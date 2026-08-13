@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   use the custom `logo.png` (Axolotl logo) instead of the generated pixel-art
   icon; `tools/generate_icons.py` reads `logo.png` to produce the
   Linux/macOS/Windows icons.
+- Navigation moved from a bottom bar to a side `NavigationRail` (desktop
+  adaptation), keeping the mini player at the bottom of the content area.
 - CI and per-OS build workflows now expose manual `workflow_dispatch`
   triggers.
 
