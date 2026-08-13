@@ -89,13 +89,14 @@ When porting a screen, read the corresponding file under the upstream
 `app/src/main/kotlin/com/music/vivi/ui/` and replicate its layout, spacing,
 colors and components.
 
-### Mascot
+### Mascot and app logo
 
-The mascot is an original pixel-art blue Axolotl. The grid is the single source
-of truth in `ui/Axolotl.kt` (`AXOLOTL_PIXELS`); the desktop icons are generated
-from it by `tools/generate_icons.py` (outputs `composeApp/icons/icon.png`,
-`icon.ico`, `icon.icns`). After changing the grid, re-run the script and keep
-the two grids in sync.
+The mascot is an original pixel-art blue Axolotl, rendered in-app (splash
+screen and About section) from the grid in `ui/Axolotl.kt` (`AXOLOTL_PIXELS`).
+The desktop app icons are generated from `logo.png` (repository root) by
+`tools/generate_icons.py`, which outputs `composeApp/icons/icon.png` (Linux),
+`icon.ico` (Windows) and `icon.icns` (macOS). After changing `logo.png`,
+re-run `python3 tools/generate_icons.py`.
 
 ## 2. Code conventions
 

@@ -33,8 +33,8 @@ Windows, macOS and Linux.
 - 🔄 **Real-time sync** — playlists, favorites and history mirror across your
   devices through Supabase.
 - 🌍 **49 languages** — with manual selection or the system language.
-- 🦎 **Axolotl mascot** — an original pixel-art companion in the splash screen,
-  About section and app icon.
+- 🦎 **Axolotl mascot** — an original pixel-art companion in the splash screen
+  and About section, plus a custom app logo.
 - 🛡️ **Privacy-first** — your library and preferences stay local; no trackers,
   analytics or telemetry.
 

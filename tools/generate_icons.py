@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Generate the Vivi Music DE desktop app icons from the shared pixel-art grid.
+"""Generate the Vivi Music DE desktop app icons from the app logo.
 
-The grid mirrors AXOLOTL_PIXELS in
-composeApp/src/commonMain/kotlin/com/vivimusic/de/ui/Axolotl.kt. Keep the two in
-sync. Outputs composeApp/icons/icon.png, icon.ico and icon.icns.
+Reads logo.png from the repository root and produces the platform icons used by
+Compose/jpackage:
+
+- composeApp/icons/icon.png  (Linux)
+- composeApp/icons/icon.ico  (Windows)
+- composeApp/icons/icon.icns (macOS)
 
 Usage: python3 tools/generate_icons.py
 """
@@ -13,33 +16,6 @@ import os
 import struct
 
 from PIL import Image
-
-PIXELS = [
-    ".PPP........PPP.",
-    ".PPPP......PPPP.",
-    ".PPPPBBBBBBPPPP.",
-    ".PBBBBBBBBBBBBP.",
-    ".PBBEEBBBBEEBBP.",
-    ".PBBEEBBBBEEBBP.",
-    ".PBBBBBBBBBBBBP.",
-    "..BBBBBBBBBBBB..",
-    "..BBBBBMMBBBBB..",
-    "..BBBBBBBBBBBB..",
-    "..BBBBBBBBBBBB..",
-    "...BBBBBBBBBB...",
-    "....BBBBBBBB....",
-    ".....DBBBBD.....",
-    "......DBBD......",
-    ".......DD.......",
-]
-
-COLORS = {
-    "B": (0x54, 0xC9, 0xF0),
-    "D": (0x2E, 0x6E, 0x8E),
-    "P": (0xFF, 0x8F, 0xB5),
-    "E": (0x14, 0x20, 0x2E),
-    "M": (0x2E, 0x6E, 0x8E),
-}
 
 ICNS_TYPES = [
     ("icp4", 16),
@@ -53,22 +29,28 @@ ICNS_TYPES = [
 
 ICO_SIZES = [16, 24, 32, 48, 64, 128, 256]
 
+PNG_SIZE = 512
 
-def base_image():
-    cols = len(PIXELS[0])
-    rows = len(PIXELS)
-    img = Image.new("RGBA", (cols, rows), (0, 0, 0, 0))
-    px = img.load()
-    for y, row in enumerate(PIXELS):
-        for x, ch in enumerate(row):
-            if ch != ".":
-                r, g, b = COLORS[ch]
-                px[x, y] = (r, g, b, 255)
-    return img
+
+def load_logo():
+    here = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.normpath(os.path.join(here, "..", "logo.png"))
+    return Image.open(logo_path).convert("RGBA")
+
+
+def to_square(img):
+    """Pad the (non-square) logo onto a transparent square canvas, centered."""
+    w, h = img.size
+    if w == h:
+        return img
+    side = max(w, h)
+    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    canvas.paste(img, ((side - w) // 2, (side - h) // 2))
+    return canvas
 
 
 def scaled(size):
-    return base_image().resize((size, size), Image.NEAREST)
+    return to_square(load_logo()).resize((size, size), Image.LANCZOS)
 
 
 def build_icns():
@@ -90,7 +72,7 @@ def main():
     out_dir = os.path.normpath(os.path.join(here, "..", "composeApp", "icons"))
     os.makedirs(out_dir, exist_ok=True)
 
-    scaled(256).save(os.path.join(out_dir, "icon.png"), format="PNG")
+    scaled(PNG_SIZE).save(os.path.join(out_dir, "icon.png"), format="PNG")
 
     ico_images = [scaled(s) for s in ICO_SIZES]
     ico_images[-1].save(
