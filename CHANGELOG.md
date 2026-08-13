@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3-alpha] - 2026-08-13
+
+### Fixed
+- YouTube Music login now accepts the original ViVi Music token bundle as
+  well as a browser Cookie header. Cookie parsing tolerates arbitrary
+  whitespace/control characters and semicolon spacing, preventing Ktor's
+  `contains illegal character (code 10)` header failure.
+- Authentication errors now include the exception type where available and
+  can be copied directly from both the YouTube Music and Supabase login screens
+  for easier diagnosis.
+
 ## [0.11.2-alpha] - 2026-08-13
 
 ### Fixed

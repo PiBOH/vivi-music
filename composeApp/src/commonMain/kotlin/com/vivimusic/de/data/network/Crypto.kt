@@ -11,11 +11,12 @@ expect fun sha1Hex(input: String): String
  * values are split on the first `=`, matching ViVi Music's `parseCookieString`.
  */
 fun parseCookieString(cookie: String): Map<String, String> =
-    cookie.split("; ")
+    cookie.split(';')
+        .map { it.trim() }
         .filter { it.isNotEmpty() }
         .mapNotNull { part ->
             val splitIndex = part.indexOf('=')
-            if (splitIndex == -1) null
-            else part.substring(0, splitIndex) to part.substring(splitIndex + 1)
+            if (splitIndex <= 0) null
+            else part.substring(0, splitIndex).trim() to part.substring(splitIndex + 1).trim()
         }
         .toMap()

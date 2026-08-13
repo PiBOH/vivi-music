@@ -40,6 +40,7 @@ import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.AppViewModel
 import com.vivimusic.de.ui.AuthState
 import com.vivimusic.de.ui.AxolotlMascot
+import com.vivimusic.de.ui.copyToClipboard
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -118,13 +119,17 @@ fun LoginScreen(viewModel: AppViewModel, onBack: () -> Unit) {
             )
 
             if (authState is AuthState.Error) {
+                val errorMessage = (authState as AuthState.Error).message
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = (authState as AuthState.Error).message,
+                    text = errorMessage,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                 )
+                TextButton(onClick = { copyToClipboard(errorMessage) }) {
+                    Text(stringResource(Res.string.copy_error))
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))

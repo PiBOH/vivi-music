@@ -5,6 +5,7 @@ import com.vivimusic.de.data.db.getRoomDatabase
 import com.vivimusic.de.data.lyrics.LyricsClient
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.network.createHttpClient
+import com.vivimusic.de.data.network.extractYtCookie
 import com.vivimusic.de.data.playback.AudioEngine
 import com.vivimusic.de.data.playback.createAudioEngine
 import com.vivimusic.de.data.sync.SupabaseSyncClient
@@ -25,7 +26,9 @@ class AppContainer(val scope: CoroutineScope) {
     val innerTube: InnerTubeClient = InnerTubeClient(httpClient, AppConfig.innerTubeApiKey).apply {
         // Restore the signed-in YouTube Music cookie so authenticated requests
         // (account menu, library) work across restarts.
-        cookie = readSetting(YTM_COOKIE_KEY)?.takeIf { it.isNotBlank() }
+        cookie = readSetting(YTM_COOKIE_KEY)
+            ?.takeIf { it.isNotBlank() }
+            ?.let(::extractYtCookie)
     }
 
     val lyricsClient: LyricsClient = LyricsClient(httpClient)

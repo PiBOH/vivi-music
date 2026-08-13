@@ -7,7 +7,9 @@ import com.vivimusic.de.data.YTM_HANDLE_KEY
 import com.vivimusic.de.data.YTM_NAME_KEY
 import com.vivimusic.de.data.YTM_THUMB_KEY
 import com.vivimusic.de.data.lyrics.LyricsLine
-import com.vivimusic.de.data.network.parseCookieString
+import com.vivimusic.de.data.network.extractYtCookie
+import com.vivimusic.de.data.network.hasSapisidCookie
+import com.vivimusic.de.data.network.validateYtCookie
 import com.vivimusic.de.data.playback.AudioEngine
 import com.vivimusic.de.data.playback.PlaybackState
 import com.vivimusic.de.data.readSetting
@@ -515,9 +517,14 @@ class AppViewModel(
      * loads the account library. [onResult] receives null on success or an
      * error message on failure.
      */
-    fun signInYt(cookie: String, onResult: (String?) -> Unit) {
+    fun signInYt(cookieInput: String, onResult: (String?) -> Unit) {
         scope.launch {
             try {
+                val cookie = extractYtCookie(cookieInput)
+                validateYtCookie(cookieInput)?.let { validationError ->
+                    onResult("Invalid YouTube Music cookie: $validationError")
+                    return@launch
+                }
                 repository.setYtCookie(cookie)
                 val info = repository.accountInfo()
                 if (info == null) {
@@ -536,7 +543,8 @@ class AppViewModel(
                 loadYtLibrary()
             } catch (t: Throwable) {
                 repository.setYtCookie(null)
-                onResult(t.message ?: "Sign in failed")
+                val type = t::class.simpleName?.let { "$it: " }.orEmpty()
+                onResult(type + (t.message ?: "Sign in failed"))
             }
         }
     }
@@ -572,7 +580,7 @@ class AppViewModel(
 }
 
 private fun cookieHasSapisid(cookie: String?): Boolean =
-    cookie?.let { "SAPISID" in parseCookieString(it) } == true
+    cookie?.let { hasSapisidCookie(extractYtCookie(it)) } == true
 
 private fun loadYtAccount(): AccountInfo? {
     val name = readSetting(YTM_NAME_KEY)?.takeIf { it.isNotBlank() } ?: return null

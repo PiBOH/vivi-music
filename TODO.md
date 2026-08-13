@@ -35,6 +35,8 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Activity history screen (listening statistics).
 - [x] Persistent session across restarts (file-backed session storage).
 - [x] YouTube Music account login (paste cookie) + profile (name/email/avatar).
+- [x] Original ViVi Music token-bundle import with cookie sanitization.
+- [x] Copy detailed authentication errors to the clipboard.
 - [x] Account library (liked playlists, albums, artists) with filter chips.
 - [ ] Real Listen Together (currently a placeholder).
 

@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,6 +56,7 @@ import com.vivimusic.de.domain.LibraryItem
 import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.AppViewModel
 import com.vivimusic.de.ui.AuthState
+import com.vivimusic.de.ui.copyToClipboard
 import com.vivimusic.de.ui.AxolotlMascot
 import com.vivimusic.de.ui.ChipsRow
 import com.vivimusic.de.ui.screens.settings.SettingsDivider
@@ -395,6 +397,9 @@ private fun YtLoginScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
+            TextButton(onClick = { copyToClipboard(error.orEmpty()) }) {
+                Text(stringResource(Res.string.copy_error))
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
