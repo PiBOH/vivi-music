@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.2-alpha] - 2026-08-13
+
+### Fixed
+- Completed a full UI color audit and added an app-wide Material theme content
+  color fallback. Plain `Text` and `Icon` calls that do not specify a color now
+  inherit `onBackground` instead of the platform default black, fixing the
+  remaining black labels and icons in dark mode across screens, lists, dialogs,
+  the player and navigation.
+- Existing explicit component colors were checked and retained only where they
+  are semantically required, such as primary actions, error states, selected
+  lyrics and accent swatches.
+
 ## [0.13.1-alpha] - 2026-08-13
 
 ### Fixed

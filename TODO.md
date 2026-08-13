@@ -55,6 +55,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 
 - [x] Full settings hub with nested pages.
 - [x] Appearance (theme mode + accent color).
+- [x] Complete dark-mode content-color audit and global text/icon fallback.
 - [x] Player & audio (quality + toggles).
 - [x] Content (language names displayed in each language's own writing).
 - [x] Privacy (synchronization toggle).

@@ -2,8 +2,10 @@ package com.vivimusic.de.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -158,6 +160,14 @@ fun ViviTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = appTypography(),
-        content = content,
-    )
+    ) {
+        // Material3 components normally provide their own content color, but
+        // plain Text/Icon calls inherit LocalContentColor. Set the app-wide
+        // default explicitly so unspecified content never falls back to the
+        // platform's black color in dark mode.
+        CompositionLocalProvider(
+            LocalContentColor provides colorScheme.onBackground,
+            content = content,
+        )
+    }
 }
