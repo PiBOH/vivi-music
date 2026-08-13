@@ -19,19 +19,19 @@ permissions:
 jobs:
   # Builds are delegated to the per-OS reusable workflows below. This workflow
   # only collects their artifacts and publishes the release.
-  build-windows:
-    name: Windows standard build
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
-    uses: ./.github/workflows/build-windows.yml
-    secrets: inherit
-
-  # Optional branding: this job is intentionally not included in release.needs.
-  # A custom Inno Setup failure must never block a release when the standard
-  # Windows, Linux and macOS jobs succeed.
   build-windows-custom:
-    name: Windows custom setup (optional)
+    name: Windows custom setup
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     uses: ./.github/workflows/build-windows-custom.yml
+    secrets: inherit
+
+  # The standard workflow is deliberately a fallback. It starts only when the
+  # custom workflow fails, so successful custom packaging is not duplicated.
+  build-windows-fallback:
+    name: Windows standard fallback
+    needs: build-windows-custom
+    if: ${{ always() && needs.build-windows-custom.result == 'failure' }}
+    uses: ./.github/workflows/build-windows.yml
     secrets: inherit
 
   build-linux:
@@ -49,10 +49,11 @@ jobs:
   release:
     name: Publish GitHub Release
     needs:
-      - build-windows
+      - build-windows-custom
+      - build-windows-fallback
       - build-linux
       - build-macos
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    if: ${{ always() && (needs.build-windows-custom.result == 'success' || needs.build-windows-fallback.result == 'success') && needs.build-linux.result == 'success' && needs.build-macos.result == 'success' }}
     runs-on: ubuntu-latest
     # Creating the release + uploading assets requires write access to repo
     # contents. Declared at the job level too, so the permission survives even

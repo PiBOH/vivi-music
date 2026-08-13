@@ -31,8 +31,8 @@ Install Inno Setup 6 and run the Gradle packaging task first:
 ```powershell
 ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
 & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
-  /DAppVersion=0.15.4-alpha `
-  /DInstallerVersion=1.15.4 `
+  /DAppVersion=0.15.6-alpha `
+  /DInstallerVersion=1.15.6 `
   /DSourceDir="$PWD\composeApp\build\compose\binaries\main\app\ViviMusicDE" `
   /DOutputDir="$PWD\dist-custom" `
   /DLogoFile="$PWD\logo.png" `
@@ -43,6 +43,7 @@ Install Inno Setup 6 and run the Gradle packaging task first:
 The `build-windows-custom.yml` GitHub Actions workflow installs Inno Setup on
 the runner, builds the app image, locates `ISCC.exe` explicitly so the compiler
 does not depend on the runner's refreshed PATH, and compiles this setup. The
-standard `build-windows.yml` workflow runs independently and remains the
-required source of the known-good MSI and portable packages; a custom compiler
-failure therefore never blocks release publication.
+custom workflow runs first. The standard `build-windows.yml` workflow is
+started only when the custom compiler fails and then provides the known-good MSI
+and portable packages. A successful custom build therefore does not duplicate
+standard Windows packaging.

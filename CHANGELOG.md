@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.6-alpha] - 2026-08-13
+
+### Changed
+- Auto Release now tries the branded Windows workflow first and starts the
+  standard jpackage workflow only if the branded workflow fails.
+- Release publication accepts either the successful custom Windows artifacts or
+  the fallback standard artifacts, together with successful Linux and macOS
+  builds, without running both Windows builds unnecessarily.
+
 ## [0.15.5-alpha] - 2026-08-13
 
 ### Changed

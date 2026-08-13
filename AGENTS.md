@@ -245,8 +245,8 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
 - **CI** (`.github/workflows/ci.yml`): on every push to `main` and pull request
   it builds the desktop target (`./gradlew :composeApp:build`).
 - **Build workflows** (reusable, invoked by Auto Release):
-  - `build-windows.yml` -> reliable standard `.msi`/portable `.exe` packages on `windows-latest` (JDK 17);
-  - `build-windows-custom.yml` -> optional branded Inno Setup package; its failure must not block a release;
+  - `build-windows-custom.yml` -> first Windows packaging attempt with the branded Inno Setup package;
+  - `build-windows.yml` -> reliable standard `.msi`/portable `.exe` fallback on `windows-latest` (JDK 17), started only if the custom attempt fails;
   - `build-linux.yml` -> `.deb`/`.AppImage` on `ubuntu-latest` (JDK 17);
   - `build-macos.yml` -> `.dmg` on `macos-15-intel` and `macos-15` (JDK 17).
 - **Auto Release** (`.github/workflows/auto-release.yml`): does not build
@@ -257,12 +257,12 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
     `v0.0.1-alpha: ...`), or
   - a manual `workflow_dispatch` (with an optional version).
   The version is read from `version.txt` (tag = version without the `v` prefix).
-- The Windows release always requires `build-windows.yml` for the known-good
-  jpackage MSI and portable executable. It also starts
-  `build-windows-custom.yml` as an optional branding job for the Inno Setup
-  installer (`installer/windows/ViviMusicDE.iss`). The release job does not
-  depend on the custom job, so a custom setup failure never blocks publication
-  when the standard Windows, Linux and macOS builds succeed.
+- The Windows release starts `build-windows-custom.yml` first for the branded
+  Inno Setup installer (`installer/windows/ViviMusicDE.iss`). Only if that job
+  fails does it start `build-windows.yml` as the standard fallback. The release
+  job accepts either successful Windows job, plus successful Linux and macOS
+  jobs, and therefore publishes exactly one Windows package set without
+  duplicating work.
 
 ### Releasing a new version
 
