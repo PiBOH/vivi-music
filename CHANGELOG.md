@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha] - 2026-08-13
+
+### Added
+- Audio playback engine (desktop): the InnerTube audio stream (preferring
+  Opus/WebM) is streamed and decoded with LavaPlayer and played through Java
+  Sound. The mini player and full player now actually play audio, with a live
+  seek bar, position and duration.
+
 ## [0.0.2-alpha] - 2026-08-13
 
 ### Added

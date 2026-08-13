@@ -11,6 +11,8 @@ datetime = "0.7.1"
 supabase = "3.6.0"
 materialKolor = "4.1.1"
 coil = "3.5.0"
+lavaplayer = "2.2.3"
+slf4j = "2.0.7"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -31,6 +33,9 @@ material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "m
 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+lavaplayer = { module = "dev.arbjerg:lavaplayer", version.ref = "lavaplayer" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 
 supabase-kt = { module = "io.github.jan-tennert.supabase:supabase-kt", version.ref = "supabase" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt", version.ref = "supabase" }

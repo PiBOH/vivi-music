@@ -1,6 +1,8 @@
 package com.vivimusic.de.ui
 
 import com.vivimusic.de.data.MusicRepository
+import com.vivimusic.de.data.playback.AudioEngine
+import com.vivimusic.de.data.playback.PlaybackState
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.data.sync.SyncStatus
 import com.vivimusic.de.domain.Album
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -26,6 +29,7 @@ class AppViewModel(
     private val repository: MusicRepository,
     syncManager: SyncManager,
     private val scope: CoroutineScope,
+    private val audioEngine: AudioEngine,
 ) {
     val favorites: StateFlow<List<Song>> =
         repository.observeFavorites().stateIn(scope, SharingStarted.Eagerly, emptyList())
@@ -58,10 +62,11 @@ class AppViewModel(
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
-    // Playback state. `isPlaying` is driven by the UI for now; it will be
-    // backed by a real audio engine (position/duration included) later.
-    private val _isPlaying = MutableStateFlow(false)
-    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+    // Playback state, driven by the real audio engine.
+    val playbackState: StateFlow<PlaybackState> = audioEngine.state
+
+    val isPlaying: StateFlow<Boolean> =
+        playbackState.map { it.isPlaying }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _album = MutableStateFlow<Album?>(null)
     val album: StateFlow<Album?> = _album.asStateFlow()
@@ -116,17 +121,25 @@ class AppViewModel(
 
     fun play(song: Song) {
         scope.launch {
-            _currentSong.value = repository.getSong(song.id) ?: song
-            repository.recordPlay(song)
-            _isPlaying.value = true
+            val full = repository.getSong(song.id) ?: song
+            _currentSong.value = full
+            repository.recordPlay(full)
+            val url = full.streamUrl
+            if (url.isNullOrBlank()) {
+                audioEngine.stop()
+            } else {
+                audioEngine.play(songId = full.id, url = url, durationMs = full.durationMs ?: 0L)
+            }
         }
     }
 
     fun togglePlayPause() {
         if (_currentSong.value != null) {
-            _isPlaying.value = !_isPlaying.value
+            audioEngine.toggle()
         }
     }
+
+    fun seekTo(positionMs: Long) = audioEngine.seekTo(positionMs)
 
     fun openAlbum(browseId: String) {
         scope.launch {

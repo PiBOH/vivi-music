@@ -166,11 +166,15 @@ class InnerTubeClient(
     private fun extractAudioStreamUrl(response: JsonObject): String? {
         val streaming = response["streamingData"] as? JsonObject ?: return null
         val formats = streaming["adaptiveFormats"] as? JsonArray ?: return null
-        return formats
+        val audioFormats = formats
             .mapNotNull { it as? JsonObject }
             .filter { it.str("mimeType")?.startsWith("audio/") == true }
-            .maxByOrNull { it.str("bitrate")?.toLongOrNull() ?: 0L }
-            ?.str("url")
+        // Prefer Opus (audio/webm), which is decoded by the bundled native
+        // decoder; AAC (audio/mp4) would need an extra codec module not
+        // included in the core. Fall back to the highest bitrate audio format.
+        val opus = audioFormats.firstOrNull { it.str("mimeType")?.startsWith("audio/webm") == true }
+        val chosen = opus ?: audioFormats.maxByOrNull { it.str("bitrate")?.toLongOrNull() ?: 0L }
+        return chosen?.str("url")
     }
 
     // ----- response traversal helpers -----

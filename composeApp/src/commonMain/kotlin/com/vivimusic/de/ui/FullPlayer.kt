@@ -45,9 +45,8 @@ import org.jetbrains.compose.resources.stringResource
  * Expanded player, ported visually from ViVi Music's `BottomSheetPlayer`:
  * artwork, title/artist, a seek bar and the playback controls.
  *
- * Note: actual audio playback is not wired yet, so the position is fixed at 0
- * and shuffle/previous/next/repeat are placeholders until the audio engine is
- * implemented.
+ * The seek bar and time labels are wired to the audio engine;
+ * shuffle/previous/next/repeat are placeholders until the play queue exists.
  */
 @Composable
 fun FullPlayer(
@@ -57,6 +56,7 @@ fun FullPlayer(
 ) {
     val currentSong by viewModel.currentSong.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
+    val playbackState by viewModel.playbackState.collectAsState()
     val song = currentSong ?: return
 
     Column(
@@ -119,11 +119,17 @@ fun FullPlayer(
             overflow = TextOverflow.Ellipsis,
         )
 
-        Slider(value = 0f, onValueChange = {}, valueRange = 0f..1f)
+        val durationMs = playbackState.durationMs.coerceAtLeast(1L)
+        val positionMs = playbackState.positionMs.coerceIn(0L, durationMs)
+        Slider(
+            value = positionMs.toFloat(),
+            onValueChange = { viewModel.seekTo(it.toLong()) },
+            valueRange = 0f..durationMs.toFloat(),
+        )
         Row(modifier = Modifier.fillMaxWidth()) {
-            Text(formatDuration(0L), style = MaterialTheme.typography.labelSmall)
+            Text(formatDuration(playbackState.positionMs), style = MaterialTheme.typography.labelSmall)
             Spacer(modifier = Modifier.weight(1f))
-            Text(formatDuration(song.durationMs), style = MaterialTheme.typography.labelSmall)
+            Text(formatDuration(playbackState.durationMs), style = MaterialTheme.typography.labelSmall)
         }
 
         Row(

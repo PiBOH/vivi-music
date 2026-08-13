@@ -78,6 +78,8 @@ kotlin {
             dependencies {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.ktor.client.cio)
+                implementation(libs.lavaplayer)
+                runtimeOnly(libs.slf4j.nop)
             }
         }
     }

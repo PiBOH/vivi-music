@@ -49,7 +49,7 @@ fun App(container: AppContainer) {
     AppEnvironment {
         ViviTheme {
             val viewModel = remember {
-                AppViewModel(container.repository, container.syncManager, container.scope)
+                AppViewModel(container.repository, container.syncManager, container.scope, container.audioEngine)
             }
             var showSplash by remember { mutableStateOf(true) }
             LaunchedEffect(Unit) {

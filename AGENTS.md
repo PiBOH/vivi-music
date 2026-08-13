@@ -20,6 +20,7 @@ shared across the **Desktop (JVM: Windows/macOS/Linux)** targets, and user data
 | Build     | Gradle (Kotlin DSL), version catalog in `gradle/libs.versions.toml`  |
 | Network   | Ktor Client (CIO engine)                                              |
 | Images    | Coil 3 (`coil-compose` + `coil-network-ktor3`)                        |
+| Audio     | LavaPlayer (`dev.arbjerg:lavaplayer`, Opus) + Java Sound              |
 | Database  | Room KMP (`androidx.room3`), bundled SQLite driver                   |
 | Sync      | Supabase (supabase-kt: PostgREST + Realtime + Auth)                  |
 | i18n      | Compose Multiplatform resources (`composeResources/**`)              |
