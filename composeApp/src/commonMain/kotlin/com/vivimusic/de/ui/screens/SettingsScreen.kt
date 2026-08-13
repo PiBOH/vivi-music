@@ -57,7 +57,7 @@ fun SettingsScreen(viewModel: AppViewModel) {
         SettingsDestination.Content -> ContentSettings(onBack = { destination = null })
         SettingsDestination.Privacy -> PrivacySettings(viewModel, onBack = { destination = null })
         SettingsDestination.Storage -> StorageSettings(viewModel, onBack = { destination = null })
-        SettingsDestination.About -> AboutSettings(onBack = { destination = null })
+        SettingsDestination.About -> AboutSettings(viewModel = viewModel, onBack = { destination = null })
     }
 }
 

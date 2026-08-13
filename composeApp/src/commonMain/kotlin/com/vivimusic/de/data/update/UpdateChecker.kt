@@ -63,8 +63,18 @@ class UpdateChecker(
         emptyList()
     }
 
+    /** Fetches the raw `CHANGELOG.md` from the repository (Keep a Changelog). */
+    suspend fun fetchChangelogMarkdown(): String = try {
+        httpClient.get("$RAW_BASE/$REPOSITORY/main/CHANGELOG.md") {
+            header("User-Agent", "vivi-music-de-updater")
+        }.bodyAsText()
+    } catch (e: Exception) {
+        ""
+    }
+
     companion object {
         private const val GITHUB_API = "https://api.github.com"
+        private const val RAW_BASE = "https://raw.githubusercontent.com"
         private const val REPOSITORY = "PiBOH/vivi-music-de"
     }
 }

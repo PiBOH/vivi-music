@@ -207,6 +207,9 @@ class AppViewModel(
         }
     }
 
+    /** Fetches the raw Keep-a-Changelog markdown from the repository. */
+    suspend fun fetchChangelogMarkdown(): String = updateChecker.fetchChangelogMarkdown()
+
     fun loadHome() {
         scope.launch {
             _loading.value = true

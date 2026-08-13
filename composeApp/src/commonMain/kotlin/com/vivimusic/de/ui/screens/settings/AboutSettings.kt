@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -16,14 +20,22 @@ import androidx.compose.ui.unit.dp
 import com.vivimusic.de.data.AppConfig
 import com.vivimusic.de.data.update.openUrl
 import com.vivimusic.de.resources.*
+import com.vivimusic.de.ui.AppViewModel
 import com.vivimusic.de.ui.AxolotlMascot
 import org.jetbrains.compose.resources.stringResource
 
 private const val REPO_URL = "https://github.com/PiBOH/vivi-music-de"
 
-/** About screen: mascot, version, credits and source link. */
+/** About screen: mascot, version, credits, changelog and source link. */
 @Composable
-fun AboutSettings(onBack: () -> Unit) {
+fun AboutSettings(viewModel: AppViewModel, onBack: () -> Unit) {
+    var showChangelog by remember { mutableStateOf(false) }
+
+    if (showChangelog) {
+        ChangelogScreen(viewModel, onBack = { showChangelog = false })
+        return
+    }
+
     SettingsPage(
         title = stringResource(Res.string.about_title),
         onBack = onBack,
@@ -49,6 +61,11 @@ fun AboutSettings(onBack: () -> Unit) {
         }
 
         SettingsGroup {
+            SettingsItem(
+                title = stringResource(Res.string.about_changelog),
+                onClick = { showChangelog = true },
+            )
+            SettingsDivider()
             SettingsItem(
                 title = stringResource(Res.string.about_source),
                 description = stringResource(Res.string.about_source_desc),

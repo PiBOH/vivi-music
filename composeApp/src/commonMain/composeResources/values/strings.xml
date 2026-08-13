@@ -116,4 +116,7 @@
     <string name="account_ytm_cookie_hint">Paste the Cookie header value here</string>
     <string name="account_ytm_cookie_desc">Open music.youtube.com in your browser and sign in, then copy the Cookie header: open DevTools (F12), go to Network, select any request to music.youtube.com, and copy the Cookie request header value.</string>
     <string name="account_data_sync">Data synchronization</string>
+    <string name="about_changelog">Changelog</string>
+    <string name="changelog">Changelog</string>
+    <string name="changelog_error">Could not load the changelog. Check your connection and try again.</string>
 </resources>
