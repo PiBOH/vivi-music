@@ -43,3 +43,13 @@ data class Playlist(
     val createdAtEpochMs: Long = 0L,
     val updatedAtEpochMs: Long = 0L,
 )
+
+/**
+ * A titled group of songs shown on the Home screen (e.g. "Quick Picks",
+ * "Keep listening"), parsed from a single InnerTube home shelf.
+ */
+@Serializable
+data class HomeSection(
+    val title: String,
+    val songs: List<Song>,
+)

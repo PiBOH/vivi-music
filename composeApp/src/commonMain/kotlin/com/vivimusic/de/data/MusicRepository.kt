@@ -7,6 +7,7 @@ import com.vivimusic.de.data.db.SongEntity
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +29,7 @@ class MusicRepository(
 
     suspend fun search(query: String): List<Song> = innerTube.search(query)
 
-    suspend fun home(): List<Song> = innerTube.getHome()
+    suspend fun home(): List<HomeSection> = innerTube.getHome()
 
     suspend fun getAlbumOrPlaylist(browseId: String): Album = innerTube.getAlbumOrPlaylist(browseId)
 

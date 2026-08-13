@@ -29,6 +29,7 @@
     <string name="favorite_add">Save</string>
     <string name="favorite_remove">Remove</string>
     <string name="play">Play</string>
+    <string name="play_all">Play all</string>
     <string name="new_playlist">New playlist</string>
     <string name="delete">Delete</string>
     <string name="about_title">About</string>

@@ -2,7 +2,7 @@
 
 A **desktop** music client built with **Kotlin Multiplatform** and
 **Compose Multiplatform**, recreating the experience of
-[ViVi Music](https://github.com/25huizengek1/ViMusic) (an open source YouTube
+[ViVi Music](https://github.com/vivizzz007/vivi-music) (an open source YouTube
 Music client). The app runs on **Windows, macOS and Linux**, and user data
 (playlists, favorites, history) syncs in real time via **Supabase**.
 

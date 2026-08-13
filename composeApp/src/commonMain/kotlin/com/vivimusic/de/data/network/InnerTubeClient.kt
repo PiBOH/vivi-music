@@ -1,6 +1,7 @@
 package com.vivimusic.de.data.network
 
 import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Song
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
@@ -77,7 +78,7 @@ class InnerTubeClient(
         }.flatten()
     }
 
-    suspend fun getHome(): List<Song> {
+    suspend fun getHome(): List<HomeSection> {
         val response = call("browse", bodyWith("browseId" to JsonPrimitive("FEmusic_home")))
         val sections = response.sectionListRendererContents() ?: return emptyList()
         return sections.mapNotNull { section ->
@@ -85,11 +86,16 @@ class InnerTubeClient(
             val shelf = obj["musicCarouselShelfRenderer"] as? JsonObject
                 ?: obj["musicShelfRenderer"] as? JsonObject
                 ?: return@mapNotNull null
-            val items = shelf["contents"] as? JsonArray ?: return@mapNotNull emptyList()
-            items.mapNotNull { item ->
-                ((item as? JsonObject)?.get("musicTwoRowItemRenderer") as? JsonObject)?.toSongFromTwoRow()
-            }
-        }.flatten().distinctBy { it.id }
+            val songs = (shelf["contents"] as? JsonArray).orEmpty()
+                .mapNotNull { item ->
+                    val renderer = item as? JsonObject ?: return@mapNotNull null
+                    (renderer["musicTwoRowItemRenderer"] as? JsonObject)?.toSongFromTwoRow()
+                        ?: (renderer["musicResponsiveListItemRenderer"] as? JsonObject)?.toSongFromListItem()
+                }
+                .distinctBy { it.id }
+            if (songs.isEmpty()) return@mapNotNull null
+            HomeSection(title = shelf.shelfTitle().orEmpty(), songs = songs)
+        }
     }
 
     suspend fun getAlbumOrPlaylist(browseId: String): Album {
@@ -216,4 +222,14 @@ class InnerTubeClient(
 
     private fun JsonObject.str(key: String): String? =
         (this[key] as? JsonPrimitive)?.let { if (it.isString) it.content else null }
+
+    /** Extracts the title of a home shelf from its header or title runs. */
+    private fun JsonObject.shelfTitle(): String? {
+        val header = this["header"] as? JsonObject
+        if (header != null) {
+            val basic = header["musicCarouselShelfBasicHeaderRenderer"] as? JsonObject
+            return (basic?.get("title") as? JsonObject)?.firstText()
+        }
+        return (this["title"] as? JsonObject)?.firstText()
+    }
 }

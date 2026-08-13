@@ -4,6 +4,7 @@ import com.vivimusic.de.data.MusicRepository
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.data.sync.SyncStatus
 import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
@@ -35,8 +36,8 @@ class AppViewModel(
 
     val syncStatus: StateFlow<SyncStatus> = syncManager.status
 
-    private val _homeSongs = MutableStateFlow<List<Song>>(emptyList())
-    val homeSongs: StateFlow<List<Song>> = _homeSongs.asStateFlow()
+    private val _homeSections = MutableStateFlow<List<HomeSection>>(emptyList())
+    val homeSections: StateFlow<List<HomeSection>> = _homeSections.asStateFlow()
 
     private val _searchResults = MutableStateFlow<List<Song>>(emptyList())
     val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
@@ -60,7 +61,7 @@ class AppViewModel(
     fun loadHome() {
         scope.launch {
             _loading.value = true
-            _homeSongs.value = repository.home()
+            _homeSections.value = repository.home()
             _loading.value = false
         }
     }

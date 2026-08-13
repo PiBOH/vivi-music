@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Home screen ported to match ViVi Music: the home feed is parsed into sections
+  with titles and rendered as section headers + horizontal card carousels with
+  thumbnails (Coil 3).
+
 ### Security
 - Remove the hardcoded InnerTube (YouTube Music) API key from the source; it is
   now provided via the `INNERTUBE_API_KEY` environment variable (GitHub secret
