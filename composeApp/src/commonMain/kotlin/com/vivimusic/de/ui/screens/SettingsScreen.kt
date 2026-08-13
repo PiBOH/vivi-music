@@ -2,6 +2,7 @@ package com.vivimusic.de.ui.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,6 +14,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vivimusic.de.data.AppConfig
 import com.vivimusic.de.data.sync.SyncStatus
+import com.vivimusic.de.data.update.openUrl
 import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.i18n.customAppLocale
 import com.vivimusic.de.i18n.supportedLanguages
@@ -90,6 +93,46 @@ fun SettingsScreen(viewModel: AppViewModel) {
         )
         TextButton(onClick = { viewModel.syncNow() }) {
             Text(stringResource(Res.string.retry))
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        Text(
+            text = stringResource(Res.string.update_settings),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        val checkPrereleases by viewModel.checkPrereleases.collectAsState()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(Res.string.update_check_prereleases),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = checkPrereleases,
+                onCheckedChange = viewModel::setCheckPrereleases,
+            )
+        }
+        TextButton(onClick = viewModel::checkForUpdates) {
+            Text(stringResource(Res.string.update_check_now))
+        }
+        val updateStatus by viewModel.updateStatus.collectAsState()
+        if (updateStatus?.updateAvailable == true) {
+            Text(
+                text = "${stringResource(Res.string.update_available)}: ${updateStatus?.latest?.tagName ?: ""}",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TextButton(onClick = { updateStatus?.latest?.htmlUrl?.let { openUrl(it) } }) {
+                Text(stringResource(Res.string.update_download))
+            }
+        } else if (updateStatus != null) {
+            Text(
+                text = stringResource(Res.string.update_up_to_date),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))

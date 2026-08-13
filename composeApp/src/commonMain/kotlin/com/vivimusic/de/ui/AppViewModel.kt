@@ -3,8 +3,12 @@ package com.vivimusic.de.ui
 import com.vivimusic.de.data.MusicRepository
 import com.vivimusic.de.data.playback.AudioEngine
 import com.vivimusic.de.data.playback.PlaybackState
+import com.vivimusic.de.data.readSetting
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.data.sync.SyncStatus
+import com.vivimusic.de.data.update.UpdateChecker
+import com.vivimusic.de.data.update.UpdateStatus
+import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Playlist
@@ -21,6 +25,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+private const val UPDATE_CHECK_PRERELEASES_KEY = "update.check_prereleases"
+
 /**
  * Holds the UI state and exposes the repository/sync operations to the Compose
  * screens. Kept intentionally simple: no DI or ViewModel framework.
@@ -30,6 +36,7 @@ class AppViewModel(
     syncManager: SyncManager,
     private val scope: CoroutineScope,
     private val audioEngine: AudioEngine,
+    private val updateChecker: UpdateChecker,
 ) {
     val favorites: StateFlow<List<Song>> =
         repository.observeFavorites().stateIn(scope, SharingStarted.Eagerly, emptyList())
@@ -74,8 +81,27 @@ class AppViewModel(
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
+    private val _checkPrereleases = MutableStateFlow(readSetting(UPDATE_CHECK_PRERELEASES_KEY) == "true")
+    val checkPrereleases: StateFlow<Boolean> = _checkPrereleases.asStateFlow()
+
+    private val _updateStatus = MutableStateFlow<UpdateStatus?>(null)
+    val updateStatus: StateFlow<UpdateStatus?> = _updateStatus.asStateFlow()
+
     init {
         loadHome()
+        checkForUpdates()
+    }
+
+    fun setCheckPrereleases(enabled: Boolean) {
+        _checkPrereleases.value = enabled
+        writeSetting(UPDATE_CHECK_PRERELEASES_KEY, enabled.toString())
+        checkForUpdates()
+    }
+
+    fun checkForUpdates() {
+        scope.launch {
+            _updateStatus.value = updateChecker.check(includePrereleases = _checkPrereleases.value)
+        }
     }
 
     fun loadHome() {

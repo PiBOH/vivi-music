@@ -8,6 +8,7 @@ import com.vivimusic.de.data.playback.AudioEngine
 import com.vivimusic.de.data.playback.createAudioEngine
 import com.vivimusic.de.data.sync.SupabaseSyncClient
 import com.vivimusic.de.data.sync.SyncManager
+import com.vivimusic.de.data.update.UpdateChecker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -30,6 +31,8 @@ class AppContainer(val scope: CoroutineScope) {
     val repository: MusicRepository = MusicRepository(database, innerTube, syncManager, scope)
 
     val audioEngine: AudioEngine = createAudioEngine()
+
+    val updateChecker: UpdateChecker = UpdateChecker(httpClient)
 
     fun start() {
         if (syncManager.isEnabled) {

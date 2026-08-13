@@ -16,13 +16,16 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vivimusic.de.data.AppContainer
 import com.vivimusic.de.data.readSetting
+import com.vivimusic.de.data.update.openUrl
 import com.vivimusic.de.i18n.AppEnvironment
 import com.vivimusic.de.i18n.customAppLocale
 import com.vivimusic.de.resources.*
@@ -51,7 +55,7 @@ fun App(container: AppContainer) {
     AppEnvironment {
         ViviTheme {
             val viewModel = remember {
-                AppViewModel(container.repository, container.syncManager, container.scope, container.audioEngine)
+                AppViewModel(container.repository, container.syncManager, container.scope, container.audioEngine, container.updateChecker)
             }
             var showSplash by remember { mutableStateOf(true) }
             LaunchedEffect(Unit) {
@@ -83,6 +87,8 @@ private enum class Screen { Home, Search, Together, Library, Settings }
 private fun AppRoot(viewModel: AppViewModel) {
     var screen by remember { mutableStateOf(Screen.Home) }
     var showFullPlayer by remember { mutableStateOf(false) }
+    val updateStatus by viewModel.updateStatus.collectAsState()
+    var updateDismissed by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -157,5 +163,31 @@ private fun AppRoot(viewModel: AppViewModel) {
                 onCollapse = { showFullPlayer = false },
             )
         }
+    }
+
+    val latest = updateStatus?.latest
+    if (updateStatus?.updateAvailable == true && !updateDismissed && latest != null) {
+        AlertDialog(
+            onDismissRequest = { updateDismissed = true },
+            title = { Text(stringResource(Res.string.update_available)) },
+            text = {
+                Text("${stringResource(Res.string.update_available_message)} ${latest.tagName}")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        openUrl(latest.htmlUrl)
+                        updateDismissed = true
+                    },
+                ) {
+                    Text(stringResource(Res.string.update_download))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { updateDismissed = true }) {
+                    Text(stringResource(Res.string.update_dismiss))
+                }
+            },
+        )
     }
 }
