@@ -122,6 +122,16 @@ which outputs `composeApp/icons/icon.png` (Linux), `icon.ico` (Windows) and
 - **Errors**: do not swallow exceptions; handle or propagate them explicitly.
 - **No emoji** in code, comments, strings, logs, resources and workflows.
 
+### Mandatory commit authorship rule
+
+**Agents, AI assistants, agent clients, bots and automation must never add
+themselves as commit authors or co-authors.** In particular, they must never
+add `Generated with Codebuff`, `Co-Authored-By`, or any equivalent attribution
+footer to a commit unless the user explicitly requests that attribution in the
+current message. This rule applies to every agent and every client used to
+operate agents, including reusable workflows and commit helpers. The user's
+explicit request is the only exception.
+
 ## 3. Golden rule: "What works is not touched"
 
 > **Do not refactor or modify modules, classes or functions that already work
@@ -257,6 +267,9 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
 2. Update `CHANGELOG.md` with a `## [VERSION] - YYYY-MM-DD` section.
 3. Commit with a message starting with `v` and push:
    `git commit -m "v$(cat version.txt): description" && git push`.
+4. Do not add agent, client or automation attribution trailers unless the user
+   explicitly requests them in the current message; see the mandatory commit
+   authorship rule above.
 
 ## 10. Definition of "Done"
 
