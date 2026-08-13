@@ -65,36 +65,6 @@ The per-OS build workflows produce the desktop installers
 (Windows/macOS/Linux), and `auto-release.yml` publishes the release with those
 artifacts attached.
 
-## Configuration
-
-Secrets are read at runtime from (in order) a JVM system property, the process
-environment, or a git-ignored `.env` file next to the executable. Supported
-keys:
-
-- `SUPABASE_URL`, `SUPABASE_ANON_KEY` — Supabase sync (PostgREST + Realtime).
-- `INNERTUBE_API_KEY` — the YouTube Music (InnerTube) API key. It is not
-  committed to the repository: releases inject it at build time from the
-  `INNERTUBE_API_KEY` GitHub Actions secret, and local development uses a
-  `.env` file.
-
-Example `.env`:
-
-```properties
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-INNERTUBE_API_KEY=your-inner-tube-key
-```
-
-To enable sync:
-
-1. Create a project on [Supabase](https://supabase.com).
-2. Run `supabase/migrations/0001_init.sql` in the SQL editor (creates tables,
-   RLS, and enables Realtime).
-3. Provide `SUPABASE_URL` and `SUPABASE_ANON_KEY` as above.
-
-Without credentials the related feature degrades: no Supabase sync and no
-YouTube Music results.
-
 ## Mascot
 
 The app's mascot is an original pixel-art blue **Axolotl**, rendered in-app
