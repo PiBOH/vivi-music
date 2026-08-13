@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.3-alpha] - 2026-08-13
+
+### Fixed
+- Corrected the Windows Inno Setup source path to the nested jpackage app
+  image (`app/ViviMusicDE`), so the executable validation and installer input
+  now match the actual Compose Desktop output layout.
+- Updated the local Windows installer command to use the same app-image path.
+
 ## [0.15.2-alpha] - 2026-08-13
 
 ### Fixed

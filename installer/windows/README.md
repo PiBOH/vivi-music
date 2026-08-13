@@ -31,9 +31,9 @@ Install Inno Setup 6 and run the Gradle packaging task first:
 ```powershell
 ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
 & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
-  /DAppVersion=0.15.0-alpha `
-  /DInstallerVersion=1.15.0 `
-  /DSourceDir="$PWD\composeApp\build\compose\binaries\main\app" `
+  /DAppVersion=0.15.3-alpha `
+  /DInstallerVersion=1.15.3 `
+  /DSourceDir="$PWD\composeApp\build\compose\binaries\main\app\ViviMusicDE" `
   /DOutputDir="$PWD\dist-custom" `
   /DLogoFile="$PWD\logo.png" `
   /DIconFile="$PWD\composeApp\icons\icon.ico" `

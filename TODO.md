@@ -65,7 +65,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Dedicated update center with live download percentage, transferred size and speed.
 - [x] Manual cleanup of downloaded update installers from the Updates settings.
 - [x] Branded Windows setup with optional shortcuts, clean install, taskbar and post-install launch.
-- [x] Hardened the Windows custom setup workflow with numeric versioning and compiler diagnostics.
+- [x] Hardened the Windows custom setup workflow with numeric versioning, correct app-image path and compiler diagnostics.
 - [x] About (mascot, version, source link).
 
 ## Phase 6 — Menus and remaining components

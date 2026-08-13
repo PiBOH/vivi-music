@@ -46,7 +46,7 @@ jobs:
           $numericParts = (($version -split '-')[0] -split '\.')
           $major = [Math]::Max(1, [int]$numericParts[0])
           $installerVersion = "$major.$($numericParts[1]).$($numericParts[2])"
-          $source = Join-Path $env:GITHUB_WORKSPACE 'composeApp\build\compose\binaries\main\app'
+          $source = Join-Path $env:GITHUB_WORKSPACE 'composeApp\build\compose\binaries\main\app\ViviMusicDE'
           $output = Join-Path $env:GITHUB_WORKSPACE 'dist-custom'
           New-Item -ItemType Directory -Force -Path $output | Out-Null
           $mainExecutable = Join-Path $source 'ViviMusicDE.exe'
