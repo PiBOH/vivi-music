@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Original pixel-art Axolotl mascot (splash screen, About section, and desktop
   app icons for Windows/macOS/Linux).
+- Material 3 Expressive design system ported from ViVi Music: seed color
+  (`0xFFED5564`) with materialKolor (SPEC 2025 + TonalSpot), the M3 Expressive
+  type scale, grouped list-item shapes, and the mobile bottom navigation
+  (Home / Search / Listen Together / Library) with a mini player.
 
 ## [0.0.1-alpha] - 2026-08-13
 

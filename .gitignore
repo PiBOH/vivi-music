@@ -21,3 +21,6 @@ captures/
 *.deb
 *.AppImage
 supabase.env
+
+# local reference material (e.g. mascot drafts) kept out of version control
+.ignore/

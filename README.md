@@ -9,8 +9,9 @@ Music client). The app runs on **Windows, macOS and Linux**, and user data
 ## Features
 
 - **Desktop (JVM)** app for Windows, macOS and Linux from a single codebase.
-- **Compose Multiplatform** (Material 3) UI: Home with search, Library,
-  Settings, and a "now playing" bar.
+- **Pixel-perfect** port of ViVi Music's **Material 3 Expressive** design
+  system: same seed color, typography, grouped list shapes and bottom
+  navigation (Home / Search / Listen Together / Library).
 - **YouTube Music** catalog via an InnerTube client (search, home feed,
   album/playlist, audio stream resolution).
 - Local database with **Room KMP** and a bundled SQLite driver.

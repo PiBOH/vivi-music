@@ -12,8 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,7 +39,7 @@ fun LibraryScreen(viewModel: AppViewModel) {
     var tab by remember { mutableStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = tab) {
+        SecondaryTabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(Res.string.nav_favorites)) })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(Res.string.nav_history)) })
             Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(Res.string.nav_playlists)) })

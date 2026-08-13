@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -15,14 +15,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.vivimusic.de.domain.Song
 import com.vivimusic.de.resources.*
+import com.vivimusic.de.ui.theme.groupedItemShape
+import com.vivimusic.de.ui.theme.listItemColors
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun SongRow(song: Song, viewModel: AppViewModel) {
+fun SongRow(song: Song, viewModel: AppViewModel, shape: Shape) {
     val isFavorite by viewModel.isFavorite(song.id).collectAsState(initial = false)
     ListItem(
         headlineContent = { Text(song.title) },
@@ -37,7 +41,8 @@ fun SongRow(song: Song, viewModel: AppViewModel) {
                 )
             }
         },
-        modifier = Modifier.clickable { viewModel.play(song) },
+        colors = listItemColors(),
+        modifier = Modifier.clip(shape).clickable { viewModel.play(song) },
     )
 }
 
@@ -53,8 +58,8 @@ fun SongList(
         return
     }
     LazyColumn(modifier.fillMaxSize()) {
-        items(songs, key = { it.id }) { song ->
-            SongRow(song, viewModel)
+        itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+            SongRow(song, viewModel, shape = groupedItemShape(index, songs.size))
         }
     }
 }

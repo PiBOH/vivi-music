@@ -16,7 +16,7 @@ shared across the **Desktop (JVM: Windows/macOS/Linux)** targets, and user data
 | Area      | Technology                                                           |
 |-----------|----------------------------------------------------------------------|
 | Language  | Kotlin (2.4.x)                                                       |
-| UI        | Compose Multiplatform + Material 3                                   |
+| UI        | Compose Multiplatform + Material 3 Expressive (pixel-perfect port)   |
 | Build     | Gradle (Kotlin DSL), version catalog in `gradle/libs.versions.toml`  |
 | Network   | Ktor Client (CIO engine)                                              |
 | Database  | Room KMP (`androidx.room3`), bundled SQLite driver                   |
@@ -59,6 +59,27 @@ locale handling).
   **InnerTubeClient** (YouTube Music catalog).
 - **SyncManager** orchestrates sync between the local Room database and
   **SupabaseSyncClient** (PostgREST for pull/push, Realtime for mirroring).
+
+### Design system (pixel-perfect port)
+
+The UI is a pixel-perfect port of the upstream **ViVi Music** mobile app, which
+uses **Material 3 Expressive**. Always mirror the upstream UI instead of
+inventing new styles:
+
+- Theme: `ui/theme/Theme.kt` — seed color `0xFFED5564`, color scheme generated
+  by materialKolor (SPEC 2025 + TonalSpot). The upstream `MaterialExpressiveTheme`
+  and `MotionScheme` are still `internal` in Compose Multiplatform's `material3`,
+  so this port uses the public `MaterialTheme` with the same scheme/typography
+  and the expressive components (`NavigationBar`, `SecondaryTabRow`, ...).
+- Typography: `ui/theme/Type.kt` — the M3 Expressive type scale, copied 1:1.
+- Shapes: `ui/theme/Shapes.kt` — grouped list items (4dp connected / 16dp end
+  corners, `surfaceContainerHigh` container).
+- Navigation: bottom `NavigationBar` (Home / Search / Listen Together /
+  Library) + a mini player above it; Settings is a top-bar action.
+
+When porting a screen, read the corresponding file under the upstream
+`app/src/main/kotlin/com/music/vivi/ui/` and replicate its layout, spacing,
+colors and components.
 
 ### Mascot
 

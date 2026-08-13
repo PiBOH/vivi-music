@@ -14,6 +14,7 @@ kotlin {
     jvm("desktop") {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
+            optIn.add("androidx.compose.material3.ExperimentalMaterial3ExpressiveApi")
         }
     }
 
@@ -22,6 +23,7 @@ kotlin {
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
 
@@ -41,6 +43,7 @@ kotlin {
             implementation(libs.supabase.postgrest)
             implementation(libs.supabase.auth)
             implementation(libs.supabase.realtime)
+            implementation(libs.material.kolor)
         }
 
         named("desktopMain") {

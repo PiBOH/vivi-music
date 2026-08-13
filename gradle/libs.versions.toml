@@ -9,6 +9,7 @@ coroutines = "1.10.2"
 serialization = "1.9.0"
 datetime = "0.7.1"
 supabase = "3.6.0"
+materialKolor = "4.1.1"
 
 [libraries]
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -24,6 +25,8 @@ ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "k
 room-runtime = { module = "androidx.room3:room3-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room3:room3-compiler", version.ref = "room" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqliteBundled" }
+
+material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
 
 supabase-kt = { module = "io.github.jan-tennert.supabase:supabase-kt", version.ref = "supabase" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt", version.ref = "supabase" }
