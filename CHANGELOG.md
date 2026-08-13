@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.2-alpha] - 2026-08-13
+
+### Fixed
+- Hardened the Windows custom Inno Setup build by passing a numeric installer
+  version to `AppVersion` while keeping the full pre-release SemVer visible in
+  the setup name and filename.
+- Reduced custom setup compilation time for the large jpackage app image and
+  added source validation, an explicit job timeout and compiler-log capture to
+  the Windows workflow.
+
 ## [0.15.1-alpha] - 2026-08-13
 
 ### Changed

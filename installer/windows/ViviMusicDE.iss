@@ -29,7 +29,9 @@
 [Setup]
 AppId={#AppId}
 AppName={#AppName}
-AppVersion={#AppVersion}
+; Inno Setup requires a numeric application version. The pre-release
+; SemVer remains visible in AppVerName and the output filename.
+AppVersion={#InstallerVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher={#AppPublisher}
 AppPublisherURL={#AppUrl}
@@ -46,8 +48,9 @@ WizardSmallImageFile={#LogoFile}
 WizardStyle=modern
 WizardImageStretch=no
 WizardImageAlphaBlend=yes
-Compression=lzma2
-SolidCompression=yes
+; Keep the 200+ MB jpackage image quick to compile on GitHub runners.
+Compression=lzma
+SolidCompression=no
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible

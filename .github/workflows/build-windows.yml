@@ -11,6 +11,7 @@ jobs:
   build:
     name: Build Windows installers
     runs-on: windows-latest
+    timeout-minutes: 20
     env:
       # Empty until a code-signing certificate is configured. When present,
       # the "Sign installers" step runs and removes the SmartScreen
@@ -48,8 +49,13 @@ jobs:
           $source = Join-Path $env:GITHUB_WORKSPACE 'composeApp\build\compose\binaries\main\app'
           $output = Join-Path $env:GITHUB_WORKSPACE 'dist-custom'
           New-Item -ItemType Directory -Force -Path $output | Out-Null
+          $mainExecutable = Join-Path $source 'ViviMusicDE.exe'
+          if (-not (Test-Path $mainExecutable)) { throw "jpackage app image is incomplete: $mainExecutable was not found" }
+          $sourceFileCount = (Get-ChildItem $source -Recurse -File | Measure-Object).Count
+          Write-Host "Inno Setup source: $sourceFileCount files"
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+          $compileLog = Join-Path $output 'innosetup.log'
           & $iscc `
             "/DAppVersion=$version" `
             "/DInstallerVersion=$installerVersion" `
@@ -57,8 +63,13 @@ jobs:
             "/DOutputDir=$output" `
             "/DLogoFile=$env:GITHUB_WORKSPACE\logo.png" `
             "/DIconFile=$env:GITHUB_WORKSPACE\composeApp\icons\icon.ico" `
-            "$env:GITHUB_WORKSPACE\installer\windows\ViviMusicDE.iss"
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed (exit $LASTEXITCODE)" }
+            "$env:GITHUB_WORKSPACE\installer\windows\ViviMusicDE.iss" 2>&1 |
+            Tee-Object -FilePath $compileLog
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Inno Setup compiler log:'
+            Get-Content $compileLog
+            throw "Inno Setup compilation failed (exit $LASTEXITCODE)"
+          }
           Get-ChildItem $output
       - name: Collect installers
         shell: bash
