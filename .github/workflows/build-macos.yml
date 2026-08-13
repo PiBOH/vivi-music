@@ -29,6 +29,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Package desktop distribution
+        env:
+          INNERTUBE_API_KEY: ${{ secrets.INNERTUBE_API_KEY }}
         run: ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
       - name: Collect installer
         shell: bash

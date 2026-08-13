@@ -18,7 +18,7 @@ class AppContainer(val scope: CoroutineScope) {
 
     private val httpClient = createHttpClient()
 
-    val innerTube: InnerTubeClient = InnerTubeClient(httpClient)
+    val innerTube: InnerTubeClient = InnerTubeClient(httpClient, AppConfig.innerTubeApiKey)
 
     private val syncClient: SupabaseSyncClient? =
         if (AppConfig.isSyncConfigured) SupabaseSyncClient.create() else null

@@ -3,18 +3,24 @@ package com.vivimusic.de.data
 /**
  * Runtime configuration, populated by the desktop entry point (`main.kt`).
  *
- * Values come from the `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment
- * variables or from a `supabase.env` file next to the executable.
+ * Values are read, in order, from a JVM system property, the process
+ * environment, or a `.env` file next to the executable. The InnerTube API key
+ * is normally injected at build time by the CI
+ * (see `composeApp/build.gradle.kts`).
  *
- * When the values are empty, remote sync is disabled and the app runs in a
- * local-only mode.
+ * When a value is empty the related feature is disabled: Supabase sync and
+ * InnerTube (YouTube Music) both degrade to local-only.
  */
 object AppConfig {
     var supabaseUrl: String = ""
     var supabaseAnonKey: String = ""
+    var innerTubeApiKey: String = ""
 
     val isSyncConfigured: Boolean
         get() = supabaseUrl.isNotBlank() && supabaseAnonKey.isNotBlank()
+
+    val isInnerTubeConfigured: Boolean
+        get() = innerTubeApiKey.isNotBlank()
 }
 
 /**

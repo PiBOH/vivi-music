@@ -23,16 +23,19 @@ jobs:
     name: Windows build
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     uses: ./.github/workflows/build-windows.yml
+    secrets: inherit
 
   build-linux:
     name: Linux build
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     uses: ./.github/workflows/build-linux.yml
+    secrets: inherit
 
   build-macos:
     name: macOS build
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     uses: ./.github/workflows/build-macos.yml
+    secrets: inherit
 
   release:
     name: Publish GitHub Release

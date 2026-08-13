@@ -10,6 +10,12 @@ plugins {
     alias(libs.plugins.room)
 }
 
+// InnerTube API key: injected from the environment at build time (CI) so the
+// key is never committed to source. The packaged app reads it via the system
+// property set below; local development can also provide it through a `.env`
+// file read at runtime (see desktopMain `main.kt`).
+val innertubeApiKey: String = System.getenv("INNERTUBE_API_KEY") ?: ""
+
 kotlin {
     jvm("desktop") {
         compilerOptions {
@@ -66,6 +72,7 @@ room3 {
 compose.desktop {
     application {
         mainClass = "com.vivimusic.de.MainKt"
+        jvmArgs += listOf("-DINNERTUBE_API_KEY=$innertubeApiKey")
 
         nativeDistributions {
             targetFormats(

@@ -20,7 +20,7 @@ captures/
 *.dmg
 *.deb
 *.AppImage
-supabase.env
+.env
 
 # local reference material (e.g. mascot drafts) kept out of version control
 .ignore/

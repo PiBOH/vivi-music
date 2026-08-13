@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Remove the hardcoded InnerTube (YouTube Music) API key from the source; it is
+  now provided via the `INNERTUBE_API_KEY` environment variable (GitHub secret
+  for releases) or a git-ignored `.env` file.
+
 ### Fixed
 - Windows installer: add a Start Menu entry and desktop shortcut
   (`menu = true`, `shortcut = true`) and a stable `upgradeUuid`, so the app is

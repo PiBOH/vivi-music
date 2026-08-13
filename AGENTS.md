@@ -176,9 +176,10 @@ past entries.
 
 ## 7. Supabase sync
 
-- Configuration is read at runtime in `data/AppConfig.kt` from the
-  `SUPABASE_URL`/`SUPABASE_ANON_KEY` environment variables or from the
-  `supabase.env` file.
+- Configuration is read at runtime in `data/AppConfig.kt` from a JVM system
+  property, the process environment, or a git-ignored `.env` file. Secrets:
+  `SUPABASE_URL`/`SUPABASE_ANON_KEY` (sync) and `INNERTUBE_API_KEY` (InnerTube,
+  injected at build time from the CI secret for releases).
 - The schema (tables, RLS, Realtime) is in `supabase/migrations/0001_init.sql`.
 - If credentials are missing, the app runs in local-only mode
   (`SyncStatus.Disabled`).

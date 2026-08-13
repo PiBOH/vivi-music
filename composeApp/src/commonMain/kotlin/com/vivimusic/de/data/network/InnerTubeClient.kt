@@ -30,10 +30,10 @@ import kotlinx.serialization.json.put
  */
 class InnerTubeClient(
     private val httpClient: HttpClient,
+    private val apiKey: String,
     private val json: Json = sharedJson,
 ) {
     private val baseUrl = "https://music.youtube.com/youtubei/v1"
-    private val apiKey = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
     private val clientVersion = "7.16.53"
 
     private fun context(): JsonObject = buildJsonObject {
