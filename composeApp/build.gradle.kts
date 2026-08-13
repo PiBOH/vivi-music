@@ -22,6 +22,15 @@ val localProps: Map<String, String> = rootProject.file("local.properties")
     ?.toMap()
     ?: emptyMap()
 
+// App SemVer: single source of truth for releases and version metadata.
+// Read from version.txt at the repository root (currently 0.0.1-alpha).
+val appVersion: String = rootProject.file("version.txt")
+    .takeIf { it.exists() }
+    ?.readText()
+    ?.trim()
+    ?.takeIf { it.isNotBlank() }
+    ?: "0.0.1-alpha"
+
 kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
@@ -85,7 +94,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = appVersion
 
         buildConfigField("String", "SUPABASE_URL", "\"${localProps["supabase.url"] ?: ""}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localProps["supabase.anonKey"] ?: ""}\"")
@@ -135,8 +144,9 @@ compose.desktop {
                 TargetFormat.AppImage
             )
             packageName = "ViviMusicDE"
-            // jpackage requires MAJOR >= 1, so the installer version starts at 1.0.0
-            // while the app SemVer (CHANGELOG) starts at 0.1.0.
+            // jpackage requires a numeric MAJOR >= 1 and no prerelease suffix,
+            // so the installer version is kept separate from the app SemVer in
+            // version.txt (currently 0.0.1-alpha).
             packageVersion = "1.0.0"
             description = "Vivi Music DE, desktop client for ViVi Music."
             vendor = "Vivi Music DE"

@@ -1,0 +1,185 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (leave empty to use version.txt)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  android:
+    name: Build Android APK
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build release APK
+        run: ./gradlew :composeApp:assembleRelease --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: composeApp/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+  desktop:
+    name: Package desktop (${{ matrix.name }})
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux
+          - os: windows-latest
+            name: windows
+          - os: macos-15-intel
+            name: macos-intel
+          - os: macos-15
+            name: macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      # JDK 17 is bundled into the installers, lowering the runtime floor to
+      # Windows 10+ and macOS 10.15+ (JDK 21 would require macOS 11+).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Package desktop distribution
+        run: ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p dist
+          case "${{ matrix.name }}" in
+            linux)
+              cp composeApp/build/compose/binaries/main/deb/*.deb dist/
+              find composeApp/build/compose/binaries/main -name '*.AppImage' -exec cp {} dist/ \;
+              ;;
+            windows)
+              cp composeApp/build/compose/binaries/main/msi/*.msi dist/
+              cp composeApp/build/compose/binaries/main/exe/*.exe dist/
+              ;;
+            macos-intel|macos-arm64)
+              for f in composeApp/build/compose/binaries/main/dmg/*.dmg; do
+                base="$(basename "$f" .dmg)"
+                cp "$f" "dist/${base}-${{ matrix.name }}.dmg"
+              done
+              ;;
+          esac
+          ls -la dist
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs:
+      - android
+      - desktop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Resolve version
+        id: version
+        shell: bash
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && -n "$VERSION_INPUT" ]]; then
+            VERSION="$VERSION_INPUT"
+          else
+            VERSION="$(cat version.txt | tr -d '\r\n' | xargs)"
+          fi
+          VERSION="${VERSION#v}"
+          VERSION="${VERSION// /-}"
+          if [[ "$VERSION" =~ -(alpha|beta|rc|pre)([.-]?[0-9]+)?$ ]]; then
+            PRERELEASE=true
+            CHANNEL="pre-release"
+          else
+            PRERELEASE=false
+            CHANNEL="stable"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "name=Vivi Music DE $VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION (prerelease: $PRERELEASE)"
+      - name: Extract changelog section
+        id: changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          SECTION=""
+          if [[ -f CHANGELOG.md ]]; then
+            SECTION="$(awk -v v="$VERSION" '
+              index($0, "## [" v "]") == 1 { found = 1; print; next }
+              found && /^## / { exit }
+              found { print }
+            ' CHANGELOG.md)"
+          fi
+          if [[ -z "$SECTION" ]]; then
+            SECTION="*No changelog entry found for version $VERSION.*"
+          fi
+          {
+            echo "section<<CHANGELOG_EOF"
+            echo "$SECTION"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          files: artifacts/*
+          fail_on_unmatched_files: true
+          body: |
+            ## Vivi Music DE ${{ steps.version.outputs.version }}
+            **Release channel:** `${{ steps.version.outputs.channel }}`
+            ${{ steps.changelog.outputs.section }}
+            ---
+            This release was built automatically from commit `${{ github.sha }}`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

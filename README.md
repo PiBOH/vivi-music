@@ -55,6 +55,19 @@ preferiti, cronologia) si sincronizzano in tempo reale tramite **Supabase**.
 ./gradlew build
 ```
 
+## Release automatico
+
+La versione canonica dell'app e in `version.txt` (formato SemVer, es.
+`0.0.1-alpha`).
+
+Per pubblicare una GitHub Release:
+1. Aggiorna `version.txt` e `CHANGELOG.md`.
+2. Commit e push con un messaggio che inizia con `v` (es. `v0.0.1-alpha: ...`),
+   oppure esegui manualmente il workflow `auto-release.yml`.
+
+Il workflow compila l'APK Android e gli installer desktop
+(Windows/macOS/Linux) e crea la release con gli artifact allegati.
+
 ## Configurazione Supabase
 
 1. Crea un progetto su [Supabase](https://supabase.com).

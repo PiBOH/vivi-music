@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-08-13
+## [0.0.1-alpha] - 2026-08-13
 
 ### Added
 - Progetto Kotlin Multiplatform iniziale con target Android e Desktop (JVM).

@@ -24,13 +24,13 @@ reale tramite **Supabase**.
 | Database      | Room KMP (`androidx.room3`), driver SQLite bundled                       |
 | Sincronizzaz. | Supabase (supabase-kt: PostgREST + Realtime + Auth)                     |
 | i18n          | Compose Multiplatform resources (`composeResources/**`)                 |
-| CI/CD         | GitHub Actions (`.github/workflows/ci.yml` e `cd.yml`)                  |
+| CI/CD         | GitHub Actions (`.github/workflows/ci.yml` e `auto-release.yml`)         |
 
 ### Struttura a moduli
 
 ```
 vivi-music-de/
-├── .github/workflows/          # ci.yml (CI) e cd.yml (CD)
+├── .github/workflows/          # ci.yml (CI) e auto-release.yml (release)
 ├── gradle/
 │   ├── libs.versions.toml      # version catalog
 │   └── wrapper/                # Gradle wrapper
@@ -103,8 +103,11 @@ Ogni incremento di versione deve seguire rigorosamente il **Semantic Versioning*
 - **MINOR**: nuove funzionalità retrocompatibili.
 - **PATCH**: correzioni di bug retrocompatibili.
 
-La versione è dichiarata in `composeApp/build.gradle.kts`
-(`defaultConfig.versionName` e `compose.desktop.application.nativeDistributions.packageVersion`).
+La versione canonica dell'app è dichiarata in `version.txt` alla radice del
+repository (formato SemVer, es. `0.0.1-alpha`). Il build la legge e la usa come
+`defaultConfig.versionName` su Android. Il `packageVersion` degli installer
+desktop è un valore numerico separato (jpackage richiede `MAJOR >= 1` e non
+accetta suffissi di prerelease).
 
 ## 5. Changelog (Keep a Changelog)
 
@@ -161,7 +164,8 @@ entry passate.
 
 ## 8. Build, test ed esecuzione
 
-Requisiti: JDK 21 (consigliato), Android SDK con platform 36 (per il target
+Requisiti: JDK 17+ (consigliato 17 per il packaging con massima compatibilità;
+Gradle 8.x non supporta JDK 25), Android SDK con platform 36 (per il target
 Android), connessione di rete per scaricare le dipendenze.
 
 ```bash
@@ -192,14 +196,27 @@ usare JDK 21 (es. `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hot
 - **CI** (`.github/workflows/ci.yml`): su ogni push a `main` e pull request
   compila il target Android (`assembleDebug`) e quello Desktop
   (`compileKotlinDesktop`) e carica l'APK di debug come artifact.
-- **CD** (`.github/workflows/cd.yml`): su ogni tag `v*` genera gli artifact
-  finali in una matrice di runner:
-  - `ubuntu-latest` / `windows-latest` / `macos-latest` -> installer desktop
-    (`packageDistributionForCurrentOS`);
-  - Android `assembleRelease` su `ubuntu-latest`.
+- **Auto Release** (`.github/workflows/auto-release.yml`): crea una GitHub
+  Release automatica. Si attiva su:
+  - un push a `main` il cui messaggio di commit inizia con `v` (es.
+    `v0.0.1-alpha: ...`), oppure
+  - `workflow_dispatch` manuale (con versione opzionale).
+  La versione è letta da `version.txt`; la sezione di `CHANGELOG.md`
+  corrispondente è usata come note di rilascio. Il workflow compila:
+  - Android `assembleRelease` (APK) su `ubuntu-latest` (JDK 21);
+  - gli installer desktop con JDK 17 in matrice `ubuntu-latest`,
+    `windows-latest`, `macos-15-intel` e `macos-15` (dual-arch macOS).
+  Gli artifact sono allegati alla release (tag = versione senza prefisso `v`).
 - Per il rilascio firmato dell'APK e per il packaging MSI su Windows (che
   richiede WiX) consultare la documentazione e aggiungere i segreti/strumenti
   necessari.
+
+### Rilasciare una nuova versione
+
+1. Aggiornare `version.txt` con la nuova versione SemVer.
+2. Aggiornare `CHANGELOG.md` con la sezione `## [VERSIONE] - YYYY-MM-DD`.
+3. Commit con messaggio che inizia con `v` ed eseguire push:
+   `git commit -m "v$(cat version.txt): descrizione" && git push`.
 
 ## 10. Definizione di "Done"
 
@@ -209,5 +226,5 @@ Un task è completo solo quando:
 2. non sono state introdotte emoji nel codice/risorse/workflow;
 3. non è stato rifattorizzato codice stabile senza necessità;
 4. `CHANGELOG.md` è aggiornato (sezione corretta) quando la modifica è rilevante;
-5. la versione in `composeApp/build.gradle.kts` rispetta SemVer se è cambiato
-   il comportamento dell'app.
+5. `version.txt` e `CHANGELOG.md` rispettano SemVer/Keep a Changelog se è
+   cambiato il comportamento dell'app.
