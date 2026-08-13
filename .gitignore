@@ -3,6 +3,8 @@ build/
 */build/
 local.properties
 .idea/
+.ignore/
+/.ignore/
 *.iml
 .kotlin/
 .DS_Store

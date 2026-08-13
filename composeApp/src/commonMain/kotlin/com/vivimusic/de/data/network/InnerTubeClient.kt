@@ -78,6 +78,28 @@ class InnerTubeClient(
         }.flatten()
     }
 
+    /**
+     * Live autocomplete suggestions from the `music/get_search_suggestions`
+     * endpoint, returned as plain query strings.
+     */
+    suspend fun getSearchSuggestions(query: String): List<String> {
+        val response = call("music/get_search_suggestions", bodyWith("input" to JsonPrimitive(query)))
+        val contents = response["contents"] as? JsonArray ?: return emptyList()
+        val sectionRenderer = (contents.firstOrNull() as? JsonObject)
+            ?.get("searchSuggestionsSectionRenderer") as? JsonObject
+            ?: return emptyList()
+        val items = sectionRenderer["contents"] as? JsonArray ?: return emptyList()
+        return items.mapNotNull { item ->
+            val renderer = (item as? JsonObject)?.get("searchSuggestionRenderer") as? JsonObject
+                ?: return@mapNotNull null
+            val suggestion = renderer["suggestion"] as? JsonObject ?: return@mapNotNull null
+            val text = ((suggestion["runs"] as? JsonArray)
+                ?.mapNotNull { (it as? JsonObject)?.str("text") }
+                ?: emptyList()).joinToString(separator = "")
+            if (text.isBlank()) null else text
+        }
+    }
+
     suspend fun getHome(): List<HomeSection> {
         val response = call("browse", bodyWith("browseId" to JsonPrimitive("FEmusic_home")))
         val sections = response.sectionListRendererContents() ?: return emptyList()

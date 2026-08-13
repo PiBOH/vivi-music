@@ -3,6 +3,7 @@ package com.vivimusic.de.data
 import com.vivimusic.de.data.db.AppDatabase
 import com.vivimusic.de.data.db.FavoriteEntity
 import com.vivimusic.de.data.db.HistoryEntity
+import com.vivimusic.de.data.db.SearchHistoryEntity
 import com.vivimusic.de.data.db.SongEntity
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.sync.SyncManager
@@ -28,6 +29,8 @@ class MusicRepository(
     // ----- remote catalog -----
 
     suspend fun search(query: String): List<Song> = innerTube.search(query)
+
+    suspend fun searchSuggestions(query: String): List<String> = innerTube.getSearchSuggestions(query)
 
     suspend fun home(): List<HomeSection> = innerTube.getHome()
 
@@ -97,6 +100,25 @@ class MusicRepository(
             db.playlistDao().deletePlaylist(id)
             db.playlistSongDao().deleteByPlaylist(id)
             syncManager.afterLocalChange()
+        }
+    }
+
+    // ----- search history -----
+
+    fun observeSearchHistory(): Flow<List<String>> =
+        db.searchHistoryDao().observeSearchHistory().map { list -> list.map { it.query } }
+
+    fun addSearchHistory(query: String) {
+        scope.launch {
+            db.searchHistoryDao().insert(
+                SearchHistoryEntity(query = query, searchedAtEpochMs = nowEpochMillis())
+            )
+        }
+    }
+
+    fun deleteSearchHistory(query: String) {
+        scope.launch {
+            db.searchHistoryDao().delete(query)
         }
     }
 

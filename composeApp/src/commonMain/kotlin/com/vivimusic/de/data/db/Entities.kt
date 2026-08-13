@@ -44,6 +44,12 @@ data class HistoryEntity(
     val playedAtEpochMs: Long,
 )
 
+@Entity(tableName = "search_history")
+data class SearchHistoryEntity(
+    @PrimaryKey val query: String,
+    val searchedAtEpochMs: Long,
+)
+
 @Entity(tableName = "sync_state")
 data class SyncStateEntity(
     @PrimaryKey val entityType: String,

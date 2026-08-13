@@ -15,6 +15,10 @@
     <string name="filter_albums">Albums</string>
     <string name="filter_artists">Artists</string>
     <string name="search_placeholder">Search songs, artists, albums</string>
+    <string name="search_history">Search history</string>
+    <string name="suggestions">Suggestions</string>
+    <string name="top_result">Top result</string>
+    <string name="empty_search">No results</string>
     <string name="settings_language">App language</string>
     <string name="system_language">System default</string>
     <string name="playing_now">Now playing</string>

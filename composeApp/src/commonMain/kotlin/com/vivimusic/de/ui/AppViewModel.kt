@@ -8,6 +8,8 @@ import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,8 +44,16 @@ class AppViewModel(
     private val _searchResults = MutableStateFlow<List<Song>>(emptyList())
     val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
 
+    private val _searchSuggestions = MutableStateFlow<List<String>>(emptyList())
+    val searchSuggestions: StateFlow<List<String>> = _searchSuggestions.asStateFlow()
+
+    val searchHistory: StateFlow<List<String>> =
+        repository.observeSearchHistory().stateIn(scope, SharingStarted.Eagerly, emptyList())
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private var searchJob: Job? = null
 
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -73,16 +83,36 @@ class AppViewModel(
 
     fun onQueryChange(query: String) {
         _searchQuery.value = query
+        searchJob?.cancel()
         if (query.isBlank()) {
             _searchResults.value = emptyList()
+            _searchSuggestions.value = emptyList()
             return
         }
-        scope.launch {
+        searchJob = scope.launch {
+            // Debounce live suggestions/results while the user is typing.
+            delay(300)
+            _loading.value = true
+            _searchSuggestions.value = repository.searchSuggestions(query)
+            _searchResults.value = repository.search(query)
+            _loading.value = false
+        }
+    }
+
+    /** Submits a search (records history and runs the full search). */
+    fun submitSearch(query: String) {
+        if (query.isBlank()) return
+        _searchQuery.value = query
+        repository.addSearchHistory(query)
+        searchJob?.cancel()
+        searchJob = scope.launch {
             _loading.value = true
             _searchResults.value = repository.search(query)
             _loading.value = false
         }
     }
+
+    fun deleteSearchHistory(query: String) = repository.deleteSearchHistory(query)
 
     fun play(song: Song) {
         scope.launch {

@@ -81,6 +81,9 @@ inventing new styles:
 - Library: a scrolling filter chip row (`ui/Components.kt` `ChipsRow`, ported
   1:1 from upstream) toggles Playlists / Songs / Albums / Artists; tapping the
   active chip deselects it and returns to the combined "mix" view.
+- Search: a search field with live autocomplete suggestions (InnerTube
+  `get_search_suggestions`), persistent search history (Room `search_history`
+  table) and a grouped results list, matching upstream `OnlineSearchScreen`.
 
 When porting a screen, read the corresponding file under the upstream
 `app/src/main/kotlin/com/music/vivi/ui/` and replicate its layout, spacing,

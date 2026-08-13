@@ -104,3 +104,15 @@ interface SyncStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(state: SyncStateEntity)
 }
+
+@Dao
+interface SearchHistoryDao {
+    @Query("SELECT * FROM search_history ORDER BY searchedAtEpochMs DESC")
+    fun observeSearchHistory(): Flow<List<SearchHistoryEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entry: SearchHistoryEntity)
+
+    @Query("DELETE FROM search_history WHERE query = :query")
+    suspend fun delete(query: String)
+}

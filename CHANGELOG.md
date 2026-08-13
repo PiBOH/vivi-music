@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   player with artwork, title/artist, seek bar and shuffle/previous/play/next/
   repeat controls. Audio playback is not wired yet, so the controls are visual
   placeholders.
+- Search screen ported to match ViVi Music's OnlineSearchScreen: live
+  autocomplete suggestions from InnerTube (`get_search_suggestions`),
+  persistent search history (new Room table), and a grouped results list.
+- Original pixel-art Axolotl mascot (splash screen, About section, and desktop
+  app icons for Windows/macOS/Linux).
+- Material 3 Expressive design system ported from ViVi Music: seed color
+  (`0xFFED5564`) with materialKolor (SPEC 2025 + TonalSpot), the M3 Expressive
+  type scale, grouped list-item shapes, and the mobile bottom navigation
+  (Home / Search / Listen Together / Library) with a mini player.
 
 ### Changed
 - Home screen ported to match ViVi Music: the home feed is parsed into sections
@@ -23,23 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per-filter views plus a combined "mix" view. Albums and artists are derived
   from the local favorites until dedicated library tables are added.
 
-### Security
-- Remove the hardcoded InnerTube (YouTube Music) API key from the source; it is
-  now provided via the `INNERTUBE_API_KEY` environment variable (GitHub secret
-  for releases) or a git-ignored `.env` file.
-
 ### Fixed
 - Windows installer: add a Start Menu entry and desktop shortcut
   (`menu = true`, `shortcut = true`) and a stable `upgradeUuid`, so the app is
   discoverable and upgradable after install.
 
-### Added
-- Original pixel-art Axolotl mascot (splash screen, About section, and desktop
-  app icons for Windows/macOS/Linux).
-- Material 3 Expressive design system ported from ViVi Music: seed color
-  (`0xFFED5564`) with materialKolor (SPEC 2025 + TonalSpot), the M3 Expressive
-  type scale, grouped list-item shapes, and the mobile bottom navigation
-  (Home / Search / Listen Together / Library) with a mini player.
+### Security
+- Remove the hardcoded InnerTube (YouTube Music) API key from the source; it is
+  now provided via the `INNERTUBE_API_KEY` environment variable (GitHub secret
+  for releases) or a git-ignored `.env` file.
 
 ## [0.0.1-alpha] - 2026-08-13
 

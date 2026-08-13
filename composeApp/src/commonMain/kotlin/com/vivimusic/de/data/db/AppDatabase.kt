@@ -14,9 +14,10 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
         PlaylistSongEntity::class,
         FavoriteEntity::class,
         HistoryEntity::class,
+        SearchHistoryEntity::class,
         SyncStateEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -26,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun playlistSongDao(): PlaylistSongDao
     abstract fun favoriteDao(): FavoriteDao
     abstract fun historyDao(): HistoryDao
+    abstract fun searchHistoryDao(): SearchHistoryDao
     abstract fun syncStateDao(): SyncStateDao
 }
 
@@ -46,8 +48,13 @@ expect fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase>
 /**
  * Builds the database using the bundled SQLite driver, which guarantees a
  * consistent SQLite version across platforms.
+ *
+ * `fallbackToDestructiveMigration` is acceptable while the app is pre-1.0:
+ * there is no migration chain yet, so schema bumps recreate the local database
+ * instead of failing to open it.
  */
 fun getRoomDatabase(): AppDatabase =
     getDatabaseBuilder()
         .setDriver(BundledSQLiteDriver())
+        .fallbackToDestructiveMigration()
         .build()
