@@ -31,8 +31,8 @@ Install Inno Setup 6 and run the Gradle packaging task first:
 ```powershell
 ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
 & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
-  /DAppVersion=0.14.0-alpha `
-  /DInstallerVersion=1.14.0 `
+  /DAppVersion=0.14.1-alpha `
+  /DInstallerVersion=1.14.1 `
   /DSourceDir="$PWD\composeApp\build\compose\binaries\main\app" `
   /DOutputDir="$PWD\dist-custom" `
   /DLogoFile="$PWD\logo.png" `

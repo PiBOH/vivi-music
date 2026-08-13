@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1-alpha] - 2026-08-13
+
+### Added
+- Added a dedicated Updates setting to remove downloaded Windows, macOS and
+  Linux installer files from the app-managed update directory.
+- Cleanup reports whether files were removed, no files were present, or an
+  installer was still in use.
+
 ## [0.14.0-alpha] - 2026-08-13
 
 ### Added

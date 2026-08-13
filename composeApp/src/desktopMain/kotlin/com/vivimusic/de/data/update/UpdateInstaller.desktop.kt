@@ -3,6 +3,9 @@ package com.vivimusic.de.data.update
 import java.awt.Desktop
 import java.io.File
 
+private fun updatesDirectory(): File =
+    File(System.getProperty("user.home"), ".vivi-music-de/updates")
+
 actual fun updateAssetSuffixes(): List<String> {
     val osName = System.getProperty("os.name").orEmpty().lowercase()
     return when {
@@ -13,7 +16,7 @@ actual fun updateAssetSuffixes(): List<String> {
 }
 
 actual fun saveAndLaunchUpdate(fileName: String, bytes: ByteArray): String {
-    val updateDirectory = File(System.getProperty("user.home"), ".vivi-music-de/updates")
+    val updateDirectory = updatesDirectory()
     updateDirectory.mkdirs()
     val destination = File(updateDirectory, File(fileName).name)
     destination.writeBytes(bytes)
@@ -42,4 +45,19 @@ actual fun saveAndLaunchUpdate(fileName: String, bytes: ByteArray): String {
         else -> error("The downloaded update cannot be launched on this desktop")
     }
     return destination.absolutePath
+}
+
+actual fun cleanupDownloadedUpdates(): UpdateCleanupResult {
+    val directory = updatesDirectory()
+    if (!directory.isDirectory) return UpdateCleanupResult(deletedFiles = 0, failedFiles = 0)
+
+    // This directory is owned exclusively by the updater. Only direct files
+    // are removed; settings, sessions and database files live elsewhere.
+    val files = directory.listFiles().orEmpty().filter { it.isFile }
+    var deleted = 0
+    var failed = 0
+    files.forEach { file ->
+        if (file.delete()) deleted++ else failed++
+    }
+    return UpdateCleanupResult(deletedFiles = deleted, failedFiles = failed)
 }

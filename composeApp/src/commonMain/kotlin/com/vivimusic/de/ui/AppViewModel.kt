@@ -17,8 +17,10 @@ import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.data.sync.SyncStatus
 import com.vivimusic.de.data.update.AppRelease
 import com.vivimusic.de.data.update.UpdateChecker
+import com.vivimusic.de.data.update.UpdateCleanupState
 import com.vivimusic.de.data.update.UpdateDownloadState
 import com.vivimusic.de.data.update.UpdateStatus
+import com.vivimusic.de.data.update.cleanupDownloadedUpdates as cleanupUpdateFiles
 import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
@@ -190,6 +192,9 @@ class AppViewModel(
     private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
     val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
 
+    private val _updateCleanupState = MutableStateFlow<UpdateCleanupState>(UpdateCleanupState.Idle)
+    val updateCleanupState: StateFlow<UpdateCleanupState> = _updateCleanupState.asStateFlow()
+
     /**
      * Kicks off the initial (network) work. Called after the first frame is
      * composed so the window opens instantly instead of competing with these
@@ -228,6 +233,18 @@ class AppViewModel(
 
     fun resetUpdateDownloadState() {
         _updateDownloadState.value = UpdateDownloadState.Idle
+    }
+
+    fun cleanupDownloadedUpdates() {
+        if (_updateCleanupState.value is UpdateCleanupState.Cleaning) return
+        scope.launch {
+            _updateCleanupState.value = UpdateCleanupState.Cleaning
+            _updateCleanupState.value = try {
+                UpdateCleanupState.Completed(cleanupUpdateFiles())
+            } catch (t: Throwable) {
+                UpdateCleanupState.Error(fullErrorDetails("Update cleanup failed", t))
+            }
+        }
     }
 
     /** Fetches the raw Keep-a-Changelog markdown from the repository. */

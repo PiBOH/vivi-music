@@ -62,6 +62,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Storage (clear search/history).
 - [x] Updates (pre-releases + manual check).
 - [x] In-app update download with automatic Windows/macOS/Linux asset selection.
+- [x] Manual cleanup of downloaded update installers from the Updates settings.
 - [x] Branded Windows setup with optional shortcuts, clean install, taskbar and post-install launch.
 - [x] About (mascot, version, source link).
 

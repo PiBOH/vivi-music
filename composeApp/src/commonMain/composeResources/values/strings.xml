@@ -58,6 +58,12 @@
     <string name="update_download_error">Could not download the update:</string>
     <string name="update_dismiss">Later</string>
     <string name="update_check_now">Check for updates</string>
+    <string name="update_cleanup_downloads">Clean downloaded update files</string>
+    <string name="update_cleanup_in_progress">Cleaning downloaded update files…</string>
+    <string name="update_cleanup_done">Downloaded update files removed.</string>
+    <string name="update_cleanup_none">No downloaded update files found.</string>
+    <string name="update_cleanup_partial">Some update files could not be removed. Close any running installer and try again.</string>
+    <string name="update_cleanup_error">Could not clean downloaded update files:</string>
     <string name="update_up_to_date">You are up to date</string>
     <string name="songs">Songs</string>
     <string name="top_songs">Top songs</string>

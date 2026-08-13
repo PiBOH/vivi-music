@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vivimusic.de.resources.*
+import com.vivimusic.de.data.update.UpdateCleanupState
 import com.vivimusic.de.data.update.UpdateDownloadState
 import com.vivimusic.de.ui.AppViewModel
 import org.jetbrains.compose.resources.stringResource
@@ -28,6 +29,7 @@ fun UpdateSettings(viewModel: AppViewModel, onBack: () -> Unit) {
     val checkPrereleases by viewModel.checkPrereleases.collectAsState()
     val updateStatus by viewModel.updateStatus.collectAsState()
     val downloadState by viewModel.updateDownloadState.collectAsState()
+    val cleanupState by viewModel.updateCleanupState.collectAsState()
 
     SettingsPage(
         title = stringResource(Res.string.update_settings),
@@ -43,6 +45,41 @@ fun UpdateSettings(viewModel: AppViewModel, onBack: () -> Unit) {
             SettingsItem(
                 title = stringResource(Res.string.update_check_now),
                 onClick = viewModel::checkForUpdates,
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.update_cleanup_downloads),
+                onClick = viewModel::cleanupDownloadedUpdates,
+            )
+        }
+
+        when (val state = cleanupState) {
+            UpdateCleanupState.Idle -> Unit
+            UpdateCleanupState.Cleaning -> Text(
+                text = stringResource(Res.string.update_cleanup_in_progress),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+            is UpdateCleanupState.Completed -> Text(
+                text = when {
+                    state.result.failedFiles > 0 -> stringResource(Res.string.update_cleanup_partial)
+                    state.result.deletedFiles > 0 -> stringResource(Res.string.update_cleanup_done)
+                    else -> stringResource(Res.string.update_cleanup_none)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (state.result.failedFiles > 0) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+            is UpdateCleanupState.Error -> Text(
+                text = "${stringResource(Res.string.update_cleanup_error)} ${state.message}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
             )
         }
 

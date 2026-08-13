@@ -47,6 +47,18 @@ sealed interface UpdateDownloadState {
     data class Error(val message: String) : UpdateDownloadState
 }
 
+data class UpdateCleanupResult(
+    val deletedFiles: Int,
+    val failedFiles: Int,
+)
+
+sealed interface UpdateCleanupState {
+    data object Idle : UpdateCleanupState
+    data object Cleaning : UpdateCleanupState
+    data class Completed(val result: UpdateCleanupResult) : UpdateCleanupState
+    data class Error(val message: String) : UpdateCleanupState
+}
+
 /**
  * Checks the GitHub Releases API for the latest release and compares it against
  * [AppConfig.appVersion] using SemVer.
@@ -129,6 +141,9 @@ expect fun updateAssetSuffixes(): List<String>
 
 /** Saves the downloaded asset and starts the native installer/launcher. */
 expect fun saveAndLaunchUpdate(fileName: String, bytes: ByteArray): String
+
+/** Deletes update installers stored in the app-managed update directory. */
+expect fun cleanupDownloadedUpdates(): UpdateCleanupResult
 
 // ----- SemVer comparison -----
 
