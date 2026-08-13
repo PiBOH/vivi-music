@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Home screen ported to match ViVi Music: the home feed is parsed into sections
   with titles and rendered as section headers + horizontal card carousels with
   thumbnails (Coil 3).
+- Library screen ported to match ViVi Music: a horizontally scrolling filter
+  chip row (Playlists / Songs / Albums / Artists, with toggle-to-deselect) and
+  per-filter views plus a combined "mix" view. Albums and artists are derived
+  from the local favorites until dedicated library tables are added.
 
 ### Security
 - Remove the hardcoded InnerTube (YouTube Music) API key from the source; it is

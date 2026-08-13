@@ -1,19 +1,23 @@
 package com.vivimusic.de.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,39 +28,170 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.Playlist
+import com.vivimusic.de.domain.Song
 import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.AppViewModel
-import com.vivimusic.de.ui.SongList
+import com.vivimusic.de.ui.ChipsRow
+import com.vivimusic.de.ui.EmptyState
+import com.vivimusic.de.ui.SongRow
+import com.vivimusic.de.ui.theme.groupedItemShape
+import com.vivimusic.de.ui.theme.listItemColors
 import org.jetbrains.compose.resources.stringResource
 
-@Composable
-fun LibraryScreen(viewModel: AppViewModel) {
-    val favorites by viewModel.favorites.collectAsState()
-    val history by viewModel.history.collectAsState()
-    val playlists by viewModel.playlists.collectAsState()
-    var tab by remember { mutableStateOf(0) }
+private val ThumbnailCornerRadius = 6.dp
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        SecondaryTabRow(selectedTabIndex = tab) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(Res.string.nav_favorites)) })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(Res.string.nav_history)) })
-            Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text(stringResource(Res.string.nav_playlists)) })
-        }
-        when (tab) {
-            0 -> SongList(favorites, viewModel, Res.string.empty_favorites)
-            1 -> SongList(history, viewModel, Res.string.empty_history)
-            2 -> PlaylistsSection(playlists, viewModel)
-        }
+/** The four Library views, mirroring ViVi Music's `LibraryFilter`. */
+private enum class LibraryFilter { PLAYLISTS, SONGS, ALBUMS, ARTISTS }
+
+/** A single row in the combined "mix" view, which is a flat list like upstream. */
+private sealed interface LibraryRow {
+    val id: String
+
+    data class PlaylistEntry(val value: Playlist) : LibraryRow {
+        override val id: String get() = "pl-${value.id}"
+    }
+
+    data class AlbumEntry(val value: Album) : LibraryRow {
+        override val id: String get() = "al-${value.id}"
+    }
+
+    data class ArtistEntry(val value: Artist) : LibraryRow {
+        override val id: String get() = "ar-${value.id}"
+    }
+
+    data class SongEntry(val value: Song) : LibraryRow {
+        override val id: String get() = "sg-${value.id}"
     }
 }
 
 @Composable
-private fun PlaylistsSection(playlists: List<Playlist>, viewModel: AppViewModel) {
+fun LibraryScreen(viewModel: AppViewModel) {
+    val favorites by viewModel.favorites.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
+    var filter by remember { mutableStateOf<LibraryFilter?>(null) }
+
+    val albums = remember(favorites) { deriveAlbums(favorites) }
+    val artists = remember(favorites) { deriveArtists(favorites) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        ChipsRow(
+            chips = listOf(
+                LibraryFilter.PLAYLISTS to stringResource(Res.string.filter_playlists),
+                LibraryFilter.SONGS to stringResource(Res.string.filter_songs),
+                LibraryFilter.ALBUMS to stringResource(Res.string.filter_albums),
+                LibraryFilter.ARTISTS to stringResource(Res.string.filter_artists),
+            ),
+            currentValue = filter,
+            onValueUpdate = { selected ->
+                // Tapping the active chip deselects it and returns to the mix view.
+                filter = if (filter == selected) null else selected
+            },
+        )
+
+        when (filter) {
+            null -> LibraryMix(playlists, albums, artists, favorites, viewModel)
+            LibraryFilter.PLAYLISTS -> PlaylistsView(playlists, viewModel)
+            LibraryFilter.SONGS -> SongList(favorites, viewModel)
+            LibraryFilter.ALBUMS -> AlbumsView(albums)
+            LibraryFilter.ARTISTS -> ArtistsView(artists)
+        }
+    }
+}
+
+// ----- data derivation (albums/artists are not stored separately yet) -----
+
+private fun deriveAlbums(songs: List<Song>): List<Album> =
+    songs.filter { it.album.isNotBlank() }
+        .groupBy { it.album }
+        .map { (name, group) ->
+            Album(
+                id = "album-$name",
+                title = name,
+                artist = group.first().artist,
+                thumbnailUrl = group.first().thumbnailUrl,
+            )
+        }
+
+private fun deriveArtists(songs: List<Song>): List<Artist> =
+    songs.filter { it.artist.isNotBlank() }
+        .groupBy { it.artist }
+        .map { (name, group) ->
+            Artist(
+                id = "artist-$name",
+                name = name,
+                thumbnailUrl = group.first().thumbnailUrl,
+            )
+        }
+
+// ----- mixed view (default) -----
+
+@Composable
+private fun LibraryMix(
+    playlists: List<Playlist>,
+    albums: List<Album>,
+    artists: List<Artist>,
+    songs: List<Song>,
+    viewModel: AppViewModel,
+) {
+    val rows = remember(playlists, albums, artists, songs) {
+        buildList {
+            playlists.forEach { add(LibraryRow.PlaylistEntry(it)) }
+            albums.forEach { add(LibraryRow.AlbumEntry(it)) }
+            artists.forEach { add(LibraryRow.ArtistEntry(it)) }
+            songs.forEach { add(LibraryRow.SongEntry(it)) }
+        }
+    }
+
+    if (rows.isEmpty()) {
+        EmptyState(Res.string.empty_library)
+        return
+    }
+
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(rows, key = { _, row -> row.id }) { index, row ->
+            when (row) {
+                is LibraryRow.PlaylistEntry -> PlaylistRow(
+                    playlist = row.value,
+                    viewModel = viewModel,
+                    shape = groupedItemShape(index, rows.size),
+                )
+
+                is LibraryRow.AlbumEntry -> AlbumRow(
+                    album = row.value,
+                    shape = groupedItemShape(index, rows.size),
+                )
+
+                is LibraryRow.ArtistEntry -> ArtistRow(
+                    artist = row.value,
+                    shape = groupedItemShape(index, rows.size),
+                )
+
+                is LibraryRow.SongEntry -> SongRow(
+                    song = row.value,
+                    viewModel = viewModel,
+                    shape = groupedItemShape(index, rows.size),
+                )
+            }
+        }
+    }
+}
+
+// ----- playlists view -----
+
+@Composable
+private fun PlaylistsView(playlists: List<Playlist>, viewModel: AppViewModel) {
     var name by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = name,
@@ -65,7 +200,7 @@ private fun PlaylistsSection(playlists: List<Playlist>, viewModel: AppViewModel)
                 modifier = Modifier.weight(1f),
                 singleLine = true,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = {
                     viewModel.createPlaylist(name.trim())
@@ -75,23 +210,128 @@ private fun PlaylistsSection(playlists: List<Playlist>, viewModel: AppViewModel)
                 Text(stringResource(Res.string.new_playlist))
             }
         }
+
         if (playlists.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(Res.string.empty_playlists))
-            }
+            EmptyState(Res.string.empty_playlists)
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(playlists, key = { it.id }) { playlist ->
-                    ListItem(
-                        headlineContent = { Text(playlist.name) },
-                        trailingContent = {
-                            TextButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
-                                Text(stringResource(Res.string.delete))
-                            }
-                        },
+                itemsIndexed(playlists, key = { _, it -> it.id }) { index, playlist ->
+                    PlaylistRow(
+                        playlist = playlist,
+                        viewModel = viewModel,
+                        shape = groupedItemShape(index, playlists.size),
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistRow(playlist: Playlist, viewModel: AppViewModel, shape: androidx.compose.ui.graphics.Shape) {
+    ListItem(
+        headlineContent = { Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingContent = { Thumbnail(playlist.thumbnailUrl) },
+        trailingContent = {
+            TextButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
+                Text(stringResource(Res.string.delete))
+            }
+        },
+        colors = listItemColors(),
+        modifier = Modifier.clip(shape),
+    )
+}
+
+// ----- songs view -----
+
+@Composable
+private fun SongList(songs: List<Song>, viewModel: AppViewModel) {
+    if (songs.isEmpty()) {
+        EmptyState(Res.string.empty_favorites)
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+            SongRow(song, viewModel, shape = groupedItemShape(index, songs.size))
+        }
+    }
+}
+
+// ----- albums view -----
+
+@Composable
+private fun AlbumsView(albums: List<Album>) {
+    if (albums.isEmpty()) {
+        EmptyState(Res.string.empty_albums)
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(albums, key = { _, album -> album.id }) { index, album ->
+            AlbumRow(album, shape = groupedItemShape(index, albums.size))
+        }
+    }
+}
+
+@Composable
+private fun AlbumRow(album: Album, shape: androidx.compose.ui.graphics.Shape) {
+    ListItem(
+        headlineContent = { Text(album.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                album.artist.ifBlank { stringResource(Res.string.unknown_artist) },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingContent = { Thumbnail(album.thumbnailUrl) },
+        colors = listItemColors(),
+        modifier = Modifier.clip(shape),
+    )
+}
+
+// ----- artists view -----
+
+@Composable
+private fun ArtistsView(artists: List<Artist>) {
+    if (artists.isEmpty()) {
+        EmptyState(Res.string.empty_artists)
+        return
+    }
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(artists, key = { _, artist -> artist.id }) { index, artist ->
+            ArtistRow(artist, shape = groupedItemShape(index, artists.size))
+        }
+    }
+}
+
+@Composable
+private fun ArtistRow(artist: Artist, shape: androidx.compose.ui.graphics.Shape) {
+    ListItem(
+        headlineContent = { Text(artist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingContent = { Thumbnail(artist.thumbnailUrl, circular = true) },
+        colors = listItemColors(),
+        modifier = Modifier.clip(shape),
+    )
+}
+
+// ----- shared thumbnail -----
+
+@Composable
+private fun Thumbnail(url: String?, size: Dp = 48.dp, circular: Boolean = false) {
+    val shape = if (circular) CircleShape else RoundedCornerShape(ThumbnailCornerRadius)
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        if (!url.isNullOrBlank()) {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }

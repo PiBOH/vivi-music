@@ -78,6 +78,9 @@ inventing new styles:
 - Navigation: bottom `NavigationBar` (Home / Search / Listen Together /
   Library) + a mini player above it (tap to expand the full player with
   artwork, seek bar and controls); Settings is a top-bar action.
+- Library: a scrolling filter chip row (`ui/Components.kt` `ChipsRow`, ported
+  1:1 from upstream) toggles Playlists / Songs / Albums / Artists; tapping the
+  active chip deselects it and returns to the combined "mix" view.
 
 When porting a screen, read the corresponding file under the upstream
 `app/src/main/kotlin/com/music/vivi/ui/` and replicate its layout, spacing,

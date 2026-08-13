@@ -10,6 +10,10 @@
     <string name="nav_favorites">Favorites</string>
     <string name="nav_history">History</string>
     <string name="nav_playlists">Playlists</string>
+    <string name="filter_playlists">Playlists</string>
+    <string name="filter_songs">Songs</string>
+    <string name="filter_albums">Albums</string>
+    <string name="filter_artists">Artists</string>
     <string name="search_placeholder">Search songs, artists, albums</string>
     <string name="settings_language">App language</string>
     <string name="system_language">System default</string>
@@ -25,6 +29,9 @@
     <string name="empty_playlists">No playlists yet</string>
     <string name="empty_favorites">No favorites yet</string>
     <string name="empty_history">No history yet</string>
+    <string name="empty_albums">No albums yet</string>
+    <string name="empty_artists">No artists yet</string>
+    <string name="empty_library">Your library is empty</string>
     <string name="unknown_artist">Unknown artist</string>
     <string name="favorite_add">Save</string>
     <string name="favorite_remove">Remove</string>
