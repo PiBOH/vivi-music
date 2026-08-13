@@ -1,11 +1,17 @@
 package com.vivimusic.de.data.sync
 
 import com.vivimusic.de.data.AppConfig
+import com.vivimusic.de.data.clearSessionJson
+import com.vivimusic.de.data.loadSessionJson
 import com.vivimusic.de.data.network.sharedJson
+import com.vivimusic.de.data.saveSessionJson
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.SessionManager
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.auth.user.UserSession
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
@@ -15,6 +21,9 @@ import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
@@ -32,7 +41,14 @@ class SupabaseSyncClient private constructor(
                 supabaseUrl = AppConfig.supabaseUrl,
                 supabaseKey = AppConfig.supabaseAnonKey,
             ) {
-                install(Auth)
+                install(Auth) {
+                    // Persist the session to disk so the user stays signed in
+                    // across restarts: auto-saved on sign-in/refresh, restored
+                    // on startup, cleared on sign-out.
+                    sessionManager = FileSessionManager(json)
+                    autoLoadFromStorage = true
+                    autoSaveToStorage = true
+                }
                 install(Postgrest)
                 install(Realtime)
             }
@@ -60,9 +76,22 @@ class SupabaseSyncClient private constructor(
         client.auth.signOut()
     }
 
-    suspend fun currentUserId(): String? = client.auth.currentUserOrNull()?.id
+    suspend fun currentUserId(): String? {
+        awaitInitialized()
+        return client.auth.currentUserOrNull()?.id
+    }
 
-    suspend fun currentEmail(): String? = client.auth.currentUserOrNull()?.email
+    suspend fun currentEmail(): String? {
+        awaitInitialized()
+        return client.auth.currentUserOrNull()?.email
+    }
+
+    /** Waits for the Auth plugin to finish restoring the stored session. */
+    private suspend fun awaitInitialized() {
+        if (client.auth.sessionStatus.value == SessionStatus.Initializing) {
+            client.auth.sessionStatus.first { it != SessionStatus.Initializing }
+        }
+    }
 
     // ----- pull -----
 
@@ -143,5 +172,26 @@ class SupabaseSyncClient private constructor(
             this.table = table
             filter("user_id", FilterOperator.EQ, userId)
         }
+    }
+}
+
+/**
+ * Persists the auth session as JSON on disk (see the `SessionStore`
+ * expect/actual). The Auth plugin drives it automatically: save on
+ * sign-in/refresh, load on startup, delete on sign-out.
+ */
+private class FileSessionManager(private val json: Json) : SessionManager {
+    override suspend fun loadSession(): UserSession {
+        val stored = loadSessionJson()
+            ?: throw IllegalStateException("No stored session")
+        return json.decodeFromString<UserSession>(stored)
+    }
+
+    override suspend fun saveSession(session: UserSession) {
+        saveSessionJson(json.encodeToString(session))
+    }
+
+    override suspend fun deleteSession() {
+        clearSessionJson()
     }
 }

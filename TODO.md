@@ -33,7 +33,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Login screen (desktop-adapted).
 - [x] Account screen (profile, sign in/out, sync status).
 - [x] Activity history screen (listening statistics).
-- [ ] Persistent session across restarts (file-backed session storage).
+- [x] Persistent session across restarts (file-backed session storage).
 - [ ] Real Listen Together (currently a placeholder).
 
 ## Phase 4 — Player screens + playback controls
