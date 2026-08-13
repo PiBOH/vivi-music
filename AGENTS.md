@@ -91,12 +91,14 @@ colors and components.
 
 ### Mascot and app logo
 
-The mascot is an original pixel-art blue Axolotl, rendered in-app (splash
-screen and About section) from the grid in `ui/Axolotl.kt` (`AXOLOTL_PIXELS`).
-The desktop app icons are generated from `logo.png` (repository root) by
-`tools/generate_icons.py`, which outputs `composeApp/icons/icon.png` (Linux),
-`icon.ico` (Windows) and `icon.icns` (macOS). After changing `logo.png`,
-re-run `python3 tools/generate_icons.py`.
+The mascot is the Axolotl logo (`logo.png` in the repository root). It is
+rendered in-app (splash screen and About section) from the bundled resource
+`composeResources/drawable/logo.png` via `ui/Axolotl.kt`. The desktop app
+icons are generated from the same `logo.png` by `tools/generate_icons.py`,
+which outputs `composeApp/icons/icon.png` (Linux), `icon.ico` (Windows) and
+`icon.icns` (macOS). After changing `logo.png`, re-run
+`python3 tools/generate_icons.py` and refresh
+`composeResources/drawable/logo.png`.
 
 ## 2. Code conventions
 
@@ -211,7 +213,7 @@ Gradle 8.x does not support JDK 25), network access to download dependencies.
 # All checks (tests + build)
 ./gradlew build
 
-# Regenerate the desktop icons from the mascot pixel art
+# Regenerate the desktop icons from logo.png
 python3 tools/generate_icons.py
 
 # Clean

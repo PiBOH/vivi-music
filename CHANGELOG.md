@@ -24,8 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for Windows/macOS/Linux) workflows.
 - Initial Supabase SQL migration with Row Level Security and Realtime.
 - `AGENTS.md` with project conventions, SemVer and changelog rules.
-- Original pixel-art Axolotl mascot (splash screen, About section, and desktop
-  app icons for Windows/macOS/Linux).
+- Original Axolotl mascot (`logo.png`) shown in the splash screen and About
+  section, and used for the desktop app icons (Windows/macOS/Linux).
 - Material 3 Expressive design system ported from ViVi Music: seed color
   (`0xFFED5564`) with materialKolor (SPEC 2025 + TonalSpot), the M3 Expressive
   type scale, grouped list-item shapes, and the mobile bottom navigation
@@ -47,9 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   chip row (Playlists / Songs / Albums / Artists, with toggle-to-deselect) and
   per-filter views plus a combined "mix" view. Albums and artists are derived
   from the local favorites until dedicated library tables are added.
-- Desktop app icon now uses the custom `logo.png` (Axolotl logo) instead of the
-  generated pixel-art icon; `tools/generate_icons.py` reads `logo.png` to
-  produce the Linux/macOS/Windows icons.
+- Desktop app icon and the in-app mascot (splash screen and About section) now
+  use the custom `logo.png` (Axolotl logo) instead of the generated pixel-art
+  icon; `tools/generate_icons.py` reads `logo.png` to produce the
+  Linux/macOS/Windows icons.
 - CI and per-OS build workflows now expose manual `workflow_dispatch`
   triggers.
 
