@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2-alpha] - 2026-08-13
+
+### Fixed
+- The language selector dialog is now scrollable and height-capped, so all 49
+  languages can be reached (previously the list overflowed the dialog and could
+  not be scrolled).
+
 ## [0.11.1-alpha] - 2026-08-13
 
 ### Fixed
