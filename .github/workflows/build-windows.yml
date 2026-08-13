@@ -11,6 +11,12 @@ jobs:
   build:
     name: Build Windows installers
     runs-on: windows-latest
+    env:
+      # Empty until a code-signing certificate is configured. When present,
+      # the "Sign installers" step runs and removes the SmartScreen
+      # "unknown publisher" warning.
+      WINDOWS_SIGNING_CERT: ${{ secrets.WINDOWS_SIGNING_CERT }}
+      WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +42,20 @@ jobs:
           cp composeApp/build/compose/binaries/main/msi/*.msi dist/
           cp composeApp/build/compose/binaries/main/exe/*.exe dist/
           ls -la dist
+      - name: Sign installers
+        if: ${{ env.WINDOWS_SIGNING_CERT != '' }}
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing-cert.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT))
+          Get-ChildItem dist -Recurse -Include *.msi,*.exe | ForEach-Object {
+            Write-Host "Signing $($_.FullName)"
+            & $signtool sign /f $pfx /p $env:WINDOWS_SIGNING_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($_.FullName) (exit $LASTEXITCODE)" }
+          }
       - name: Upload installers
         uses: actions/upload-artifact@v4
         with:
