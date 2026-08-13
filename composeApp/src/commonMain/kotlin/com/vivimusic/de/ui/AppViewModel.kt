@@ -1,7 +1,13 @@
 package com.vivimusic.de.ui
 
 import com.vivimusic.de.data.MusicRepository
+import com.vivimusic.de.data.YTM_COOKIE_KEY
+import com.vivimusic.de.data.YTM_EMAIL_KEY
+import com.vivimusic.de.data.YTM_HANDLE_KEY
+import com.vivimusic.de.data.YTM_NAME_KEY
+import com.vivimusic.de.data.YTM_THUMB_KEY
 import com.vivimusic.de.data.lyrics.LyricsLine
+import com.vivimusic.de.data.network.parseCookieString
 import com.vivimusic.de.data.playback.AudioEngine
 import com.vivimusic.de.data.playback.PlaybackState
 import com.vivimusic.de.data.readSetting
@@ -10,9 +16,11 @@ import com.vivimusic.de.data.sync.SyncStatus
 import com.vivimusic.de.data.update.UpdateChecker
 import com.vivimusic.de.data.update.UpdateStatus
 import com.vivimusic.de.data.writeSetting
+import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
+import com.vivimusic.de.domain.LibraryItem
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
@@ -129,6 +137,19 @@ class AppViewModel(
     private val _authState = MutableStateFlow<AuthState>(AuthState.Checking)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
+    // YouTube Music account (signed-in library), driven by the InnerTube cookie.
+    private val _ytAccountInfo = MutableStateFlow(loadYtAccount())
+    val ytAccountInfo: StateFlow<AccountInfo?> = _ytAccountInfo.asStateFlow()
+
+    private val _ytSignedIn = MutableStateFlow(cookieHasSapisid(readSetting(YTM_COOKIE_KEY)))
+    val ytSignedIn: StateFlow<Boolean> = _ytSignedIn.asStateFlow()
+
+    private val _ytLibrary = MutableStateFlow<List<LibraryItem>>(emptyList())
+    val ytLibrary: StateFlow<List<LibraryItem>> = _ytLibrary.asStateFlow()
+
+    private val _ytLibraryLoading = MutableStateFlow(false)
+    val ytLibraryLoading: StateFlow<Boolean> = _ytLibraryLoading.asStateFlow()
+
     // Listening statistics derived from the local history.
     val listeningStats: StateFlow<ListeningStats> = history.map { songs ->
         ListeningStats(
@@ -171,6 +192,7 @@ class AppViewModel(
         loadHome()
         checkForUpdates()
         refreshAuthState()
+        if (_ytSignedIn.value) loadYtLibrary()
     }
 
     fun setCheckPrereleases(enabled: Boolean) {
@@ -482,4 +504,79 @@ class AppViewModel(
             }
         }
     }
+
+    // ----- YouTube Music account (cookie-based) -----
+
+    /**
+     * Validates a pasted cookie against the account endpoint, persists it and
+     * loads the account library. [onResult] receives null on success or an
+     * error message on failure.
+     */
+    fun signInYt(cookie: String, onResult: (String?) -> Unit) {
+        scope.launch {
+            try {
+                repository.setYtCookie(cookie)
+                val info = repository.accountInfo()
+                if (info == null) {
+                    repository.setYtCookie(null)
+                    onResult("Invalid cookie")
+                    return@launch
+                }
+                writeSetting(YTM_COOKIE_KEY, cookie)
+                writeSetting(YTM_NAME_KEY, info.name)
+                writeSetting(YTM_EMAIL_KEY, info.email.orEmpty())
+                writeSetting(YTM_HANDLE_KEY, info.channelHandle.orEmpty())
+                writeSetting(YTM_THUMB_KEY, info.thumbnailUrl.orEmpty())
+                _ytAccountInfo.value = info
+                _ytSignedIn.value = true
+                onResult(null)
+                loadYtLibrary()
+            } catch (t: Throwable) {
+                repository.setYtCookie(null)
+                onResult(t.message ?: "Sign in failed")
+            }
+        }
+    }
+
+    fun signOutYt() {
+        repository.setYtCookie(null)
+        _ytAccountInfo.value = null
+        _ytSignedIn.value = false
+        _ytLibrary.value = emptyList()
+        writeSetting(YTM_COOKIE_KEY, "")
+        writeSetting(YTM_NAME_KEY, "")
+        writeSetting(YTM_EMAIL_KEY, "")
+        writeSetting(YTM_HANDLE_KEY, "")
+        writeSetting(YTM_THUMB_KEY, "")
+    }
+
+    /** Loads the liked playlists, albums and artists for the signed-in account. */
+    fun loadYtLibrary() {
+        scope.launch {
+            _ytLibraryLoading.value = true
+            try {
+                val playlists = repository.libraryPlaylists()
+                val albums = repository.libraryAlbums()
+                val artists = repository.libraryArtists()
+                _ytLibrary.value = playlists + albums + artists
+            } catch (t: Throwable) {
+                // The library is best-effort: keep whatever we already had.
+            } finally {
+                _ytLibraryLoading.value = false
+            }
+        }
+    }
+}
+
+private fun cookieHasSapisid(cookie: String?): Boolean =
+    cookie?.let { "SAPISID" in parseCookieString(it) } == true
+
+private fun loadYtAccount(): AccountInfo? {
+    val name = readSetting(YTM_NAME_KEY)?.takeIf { it.isNotBlank() } ?: return null
+    return AccountInfo(
+        name = name,
+        email = readSetting(YTM_EMAIL_KEY)?.takeIf { it.isNotBlank() },
+        channelHandle = readSetting(YTM_HANDLE_KEY)?.takeIf { it.isNotBlank() },
+        thumbnailUrl = readSetting(YTM_THUMB_KEY)?.takeIf { it.isNotBlank() },
+    )
 }

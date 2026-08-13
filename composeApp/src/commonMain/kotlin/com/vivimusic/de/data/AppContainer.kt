@@ -22,7 +22,11 @@ class AppContainer(val scope: CoroutineScope) {
 
     private val httpClient = createHttpClient()
 
-    val innerTube: InnerTubeClient = InnerTubeClient(httpClient, AppConfig.innerTubeApiKey)
+    val innerTube: InnerTubeClient = InnerTubeClient(httpClient, AppConfig.innerTubeApiKey).apply {
+        // Restore the signed-in YouTube Music cookie so authenticated requests
+        // (account menu, library) work across restarts.
+        cookie = readSetting(YTM_COOKIE_KEY)?.takeIf { it.isNotBlank() }
+    }
 
     val lyricsClient: LyricsClient = LyricsClient(httpClient)
 

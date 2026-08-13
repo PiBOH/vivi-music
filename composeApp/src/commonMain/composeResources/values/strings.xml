@@ -110,4 +110,10 @@
     <string name="activity_history">Activity history</string>
     <string name="total_listening_time">Total listening time</string>
     <string name="artists">Artists</string>
+    <string name="account_sign_in_ytm">Sign in with YouTube Music</string>
+    <string name="account_ytm_desc">Access your liked playlists, albums and artists from YouTube Music.</string>
+    <string name="account_ytm_cookie_label">YouTube Music cookie</string>
+    <string name="account_ytm_cookie_hint">Paste the Cookie header value here</string>
+    <string name="account_ytm_cookie_desc">Open music.youtube.com in your browser and sign in, then copy the Cookie header: open DevTools (F12), go to Network, select any request to music.youtube.com, and copy the Cookie request header value.</string>
+    <string name="account_data_sync">Data synchronization</string>
 </resources>

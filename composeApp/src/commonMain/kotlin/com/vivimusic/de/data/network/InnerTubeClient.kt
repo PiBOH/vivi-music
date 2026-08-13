@@ -1,9 +1,12 @@
 package com.vivimusic.de.data.network
 
+import com.vivimusic.de.data.nowEpochMillis
 import com.vivimusic.de.data.readSetting
+import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
+import com.vivimusic.de.domain.LibraryItem
 import com.vivimusic.de.domain.Song
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
@@ -39,6 +42,14 @@ class InnerTubeClient(
     private val json: Json = sharedJson,
 ) {
     private val baseUrl = "https://music.youtube.com/youtubei/v1"
+
+    /**
+     * The signed-in YouTube Music cookie (copied from the browser), used to
+     * authenticate `account/account_menu` and `library` requests. Empty when
+     * not signed in.
+     */
+    @Volatile
+    var cookie: String? = null
 
     /**
      * InnerTube clients. WEB_REMIX is used for read endpoints (search, browse,
@@ -88,7 +99,12 @@ class InnerTubeClient(
         pairs.forEach { (key, value) -> put(key, value) }
     }
 
-    private suspend fun call(endpoint: String, body: JsonObject, client: Client = Client.WEB_REMIX): JsonObject {
+    private suspend fun call(
+        endpoint: String,
+        body: JsonObject,
+        client: Client = Client.WEB_REMIX,
+        setLogin: Boolean = false,
+    ): JsonObject {
         val response = httpClient.post("$baseUrl/$endpoint?key=$apiKey") {
             contentType(ContentType.Application.Json)
             header("X-Goog-Api-Format-Version", "1")
@@ -97,6 +113,18 @@ class InnerTubeClient(
             header("X-Origin", "https://music.youtube.com")
             header("Referer", "https://music.youtube.com/")
             header("User-Agent", client.userAgent)
+            if (setLogin) {
+                val currentCookie = cookie
+                if (!currentCookie.isNullOrBlank()) {
+                    header("Cookie", currentCookie)
+                    val sapisid = parseCookieString(currentCookie)["SAPISID"]
+                    if (sapisid != null) {
+                        val currentTime = nowEpochMillis() / 1000
+                        val hash = sha1Hex("$currentTime $sapisid https://music.youtube.com")
+                        header("Authorization", "SAPISIDHASH ${currentTime}_$hash")
+                    }
+                }
+            }
             setBody(body.toString())
         }
         return json.parseToJsonElement(response.bodyAsText()).jsonObject
@@ -280,6 +308,70 @@ class InnerTubeClient(
             else -> opus ?: audioFormats.maxByOrNull { it.str("bitrate")?.toLongOrNull() ?: 0L }
         }
         return chosen?.str("url")
+    }
+
+    /**
+     * Fetches the signed-in account profile from `account/account_menu`.
+     * Returns null when not signed in or the response cannot be parsed.
+     */
+    suspend fun accountMenu(): AccountInfo? {
+        val response = call("account/account_menu", bodyWith(Client.WEB_REMIX), setLogin = true)
+        val actions = response["actions"] as? JsonArray ?: return null
+        val header = actions
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { it["openPopupAction"] as? JsonObject }
+            .mapNotNull { it["popup"] as? JsonObject }
+            .mapNotNull { it["multiPageMenuRenderer"] as? JsonObject }
+            .mapNotNull { it["header"] as? JsonObject }
+            .mapNotNull { it["activeAccountHeaderRenderer"] as? JsonObject }
+            .firstOrNull() ?: return null
+        val name = (header["accountName"] as? JsonObject)?.firstText() ?: return null
+        val email = (header["email"] as? JsonObject)?.firstText()
+        val channelHandle = (header["channelHandle"] as? JsonObject)?.firstText()
+        val thumbnailUrl = ((header["accountPhoto"] as? JsonObject)?.get("thumbnails") as? JsonArray)
+            ?.let { (it.lastOrNull() as? JsonObject)?.str("url") }
+        return AccountInfo(
+            name = name,
+            email = email,
+            channelHandle = channelHandle,
+            thumbnailUrl = thumbnailUrl,
+        )
+    }
+
+    /**
+     * Loads one account-library browse page (e.g. liked playlists, albums or
+     * artists) and returns its items. Requires a signed-in cookie.
+     */
+    suspend fun library(browseId: String): List<LibraryItem> {
+        val response = call("browse", bodyWith(Client.WEB_REMIX, "browseId" to JsonPrimitive(browseId)), setLogin = true)
+        val singleColumn = (response["contents"] as? JsonObject)?.get("singleColumnBrowseResultsRenderer") as? JsonObject
+        val tab = (singleColumn?.get("tabs") as? JsonArray)?.firstOrNull() as? JsonObject
+        val content = (tab?.get("tabRenderer") as? JsonObject)?.get("content") as? JsonObject
+        val sectionList = (content?.get("sectionListRenderer") as? JsonObject)
+        val firstSection = (sectionList?.get("contents") as? JsonArray)?.firstOrNull() as? JsonObject
+        val grid = (firstSection?.get("gridRenderer") as? JsonObject)
+            ?: (firstSection?.get("musicShelfRenderer") as? JsonObject)
+            ?: return emptyList()
+        val items = grid["contents"] as? JsonArray ?: return emptyList()
+        return items.mapNotNull { item ->
+            val obj = item as? JsonObject ?: return@mapNotNull null
+            val renderer = (obj["musicTwoRowItemRenderer"] as? JsonObject)
+                ?: (obj["musicResponsiveListItemRenderer"] as? JsonObject)
+                ?: return@mapNotNull null
+            renderer.toLibraryItem()
+        }
+    }
+
+    private fun JsonObject.toLibraryItem(): LibraryItem? {
+        val id = browseId() ?: return null
+        val title = (this["title"] as? JsonObject)?.firstText() ?: return null
+        val subtitle = (this["subtitle"] as? JsonObject)?.joinedText().orEmpty()
+        val thumbnailUrl = thumbnailUrl()
+        return when {
+            id.startsWith("UC") -> LibraryItem.Artist(id, title, subtitle, thumbnailUrl)
+            id.startsWith("VL") -> LibraryItem.Playlist(id, title, subtitle, thumbnailUrl)
+            else -> LibraryItem.Album(id, title, subtitle, thumbnailUrl)
+        }
     }
 
     // ----- response traversal helpers -----

@@ -58,3 +58,47 @@ data class HomeSection(
     val title: String,
     val songs: List<Song>,
 )
+
+/**
+ * The signed-in YouTube Music account profile, fetched from the
+ * `account/account_menu` InnerTube endpoint.
+ */
+@Serializable
+data class AccountInfo(
+    val name: String,
+    val email: String? = null,
+    val channelHandle: String? = null,
+    val thumbnailUrl: String? = null,
+)
+
+/**
+ * A single entry in the signed-in account library (a liked playlist, album or
+ * artist), parsed from the InnerTube `library` endpoint.
+ */
+sealed interface LibraryItem {
+    val id: String
+    val title: String
+    val subtitle: String
+    val thumbnailUrl: String?
+
+    data class Playlist(
+        override val id: String,
+        override val title: String,
+        override val subtitle: String,
+        override val thumbnailUrl: String?,
+    ) : LibraryItem
+
+    data class Album(
+        override val id: String,
+        override val title: String,
+        override val subtitle: String,
+        override val thumbnailUrl: String?,
+    ) : LibraryItem
+
+    data class Artist(
+        override val id: String,
+        override val title: String,
+        override val subtitle: String,
+        override val thumbnailUrl: String?,
+    ) : LibraryItem
+}

@@ -208,7 +208,17 @@ private fun AppRoot(viewModel: AppViewModel) {
                                 },
                             )
                             Screen.History -> HistoryScreen(viewModel)
-                            Screen.Account -> AccountScreen(viewModel)
+                            Screen.Account -> AccountScreen(
+                                viewModel = viewModel,
+                                onOpenAlbum = { browseId ->
+                                    viewModel.openAlbum(browseId)
+                                    detail = Detail.AlbumDetail(browseId)
+                                },
+                                onOpenArtist = { browseId ->
+                                    viewModel.openArtist(browseId)
+                                    detail = Detail.ArtistDetail(browseId)
+                                },
+                            )
                             Screen.Settings -> SettingsScreen(viewModel)
                         }
                     }

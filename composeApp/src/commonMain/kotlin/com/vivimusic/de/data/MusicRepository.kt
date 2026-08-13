@@ -9,9 +9,11 @@ import com.vivimusic.de.data.lyrics.LyricsClient
 import com.vivimusic.de.data.lyrics.LyricsLine
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.sync.SyncManager
+import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
+import com.vivimusic.de.domain.LibraryItem
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +45,20 @@ class MusicRepository(
     suspend fun getArtist(browseId: String): Artist = innerTube.getArtist(browseId)
 
     suspend fun getSong(videoId: String): Song? = innerTube.getSong(videoId)
+
+    // ----- YouTube Music account (signed-in library) -----
+
+    suspend fun accountInfo(): AccountInfo? = innerTube.accountMenu()
+
+    suspend fun libraryPlaylists(): List<LibraryItem> = innerTube.library("FEmusic_liked_playlists")
+
+    suspend fun libraryAlbums(): List<LibraryItem> = innerTube.library("FEmusic_liked_albums")
+
+    suspend fun libraryArtists(): List<LibraryItem> = innerTube.library("FEmusic_library_corpus_artists")
+
+    fun setYtCookie(cookie: String?) {
+        innerTube.cookie = cookie
+    }
 
     // ----- lyrics -----
 

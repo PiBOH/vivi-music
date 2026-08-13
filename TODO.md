@@ -34,6 +34,8 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Account screen (profile, sign in/out, sync status).
 - [x] Activity history screen (listening statistics).
 - [x] Persistent session across restarts (file-backed session storage).
+- [x] YouTube Music account login (paste cookie) + profile (name/email/avatar).
+- [x] Account library (liked playlists, albums, artists) with filter chips.
 - [ ] Real Listen Together (currently a placeholder).
 
 ## Phase 4 — Player screens + playback controls
