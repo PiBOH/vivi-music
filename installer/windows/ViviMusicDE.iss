@@ -47,7 +47,6 @@ WizardImageFile={#LogoFile}
 WizardSmallImageFile={#LogoFile}
 WizardStyle=modern
 WizardImageStretch=no
-WizardImageAlphaBlend=yes
 ; Keep the 200+ MB jpackage image quick to compile on GitHub runners.
 Compression=lzma
 SolidCompression=no

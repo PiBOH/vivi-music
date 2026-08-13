@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.4-alpha] - 2026-08-13
+
+### Added
+- Separated the branded Windows setup into `build-windows-custom.yml`.
+- Added an automatic fallback to the standard jpackage Windows workflow when
+  Inno Setup compilation or custom packaging fails.
+
+### Fixed
+- Removed the unsupported `WizardImageAlphaBlend` directive from the Inno
+  Setup script; Inno Setup 6.7.1 now reaches the actual packaging stage.
+
 ## [0.15.3-alpha] - 2026-08-13
 
 ### Fixed

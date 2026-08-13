@@ -1,0 +1,122 @@
+name: Build Windows Custom
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  custom:
+    name: Build branded Windows setup
+    runs-on: windows-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    outputs:
+      custom_succeeded: ${{ steps.custom_setup.outputs.succeeded }}
+    env:
+      WINDOWS_SIGNING_CERT: ${{ secrets.WINDOWS_SIGNING_CERT }}
+      WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Package desktop app image
+        shell: bash
+        env:
+          INNERTUBE_API_KEY: ${{ secrets.INNERTUBE_API_KEY }}
+        run: ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+      - name: Compile branded setup
+        id: custom_setup
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            $version = (Get-Content version.txt -Raw).Trim()
+            $numericParts = (($version -split '-')[0] -split '\.')
+            $major = [Math]::Max(1, [int]$numericParts[0])
+            $installerVersion = "$major.$($numericParts[1]).$($numericParts[2])"
+            $source = Join-Path $env:GITHUB_WORKSPACE 'composeApp\build\compose\binaries\main\app\ViviMusicDE'
+            $output = Join-Path $env:GITHUB_WORKSPACE 'dist-custom'
+            New-Item -ItemType Directory -Force -Path $output | Out-Null
+            $mainExecutable = Join-Path $source 'ViviMusicDE.exe'
+            if (-not (Test-Path $mainExecutable)) { throw "jpackage app image is incomplete: $mainExecutable was not found" }
+            $sourceFileCount = (Get-ChildItem $source -Recurse -File | Measure-Object).Count
+            Write-Host "Inno Setup source: $sourceFileCount files"
+            $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+            if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+            $compileLog = Join-Path $output 'innosetup.log'
+            & $iscc `
+              "/DAppVersion=$version" `
+              "/DInstallerVersion=$installerVersion" `
+              "/DSourceDir=$source" `
+              "/DOutputDir=$output" `
+              "/DLogoFile=$env:GITHUB_WORKSPACE\logo.png" `
+              "/DIconFile=$env:GITHUB_WORKSPACE\composeApp\icons\icon.ico" `
+              "$env:GITHUB_WORKSPACE\installer\windows\ViviMusicDE.iss" 2>&1 |
+              Tee-Object -FilePath $compileLog
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host 'Inno Setup compiler log:'
+              Get-Content $compileLog
+              throw "Inno Setup compilation failed (exit $LASTEXITCODE)"
+            }
+            "succeeded=true" >> $env:GITHUB_OUTPUT
+          } catch {
+            Write-Host "Custom Windows setup failed: $($_.Exception.Message)"
+            "succeeded=false" >> $env:GITHUB_OUTPUT
+            exit 1
+          }
+      - name: Collect branded packages
+        if: ${{ steps.custom_setup.outputs.succeeded == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp composeApp/build/compose/binaries/main/msi/*.msi dist/
+          cp dist-custom/*.exe dist/
+          for f in composeApp/build/compose/binaries/main/exe/*.exe; do
+            base="$(basename "$f" .exe)"
+            cp "$f" "dist/${base}-portable.exe"
+          done
+          ls -la dist
+      - name: Sign branded packages
+        if: ${{ steps.custom_setup.outputs.succeeded == 'true' && env.WINDOWS_SIGNING_CERT != '' }}
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $signtool) { throw "signtool.exe not found" }
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing-cert.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT))
+          Get-ChildItem dist -Recurse -Include *.msi,*.exe | ForEach-Object {
+            Write-Host "Signing $($_.FullName)"
+            & $signtool sign /f $pfx /p $env:WINDOWS_SIGNING_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($_.FullName) (exit $LASTEXITCODE)" }
+          }
+      - name: Upload branded packages
+        if: ${{ steps.custom_setup.outputs.succeeded == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: dist/*
+          if-no-files-found: error
+
+  fallback:
+    name: Fallback to standard Windows packages
+    needs: custom
+    if: ${{ always() && needs.custom.outputs.custom_succeeded != 'true' }}
+    uses: ./.github/workflows/build-windows.yml
+    secrets: inherit

@@ -245,7 +245,8 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
 - **CI** (`.github/workflows/ci.yml`): on every push to `main` and pull request
   it builds the desktop target (`./gradlew :composeApp:build`).
 - **Build workflows** (reusable, invoked by Auto Release):
-  - `build-windows.yml` -> `.msi`/`.exe` on `windows-latest` (JDK 17);
+  - `build-windows.yml` -> reliable standard `.msi`/portable `.exe` packages on `windows-latest` (JDK 17);
+  - `build-windows-custom.yml` -> branded Inno Setup package first, with an automatic call to `build-windows.yml` if the custom compiler fails;
   - `build-linux.yml` -> `.deb`/`.AppImage` on `ubuntu-latest` (JDK 17);
   - `build-macos.yml` -> `.dmg` on `macos-15-intel` and `macos-15` (JDK 17).
 - **Auto Release** (`.github/workflows/auto-release.yml`): does not build
@@ -256,10 +257,12 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
     `v0.0.1-alpha: ...`), or
   - a manual `workflow_dispatch` (with an optional version).
   The version is read from `version.txt` (tag = version without the `v` prefix).
-- The Windows release also builds the branded Inno Setup installer
-  (`installer/windows/ViviMusicDE.iss`) with optional Start Menu, desktop,
-  taskbar, clean-install and post-install launch tasks. The jpackage MSI and
-  portable executable remain compatibility artifacts.
+- The Windows release invokes `build-windows-custom.yml`, which first builds
+  the branded Inno Setup installer (`installer/windows/ViviMusicDE.iss`) with
+  optional Start Menu, desktop, taskbar, clean-install and post-install launch
+  tasks. If that custom job fails, it automatically falls back to the standard
+  `build-windows.yml` packages, so the release still receives the known-good
+  jpackage MSI and portable executable.
 
 ### Releasing a new version
 
