@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0-alpha] - 2026-08-13
+
+### Changed
+- Startup now presents the logo and a loading indicator immediately, before
+  constructing Room, the HTTP client and Supabase services.
+- Database, sync and service initialization now runs after the first window
+  frame on a background dispatcher, so older CPUs are not blocked by startup
+  work and the app visibly confirms that it has opened.
+- Desktop settings are loaded once into memory instead of reopening
+  `settings.properties` for every key read during startup and composition.
+- The initial Home feed, update check, auth restoration and signed-in library
+  loading remain asynchronous and start only after the main UI is visible.
+
 ## [0.12.0-alpha] - 2026-08-13
 
 ### Added

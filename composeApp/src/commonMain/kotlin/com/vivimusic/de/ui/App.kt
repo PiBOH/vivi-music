@@ -21,13 +21,13 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,33 +55,97 @@ import com.vivimusic.de.ui.screens.SearchScreen
 import com.vivimusic.de.ui.screens.SettingsScreen
 import com.vivimusic.de.ui.screens.TogetherScreen
 import com.vivimusic.de.ui.theme.ViviTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 private const val LANGUAGE_KEY = "app.language"
+
+/**
+ * Starts the visual shell first, then constructs the database, HTTP client and
+ * sync services off the UI thread. This keeps the native window responsive on
+ * older CPUs while the heavier application services initialize.
+ */
+@Composable
+fun AppStartup(
+    scope: CoroutineScope,
+    createContainer: () -> AppContainer,
+) {
+    AppEnvironment {
+        ViviTheme {
+            var container by remember { mutableStateOf<AppContainer?>(null) }
+            var startupError by remember { mutableStateOf<Throwable?>(null) }
+
+            LaunchedEffect(Unit) {
+                try {
+                    container = withContext(Dispatchers.Default) {
+                        createContainer().also { it.start() }
+                    }
+                } catch (throwable: Throwable) {
+                    startupError = throwable
+                }
+            }
+
+            when {
+                container != null -> AppContent(container!!)
+                startupError != null -> StartupError(startupError!!)
+                else -> SplashScreen()
+            }
+        }
+    }
+}
+
+@Composable
+private fun StartupError(throwable: Throwable) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+    ) {
+        AxolotlMascot(modifier = Modifier.size(128.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+        Text(
+            text = stringResource(Res.string.startup_error),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.error,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = throwable.message ?: throwable::class.simpleName.orEmpty(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+}
 
 @Composable
 fun App(container: AppContainer) {
     AppEnvironment {
         ViviTheme {
-            val viewModel = remember {
-                AppViewModel(container.repository, container.syncManager, container.scope, container.audioEngine, container.updateChecker)
-            }
-            // Restore the saved language, then show the app immediately. There
-            // is no artificial splash delay: the window opens as fast as the
-            // initial composition allows.
-            LaunchedEffect(Unit) {
-                val saved = readSetting(LANGUAGE_KEY)
-                if (!saved.isNullOrBlank()) {
-                    customAppLocale = saved
-                }
-                // Defer the initial network work (home feed, update check,
-                // auth restore) until after the first frame is composed, so the
-                // window opens as fast as possible.
-                viewModel.loadInitialData()
-            }
-            AppRoot(viewModel)
+            AppContent(container)
         }
     }
+}
+
+@Composable
+private fun AppContent(container: AppContainer) {
+    val viewModel = remember {
+        AppViewModel(container.repository, container.syncManager, container.scope, container.audioEngine, container.updateChecker)
+    }
+    // Restore the saved language, then show the app immediately. There is no
+    // artificial splash delay: the window opens as fast as the initial
+    // composition allows.
+    LaunchedEffect(Unit) {
+        val saved = readSetting(LANGUAGE_KEY)
+        if (!saved.isNullOrBlank()) {
+            customAppLocale = saved
+        }
+        // Defer the initial network work (home feed, update check, auth
+        // restore) until after the first frame is composed.
+        viewModel.loadInitialData()
+    }
+    AppRoot(viewModel)
 }
 
 private enum class Screen { Home, Search, Together, Library, History, Account, Settings }

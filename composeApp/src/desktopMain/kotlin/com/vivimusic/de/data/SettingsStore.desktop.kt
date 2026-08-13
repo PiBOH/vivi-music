@@ -9,19 +9,26 @@ private fun settingsFile(): File {
     return File(dir, "settings.properties")
 }
 
-private fun loadProps(): Properties {
-    val props = Properties()
-    val file = settingsFile()
-    if (file.exists()) {
-        file.inputStream().use { props.load(it) }
+private val cachedProperties: Properties by lazy {
+    Properties().also { props ->
+        val file = settingsFile()
+        if (file.exists()) {
+            file.inputStream().use { props.load(it) }
+        }
     }
-    return props
 }
 
-actual fun readSetting(key: String): String? = loadProps().getProperty(key)
+/** Reads from the in-memory snapshot instead of reopening the file per key. */
+actual fun readSetting(key: String): String? =
+    synchronized(cachedProperties) { cachedProperties.getProperty(key) }
 
+/** Updates the memory snapshot immediately and persists it atomically enough
+ * for this small settings file. */
 actual fun writeSetting(key: String, value: String) {
-    val props = loadProps()
-    props.setProperty(key, value)
-    settingsFile().outputStream().use { props.store(it, "Vivi Music DE settings") }
+    synchronized(cachedProperties) {
+        cachedProperties.setProperty(key, value)
+        settingsFile().outputStream().use {
+            cachedProperties.store(it, "Vivi Music DE settings")
+        }
+    }
 }

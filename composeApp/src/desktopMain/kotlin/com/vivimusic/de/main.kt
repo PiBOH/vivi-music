@@ -6,7 +6,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.vivimusic.de.data.AppConfig
 import com.vivimusic.de.data.AppContainer
-import com.vivimusic.de.ui.App
+import com.vivimusic.de.ui.AppStartup
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -83,16 +83,17 @@ private fun runApplication() {
     AppConfig.appVersion = readConfig("APP_VERSION").ifBlank { "dev" }
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val container = AppContainer(scope)
-    container.start()
 
+    // Create the native window before constructing Room, the HTTP client and
+    // Supabase. AppStartup shows the lightweight shell first and initializes
+    // those services off the UI thread after the first frame.
     application {
         Window(
             onCloseRequest = ::exitApplication,
             title = "Vivi Music DE",
             state = rememberWindowState(width = 1000.dp, height = 720.dp),
         ) {
-            App(container)
+            AppStartup(scope = scope) { AppContainer(scope) }
         }
     }
 }

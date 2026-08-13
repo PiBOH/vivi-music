@@ -13,6 +13,8 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Opus/WebM stream decoding with native codecs.
 - [x] Live seek bar, position and duration wired to the engine.
 - [x] Detailed startup error reporting (dialog + crash log).
+- [x] Lightweight startup shell with background service initialization.
+- [x] Cached desktop settings access to avoid repeated file I/O during startup.
 
 ## Phase 2 — Content screens + data layer
 

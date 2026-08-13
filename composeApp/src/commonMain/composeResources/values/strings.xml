@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vivi Music DE</string>
+    <string name="startup_loading">Loading the app…</string>
+    <string name="startup_error">The app could not finish starting</string>
     <string name="nav_home">Home</string>
     <string name="nav_library">Library</string>
     <string name="nav_search">Search</string>
