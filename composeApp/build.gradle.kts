@@ -140,6 +140,15 @@ compose.desktop {
     }
 }
 
+// The Compose plugin does not declare `packageAppImage` as an input of
+// `packageDmg`, so Gradle's implicit-dependency validation fails the macOS
+// DMG build. Declare the dependency explicitly.
+tasks.configureEach {
+    if (name == "packageDmg") {
+        dependsOn("packageAppImage")
+    }
+}
+
 compose.resources {
     packageOfResClass = "com.vivimusic.de.resources"
 }
