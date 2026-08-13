@@ -17,6 +17,8 @@ Music client). The app runs on **Windows, macOS and Linux**, and user data
 - **Supabase** sync (PostgREST + Realtime + Auth) with real-time mirroring
   across devices.
 - **49 languages**, with manual selection or system language.
+- Original **Axolotl** pixel-art mascot shown in the splash screen and About
+  section, and used as the desktop app icon.
 - **CI/CD** with GitHub Actions.
 
 ## Build requirements
@@ -72,6 +74,15 @@ artifacts attached.
    file with `SUPABASE_URL=...` and `SUPABASE_ANON_KEY=...`.
 
 Without credentials the app runs in local-only mode.
+
+## Mascot
+
+The app's mascot is an original pixel-art blue **Axolotl**, rendered in-app
+(splash screen and About section) and used as the desktop icon. The artwork is
+defined once in
+[`Axolotl.kt`](composeApp/src/commonMain/kotlin/com/vivimusic/de/ui/Axolotl.kt)
+and the icon files are generated with
+[`tools/generate_icons.py`](tools/generate_icons.py).
 
 ## Project structure
 

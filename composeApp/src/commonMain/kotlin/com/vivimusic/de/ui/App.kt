@@ -26,6 +26,7 @@ import com.vivimusic.de.ui.screens.HomeScreen
 import com.vivimusic.de.ui.screens.LibraryScreen
 import com.vivimusic.de.ui.screens.SettingsScreen
 import com.vivimusic.de.ui.theme.ViviTheme
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
 private const val LANGUAGE_KEY = "app.language"
@@ -37,13 +38,20 @@ fun App(container: AppContainer) {
             val viewModel = remember {
                 AppViewModel(container.repository, container.syncManager, container.scope)
             }
+            var showSplash by remember { mutableStateOf(true) }
             LaunchedEffect(Unit) {
                 val saved = readSetting(LANGUAGE_KEY)
                 if (!saved.isNullOrBlank()) {
                     customAppLocale = saved
                 }
+                delay(1_200)
+                showSplash = false
             }
-            AppRoot(viewModel)
+            if (showSplash) {
+                SplashScreen()
+            } else {
+                AppRoot(viewModel)
+            }
         }
     }
 }

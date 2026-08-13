@@ -60,6 +60,14 @@ locale handling).
 - **SyncManager** orchestrates sync between the local Room database and
   **SupabaseSyncClient** (PostgREST for pull/push, Realtime for mirroring).
 
+### Mascot
+
+The mascot is an original pixel-art blue Axolotl. The grid is the single source
+of truth in `ui/Axolotl.kt` (`AXOLOTL_PIXELS`); the desktop icons are generated
+from it by `tools/generate_icons.py` (outputs `composeApp/icons/icon.png`,
+`icon.ico`, `icon.icns`). After changing the grid, re-run the script and keep
+the two grids in sync.
+
 ## 2. Code conventions
 
 - **Language**: code, comments, commit messages and all documentation in
@@ -171,6 +179,9 @@ Gradle 8.x does not support JDK 25), network access to download dependencies.
 
 # All checks (tests + build)
 ./gradlew build
+
+# Regenerate the desktop icons from the mascot pixel art
+python3 tools/generate_icons.py
 
 # Clean
 ./gradlew clean

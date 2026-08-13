@@ -3,7 +3,9 @@ package com.vivimusic.de.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
@@ -19,14 +21,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vivimusic.de.data.APP_VERSION
 import com.vivimusic.de.data.sync.SyncStatus
 import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.i18n.customAppLocale
 import com.vivimusic.de.i18n.supportedLanguages
 import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.AppViewModel
+import com.vivimusic.de.ui.AxolotlMascot
 import org.jetbrains.compose.resources.stringResource
 
 private const val LANGUAGE_KEY = "app.language"
@@ -86,6 +91,24 @@ fun SettingsScreen(viewModel: AppViewModel) {
         TextButton(onClick = { viewModel.syncNow() }) {
             Text(stringResource(Res.string.retry))
         }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        Text(
+            text = stringResource(Res.string.about_title),
+            style = MaterialTheme.typography.titleMedium,
+        )
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            AxolotlMascot(modifier = Modifier.size(96.dp))
+        }
+        Text(
+            text = "${stringResource(Res.string.about_version)} $APP_VERSION",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = stringResource(Res.string.about_credits),
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 

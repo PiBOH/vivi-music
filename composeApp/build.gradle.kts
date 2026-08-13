@@ -79,6 +79,16 @@ compose.desktop {
             packageVersion = "1.0.0"
             description = "Vivi Music DE, desktop client for ViVi Music."
             vendor = "Vivi Music DE"
+
+            linux {
+                iconFile.set(project.file("icons/icon.png"))
+            }
+            windows {
+                iconFile.set(project.file("icons/icon.ico"))
+            }
+            macOS {
+                iconFile.set(project.file("icons/icon.icns"))
+            }
         }
     }
 }

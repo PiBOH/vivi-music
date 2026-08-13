@@ -16,3 +16,9 @@ object AppConfig {
     val isSyncConfigured: Boolean
         get() = supabaseUrl.isNotBlank() && supabaseAnonKey.isNotBlank()
 }
+
+/**
+ * Display version shown in the About section. Keep in sync with the canonical
+ * `version.txt` at the repository root (currently 0.0.1-alpha).
+ */
+const val APP_VERSION = "0.0.1-alpha"
