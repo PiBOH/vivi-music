@@ -45,6 +45,11 @@ jobs:
       - build-macos
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     runs-on: ubuntu-latest
+    # Creating the release + uploading assets requires write access to repo
+    # contents. Declared at the job level too, so the permission survives even
+    # if the workflow-level `permissions` block is edited or the job is moved.
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
