@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0-alpha] - 2026-08-13
+
+### Added
+- Branded Windows Inno Setup installer with the Axolotl logo and a dedicated
+  setup options page.
+- Optional desktop shortcut, Start Menu shortcut, taskbar entry, clean install
+  and launch-after-install tasks. Start Menu is enabled by default; clean
+  installation, desktop shortcut, taskbar entry and automatic launch are
+  disabled by default.
+- Clean installation confirmation that removes the installed app plus local
+  settings, cache, database and saved sessions only when explicitly selected.
+
+### Changed
+- The Windows workflow now publishes the customizable
+  `ViviMusicDE-<version>-setup.exe` alongside the compatibility MSI and
+  portable executable.
+- Taskbar setup uses the Windows shell pin verb when available and falls back to
+  creating the standard pinned-taskbar shortcut. Windows policies may still
+  prevent automatic pinning.
+
 ## [0.13.2-alpha] - 2026-08-13
 
 ### Fixed

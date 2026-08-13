@@ -45,6 +45,7 @@ vivi-music-de/
 │       │       ├── i18n/           # languages and locale handling
 │       │       └── ui/             # shared Compose screens
 │       └── desktopMain/        # main.kt, Desktop actuals
+├── installer/windows/          # branded Inno Setup installer and options
 ├── supabase/migrations/        # SQL schema + RLS + Realtime
 ├── AGENTS.md
 └── CHANGELOG.md
@@ -245,8 +246,10 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
     `v0.0.1-alpha: ...`), or
   - a manual `workflow_dispatch` (with an optional version).
   The version is read from `version.txt` (tag = version without the `v` prefix).
-- For MSI packaging on Windows (which requires WiX) consult the documentation
-  and add the required tools.
+- The Windows release also builds the branded Inno Setup installer
+  (`installer/windows/ViviMusicDE.iss`) with optional Start Menu, desktop,
+  taskbar, clean-install and post-install launch tasks. The jpackage MSI and
+  portable executable remain compatibility artifacts.
 
 ### Releasing a new version
 
