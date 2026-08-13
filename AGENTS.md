@@ -76,7 +76,8 @@ inventing new styles:
 - Shapes: `ui/theme/Shapes.kt` — grouped list items (4dp connected / 16dp end
   corners, `surfaceContainerHigh` container).
 - Navigation: bottom `NavigationBar` (Home / Search / Listen Together /
-  Library) + a mini player above it; Settings is a top-bar action.
+  Library) + a mini player above it (tap to expand the full player with
+  artwork, seek bar and controls); Settings is a top-bar action.
 
 When porting a screen, read the corresponding file under the upstream
 `app/src/main/kotlin/com/music/vivi/ui/` and replicate its layout, spacing,

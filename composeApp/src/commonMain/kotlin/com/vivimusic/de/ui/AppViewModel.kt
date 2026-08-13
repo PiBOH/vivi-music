@@ -48,6 +48,11 @@ class AppViewModel(
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
+    // Playback state. `isPlaying` is driven by the UI for now; it will be
+    // backed by a real audio engine (position/duration included) later.
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
     private val _album = MutableStateFlow<Album?>(null)
     val album: StateFlow<Album?> = _album.asStateFlow()
 
@@ -83,6 +88,13 @@ class AppViewModel(
         scope.launch {
             _currentSong.value = repository.getSong(song.id) ?: song
             repository.recordPlay(song)
+            _isPlaying.value = true
+        }
+    }
+
+    fun togglePlayPause() {
+        if (_currentSong.value != null) {
+            _isPlaying.value = !_isPlaying.value
         }
     }
 

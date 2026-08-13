@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Mini player and full player (bottom-sheet style) ported to match ViVi Music:
+  a rounded pill mini player (play/pause, song info, skip next) and an expanded
+  player with artwork, title/artist, seek bar and shuffle/previous/play/next/
+  repeat controls. Audio playback is not wired yet, so the controls are visual
+  placeholders.
+
 ### Changed
 - Home screen ported to match ViVi Music: the home feed is parsed into sections
   with titles and rendered as section headers + horizontal card carousels with

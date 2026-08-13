@@ -77,8 +77,10 @@ private enum class Screen { Home, Search, Together, Library, Settings }
 @Composable
 private fun AppRoot(viewModel: AppViewModel) {
     var screen by remember { mutableStateOf(Screen.Home) }
+    var showFullPlayer by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -110,7 +112,7 @@ private fun AppRoot(viewModel: AppViewModel) {
             }
         }
 
-        PlayerBar(viewModel)
+        MiniPlayer(viewModel = viewModel, onExpand = { showFullPlayer = true })
 
         NavigationBar {
             NavigationBarItem(
@@ -136,6 +138,14 @@ private fun AppRoot(viewModel: AppViewModel) {
                 onClick = { screen = Screen.Library },
                 icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
                 label = { Text(stringResource(Res.string.nav_library)) },
+            )
+        }
+        }
+
+        if (showFullPlayer) {
+            FullPlayer(
+                viewModel = viewModel,
+                onCollapse = { showFullPlayer = false },
             )
         }
     }
