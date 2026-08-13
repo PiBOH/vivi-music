@@ -20,4 +20,27 @@
     <string name="favorite_remove">Entfernen</string>
     <string name="new_playlist">Neue Playlist</string>
     <string name="delete">Löschen</string>
+    <string name="update_settings">Updates</string>
+    <string name="update_center">Update-Zentrum</string>
+    <string name="update_check_prereleases">Vorabversionen einbeziehen</string>
+    <string name="update_checking">Suche nach Updates…</string>
+    <string name="update_available">Update verfügbar</string>
+    <string name="update_available_message">Eine neue Version ist verfügbar:</string>
+    <string name="update_download">Herunterladen und installieren</string>
+    <string name="update_downloading">Update wird heruntergeladen…</string>
+    <string name="update_download_percent">Fortschritt</string>
+    <string name="update_download_size">Heruntergeladen</string>
+    <string name="update_download_speed">Geschwindigkeit</string>
+    <string name="update_download_unknown_size">Unbekannt</string>
+    <string name="update_launched">Das Installationsprogramm wurde gestartet.</string>
+    <string name="update_download_error">Update konnte nicht heruntergeladen werden:</string>
+    <string name="update_dismiss">Später</string>
+    <string name="update_check_now">Nach Updates suchen</string>
+    <string name="update_cleanup_downloads">Heruntergeladene Update-Dateien löschen</string>
+    <string name="update_cleanup_in_progress">Update-Dateien werden gelöscht…</string>
+    <string name="update_cleanup_done">Heruntergeladene Update-Dateien wurden entfernt.</string>
+    <string name="update_cleanup_none">Keine heruntergeladenen Update-Dateien gefunden.</string>
+    <string name="update_cleanup_partial">Einige Dateien konnten nicht entfernt werden. Schließe das Installationsprogramm und versuche es erneut.</string>
+    <string name="update_cleanup_error">Update-Dateien konnten nicht gelöscht werden:</string>
+    <string name="update_up_to_date">Du verwendest die neueste Version</string>
 </resources>

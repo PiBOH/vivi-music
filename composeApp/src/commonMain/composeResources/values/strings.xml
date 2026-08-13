@@ -49,11 +49,17 @@
     <string name="about_version">Version</string>
     <string name="about_credits">Mascot: Axolotl. Based on the open source ViVi Music project.</string>
     <string name="update_settings">Updates</string>
+    <string name="update_center">Update center</string>
     <string name="update_check_prereleases">Include pre-release versions</string>
+    <string name="update_checking">Checking for updates…</string>
     <string name="update_available">Update available</string>
     <string name="update_available_message">A new version is available:</string>
     <string name="update_download">Download and install</string>
     <string name="update_downloading">Downloading update…</string>
+    <string name="update_download_percent">Progress</string>
+    <string name="update_download_size">Downloaded</string>
+    <string name="update_download_speed">Speed</string>
+    <string name="update_download_unknown_size">Unknown</string>
     <string name="update_launched">The installer was started.</string>
     <string name="update_download_error">Could not download the update:</string>
     <string name="update_dismiss">Later</string>

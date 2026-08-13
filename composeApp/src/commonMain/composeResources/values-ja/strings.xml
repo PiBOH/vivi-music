@@ -20,4 +20,27 @@
     <string name="favorite_remove">削除</string>
     <string name="new_playlist">新しいプレイリスト</string>
     <string name="delete">削除</string>
+    <string name="update_settings">アップデート</string>
+    <string name="update_center">アップデートセンター</string>
+    <string name="update_check_prereleases">プレリリース版を含める</string>
+    <string name="update_checking">アップデートを確認中…</string>
+    <string name="update_available">アップデートがあります</string>
+    <string name="update_available_message">新しいバージョンがあります：</string>
+    <string name="update_download">ダウンロードしてインストール</string>
+    <string name="update_downloading">アップデートをダウンロード中…</string>
+    <string name="update_download_percent">進捗</string>
+    <string name="update_download_size">ダウンロード済み</string>
+    <string name="update_download_speed">速度</string>
+    <string name="update_download_unknown_size">不明</string>
+    <string name="update_launched">インストーラーを起動しました。</string>
+    <string name="update_download_error">アップデートをダウンロードできませんでした：</string>
+    <string name="update_dismiss">後で</string>
+    <string name="update_check_now">アップデートを確認</string>
+    <string name="update_cleanup_downloads">ダウンロード済みアップデートファイルを削除</string>
+    <string name="update_cleanup_in_progress">アップデートファイルを削除中…</string>
+    <string name="update_cleanup_done">アップデートファイルを削除しました。</string>
+    <string name="update_cleanup_none">ダウンロード済みアップデートファイルはありません。</string>
+    <string name="update_cleanup_partial">一部のファイルを削除できませんでした。インストーラーを閉じて再試行してください。</string>
+    <string name="update_cleanup_error">アップデートファイルを削除できませんでした：</string>
+    <string name="update_up_to_date">最新バージョンを使用しています</string>
 </resources>

@@ -20,4 +20,27 @@
     <string name="favorite_remove">移除</string>
     <string name="new_playlist">新增播放清單</string>
     <string name="delete">刪除</string>
+    <string name="update_settings">更新</string>
+    <string name="update_center">更新中心</string>
+    <string name="update_check_prereleases">包含預發布版本</string>
+    <string name="update_checking">正在檢查更新…</string>
+    <string name="update_available">有可用更新</string>
+    <string name="update_available_message">有新版本可用：</string>
+    <string name="update_download">下載並安裝</string>
+    <string name="update_downloading">正在下載更新…</string>
+    <string name="update_download_percent">進度</string>
+    <string name="update_download_size">已下載</string>
+    <string name="update_download_speed">速度</string>
+    <string name="update_download_unknown_size">未知</string>
+    <string name="update_launched">安裝程式已啟動。</string>
+    <string name="update_download_error">無法下載更新：</string>
+    <string name="update_dismiss">稍後</string>
+    <string name="update_check_now">檢查更新</string>
+    <string name="update_cleanup_downloads">清理已下載的更新檔案</string>
+    <string name="update_cleanup_in_progress">正在清理更新檔案…</string>
+    <string name="update_cleanup_done">已刪除下載的更新檔案。</string>
+    <string name="update_cleanup_none">找不到已下載的更新檔案。</string>
+    <string name="update_cleanup_partial">部分檔案無法刪除。請關閉安裝程式後再試。</string>
+    <string name="update_cleanup_error">無法清理更新檔案：</string>
+    <string name="update_up_to_date">你已使用最新版本</string>
 </resources>

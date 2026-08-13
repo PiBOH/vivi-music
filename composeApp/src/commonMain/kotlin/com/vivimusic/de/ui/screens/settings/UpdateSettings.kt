@@ -21,6 +21,7 @@ import com.vivimusic.de.resources.*
 import com.vivimusic.de.data.update.UpdateCleanupState
 import com.vivimusic.de.data.update.UpdateDownloadState
 import com.vivimusic.de.ui.AppViewModel
+import com.vivimusic.de.ui.UpdateDownloadProgressPanel
 import org.jetbrains.compose.resources.stringResource
 
 /** Update settings: pre-release opt-in plus manual check and download. */
@@ -28,6 +29,7 @@ import org.jetbrains.compose.resources.stringResource
 fun UpdateSettings(viewModel: AppViewModel, onBack: () -> Unit) {
     val checkPrereleases by viewModel.checkPrereleases.collectAsState()
     val updateStatus by viewModel.updateStatus.collectAsState()
+    val checkingForUpdates by viewModel.checkingForUpdates.collectAsState()
     val downloadState by viewModel.updateDownloadState.collectAsState()
     val cleanupState by viewModel.updateCleanupState.collectAsState()
 
@@ -35,7 +37,7 @@ fun UpdateSettings(viewModel: AppViewModel, onBack: () -> Unit) {
         title = stringResource(Res.string.update_settings),
         onBack = onBack,
     ) {
-        SettingsGroup {
+        SettingsGroup(title = stringResource(Res.string.update_center)) {
             SettingsItem(
                 title = stringResource(Res.string.update_check_prereleases),
                 checked = checkPrereleases,
@@ -83,6 +85,15 @@ fun UpdateSettings(viewModel: AppViewModel, onBack: () -> Unit) {
             )
         }
 
+        if (checkingForUpdates) {
+            Text(
+                text = stringResource(Res.string.update_checking),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+            )
+        }
+
         val status = updateStatus
         if (status != null) {
             Text(
@@ -98,6 +109,12 @@ fun UpdateSettings(viewModel: AppViewModel, onBack: () -> Unit) {
             if (status.updateAvailable) {
                 val isDownloading = downloadState is UpdateDownloadState.Downloading
                 val error = (downloadState as? UpdateDownloadState.Error)?.message
+                if (isDownloading) {
+                    UpdateDownloadProgressPanel(
+                        state = downloadState,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    )
+                }
                 if (error != null) {
                     Text(
                         text = "${stringResource(Res.string.update_download_error)} $error",

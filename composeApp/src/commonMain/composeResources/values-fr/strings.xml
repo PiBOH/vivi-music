@@ -20,4 +20,27 @@
     <string name="favorite_remove">Retirer</string>
     <string name="new_playlist">Nouvelle playlist</string>
     <string name="delete">Supprimer</string>
+    <string name="update_settings">Mises à jour</string>
+    <string name="update_center">Centre des mises à jour</string>
+    <string name="update_check_prereleases">Inclure les versions préliminaires</string>
+    <string name="update_checking">Recherche de mises à jour…</string>
+    <string name="update_available">Mise à jour disponible</string>
+    <string name="update_available_message">Une nouvelle version est disponible :</string>
+    <string name="update_download">Télécharger et installer</string>
+    <string name="update_downloading">Téléchargement de la mise à jour…</string>
+    <string name="update_download_percent">Progression</string>
+    <string name="update_download_size">Téléchargé</string>
+    <string name="update_download_speed">Vitesse</string>
+    <string name="update_download_unknown_size">Inconnue</string>
+    <string name="update_launched">Le programme d'installation a été lancé.</string>
+    <string name="update_download_error">Impossible de télécharger la mise à jour :</string>
+    <string name="update_dismiss">Plus tard</string>
+    <string name="update_check_now">Rechercher des mises à jour</string>
+    <string name="update_cleanup_downloads">Supprimer les fichiers de mise à jour téléchargés</string>
+    <string name="update_cleanup_in_progress">Suppression des fichiers de mise à jour…</string>
+    <string name="update_cleanup_done">Les fichiers de mise à jour ont été supprimés.</string>
+    <string name="update_cleanup_none">Aucun fichier de mise à jour téléchargé.</string>
+    <string name="update_cleanup_partial">Certains fichiers n'ont pas pu être supprimés. Fermez l'installateur et réessayez.</string>
+    <string name="update_cleanup_error">Impossible de supprimer les fichiers de mise à jour :</string>
+    <string name="update_up_to_date">Vous utilisez la dernière version</string>
 </resources>

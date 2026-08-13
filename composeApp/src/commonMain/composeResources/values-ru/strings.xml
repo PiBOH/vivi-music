@@ -20,4 +20,27 @@
     <string name="favorite_remove">Удалить</string>
     <string name="new_playlist">Новый плейлист</string>
     <string name="delete">Удалить</string>
+    <string name="update_settings">Обновления</string>
+    <string name="update_center">Центр обновлений</string>
+    <string name="update_check_prereleases">Включать предварительные версии</string>
+    <string name="update_checking">Проверка обновлений…</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_available_message">Доступна новая версия:</string>
+    <string name="update_download">Скачать и установить</string>
+    <string name="update_downloading">Загрузка обновления…</string>
+    <string name="update_download_percent">Прогресс</string>
+    <string name="update_download_size">Загружено</string>
+    <string name="update_download_speed">Скорость</string>
+    <string name="update_download_unknown_size">Неизвестно</string>
+    <string name="update_launched">Установщик запущен.</string>
+    <string name="update_download_error">Не удалось скачать обновление:</string>
+    <string name="update_dismiss">Позже</string>
+    <string name="update_check_now">Проверить обновления</string>
+    <string name="update_cleanup_downloads">Очистить загруженные файлы обновлений</string>
+    <string name="update_cleanup_in_progress">Очистка файлов обновлений…</string>
+    <string name="update_cleanup_done">Загруженные файлы обновлений удалены.</string>
+    <string name="update_cleanup_none">Загруженные файлы обновлений не найдены.</string>
+    <string name="update_cleanup_partial">Некоторые файлы удалить не удалось. Закройте установщик и повторите попытку.</string>
+    <string name="update_cleanup_error">Не удалось очистить файлы обновлений:</string>
+    <string name="update_up_to_date">Установлена последняя версия</string>
 </resources>

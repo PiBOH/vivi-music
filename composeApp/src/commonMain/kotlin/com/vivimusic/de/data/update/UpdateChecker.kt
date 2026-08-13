@@ -3,14 +3,17 @@ package com.vivimusic.de.data.update
 import com.vivimusic.de.data.AppConfig
 import com.vivimusic.de.data.network.sharedJson
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpHeaders
+import io.ktor.utils.io.readAvailable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlin.time.TimeSource
 
 /**
  * A single GitHub release, with only the fields the update checker needs.
@@ -40,9 +43,20 @@ data class UpdateStatus(
     val updateAvailable: Boolean = false,
 )
 
+data class UpdateDownloadProgress(
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long? = null,
+    val speedBytesPerSecond: Long = 0L,
+) {
+    val percent: Int?
+        get() = totalBytes?.takeIf { it > 0L }?.let {
+            ((downloadedBytes * 100L) / it).coerceIn(0L, 100L).toInt()
+        }
+}
+
 sealed interface UpdateDownloadState {
     data object Idle : UpdateDownloadState
-    data object Downloading : UpdateDownloadState
+    data class Downloading(val progress: UpdateDownloadProgress = UpdateDownloadProgress()) : UpdateDownloadState
     data class Launched(val path: String) : UpdateDownloadState
     data class Error(val message: String) : UpdateDownloadState
 }
@@ -94,7 +108,10 @@ class UpdateChecker(
      * Downloads the release asset matching this operating system and starts it
      * with the native installer/launcher. The browser is never opened.
      */
-    suspend fun downloadAndLaunch(release: AppRelease): String {
+    suspend fun downloadAndLaunch(
+        release: AppRelease,
+        onProgress: (UpdateDownloadProgress) -> Unit = {},
+    ): String {
         val asset = selectUpdateAsset(release.assets)
             ?: error("No update asset is available for this operating system")
         val response = httpClient.get(asset.downloadUrl) {
@@ -104,7 +121,37 @@ class UpdateChecker(
         if (response.status.value !in 200..299) {
             error("Update download failed: HTTP ${response.status.value}")
         }
-        val bytes = response.body<ByteArray>()
+
+        val totalBytes = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+        val channel = response.bodyAsChannel()
+        val chunks = mutableListOf<ByteArray>()
+        val buffer = ByteArray(64 * 1024)
+        var downloadedBytes = 0L
+        val startedAt = TimeSource.Monotonic.markNow()
+        onProgress(UpdateDownloadProgress(totalBytes = totalBytes))
+
+        while (true) {
+            val read = channel.readAvailable(buffer)
+            if (read == -1) break
+            if (read == 0) continue
+            chunks += buffer.copyOf(read)
+            downloadedBytes += read
+            val elapsedMillis = startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(1L)
+            onProgress(
+                UpdateDownloadProgress(
+                    downloadedBytes = downloadedBytes,
+                    totalBytes = totalBytes,
+                    speedBytesPerSecond = downloadedBytes * 1_000L / elapsedMillis,
+                ),
+            )
+        }
+
+        val bytes = ByteArray(downloadedBytes.toInt())
+        var offset = 0
+        chunks.forEach { chunk ->
+            chunk.copyInto(bytes, destinationOffset = offset)
+            offset += chunk.size
+        }
         return saveAndLaunchUpdate(asset.name, bytes)
     }
 

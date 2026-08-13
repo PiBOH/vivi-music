@@ -330,6 +330,7 @@ private fun AppRoot(viewModel: AppViewModel) {
     if (updateStatus?.updateAvailable == true && !updateDismissed && latest != null) {
         val downloadError = (updateDownloadState as? UpdateDownloadState.Error)?.message
         val isDownloading = updateDownloadState is UpdateDownloadState.Downloading
+        val updateLaunched = updateDownloadState is UpdateDownloadState.Launched
         AlertDialog(
             onDismissRequest = {
                 if (!isDownloading) updateDismissed = true
@@ -349,6 +350,10 @@ private fun AppRoot(viewModel: AppViewModel) {
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(stringResource(Res.string.update_downloading), color = MaterialTheme.colorScheme.onSurface)
                             }
+                            UpdateDownloadProgressPanel(
+                                state = updateDownloadState,
+                                modifier = Modifier.padding(top = 12.dp),
+                            )
                         }
                         downloadError != null -> {
                             Spacer(modifier = Modifier.height(12.dp))
@@ -367,11 +372,14 @@ private fun AppRoot(viewModel: AppViewModel) {
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.downloadAndInstallUpdate(latest) },
-                    enabled = !isDownloading,
+                    enabled = !isDownloading && !updateLaunched,
                 ) {
                     Text(
-                        text = if (downloadError != null) stringResource(Res.string.retry)
-                        else stringResource(Res.string.update_download),
+                        text = when {
+                            downloadError != null -> stringResource(Res.string.retry)
+                            updateLaunched -> stringResource(Res.string.update_launched)
+                            else -> stringResource(Res.string.update_download)
+                        },
                     )
                 }
             },

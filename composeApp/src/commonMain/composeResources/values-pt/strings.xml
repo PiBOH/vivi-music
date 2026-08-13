@@ -20,4 +20,27 @@
     <string name="favorite_remove">Remover</string>
     <string name="new_playlist">Nova lista de reprodução</string>
     <string name="delete">Eliminar</string>
+    <string name="update_settings">Atualizações</string>
+    <string name="update_center">Centro de atualizações</string>
+    <string name="update_check_prereleases">Incluir versões de pré-lançamento</string>
+    <string name="update_checking">Procurando atualizações…</string>
+    <string name="update_available">Atualização disponível</string>
+    <string name="update_available_message">Uma nova versão está disponível:</string>
+    <string name="update_download">Baixar e instalar</string>
+    <string name="update_downloading">Baixando a atualização…</string>
+    <string name="update_download_percent">Progresso</string>
+    <string name="update_download_size">Baixado</string>
+    <string name="update_download_speed">Velocidade</string>
+    <string name="update_download_unknown_size">Desconhecido</string>
+    <string name="update_launched">O instalador foi iniciado.</string>
+    <string name="update_download_error">Não foi possível baixar a atualização:</string>
+    <string name="update_dismiss">Mais tarde</string>
+    <string name="update_check_now">Verificar atualizações</string>
+    <string name="update_cleanup_downloads">Limpar arquivos de atualização baixados</string>
+    <string name="update_cleanup_in_progress">Limpando arquivos de atualização…</string>
+    <string name="update_cleanup_done">Os arquivos de atualização foram removidos.</string>
+    <string name="update_cleanup_none">Nenhum arquivo de atualização baixado foi encontrado.</string>
+    <string name="update_cleanup_partial">Alguns arquivos não puderam ser removidos. Feche o instalador e tente novamente.</string>
+    <string name="update_cleanup_error">Não foi possível limpar os arquivos de atualização:</string>
+    <string name="update_up_to_date">Você está usando a versão mais recente</string>
 </resources>

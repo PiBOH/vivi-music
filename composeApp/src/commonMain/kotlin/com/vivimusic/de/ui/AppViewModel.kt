@@ -189,6 +189,9 @@ class AppViewModel(
     private val _updateStatus = MutableStateFlow<UpdateStatus?>(null)
     val updateStatus: StateFlow<UpdateStatus?> = _updateStatus.asStateFlow()
 
+    private val _checkingForUpdates = MutableStateFlow(false)
+    val checkingForUpdates: StateFlow<Boolean> = _checkingForUpdates.asStateFlow()
+
     private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
     val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
 
@@ -214,17 +217,27 @@ class AppViewModel(
     }
 
     fun checkForUpdates() {
+        if (_checkingForUpdates.value) return
         scope.launch {
-            _updateStatus.value = updateChecker.check(includePrereleases = _checkPrereleases.value)
+            _checkingForUpdates.value = true
+            try {
+                _updateStatus.value = updateChecker.check(includePrereleases = _checkPrereleases.value)
+            } finally {
+                _checkingForUpdates.value = false
+            }
         }
     }
 
     fun downloadAndInstallUpdate(release: AppRelease) {
         if (_updateDownloadState.value is UpdateDownloadState.Downloading) return
         scope.launch {
-            _updateDownloadState.value = UpdateDownloadState.Downloading
+            _updateDownloadState.value = UpdateDownloadState.Downloading()
             _updateDownloadState.value = try {
-                UpdateDownloadState.Launched(updateChecker.downloadAndLaunch(release))
+                UpdateDownloadState.Launched(
+                    updateChecker.downloadAndLaunch(release) { progress ->
+                        _updateDownloadState.value = UpdateDownloadState.Downloading(progress)
+                    },
+                )
             } catch (t: Throwable) {
                 UpdateDownloadState.Error(fullErrorDetails("Update download failed", t))
             }

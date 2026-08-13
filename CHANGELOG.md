@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0-alpha] - 2026-08-13
+
+### Added
+- Dedicated Update Center presentation in the Updates settings page.
+- Streaming update downloads with live percentage, downloaded size and
+  transfer speed; the same progress is shown in the startup update dialog.
+- Added missing Update Center translations for the main localized resources,
+  including Italian, German, French, Spanish, Portuguese, Russian, Japanese
+  and Simplified/Traditional Chinese.
+
+### Changed
+- The update client now reads the response stream incrementally instead of
+  waiting for the complete installer in memory before updating the UI.
+
 ## [0.14.1-alpha] - 2026-08-13
 
 ### Added
