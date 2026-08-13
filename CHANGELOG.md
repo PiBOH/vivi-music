@@ -10,17 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.1-alpha] - 2026-08-13
 
 ### Added
-- Progetto Kotlin Multiplatform iniziale con target Android e Desktop (JVM).
-- UI condivisa in Compose Multiplatform: Home con ricerca, Libreria (preferiti,
-  cronologia, playlist), Impostazioni e barra "in riproduzione".
-- Client InnerTube (YouTube Music) in `commonMain` per ricerca, home feed,
-  album/playlist e risoluzione del flusso audio.
-- Persistenza locale con Room KMP (entità per brani, playlist, preferiti,
-  cronologia e stato di sincronizzazione).
-- Sincronizzazione dati utente con Supabase (PostgREST + Realtime + Auth) e
-  `SyncManager` con pull/push bidirezionale e mirroring in tempo reale.
-- Supporto multilingua per 49 lingue con selezione manuale o lingua di sistema.
-- Workflow GitHub Actions di CI (build su push/PR) e CD (artifact Android e
-  desktop per Windows/macOS/Linux).
-- Migrazione SQL Supabase iniziale con Row Level Security e Realtime.
-- File `AGENTS.md` con convenzioni di progetto, regole SemVer e changelog.
+- Initial Kotlin Multiplatform project with Android and Desktop (JVM) targets.
+- Shared Compose Multiplatform UI: Home with search, Library (favorites,
+  history, playlists), Settings and a "now playing" bar.
+- InnerTube (YouTube Music) client in `commonMain` for search, home feed,
+  album/playlist and audio stream resolution.
+- Local persistence with Room KMP (entities for songs, playlists, favorites,
+  history and sync state).
+- User data sync with Supabase (PostgREST + Realtime + Auth) and a
+  `SyncManager` with bidirectional pull/push and real-time mirroring.
+- Multilingual support for 49 languages with manual or system-language
+  selection.
+- GitHub Actions CI (build on push/PR) and auto-release (Android and desktop
+  artifacts for Windows/macOS/Linux) workflows.
+- Initial Supabase SQL migration with Row Level Security and Realtime.
+- `AGENTS.md` with project conventions, SemVer and changelog rules.

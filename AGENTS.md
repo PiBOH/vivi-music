@@ -1,230 +1,230 @@
 # AGENTS.md
 
-Istruzioni operative per gli agenti AI (e per gli sviluppatori) che lavorano su
-questo repository. Leggere integralmente questo file prima di modificare il
-codice.
+Operational instructions for AI agents (and developers) working on this
+repository. Read this file in full before modifying the code.
 
-## 1. Panoramica del progetto
+## 1. Project overview
 
-**Vivi Music DE** è un client musicale desktop e mobile basato su
-**Kotlin Multiplatform (KMP)** e **Compose Multiplatform**, che ripropone
-l'esperienza di ViVi Music (client YouTube Music open source). Il codice e la UI
-sono condivisi tra i target **Android** e **Desktop (JVM: Windows/macOS/Linux)**
-e i dati utente (playlist, preferiti, cronologia) si sincronizzano in tempo
-reale tramite **Supabase**.
+**Vivi Music DE** is a desktop and mobile music client built with
+**Kotlin Multiplatform (KMP)** and **Compose Multiplatform**, recreating the
+experience of ViVi Music (an open source YouTube Music client). Code and UI are
+shared between the **Android** and **Desktop (JVM: Windows/macOS/Linux)**
+targets, and user data (playlists, favorites, history) syncs in real time via
+**Supabase**.
 
-### Stack tecnologico
+### Tech stack
 
-| Area          | Tecnologia                                                              |
-|---------------|-------------------------------------------------------------------------|
-| Linguaggio    | Kotlin (2.4.x)                                                          |
-| UI            | Compose Multiplatform + Material 3                                      |
-| Build         | Gradle (Kotlin DSL), version catalog in `gradle/libs.versions.toml`     |
-| Rete          | Ktor Client (OkHttp su Android, CIO su Desktop)                         |
-| Database      | Room KMP (`androidx.room3`), driver SQLite bundled                       |
-| Sincronizzaz. | Supabase (supabase-kt: PostgREST + Realtime + Auth)                     |
-| i18n          | Compose Multiplatform resources (`composeResources/**`)                 |
-| CI/CD         | GitHub Actions (`.github/workflows/ci.yml` e `auto-release.yml`)         |
+| Area      | Technology                                                           |
+|-----------|----------------------------------------------------------------------|
+| Language  | Kotlin (2.4.x)                                                       |
+| UI        | Compose Multiplatform + Material 3                                   |
+| Build     | Gradle (Kotlin DSL), version catalog in `gradle/libs.versions.toml`  |
+| Network   | Ktor Client (OkHttp on Android, CIO on Desktop)                      |
+| Database  | Room KMP (`androidx.room3`), bundled SQLite driver                   |
+| Sync      | Supabase (supabase-kt: PostgREST + Realtime + Auth)                  |
+| i18n      | Compose Multiplatform resources (`composeResources/**`)              |
+| CI/CD     | GitHub Actions (`.github/workflows/ci.yml` and `auto-release.yml`)   |
 
-### Struttura a moduli
+### Module structure
 
 ```
 vivi-music-de/
-├── .github/workflows/          # ci.yml (CI) e auto-release.yml (release)
+├── .github/workflows/          # ci.yml (CI) and auto-release.yml (release)
 ├── gradle/
 │   ├── libs.versions.toml      # version catalog
 │   └── wrapper/                # Gradle wrapper
-├── composeApp/                 # unico modulo KMP (app Android + Desktop)
+├── composeApp/                 # single KMP module (Android + Desktop app)
 │   ├── build.gradle.kts
 │   └── src/
-│       ├── commonMain/         # codice condiviso
-│       │   ├── composeResources/   # risorse stringa (values/ e values-XX/)
+│       ├── commonMain/         # shared code
+│       │   ├── composeResources/   # string resources (values/ and values-XX/)
 │       │   └── kotlin/com/vivimusic/de/
 │       │       ├── data/           # db, network, sync, repository, container
-│       │       ├── domain/         # modelli di dominio (Song, Playlist, ...)
-│       │       ├── i18n/           # lingue e gestione locale
-│       │       └── ui/             # schermate Compose condivise
-│       ├── androidMain/        # MainActivity, manifest, actual Android
-│       └── desktopMain/        # main.kt, actual Desktop
-├── supabase/migrations/        # schema SQL + RLS + Realtime
+│       │       ├── domain/         # domain models (Song, Playlist, ...)
+│       │       ├── i18n/           # languages and locale handling
+│       │       └── ui/             # shared Compose screens
+│       ├── androidMain/        # MainActivity, manifest, Android actuals
+│       └── desktopMain/        # main.kt, Desktop actuals
+├── supabase/migrations/        # SQL schema + RLS + Realtime
 ├── AGENTS.md
 └── CHANGELOG.md
 ```
 
-Il progetto usa un **singolo modulo Gradle** (`composeApp`) con i tre source
-set `commonMain`, `androidMain` e `desktopMain`. Il pattern `expect`/`actual` è
-usato per le parti platform-specific (HTTP engine, builder del database,
-persistenza impostazioni, gestione del locale).
+The project uses a **single Gradle module** (`composeApp`) with the three source
+sets `commonMain`, `androidMain` and `desktopMain`. The `expect`/`actual`
+pattern is used for platform-specific parts (HTTP engine, database builder,
+settings persistence, locale handling).
 
-### Flusso dei dati
+### Data flow
 
-- **UI** (`ui/`) -> **AppViewModel** -> **MusicRepository** -> database locale /
-  **InnerTubeClient** (catalogo YouTube Music).
-- **SyncManager** orchestra la sincronizzazione tra il database Room locale e
-  **SupabaseSyncClient** (PostgREST per pull/push, Realtime per il mirroring).
+- **UI** (`ui/`) -> **AppViewModel** -> **MusicRepository** -> local database /
+  **InnerTubeClient** (YouTube Music catalog).
+- **SyncManager** orchestrates sync between the local Room database and
+  **SupabaseSyncClient** (PostgREST for pull/push, Realtime for mirroring).
 
-## 2. Convenzioni di codice
+## 2. Code conventions
 
-- **Linguaggio**: codice, commenti e messaggi di commit in inglese. (Questo
-  file e la documentazione rivolta all'utente possono essere in italiano.)
+- **Language**: code, comments, commit messages and all documentation in
+  English.
 - **Package**: `com.vivimusic.de`.
-- **Stile**: seguire `kotlin.code.style=official` (già configurato).
-- **Nomi**: data class e classi in PascalCase, funzioni/proprietà in camelCase,
-  costanti in UPPER_SNAKE_CASE.
-- **Coroutine**: usare `suspend` per le operazioni I/O e `Flow`/`StateFlow` per
-  lo stato reattivo. Non bloccare mai il thread UI.
-- **Risorse**: ogni stringa visibile all'utente deve essere una risorsa
-  (`Res.string.*`), mai una stringa hardcoded.
-- **Dipendenze**: aggiungere le versioni solo in `gradle/libs.versions.toml`.
-  Non introdurre nuove librerie senza necessità e senza verificarne la presenza
-  nel progetto.
-- **Errori**: non ingoiare le eccezioni; gestirle o propagarle in modo esplicito.
-- **Niente emoji** in codice, commenti, stringhe, log, risorse e workflow.
+- **Style**: follow `kotlin.code.style=official` (already configured).
+- **Names**: data classes and classes in PascalCase, functions/properties in
+  camelCase, constants in UPPER_SNAKE_CASE.
+- **Coroutines**: use `suspend` for I/O operations and `Flow`/`StateFlow` for
+  reactive state. Never block the UI thread.
+- **Resources**: every user-visible string must be a resource
+  (`Res.string.*`), never a hardcoded string.
+- **Dependencies**: add versions only in `gradle/libs.versions.toml`. Do not
+  introduce new libraries without need and without checking whether they are
+  already present in the project.
+- **Errors**: do not swallow exceptions; handle or propagate them explicitly.
+- **No emoji** in code, comments, strings, logs, resources and workflows.
 
-## 3. Regola d'oro: "Quello che funziona non si tocca"
+## 3. Golden rule: "What works is not touched"
 
-> **Non rifattorizzare o modificare moduli, classi o funzioni già funzionanti e
-> stabili, a meno che non sia strettamente necessario per la nuova feature
-> richiesta o su richiesta esplicita dell'utente.**
+> **Do not refactor or modify modules, classes or functions that already work
+> and are stable, unless it is strictly necessary for the requested feature or
+> explicitly requested by the user.**
 
-- Prima di toccare codice esistente, verificare che serva davvero al task.
-- Preferire aggiunte non invasive (nuovi file, estensioni, parametri con
-  default) rispetto a riscritture.
-- Se una modifica a codice stabile è inevitabile, motivarla nel commit e nel
+- Before touching existing code, verify that it is really needed for the task.
+- Prefer non-invasive additions (new files, extensions, defaulted parameters)
+  over rewrites.
+- If a change to stable code is unavoidable, justify it in the commit and the
   changelog.
-- Dopo ogni modifica, eseguire build e test per confermare che nulla si è rotto.
+- After every change, run the build and tests to confirm nothing broke.
 
-## 4. Versionamento (SemVer)
+## 4. Versioning (SemVer)
 
-Ogni incremento di versione deve seguire rigorosamente il **Semantic Versioning**
-(`MAJOR.MINOR.PATCH`), definito in https://semver.org:
+Every version bump must strictly follow **Semantic Versioning**
+(`MAJOR.MINOR.PATCH`), as defined at https://semver.org:
 
-- **MAJOR**: cambiamenti incompatibili con le versioni precedenti.
-- **MINOR**: nuove funzionalità retrocompatibili.
-- **PATCH**: correzioni di bug retrocompatibili.
+- **MAJOR**: incompatible changes with previous versions.
+- **MINOR**: backwards-compatible new features.
+- **PATCH**: backwards-compatible bug fixes.
 
-La versione canonica dell'app è dichiarata in `version.txt` alla radice del
-repository (formato SemVer, es. `0.0.1-alpha`). Il build la legge e la usa come
-`defaultConfig.versionName` su Android. Il `packageVersion` degli installer
-desktop è un valore numerico separato (jpackage richiede `MAJOR >= 1` e non
-accetta suffissi di prerelease).
+The canonical app version is declared in `version.txt` at the repository root
+(SemVer format, e.g. `0.0.1-alpha`). The build reads it and uses it as
+`defaultConfig.versionName` on Android. The `packageVersion` of the desktop
+installers is a separate numeric value (jpackage requires `MAJOR >= 1` and does
+not accept prerelease suffixes).
 
 ## 5. Changelog (Keep a Changelog)
 
-Il file `CHANGELOG.md` segue lo standard **Keep a Changelog**
-(https://keepachangelog.com). **Va aggiornato obbligatoriamente a ogni modifica
-importante**, usando le sezioni:
+The `CHANGELOG.md` file follows the **Keep a Changelog** standard
+(https://keepachangelog.com). **It must be updated on every important change**,
+using the sections:
 
-- `Added` — nuove funzionalità.
-- `Changed` — modifiche a funzionalità esistenti.
-- `Deprecated` — funzionalità deprecate.
-- `Removed` — funzionalità rimosse.
-- `Fixed` — correzioni di bug.
-- `Security` — correzioni di sicurezza.
+- `Added` — new features.
+- `Changed` — changes to existing features.
+- `Deprecated` — deprecated features.
+- `Removed` — removed features.
+- `Fixed` — bug fixes.
+- `Security` — security fixes.
 
-Ogni entry è sotto una sezione `## [VERSIONE] - YYYY-MM-DD`. Non cancellare le
-entry passate.
+Each entry lives under a `## [VERSION] - YYYY-MM-DD` section. Do not delete
+past entries.
 
-## 6. Localizzazione (i18n)
+## 6. Localization (i18n)
 
-- Le stringhe vivono in `composeApp/src/commonMain/composeResources/`.
-- `values/strings.xml` è il **default inglese** e contiene l'elenco canonico
-  delle chiavi.
-- Ogni lingua ha `values-<qualifier>/strings.xml` (es. `values-it`, `values-de`,
-  `values-zh-rCN`, `values-zh-rTW`). Le chiavi assenti ricadono sull'inglese.
-- L'elenco delle lingue supportate è in
-  `i18n/AppLanguage.kt` (`supportedLanguages`), con codice BCP-47 e nome nativo.
-- La selezione manuale usa il pattern `expect/actual LocalAppLocale`
-  (`i18n/Locale.kt` + actual per piattaforma); la scelta è persistita tramite
+- Strings live in `composeApp/src/commonMain/composeResources/`.
+- `values/strings.xml` is the **English default** and contains the canonical
+  list of keys.
+- Each language has `values-<qualifier>/strings.xml` (e.g. `values-it`,
+  `values-de`, `values-zh-rCN`, `values-zh-rTW`). Missing keys fall back to
+  English.
+- The list of supported languages is in
+  `i18n/AppLanguage.kt` (`supportedLanguages`), with BCP-47 code and native
+  name.
+- Manual selection uses the `expect/actual LocalAppLocale` pattern
+  (`i18n/Locale.kt` + platform actuals); the choice is persisted via
   `SettingsStore` (`data/SettingsStore.kt`).
 
-### Aggiungere una nuova lingua
+### Adding a new language
 
-1. Aggiungere una voce a `supportedLanguages` in `i18n/AppLanguage.kt`.
-2. Creare `composeApp/src/commonMain/composeResources/values-XX/strings.xml`
-   (sostituire `XX` con il qualifier della lingua) traducendo le chiavi del
+1. Add an entry to `supportedLanguages` in `i18n/AppLanguage.kt`.
+2. Create `composeApp/src/commonMain/composeResources/values-XX/strings.xml`
+   (replace `XX` with the language qualifier) translating the keys from the
    default `values/strings.xml`.
-3. Non è richiesta la traduzione di tutte le chiavi: quelle mancanti ricadono
-   sull'inglese.
-4. Aggiornare `CHANGELOG.md` (sezione `Added`).
+3. Translating every key is not required: missing keys fall back to English.
+4. Update `CHANGELOG.md` (`Added` section).
 
-## 7. Sincronizzazione Supabase
+## 7. Supabase sync
 
-- La configurazione è letta a runtime in `data/AppConfig.kt`:
-  - **Android**: da `local.properties` (`supabase.url`, `supabase.anonKey`)
-    iniettate in `BuildConfig` (vedi `composeApp/build.gradle.kts`).
-  - **Desktop**: dalle variabili d'ambiente `SUPABASE_URL`/`SUPABASE_ANON_KEY`
-    o dal file `supabase.env`.
-- Lo schema (tabelle, RLS, Realtime) è in `supabase/migrations/0001_init.sql`.
-- Se le credenziali mancano, l'app gira in modalità solo-locale
+- Configuration is read at runtime in `data/AppConfig.kt`:
+  - **Android**: from `local.properties` (`supabase.url`, `supabase.anonKey`)
+    injected into `BuildConfig` (see `composeApp/build.gradle.kts`).
+  - **Desktop**: from the `SUPABASE_URL`/`SUPABASE_ANON_KEY` environment
+    variables or from the `supabase.env` file.
+- The schema (tables, RLS, Realtime) is in `supabase/migrations/0001_init.sql`.
+- If credentials are missing, the app runs in local-only mode
   (`SyncStatus.Disabled`).
-- Il sync attuale fa push dell'intero dataset locale (niente dirty flag): è
-  corretto e semplice per librerie piccole; per librerie grandi va introdotto
-  un tracking delle modifiche per riga.
+- The current sync pushes the entire local dataset (no dirty flag): it is
+  correct and simple for small libraries; for large libraries, per-row change
+  tracking should be introduced.
 
-## 8. Build, test ed esecuzione
+## 8. Build, test and run
 
-Requisiti: JDK 17+ (consigliato 17 per il packaging con massima compatibilità;
-Gradle 8.x non supporta JDK 25), Android SDK con platform 36 (per il target
-Android), connessione di rete per scaricare le dipendenze.
+Requirements: JDK 17+ (17 recommended for packaging with maximum compatibility;
+Gradle 8.x does not support JDK 25), Android SDK with platform 36 (for the
+Android target), network access to download dependencies.
 
 ```bash
-# Desktop: compila e avvia l'app
+# Desktop: compile and run the app
 ./gradlew :composeApp:run
 
-# Desktop: genera l'installer nativo per il sistema corrente (.msi/.dmg/.deb/...)
+# Desktop: native installer for the current OS (.msi/.dmg/.deb/...)
 ./gradlew :composeApp:packageDistributionForCurrentOS
 
-# Android: compila l'APK di debug
+# Android: debug APK
 ./gradlew :composeApp:assembleDebug
 
-# Android: installa ed esegue su un dispositivo/emulatore collegato
+# Android: install and run on a connected device/emulator
 ./gradlew :composeApp:installDebug
 
-# Tutti i controlli (test + build)
+# All checks (tests + build)
 ./gradlew build
 
-# Pulizia
+# Clean
 ./gradlew clean
 ```
 
-Nota su Windows: JDK 25 (o superiori) può non essere supportato da Gradle 8.x;
-usare JDK 21 (es. `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot`).
+Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
+(e.g. `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot`).
 
-## 9. Workflow GitHub Actions
+## 9. GitHub Actions workflows
 
-- **CI** (`.github/workflows/ci.yml`): su ogni push a `main` e pull request
-  compila il target Android (`assembleDebug`) e quello Desktop
-  (`compileKotlinDesktop`) e carica l'APK di debug come artifact.
-- **Auto Release** (`.github/workflows/auto-release.yml`): crea una GitHub
-  Release automatica. Si attiva su:
-  - un push a `main` il cui messaggio di commit inizia con `v` (es.
-    `v0.0.1-alpha: ...`), oppure
-  - `workflow_dispatch` manuale (con versione opzionale).
-  La versione è letta da `version.txt`; la sezione di `CHANGELOG.md`
-  corrispondente è usata come note di rilascio. Il workflow compila:
-  - Android `assembleRelease` (APK) su `ubuntu-latest` (JDK 21);
-  - gli installer desktop con JDK 17 in matrice `ubuntu-latest`,
-    `windows-latest`, `macos-15-intel` e `macos-15` (dual-arch macOS).
-  Gli artifact sono allegati alla release (tag = versione senza prefisso `v`).
-- Per il rilascio firmato dell'APK e per il packaging MSI su Windows (che
-  richiede WiX) consultare la documentazione e aggiungere i segreti/strumenti
-  necessari.
+- **CI** (`.github/workflows/ci.yml`): on every push to `main` and pull request
+  it compiles the Android target (`assembleDebug`) and the Desktop target
+  (`compileKotlinDesktop`) and uploads the debug APK as an artifact.
+- **Auto Release** (`.github/workflows/auto-release.yml`): creates a GitHub
+  Release automatically. It triggers on:
+  - a push to `main` whose commit message starts with `v` (e.g.
+    `v0.0.1-alpha: ...`), or
+  - a manual `workflow_dispatch` (with an optional version).
+  The version is read from `version.txt`; the matching `CHANGELOG.md` section is
+  used as the release notes. The workflow builds:
+  - Android `assembleRelease` (APK) on `ubuntu-latest` (JDK 21);
+  - the desktop installers with JDK 17 in a matrix of `ubuntu-latest`,
+    `windows-latest`, `macos-15-intel` and `macos-15` (dual-arch macOS).
+  The artifacts are attached to the release (tag = version without the `v`
+  prefix).
+- For signed APK releases and for MSI packaging on Windows (which requires
+  WiX) consult the documentation and add the required secrets/tools.
 
-### Rilasciare una nuova versione
+### Releasing a new version
 
-1. Aggiornare `version.txt` con la nuova versione SemVer.
-2. Aggiornare `CHANGELOG.md` con la sezione `## [VERSIONE] - YYYY-MM-DD`.
-3. Commit con messaggio che inizia con `v` ed eseguire push:
-   `git commit -m "v$(cat version.txt): descrizione" && git push`.
+1. Update `version.txt` with the new SemVer version.
+2. Update `CHANGELOG.md` with a `## [VERSION] - YYYY-MM-DD` section.
+3. Commit with a message starting with `v` and push:
+   `git commit -m "v$(cat version.txt): description" && git push`.
 
-## 10. Definizione di "Done"
+## 10. Definition of "Done"
 
-Un task è completo solo quando:
+A task is complete only when:
 
-1. il codice compila (`./gradlew build`) e i test passano;
-2. non sono state introdotte emoji nel codice/risorse/workflow;
-3. non è stato rifattorizzato codice stabile senza necessità;
-4. `CHANGELOG.md` è aggiornato (sezione corretta) quando la modifica è rilevante;
-5. `version.txt` e `CHANGELOG.md` rispettano SemVer/Keep a Changelog se è
-   cambiato il comportamento dell'app.
+1. the code compiles (`./gradlew build`) and the tests pass;
+2. no emoji were introduced in code/resources/workflows;
+3. no stable code was refactored without necessity;
+4. `CHANGELOG.md` is updated (correct section) when the change is relevant;
+5. `version.txt` and `CHANGELOG.md` follow SemVer/Keep a Changelog when the app
+   behavior changed.

@@ -1,97 +1,98 @@
 # Vivi Music DE
 
-Client musicale desktop e mobile basato su **Kotlin Multiplatform** e **Compose
-Multiplatform**, che ripropone l'esperienza di [ViVi Music](https://github.com/25huizengek1/ViMusic)
-(client YouTube Music open source). La UI e la logica sono condivise tra
-**Android** e **Desktop (Windows/macOS/Linux)** e i dati utente (playlist,
-preferiti, cronologia) si sincronizzano in tempo reale tramite **Supabase**.
+A desktop and mobile music client built with **Kotlin Multiplatform** and
+**Compose Multiplatform**, recreating the experience of
+[ViVi Music](https://github.com/25huizengek1/ViMusic) (an open source YouTube
+Music client). The UI and logic are shared between **Android** and
+**Desktop (Windows/macOS/Linux)**, and user data (playlists, favorites,
+history) syncs in real time via **Supabase**.
 
-## Caratteristiche
+## Features
 
-- Target **Android** e **Desktop (JVM)** da un unico codebase.
-- UI in **Compose Multiplatform** (Material 3): Home con ricerca, Libreria,
-  Impostazioni e barra "in riproduzione".
-- Catalogo **YouTube Music** via client InnerTube (ricerca, home feed,
-  album/playlist, risoluzione flusso audio).
-- Database locale **Room KMP** con driver SQLite bundled.
-- Sincronizzazione **Supabase** (PostgREST + Realtime + Auth) con mirroring in
-  tempo reale tra dispositivi.
-- **49 lingue** supportate, con selezione manuale o lingua di sistema.
-- **CI/CD** con GitHub Actions.
+- **Android** and **Desktop (JVM)** targets from a single codebase.
+- **Compose Multiplatform** (Material 3) UI: Home with search, Library,
+  Settings, and a "now playing" bar.
+- **YouTube Music** catalog via an InnerTube client (search, home feed,
+  album/playlist, audio stream resolution).
+- Local database with **Room KMP** and a bundled SQLite driver.
+- **Supabase** sync (PostgREST + Realtime + Auth) with real-time mirroring
+  across devices.
+- **49 languages**, with manual selection or system language.
+- **CI/CD** with GitHub Actions.
 
-## Requisiti di build
+## Build requirements
 
-- JDK 17+ (Gradle 8.x non supporta JDK 25; il packaging desktop con JDK 17
-  abbassa il requisito runtime a macOS 10.15+ e Windows 10+).
-- Android SDK con platform 36 (solo per il target Android).
-- Un progetto Supabase (opzionale, per la sincronizzazione).
+- JDK 17+ (Gradle 8.x does not support JDK 25; packaging with JDK 17 lowers the
+  runtime requirement to macOS 10.15+ and Windows 10+).
+- Android SDK with platform 36 (only for the Android target).
+- A Supabase project (optional, for sync).
 
-## Requisiti di sistema (runtime)
+## System requirements (runtime)
 
-- **Windows**: Windows 10 o successivo (x86-64). Windows 7/8/8.1 non sono
-  supportati perche il runtime JDK 17+ richiede Windows 10+.
-- **macOS**: macOS 10.15 (Catalina) o successivo, sia Intel che Apple Silicon.
-- **Linux**: Debian/Ubuntu tramite `.deb`; Arch Linux e altre distribuzioni
-  (glibc) tramite `.AppImage`.
-- **CPU**: processore x86-64 con istruzioni SSE2 (es. Intel Core i5-650 o
-  superiore). Non e richiesto il supporto AVX.
+- **Windows**: Windows 10 or later (x86-64). Windows 7/8/8.1 are not supported
+  because the JDK 17+ runtime requires Windows 10+.
+- **macOS**: macOS 10.15 (Catalina) or later, on both Intel and Apple Silicon.
+- **Linux**: Debian/Ubuntu via `.deb`; Arch Linux and other (glibc) distros via
+  `.AppImage`.
+- **CPU**: x86-64 processor with SSE2 instructions (e.g. Intel Core i5-650 or
+  later). AVX support is not required.
 
-## Build ed esecuzione
+## Build and run
 
 ```bash
-# Desktop: compila e avvia
+# Desktop: compile and run
 ./gradlew :composeApp:run
 
-# Desktop: installer nativo per il sistema corrente
+# Desktop: native installer for the current OS
 ./gradlew :composeApp:packageDistributionForCurrentOS
 
-# Android: APK di debug
+# Android: debug APK
 ./gradlew :composeApp:assembleDebug
 
-# Android: installa su dispositivo/emulatore collegato
+# Android: install on a connected device/emulator
 ./gradlew :composeApp:installDebug
 
-# Tutti i controlli
+# All checks
 ./gradlew build
 ```
 
-## Release automatico
+## Automatic releases
 
-La versione canonica dell'app e in `version.txt` (formato SemVer, es.
+The canonical app version lives in `version.txt` (SemVer format, e.g.
 `0.0.1-alpha`).
 
-Per pubblicare una GitHub Release:
-1. Aggiorna `version.txt` e `CHANGELOG.md`.
-2. Commit e push con un messaggio che inizia con `v` (es. `v0.0.1-alpha: ...`),
-   oppure esegui manualmente il workflow `auto-release.yml`.
+To publish a GitHub Release:
+1. Update `version.txt` and `CHANGELOG.md`.
+2. Commit and push with a message starting with `v` (e.g. `v0.0.1-alpha: ...`),
+   or run the `auto-release.yml` workflow manually.
 
-Il workflow compila l'APK Android e gli installer desktop
-(Windows/macOS/Linux) e crea la release con gli artifact allegati.
+The workflow builds the Android APK and the desktop installers
+(Windows/macOS/Linux) and creates the release with the artifacts attached.
 
-## Configurazione Supabase
+## Supabase configuration
 
-1. Crea un progetto su [Supabase](https://supabase.com).
-2. Esegui `supabase/migrations/0001_init.sql` nell'SQL editor (crea tabelle,
-   RLS e abilita Realtime).
-3. Fornisci le credenziali:
-   - **Android**: aggiungi a `local.properties` (file git-ignorato):
+1. Create a project on [Supabase](https://supabase.com).
+2. Run `supabase/migrations/0001_init.sql` in the SQL editor (creates tables,
+   RLS, and enables Realtime).
+3. Provide the credentials:
+   - **Android**: add to `local.properties` (a git-ignored file):
      ```properties
-     supabase.url=https://tuo-progetto.supabase.co
-     supabase.anonKey=la-tua-anon-key
+     supabase.url=https://your-project.supabase.co
+     supabase.anonKey=your-anon-key
      ```
-   - **Desktop**: imposta le variabili d'ambiente `SUPABASE_URL` e
-     `SUPABASE_ANON_KEY`, oppure crea un file `supabase.env` con
-     `SUPABASE_URL=...` e `SUPABASE_ANON_KEY=...`.
+   - **Desktop**: set the `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment
+     variables, or create a `supabase.env` file with
+     `SUPABASE_URL=...` and `SUPABASE_ANON_KEY=...`.
 
-Senza credenziali l'app funziona in modalità solo-locale.
+Without credentials the app runs in local-only mode.
 
-## Struttura del progetto
+## Project structure
 
-Vedi [`AGENTS.md`](AGENTS.md) per architettura, convenzioni, regole di
-versionamento (SemVer) e istruzioni per aggiungere nuove lingue.
+See [`AGENTS.md`](AGENTS.md) for architecture, conventions, versioning (SemVer)
+rules, and instructions for adding new languages.
 
-## Nota
+## Note
 
-Il motore di riproduzione audio (player) è il prossimo passo: l'app risolve già
-il flusso audio dei brani ma non lo riproduce ancora. Il client InnerTube è un
-sottoinsieme funzionante del modulo completo del progetto originale.
+The audio playback engine (player) is the next step: the app already resolves
+the audio stream of tracks but does not play them yet. The InnerTube client is
+a working subset of the full module from the original project.
