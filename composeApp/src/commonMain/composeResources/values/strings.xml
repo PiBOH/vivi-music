@@ -97,4 +97,17 @@
     <string name="no_lyrics">No lyrics found</string>
     <string name="shuffle">Shuffle</string>
     <string name="repeat">Repeat</string>
+    <string name="account">Account</string>
+    <string name="sign_in">Sign in</string>
+    <string name="sign_in_desc">Sign in to sync your playlists, favorites and history between devices.</string>
+    <string name="sign_in_not_configured">Synchronization is not configured. Set the Supabase environment variables to enable sign-in.</string>
+    <string name="sign_out">Sign out</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="create_account">Create account</string>
+    <string name="signed_in_as">Signed in</string>
+    <string name="not_signed_in">Not signed in</string>
+    <string name="activity_history">Activity history</string>
+    <string name="total_listening_time">Total listening time</string>
+    <string name="artists">Artists</string>
 </resources>

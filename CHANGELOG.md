@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0-alpha] - 2026-08-13
+
+### Added
+- Account / authentication (Phase 3): Supabase email/password sign-in and
+  sign-up (delegated through `SyncManager`), an `AuthState` flow in the view
+  model, and a desktop Login screen.
+- Account screen (new navigation-rail destination) with the signed-in profile,
+  sign-in / sign-out, sync status and a link to the activity history.
+- Activity history screen showing total listening time and unique
+  song / artist / album counts, derived from the local listening history.
+
 ## [0.5.0-alpha] - 2026-08-13
 
 ### Added

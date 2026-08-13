@@ -33,6 +33,20 @@ private const val SYNC_ENABLED_KEY = "sync.enabled"
 
 enum class RepeatMode { Off, All, One }
 
+sealed interface AuthState {
+    data object Checking : AuthState
+    data object SignedOut : AuthState
+    data class SignedIn(val email: String) : AuthState
+    data class Error(val message: String) : AuthState
+}
+
+data class ListeningStats(
+    val totalPlayTimeMs: Long = 0L,
+    val uniqueSongs: Int = 0,
+    val uniqueArtists: Int = 0,
+    val uniqueAlbums: Int = 0,
+)
+
 /**
  * Holds the UI state and exposes the repository/sync operations to the Compose
  * screens. Kept intentionally simple: no DI or ViewModel framework.
@@ -54,6 +68,9 @@ class AppViewModel(
         repository.observePlaylists().stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     val syncStatus: StateFlow<SyncStatus> = syncManager.status
+
+    /** True when a Supabase backend is configured (auth + sync available). */
+    val syncConfigured: Boolean get() = syncManager.isConfigured
 
     private val _syncEnabled = MutableStateFlow(readSetting(SYNC_ENABLED_KEY) != "false")
     val syncEnabled: StateFlow<Boolean> = _syncEnabled.asStateFlow()
@@ -108,6 +125,20 @@ class AppViewModel(
     private val _lyricsLoading = MutableStateFlow(false)
     val lyricsLoading: StateFlow<Boolean> = _lyricsLoading.asStateFlow()
 
+    // Authentication state, driven by the Supabase sync backend.
+    private val _authState = MutableStateFlow<AuthState>(AuthState.Checking)
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
+
+    // Listening statistics derived from the local history.
+    val listeningStats: StateFlow<ListeningStats> = history.map { songs ->
+        ListeningStats(
+            totalPlayTimeMs = songs.sumOf { it.durationMs ?: 0L },
+            uniqueSongs = songs.distinctBy { it.id }.size,
+            uniqueArtists = songs.map { it.artist }.filter { it.isNotBlank() }.distinct().size,
+            uniqueAlbums = songs.map { it.album }.filter { it.isNotBlank() }.distinct().size,
+        )
+    }.stateIn(scope, SharingStarted.Eagerly, ListeningStats())
+
     private val _album = MutableStateFlow<Album?>(null)
     val album: StateFlow<Album?> = _album.asStateFlow()
 
@@ -134,6 +165,7 @@ class AppViewModel(
     init {
         loadHome()
         checkForUpdates()
+        refreshAuthState()
     }
 
     fun setCheckPrereleases(enabled: Boolean) {
@@ -387,4 +419,62 @@ class AppViewModel(
     fun clearHistory() = repository.clearHistory()
 
     fun syncNow() = repository.syncNow()
+
+    // ----- account / auth -----
+
+    fun refreshAuthState() {
+        _authState.value = AuthState.Checking
+        scope.launch {
+            _authState.value = try {
+                val email = syncManager.currentUserEmail()
+                if (email != null) AuthState.SignedIn(email) else AuthState.SignedOut
+            } catch (t: Throwable) {
+                AuthState.SignedOut
+            }
+        }
+    }
+
+    fun signIn(email: String, password: String) {
+        if (!syncManager.isConfigured) {
+            _authState.value = AuthState.Error("Synchronization is not configured")
+            return
+        }
+        _authState.value = AuthState.Checking
+        scope.launch {
+            _authState.value = try {
+                syncManager.signIn(email, password)
+                val user = syncManager.currentUserEmail() ?: email
+                AuthState.SignedIn(user)
+            } catch (t: Throwable) {
+                AuthState.Error(t.message ?: "Sign in failed")
+            }
+        }
+    }
+
+    fun signUp(email: String, password: String) {
+        if (!syncManager.isConfigured) {
+            _authState.value = AuthState.Error("Synchronization is not configured")
+            return
+        }
+        _authState.value = AuthState.Checking
+        scope.launch {
+            _authState.value = try {
+                syncManager.signUp(email, password)
+                val user = syncManager.currentUserEmail() ?: email
+                AuthState.SignedIn(user)
+            } catch (t: Throwable) {
+                AuthState.Error(t.message ?: "Sign up failed")
+            }
+        }
+    }
+
+    fun signOut() {
+        scope.launch {
+            try {
+                syncManager.signOut()
+            } finally {
+                _authState.value = AuthState.SignedOut
+            }
+        }
+    }
 }

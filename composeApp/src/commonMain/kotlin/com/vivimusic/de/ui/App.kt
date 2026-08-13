@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -40,6 +41,7 @@ import com.vivimusic.de.data.update.openUrl
 import com.vivimusic.de.i18n.AppEnvironment
 import com.vivimusic.de.i18n.customAppLocale
 import com.vivimusic.de.resources.*
+import com.vivimusic.de.ui.screens.AccountScreen
 import com.vivimusic.de.ui.screens.AlbumScreen
 import com.vivimusic.de.ui.screens.ArtistScreen
 import com.vivimusic.de.ui.screens.HistoryScreen
@@ -80,7 +82,7 @@ fun App(container: AppContainer) {
     }
 }
 
-private enum class Screen { Home, Search, Together, Library, History, Settings }
+private enum class Screen { Home, Search, Together, Library, History, Account, Settings }
 
 /** A detail destination shown in place of the main content area. */
 private sealed interface Detail {
@@ -152,6 +154,12 @@ private fun AppRoot(viewModel: AppViewModel) {
                     icon = { Icon(Icons.Filled.History, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_history)) },
                 )
+                NavigationRailItem(
+                    selected = screen == Screen.Account && detail == null,
+                    onClick = { screen = Screen.Account; detail = null },
+                    icon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.account)) },
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 NavigationRailItem(
                     selected = screen == Screen.Settings,
@@ -196,6 +204,7 @@ private fun AppRoot(viewModel: AppViewModel) {
                                 },
                             )
                             Screen.History -> HistoryScreen(viewModel)
+                            Screen.Account -> AccountScreen(viewModel)
                             Screen.Settings -> SettingsScreen(viewModel)
                         }
                     }

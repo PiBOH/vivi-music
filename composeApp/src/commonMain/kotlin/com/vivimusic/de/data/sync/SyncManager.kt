@@ -69,6 +69,27 @@ class SyncManager(
         }
     }
 
+    // ----- auth (delegated to Supabase) -----
+
+    /** True when a Supabase backend is configured (auth + sync available). */
+    val isConfigured: Boolean get() = syncClient != null
+
+    suspend fun signIn(email: String, password: String) {
+        val client = syncClient ?: throw IllegalStateException("Synchronization is not configured")
+        client.signIn(email, password)
+    }
+
+    suspend fun signUp(email: String, password: String) {
+        val client = syncClient ?: throw IllegalStateException("Synchronization is not configured")
+        client.signUp(email, password)
+    }
+
+    suspend fun signOut() {
+        syncClient?.signOut()
+    }
+
+    suspend fun currentUserEmail(): String? = syncClient?.currentEmail()
+
     /** Runs a full pull/push cycle for the signed-in user. */
     suspend fun fullSync() {
         val client = syncClient ?: return

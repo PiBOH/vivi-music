@@ -49,11 +49,20 @@ class SupabaseSyncClient private constructor(
         }
     }
 
+    suspend fun signUp(mail: String, password: String) {
+        client.auth.signUpWith(Email) {
+            email = mail
+            this.password = password
+        }
+    }
+
     suspend fun signOut() {
         client.auth.signOut()
     }
 
     suspend fun currentUserId(): String? = client.auth.currentUserOrNull()?.id
+
+    suspend fun currentEmail(): String? = client.auth.currentUserOrNull()?.email
 
     // ----- pull -----
 
