@@ -264,4 +264,6 @@ A task is complete only when:
 3. no stable code was refactored without necessity;
 4. `CHANGELOG.md` is updated (correct section) when the change is relevant;
 5. `version.txt` and `CHANGELOG.md` follow SemVer/Keep a Changelog when the app
-   behavior changed.
+   behavior changed;
+6. `TODO.md` (porting phase tracker) is updated: mark completed phases/items
+   as done whenever a phase advances.
