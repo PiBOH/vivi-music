@@ -1,0 +1,37 @@
+name: Build Windows
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    name: Build Windows installers
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+      # JDK 17 is bundled into the installers (runtime floor Windows 10+).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Package desktop distribution
+        run: ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp composeApp/build/compose/binaries/main/msi/*.msi dist/
+          cp composeApp/build/compose/binaries/main/exe/*.exe dist/
+          ls -la dist
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: dist/*
+          if-no-files-found: error

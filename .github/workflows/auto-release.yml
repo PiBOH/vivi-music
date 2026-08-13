@@ -17,100 +17,42 @@ permissions:
   actions: write
 
 jobs:
-  android:
-    name: Build Android APK
+  # Builds are delegated to the per-OS reusable workflows below. This workflow
+  # only collects their artifacts and publishes the release.
+  build-android:
+    name: Android build
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Build release APK
-        run: ./gradlew :composeApp:assembleRelease --no-daemon
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: composeApp/build/outputs/apk/release/*.apk
-          if-no-files-found: error
+    uses: ./.github/workflows/build-android.yml
 
-  desktop:
-    name: Package desktop (${{ matrix.name }})
+  build-windows:
+    name: Windows build
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            name: linux
-          - os: windows-latest
-            name: windows
-          - os: macos-15-intel
-            name: macos-intel
-          - os: macos-15
-            name: macos-arm64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
-      # JDK 17 is bundled into the installers, lowering the runtime floor to
-      # Windows 10+ and macOS 10.15+ (JDK 21 would require macOS 11+).
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Package desktop distribution
-        run: ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
-      - name: Collect installers
-        shell: bash
-        run: |
-          mkdir -p dist
-          case "${{ matrix.name }}" in
-            linux)
-              cp composeApp/build/compose/binaries/main/deb/*.deb dist/
-              find composeApp/build/compose/binaries/main -name '*.AppImage' -exec cp {} dist/ \;
-              ;;
-            windows)
-              cp composeApp/build/compose/binaries/main/msi/*.msi dist/
-              cp composeApp/build/compose/binaries/main/exe/*.exe dist/
-              ;;
-            macos-intel|macos-arm64)
-              for f in composeApp/build/compose/binaries/main/dmg/*.dmg; do
-                base="$(basename "$f" .dmg)"
-                cp "$f" "dist/${base}-${{ matrix.name }}.dmg"
-              done
-              ;;
-          esac
-          ls -la dist
-      - name: Upload desktop artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-${{ matrix.name }}
-          path: dist/*
-          if-no-files-found: error
+    uses: ./.github/workflows/build-windows.yml
+
+  build-linux:
+    name: Linux build
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    uses: ./.github/workflows/build-linux.yml
+
+  build-macos:
+    name: macOS build
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    uses: ./.github/workflows/build-macos.yml
 
   release:
-    name: Create GitHub Release
+    name: Publish GitHub Release
     needs:
-      - android
-      - desktop
+      - build-android
+      - build-windows
+      - build-linux
+      - build-macos
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Resolve version
         id: version
         shell: bash
@@ -161,6 +103,25 @@ jobs:
             echo "$SECTION"
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
+      - name: Collect commits
+        id: commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREV_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+          if [[ -n "$PREV_TAG" ]]; then
+            COMMITS="$(git log "$PREV_TAG..HEAD" --pretty=format:'- %s' --no-merges 2>/dev/null || true)"
+          else
+            COMMITS="$(git log --pretty=format:'- %s' --no-merges 2>/dev/null || true)"
+          fi
+          if [[ -z "$COMMITS" ]]; then
+            COMMITS="- Initial release"
+          fi
+          {
+            echo "commits<<COMMITS_EOF"
+            echo "$COMMITS"
+            echo "COMMITS_EOF"
+          } >> "$GITHUB_OUTPUT"
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -178,7 +139,12 @@ jobs:
           body: |
             ## Vivi Music DE ${{ steps.version.outputs.version }}
             **Release channel:** `${{ steps.version.outputs.channel }}`
+
             ${{ steps.changelog.outputs.section }}
+
+            ### Commits
+            ${{ steps.commits.outputs.commits }}
+
             ---
             This release was built automatically from commit `${{ github.sha }}`.
         env:

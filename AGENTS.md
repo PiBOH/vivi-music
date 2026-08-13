@@ -29,7 +29,7 @@ targets, and user data (playlists, favorites, history) syncs in real time via
 
 ```
 vivi-music-de/
-├── .github/workflows/          # ci.yml (CI) and auto-release.yml (release)
+├── .github/workflows/          # ci.yml, build-*.yml (per OS), auto-release.yml
 ├── gradle/
 │   ├── libs.versions.toml      # version catalog
 │   └── wrapper/                # Gradle wrapper
@@ -196,18 +196,19 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
 - **CI** (`.github/workflows/ci.yml`): on every push to `main` and pull request
   it compiles the Android target (`assembleDebug`) and the Desktop target
   (`compileKotlinDesktop`) and uploads the debug APK as an artifact.
-- **Auto Release** (`.github/workflows/auto-release.yml`): creates a GitHub
-  Release automatically. It triggers on:
+- **Build workflows** (reusable, invoked by Auto Release):
+  - `build-android.yml` -> `assembleRelease` (APK) on `ubuntu-latest` (JDK 21);
+  - `build-windows.yml` -> `.msi`/`.exe` on `windows-latest` (JDK 17);
+  - `build-linux.yml` -> `.deb`/`.AppImage` on `ubuntu-latest` (JDK 17);
+  - `build-macos.yml` -> `.dmg` on `macos-15-intel` and `macos-15` (JDK 17).
+- **Auto Release** (`.github/workflows/auto-release.yml`): does not build
+  anything itself. It collects the artifacts produced by the build workflows,
+  the matching `CHANGELOG.md` section and the commits since the previous tag,
+  then publishes the GitHub Release. It triggers on:
   - a push to `main` whose commit message starts with `v` (e.g.
     `v0.0.1-alpha: ...`), or
   - a manual `workflow_dispatch` (with an optional version).
-  The version is read from `version.txt`; the matching `CHANGELOG.md` section is
-  used as the release notes. The workflow builds:
-  - Android `assembleRelease` (APK) on `ubuntu-latest` (JDK 21);
-  - the desktop installers with JDK 17 in a matrix of `ubuntu-latest`,
-    `windows-latest`, `macos-15-intel` and `macos-15` (dual-arch macOS).
-  The artifacts are attached to the release (tag = version without the `v`
-  prefix).
+  The version is read from `version.txt` (tag = version without the `v` prefix).
 - For signed APK releases and for MSI packaging on Windows (which requires
   WiX) consult the documentation and add the required secrets/tools.
 

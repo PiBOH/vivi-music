@@ -66,8 +66,9 @@ To publish a GitHub Release:
 2. Commit and push with a message starting with `v` (e.g. `v0.0.1-alpha: ...`),
    or run the `auto-release.yml` workflow manually.
 
-The workflow builds the Android APK and the desktop installers
-(Windows/macOS/Linux) and creates the release with the artifacts attached.
+The per-OS build workflows produce the Android APK and the desktop installers
+(Windows/macOS/Linux), and `auto-release.yml` publishes the release with those
+artifacts attached.
 
 ## Supabase configuration
 
