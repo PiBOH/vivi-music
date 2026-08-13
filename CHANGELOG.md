@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.1-alpha] - 2026-08-13
+## [0.0.2-alpha] - 2026-08-13
 
 ### Added
 - Initial Kotlin Multiplatform project with a Desktop (JVM) target for
@@ -55,6 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adaptation), keeping the mini player at the bottom of the content area.
 - CI and per-OS build workflows now expose manual `workflow_dispatch`
   triggers.
+- Installer and artifact version now derive from `version.txt` (single source
+  of truth) instead of a hardcoded `1.0.0`; the in-app About version is also
+  injected from `version.txt` at build time. The installer `packageVersion`
+  maps the SemVer to a MAJOR >= 1 numeric version (e.g. `0.0.2-alpha` ->
+  `1.0.2`).
+- Package author/publisher set to PiBOH (https://piboh.github.io/).
 
 ### Fixed
 - Windows installer: add a Start Menu entry and desktop shortcut

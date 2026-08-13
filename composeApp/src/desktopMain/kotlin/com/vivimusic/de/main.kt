@@ -15,6 +15,7 @@ fun main() {
     AppConfig.supabaseUrl = readConfig("SUPABASE_URL")
     AppConfig.supabaseAnonKey = readConfig("SUPABASE_ANON_KEY")
     AppConfig.innerTubeApiKey = readConfig("INNERTUBE_API_KEY")
+    AppConfig.appVersion = readConfig("APP_VERSION").ifBlank { "dev" }
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val container = AppContainer(scope)

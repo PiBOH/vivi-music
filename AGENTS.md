@@ -143,9 +143,12 @@ Every version bump must strictly follow **Semantic Versioning**
 - **PATCH**: backwards-compatible bug fixes.
 
 The canonical app version is declared in `version.txt` at the repository root
-(SemVer format, e.g. `0.0.1-alpha`). The `packageVersion` of the desktop
-installers is a separate numeric value (jpackage requires `MAJOR >= 1` and does
-not accept prerelease suffixes).
+(SemVer format, e.g. `0.0.2-alpha`). It is the single source of truth: the
+installer/artifact version and the in-app About version are both derived from
+it at build time. The installer `packageVersion` is the numeric part of the
+SemVer with the pre-release suffix dropped and the MAJOR raised to at least 1
+(the Compose/jpackage installer requires MAJOR > 0), so `0.0.2-alpha` maps to
+`1.0.2` (the MINOR.PATCH tracks the SemVer exactly).
 
 ## 5. Changelog (Keep a Changelog)
 

@@ -16,6 +16,25 @@ plugins {
 // file read at runtime (see desktopMain `main.kt`).
 val innertubeApiKey: String = System.getenv("INNERTUBE_API_KEY") ?: ""
 
+// Canonical app version (SemVer). Single source of truth for the release tag,
+// the in-app About display and the installer version (see `version.txt`).
+val appVersion: String = rootProject.file("version.txt").readText().trim()
+
+// The Compose/jpackage installer version must be a plain numeric
+// "MAJOR.MINOR.PATCH" with MAJOR > 0 and no pre-release suffix, while the app
+// SemVer is still 0.x. Map the numeric part so MAJOR is at least 1:
+// "0.0.2-alpha" -> "1.0.2" (the MINOR.PATCH tracks the SemVer exactly).
+val installerVersion: String = appVersion
+    .substringBefore("-")
+    .substringBefore("+")
+    .split(".")
+    .let { parts ->
+        val major = parts.firstOrNull()?.toIntOrNull() ?: 0
+        val rest = parts.drop(1).ifEmpty { listOf("0") }
+        listOf(if (major > 0) major else 1).map(Int::toString) + rest
+    }
+    .joinToString(".")
+
 kotlin {
     jvm("desktop") {
         compilerOptions {
@@ -75,7 +94,10 @@ room3 {
 compose.desktop {
     application {
         mainClass = "com.vivimusic.de.MainKt"
-        jvmArgs += listOf("-DINNERTUBE_API_KEY=$innertubeApiKey")
+        jvmArgs += listOf(
+            "-DINNERTUBE_API_KEY=$innertubeApiKey",
+            "-DAPP_VERSION=$appVersion",
+        )
 
         nativeDistributions {
             targetFormats(
@@ -86,12 +108,10 @@ compose.desktop {
                 TargetFormat.AppImage
             )
             packageName = "ViviMusicDE"
-            // jpackage requires a numeric MAJOR >= 1 and no prerelease suffix,
-            // so the installer version is kept separate from the app SemVer in
-            // version.txt (currently 0.0.1-alpha).
-            packageVersion = "1.0.0"
+            packageVersion = installerVersion
             description = "Vivi Music DE, desktop client for ViVi Music."
-            vendor = "Vivi Music DE"
+            vendor = "PiBOH"
+            copyright = "Copyright (c) 2026 PiBOH. https://piboh.github.io/"
 
             linux {
                 iconFile.set(project.file("icons/icon.png"))

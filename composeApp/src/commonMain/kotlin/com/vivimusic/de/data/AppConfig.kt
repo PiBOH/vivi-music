@@ -16,15 +16,15 @@ object AppConfig {
     var supabaseAnonKey: String = ""
     var innerTubeApiKey: String = ""
 
+    /**
+     * Display version shown in the About section. Populated at runtime from the
+     * build (system property `APP_VERSION`, injected from `version.txt`).
+     */
+    var appVersion: String = "dev"
+
     val isSyncConfigured: Boolean
         get() = supabaseUrl.isNotBlank() && supabaseAnonKey.isNotBlank()
 
     val isInnerTubeConfigured: Boolean
         get() = innerTubeApiKey.isNotBlank()
 }
-
-/**
- * Display version shown in the About section. Keep in sync with the canonical
- * `version.txt` at the repository root (currently 0.0.1-alpha).
- */
-const val APP_VERSION = "0.0.1-alpha"

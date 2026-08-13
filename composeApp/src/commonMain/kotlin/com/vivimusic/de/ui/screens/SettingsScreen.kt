@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vivimusic.de.data.APP_VERSION
+import com.vivimusic.de.data.AppConfig
 import com.vivimusic.de.data.sync.SyncStatus
 import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.i18n.customAppLocale
@@ -102,7 +102,7 @@ fun SettingsScreen(viewModel: AppViewModel) {
             AxolotlMascot(modifier = Modifier.size(96.dp))
         }
         Text(
-            text = "${stringResource(Res.string.about_version)} $APP_VERSION",
+            text = "${stringResource(Res.string.about_version)} ${AppConfig.appVersion}",
             style = MaterialTheme.typography.bodyMedium,
         )
         Text(
