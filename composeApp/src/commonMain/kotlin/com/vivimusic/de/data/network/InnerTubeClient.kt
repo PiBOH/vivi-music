@@ -1,5 +1,6 @@
 package com.vivimusic.de.data.network
 
+import com.vivimusic.de.data.readSetting
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
@@ -272,7 +273,12 @@ class InnerTubeClient(
         // decoder; AAC (audio/mp4) would need an extra codec module not
         // included in the core. Fall back to the highest bitrate audio format.
         val opus = audioFormats.firstOrNull { it.str("mimeType")?.startsWith("audio/webm") == true }
-        val chosen = opus ?: audioFormats.maxByOrNull { it.str("bitrate")?.toLongOrNull() ?: 0L }
+        val quality = readSetting("audio.quality") ?: "auto"
+        val chosen = when (quality) {
+            "low" -> audioFormats.minByOrNull { it.str("bitrate")?.toLongOrNull() ?: Long.MAX_VALUE }
+            "high" -> audioFormats.maxByOrNull { it.str("bitrate")?.toLongOrNull() ?: 0L }
+            else -> opus ?: audioFormats.maxByOrNull { it.str("bitrate")?.toLongOrNull() ?: 0L }
+        }
         return chosen?.str("url")
     }
 

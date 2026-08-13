@@ -1,165 +1,120 @@
 package com.vivimusic.de.ui.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.vivimusic.de.data.AppConfig
-import com.vivimusic.de.data.sync.SyncStatus
-import com.vivimusic.de.data.update.openUrl
-import com.vivimusic.de.data.writeSetting
-import com.vivimusic.de.i18n.customAppLocale
-import com.vivimusic.de.i18n.supportedLanguages
 import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.AppViewModel
-import com.vivimusic.de.ui.AxolotlMascot
+import com.vivimusic.de.ui.screens.settings.AboutSettings
+import com.vivimusic.de.ui.screens.settings.AppearanceSettings
+import com.vivimusic.de.ui.screens.settings.ContentSettings
+import com.vivimusic.de.ui.screens.settings.PlayerSettings
+import com.vivimusic.de.ui.screens.settings.PrivacySettings
+import com.vivimusic.de.ui.screens.settings.SettingsDivider
+import com.vivimusic.de.ui.screens.settings.SettingsGroup
+import com.vivimusic.de.ui.screens.settings.SettingsItem
+import com.vivimusic.de.ui.screens.settings.SettingsPage
+import com.vivimusic.de.ui.screens.settings.StorageSettings
+import com.vivimusic.de.ui.screens.settings.UpdateSettings
 import org.jetbrains.compose.resources.stringResource
 
-private const val LANGUAGE_KEY = "app.language"
+private enum class SettingsDestination {
+    Update,
+    Appearance,
+    Player,
+    Content,
+    Privacy,
+    Storage,
+    About,
+}
 
+/**
+ * Settings entry point, ported from ViVi Music's `SettingsScreen`: a grouped
+ * list of destinations that open nested settings pages. Desktop-adapted: no
+ * Android-specific entries (account, cast, data saver, backup) and a wider,
+ * centered content column.
+ */
 @Composable
 fun SettingsScreen(viewModel: AppViewModel) {
-    val syncStatus by viewModel.syncStatus.collectAsState()
-    var langMenuExpanded by remember { mutableStateOf(false) }
+    var destination by remember { mutableStateOf<SettingsDestination?>(null) }
 
-    val selectedLanguage = customAppLocale?.let { code ->
-        supportedLanguages.firstOrNull { it.code == code }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-    ) {
-        Text(
-            text = stringResource(Res.string.settings_language),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Box {
-            OutlinedButton(onClick = { langMenuExpanded = true }) {
-                Text(selectedLanguage?.nativeName ?: stringResource(Res.string.system_language))
-            }
-            DropdownMenu(expanded = langMenuExpanded, onDismissRequest = { langMenuExpanded = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(Res.string.system_language)) },
-                    onClick = {
-                        customAppLocale = null
-                        writeSetting(LANGUAGE_KEY, "")
-                        langMenuExpanded = false
-                    },
-                )
-                supportedLanguages.forEach { language ->
-                    DropdownMenuItem(
-                        text = { Text(language.nativeName) },
-                        onClick = {
-                            customAppLocale = language.code
-                            writeSetting(LANGUAGE_KEY, language.code)
-                            langMenuExpanded = false
-                        },
-                    )
-                }
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-        Text(
-            text = stringResource(Res.string.sync_status),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = syncStatusLabel(syncStatus),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        TextButton(onClick = { viewModel.syncNow() }) {
-            Text(stringResource(Res.string.retry))
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-        Text(
-            text = stringResource(Res.string.update_settings),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        val checkPrereleases by viewModel.checkPrereleases.collectAsState()
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = stringResource(Res.string.update_check_prereleases),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            Switch(
-                checked = checkPrereleases,
-                onCheckedChange = viewModel::setCheckPrereleases,
-            )
-        }
-        TextButton(onClick = viewModel::checkForUpdates) {
-            Text(stringResource(Res.string.update_check_now))
-        }
-        val updateStatus by viewModel.updateStatus.collectAsState()
-        if (updateStatus?.updateAvailable == true) {
-            Text(
-                text = "${stringResource(Res.string.update_available)}: ${updateStatus?.latest?.tagName ?: ""}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            TextButton(onClick = { updateStatus?.latest?.htmlUrl?.let { openUrl(it) } }) {
-                Text(stringResource(Res.string.update_download))
-            }
-        } else if (updateStatus != null) {
-            Text(
-                text = stringResource(Res.string.update_up_to_date),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-        Text(
-            text = stringResource(Res.string.about_title),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            AxolotlMascot(modifier = Modifier.size(96.dp))
-        }
-        Text(
-            text = "${stringResource(Res.string.about_version)} ${AppConfig.appVersion}",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Text(
-            text = stringResource(Res.string.about_credits),
-            style = MaterialTheme.typography.bodySmall,
-        )
+    when (destination) {
+        null -> SettingsHub(viewModel, onOpen = { destination = it })
+        SettingsDestination.Update -> UpdateSettings(viewModel, onBack = { destination = null })
+        SettingsDestination.Appearance -> AppearanceSettings(onBack = { destination = null })
+        SettingsDestination.Player -> PlayerSettings(onBack = { destination = null })
+        SettingsDestination.Content -> ContentSettings(onBack = { destination = null })
+        SettingsDestination.Privacy -> PrivacySettings(viewModel, onBack = { destination = null })
+        SettingsDestination.Storage -> StorageSettings(viewModel, onBack = { destination = null })
+        SettingsDestination.About -> AboutSettings(onBack = { destination = null })
     }
 }
 
 @Composable
-private fun syncStatusLabel(status: SyncStatus): String = when (status) {
-    SyncStatus.Disabled -> stringResource(Res.string.sync_disabled)
-    SyncStatus.Offline -> stringResource(Res.string.sync_offline)
-    SyncStatus.Syncing -> stringResource(Res.string.sync_syncing)
-    SyncStatus.Synced -> stringResource(Res.string.sync_synced)
-    SyncStatus.Error -> stringResource(Res.string.sync_error)
+private fun SettingsHub(viewModel: AppViewModel, onOpen: (SettingsDestination) -> Unit) {
+    val updateStatus by viewModel.updateStatus.collectAsState()
+    val updateLabel = if (updateStatus?.updateAvailable == true) {
+        stringResource(Res.string.update_available)
+    } else {
+        stringResource(Res.string.update_up_to_date)
+    }
+
+    SettingsPage(title = stringResource(Res.string.nav_settings)) {
+        SettingsGroup {
+            SettingsItem(
+                title = stringResource(Res.string.update_settings),
+                description = updateLabel,
+                icon = Icons.Filled.Refresh,
+                highlighted = updateStatus?.updateAvailable == true,
+                onClick = { onOpen(SettingsDestination.Update) },
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.appearance),
+                icon = Icons.Filled.Palette,
+                onClick = { onOpen(SettingsDestination.Appearance) },
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.player_and_audio),
+                icon = Icons.Filled.MusicNote,
+                onClick = { onOpen(SettingsDestination.Player) },
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.content),
+                icon = Icons.Filled.Translate,
+                onClick = { onOpen(SettingsDestination.Content) },
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.privacy),
+                icon = Icons.Filled.Lock,
+                onClick = { onOpen(SettingsDestination.Privacy) },
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.storage),
+                icon = Icons.Filled.Storage,
+                onClick = { onOpen(SettingsDestination.Storage) },
+            )
+            SettingsDivider()
+            SettingsItem(
+                title = stringResource(Res.string.about_title),
+                icon = Icons.Filled.Info,
+                onClick = { onOpen(SettingsDestination.About) },
+            )
+        }
+    }
 }

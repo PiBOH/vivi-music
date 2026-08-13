@@ -150,6 +150,19 @@ class MusicRepository(
         }
     }
 
+    fun clearSearchHistory() {
+        scope.launch {
+            db.searchHistoryDao().clearAll()
+        }
+    }
+
+    fun clearHistory() {
+        scope.launch {
+            db.historyDao().clearAll()
+            syncManager.afterLocalChange()
+        }
+    }
+
     // ----- sync -----
 
     fun syncNow() {

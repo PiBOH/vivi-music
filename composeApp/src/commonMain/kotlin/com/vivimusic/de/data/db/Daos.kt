@@ -91,6 +91,9 @@ interface HistoryDao {
 
     @Query("DELETE FROM history WHERE songId = :songId")
     suspend fun delete(songId: String)
+
+    @Query("DELETE FROM history")
+    suspend fun clearAll()
 }
 
 @Dao
@@ -115,4 +118,7 @@ interface SearchHistoryDao {
 
     @Query("DELETE FROM search_history WHERE query = :query")
     suspend fun delete(query: String)
+
+    @Query("DELETE FROM search_history")
+    suspend fun clearAll()
 }

@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0-alpha] - 2026-08-13
+
+### Added
+- Full settings screen set, ported from ViVi Music and adapted for desktop: a
+  grouped hub (Update / Appearance / Player and audio / Content / Privacy /
+  Storage / About) that opens nested settings pages with back navigation.
+- Appearance settings: theme mode (system default / light / dark) and a
+  selectable accent color, both persisted and applied live.
+- Player and audio settings: audio quality (auto / high / low), plus persisted
+  toggles for audio normalization, skip silence and crossfade.
+- Content settings: app language selector (moved out of the old flat settings
+  screen).
+- Privacy settings: a synchronization toggle (persisted, gates Supabase sync)
+  with the sync status and a "Sync now" action.
+- Storage settings: clear search history and clear playback history, each with
+  a confirmation dialog.
+- About settings: mascot, version, credits and a source-code link to the
+  GitHub repository.
+
+### Changed
+- Audio quality selection is wired into InnerTube stream resolution (low =
+  lowest bitrate audio format, high = highest, auto = Opus preferred).
+- Settings UI uses a reusable Material 3 group/item component set (rounded
+  cards, dividers, switches, radio-list and confirm dialogs), centered and
+  width-capped for wide desktop windows.
+
 ## [0.3.0-alpha] - 2026-08-13
 
 ### Added

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 private const val UPDATE_CHECK_PRERELEASES_KEY = "update.check_prereleases"
+private const val SYNC_ENABLED_KEY = "sync.enabled"
 
 /**
  * Holds the UI state and exposes the repository/sync operations to the Compose
@@ -34,7 +35,7 @@ private const val UPDATE_CHECK_PRERELEASES_KEY = "update.check_prereleases"
  */
 class AppViewModel(
     private val repository: MusicRepository,
-    syncManager: SyncManager,
+    private val syncManager: SyncManager,
     private val scope: CoroutineScope,
     private val audioEngine: AudioEngine,
     private val updateChecker: UpdateChecker,
@@ -49,6 +50,13 @@ class AppViewModel(
         repository.observePlaylists().stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     val syncStatus: StateFlow<SyncStatus> = syncManager.status
+
+    private val _syncEnabled = MutableStateFlow(readSetting(SYNC_ENABLED_KEY) != "false")
+    val syncEnabled: StateFlow<Boolean> = _syncEnabled.asStateFlow()
+
+    init {
+        syncManager.enabled = _syncEnabled.value
+    }
 
     private val _homeSections = MutableStateFlow<List<HomeSection>>(emptyList())
     val homeSections: StateFlow<List<HomeSection>> = _homeSections.asStateFlow()
@@ -242,6 +250,16 @@ class AppViewModel(
     fun createPlaylist(name: String) = repository.createPlaylist(name)
 
     fun deletePlaylist(id: String) = repository.deletePlaylist(id)
+
+    fun setSyncEnabled(enabled: Boolean) {
+        _syncEnabled.value = enabled
+        syncManager.applyEnabled(enabled)
+        writeSetting(SYNC_ENABLED_KEY, enabled.toString())
+    }
+
+    fun clearSearchHistory() = repository.clearSearchHistory()
+
+    fun clearHistory() = repository.clearHistory()
 
     fun syncNow() = repository.syncNow()
 }

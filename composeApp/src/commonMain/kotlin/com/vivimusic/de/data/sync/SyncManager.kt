@@ -51,13 +51,31 @@ class SyncManager(
 
     val isEnabled: Boolean get() = syncClient != null
 
+    /** User-facing switch (persisted under `sync.enabled`), defaults to on. */
+    @Volatile
+    var enabled: Boolean = true
+
     init {
         _status.value = if (syncClient != null) SyncStatus.Offline else SyncStatus.Disabled
+    }
+
+    /** Turns synchronization on/off and reflects the change in the status flow. */
+    fun applyEnabled(value: Boolean) {
+        enabled = value
+        _status.value = if (!value || syncClient == null) {
+            SyncStatus.Disabled
+        } else {
+            SyncStatus.Offline
+        }
     }
 
     /** Runs a full pull/push cycle for the signed-in user. */
     suspend fun fullSync() {
         val client = syncClient ?: return
+        if (!enabled) {
+            _status.value = SyncStatus.Disabled
+            return
+        }
         _status.value = SyncStatus.Syncing
         try {
             val userId = client.currentUserId() ?: run {
@@ -75,6 +93,7 @@ class SyncManager(
 
     /** Called after a local mutation to propagate the change to the server. */
     suspend fun afterLocalChange() {
+        if (!enabled) return
         if (syncClient == null) return
         fullSync()
     }
