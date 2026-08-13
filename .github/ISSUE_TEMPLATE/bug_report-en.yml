@@ -1,0 +1,124 @@
+name: "🐛 Bug Report (English)"
+description: "Report a reproducible problem with Vivi Music DE on Android or Desktop."
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🐛 Vivi Music DE bug report
+        Thank you for helping improve Vivi Music DE. Please remove Supabase URLs, anon keys, tokens, and any private data before submitting logs or screenshots.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      description: Please confirm these items before submitting the report.
+      options:
+        - label: I am using the latest release, or I have included my exact version below.
+          required: true
+        - label: I searched existing issues and this does not appear to be a duplicate.
+          required: true
+        - label: I removed secrets and private data from all logs, screenshots, and attachments.
+          required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Where does the problem occur?
+      options:
+        - "Android"
+        - "Windows"
+        - "macOS (Intel)"
+        - "macOS (Apple Silicon)"
+        - "Linux (Debian / Ubuntu via .deb)"
+        - "Linux (Arch or other distro via .AppImage)"
+        - "Cross-platform (reproduces on every platform)"
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often can you reproduce the problem?
+      options:
+        - "Always (100%)"
+        - "Often (more than 50%)"
+        - "Sometimes (less than 50%)"
+        - "Rarely (once or twice)"
+        - "Only on first launch"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: The version shown in the app, for example `0.1.0`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: Operating system / Android version
+      description: For example `Android 14`, `Windows 11 23H2`, `macOS 13 Ventura (Intel)`, or `Arch Linux`.
+      placeholder: "Windows 11 23H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: sync_mode
+    attributes:
+      label: Sync mode
+      description: Is Supabase sync configured and signed in, or is the app running local-only?
+      options:
+        - "Supabase sync enabled (signed in)"
+        - "Local-only (no Supabase credentials)"
+        - "Not sure"
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: App language (if translation-related)
+      description: Only needed when the bug is about a translation or missing text.
+      placeholder: "Italian"
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Give the smallest exact sequence that triggers the problem.
+      placeholder: |
+        1. Launch the app.
+        2. Open the Home screen and search for a track.
+        3. Observe the error.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected and actual behavior
+      description: Explain what you expected and what happened instead.
+      placeholder: |
+        Expected: The search results appear.
+        Actual: The app crashes and returns to the launcher.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Paste the relevant output or a screenshot. Redact Supabase URLs, keys, tokens, and private data.
+      render: shell
+      placeholder: "Paste the relevant console output or log here."
+    validations:
+      required: true
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Add crash reports, recent changes, or anything else that may help reproduce the issue.

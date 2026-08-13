@@ -1,0 +1,92 @@
+name: "🚀 Feature Request (English)"
+description: "Suggest an improvement to Vivi Music DE."
+title: "[Feature]: "
+labels:
+  - enhancement
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 💡 Vivi Music DE feature proposal
+        Please explain the user problem first. Vivi Music DE keeps the Android and Desktop experience consistent, syncs user data via Supabase, and never ships emoji inside application code or resources.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I searched existing issues and discussions for a similar request.
+          required: true
+        - label: I have described a practical use case rather than only requesting a specific implementation.
+          required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature category
+      options:
+        - "Playback / audio"
+        - "Search / discovery (YouTube Music)"
+        - "Library, playlists, or favorites"
+        - "Supabase sync / account"
+        - "UI / design"
+        - "Internationalization (i18n) / translations"
+        - "Android-specific"
+        - "Desktop-specific (Windows / macOS / Linux)"
+        - "CI/CD, packaging, or releases"
+        - "Documentation"
+        - "Other"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What is difficult, missing, or repetitive today? Who would benefit?
+      placeholder: "When I ..., it is difficult because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe what the app should do from the user's point of view, with an example workflow if possible.
+      placeholder: |
+        1. The user opens ...
+        2. The app shows ...
+        3. The app saves / syncs ...
+    validations:
+      required: true
+  - type: dropdown
+    id: platform_scope
+    attributes:
+      label: Platform scope
+      description: Should the feature apply to Android, Desktop, or both?
+      options:
+        - "Both Android and Desktop"
+        - "Android only"
+        - "Desktop only"
+    validations:
+      required: true
+  - type: dropdown
+    id: breaking_change
+    attributes:
+      label: Compatibility impact
+      description: Could the proposal change existing data, sync behavior, or the UI?
+      options:
+        - "No known breaking change"
+        - "Changes an existing setting or default"
+        - "Changes the sync or local database schema"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workaround or manual process do you use today? Why is it insufficient?
+      placeholder: "Currently I ... but this does not work well because ..."
+  - type: textarea
+    id: context
+    attributes:
+      label: Examples and supporting material
+      description: Add mockups, screenshots, links, or implementation ideas. Redact private data and secrets.
