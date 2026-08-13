@@ -28,12 +28,38 @@ actual fun createAudioEngine(): AudioEngine = DesktopAudioEngine()
  */
 class DesktopAudioEngine : AudioEngine {
 
-    private val manager: AudioPlayerManager = DefaultAudioPlayerManager().apply {
-        configuration.outputFormat = StandardAudioDataFormats.COMMON_PCM_S16_LE
-        AudioSourceManagers.registerRemoteSources(this)
+    // LavaPlayer is initialized lazily: the manager registers its remote
+    // sources and creates the player only on the first play() call, so app
+    // startup is not blocked by audio codec/source setup.
+    private val manager: AudioPlayerManager by lazy {
+        DefaultAudioPlayerManager().apply {
+            configuration.outputFormat = StandardAudioDataFormats.COMMON_PCM_S16_LE
+            AudioSourceManagers.registerRemoteSources(this)
+        }
     }
 
-    private val player: AudioPlayer = manager.createPlayer()
+    private val player: AudioPlayer by lazy {
+        manager.createPlayer().also { player ->
+            player.addListener(object : AudioEventAdapter() {
+                override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
+                    stopPlayback()
+                    _state.value = _state.value.copy(
+                        isPlaying = false,
+                        isBuffering = false,
+                        positionMs = _state.value.durationMs,
+                    )
+                }
+
+                override fun onTrackException(player: AudioPlayer, track: AudioTrack, exception: FriendlyException) {
+                    _state.value = _state.value.copy(
+                        isPlaying = false,
+                        isBuffering = false,
+                        error = exception.message,
+                    )
+                }
+            })
+        }
+    }
 
     private val _state = MutableStateFlow(PlaybackState())
     override val state: StateFlow<PlaybackState> = _state.asStateFlow()
@@ -42,27 +68,6 @@ class DesktopAudioEngine : AudioEngine {
     private var running = false
 
     private var decodeThread: Thread? = null
-
-    init {
-        player.addListener(object : AudioEventAdapter() {
-            override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-                stopPlayback()
-                _state.value = _state.value.copy(
-                    isPlaying = false,
-                    isBuffering = false,
-                    positionMs = _state.value.durationMs,
-                )
-            }
-
-            override fun onTrackException(player: AudioPlayer, track: AudioTrack, exception: FriendlyException) {
-                _state.value = _state.value.copy(
-                    isPlaying = false,
-                    isBuffering = false,
-                    error = exception.message,
-                )
-            }
-        })
-    }
 
     override fun play(songId: String, url: String, durationMs: Long) {
         stop()

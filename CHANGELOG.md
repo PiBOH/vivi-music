@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0-alpha] - 2026-08-13
+
+### Changed
+- Faster startup: removed the fixed 1.2s splash delay (the window opens as soon
+  as the initial composition completes) and made the audio engine initialize
+  LavaPlayer lazily on the first playback instead of during startup.
+
 ## [0.6.1-alpha] - 2026-08-13
 
 ### Fixed
