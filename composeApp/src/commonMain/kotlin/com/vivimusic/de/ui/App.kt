@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
@@ -98,10 +101,23 @@ fun AppStartup(
 
 @Composable
 private fun StartupError(throwable: Throwable) {
+    val details = remember(throwable) {
+        buildString {
+            append(throwable::class.simpleName ?: "Throwable")
+            append(": ")
+            append(throwable.message ?: "No error message")
+            appendLine()
+            appendLine()
+            append(throwable.stackTraceToString())
+        }
+    }
+
     Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
     ) {
         AxolotlMascot(modifier = Modifier.size(128.dp))
         Spacer(modifier = Modifier.height(20.dp))
@@ -110,12 +126,19 @@ private fun StartupError(throwable: Throwable) {
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.error,
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = throwable.message ?: throwable::class.simpleName.orEmpty(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+        TextButton(onClick = { copyToClipboard(details) }) {
+            Text(stringResource(Res.string.copy_error))
+        }
+        SelectionContainer {
+            Text(
+                text = details,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+        TextButton(onClick = { copyToClipboard(details) }) {
+            Text(stringResource(Res.string.copy_error))
+        }
     }
 }
 

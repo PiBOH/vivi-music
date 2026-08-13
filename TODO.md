@@ -12,7 +12,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Real desktop playback (LavaPlayer + Java Sound).
 - [x] Opus/WebM stream decoding with native codecs.
 - [x] Live seek bar, position and duration wired to the engine.
-- [x] Detailed startup error reporting (dialog + crash log).
+- [x] Detailed startup error reporting (dialog + crash log + copy action).
 - [x] Lightweight startup shell with background service initialization.
 - [x] Cached desktop settings access to avoid repeated file I/O during startup.
 
@@ -56,7 +56,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Full settings hub with nested pages.
 - [x] Appearance (theme mode + accent color).
 - [x] Player & audio (quality + toggles).
-- [x] Content (language).
+- [x] Content (language names displayed in each language's own writing).
 - [x] Privacy (synchronization toggle).
 - [x] Storage (clear search/history).
 - [x] Updates (pre-releases + manual check).

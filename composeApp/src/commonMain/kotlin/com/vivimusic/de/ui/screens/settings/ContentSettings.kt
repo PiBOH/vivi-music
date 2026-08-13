@@ -21,7 +21,7 @@ fun ContentSettings(onBack: () -> Unit) {
     val selected = customAppLocale?.let { code ->
         supportedLanguages.firstOrNull { it.code == code }
     }
-    val currentLabel = selected?.nativeName ?: stringResource(Res.string.system_language)
+    val currentLabel = selected?.nameInOwnLanguage ?: stringResource(Res.string.system_language)
 
     SettingsPage(
         title = stringResource(Res.string.content),
@@ -40,7 +40,7 @@ fun ContentSettings(onBack: () -> Unit) {
         ChoiceDialog(
             title = stringResource(Res.string.settings_language),
             options = listOf("" to stringResource(Res.string.system_language)) +
-                supportedLanguages.map { it.code to it.nativeName },
+                supportedLanguages.map { it.code to it.nameInOwnLanguage },
             selectedValue = customAppLocale ?: "",
             onSelect = { code ->
                 customAppLocale = if (code.isEmpty()) null else code

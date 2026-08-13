@@ -221,7 +221,7 @@ class AppViewModel(
             _updateDownloadState.value = try {
                 UpdateDownloadState.Launched(updateChecker.downloadAndLaunch(release))
             } catch (t: Throwable) {
-                UpdateDownloadState.Error(t.message ?: "Update download failed")
+                UpdateDownloadState.Error(fullErrorDetails("Update download failed", t))
             }
         }
     }
@@ -499,7 +499,7 @@ class AppViewModel(
                 val user = syncManager.currentUserEmail() ?: email
                 AuthState.SignedIn(user)
             } catch (t: Throwable) {
-                AuthState.Error(t.message ?: "Sign in failed")
+                AuthState.Error(fullErrorDetails("Sign in failed", t))
             }
         }
     }
@@ -516,7 +516,7 @@ class AppViewModel(
                 val user = syncManager.currentUserEmail() ?: email
                 AuthState.SignedIn(user)
             } catch (t: Throwable) {
-                AuthState.Error(t.message ?: "Sign up failed")
+                AuthState.Error(fullErrorDetails("Sign up failed", t))
             }
         }
     }
@@ -564,8 +564,7 @@ class AppViewModel(
                 loadYtLibrary()
             } catch (t: Throwable) {
                 repository.setYtCookie(null)
-                val type = t::class.simpleName?.let { "$it: " }.orEmpty()
-                onResult(type + (t.message ?: "Sign in failed"))
+                onResult(fullErrorDetails("YouTube Music sign in failed", t))
             }
         }
     }
@@ -598,6 +597,15 @@ class AppViewModel(
             }
         }
     }
+}
+
+private fun fullErrorDetails(context: String, throwable: Throwable): String = buildString {
+    append(context)
+    append(": ")
+    append(throwable.message ?: "No error message")
+    appendLine()
+    appendLine()
+    append(throwable.stackTraceToString())
 }
 
 private fun cookieHasSapisid(cookie: String?): Boolean =

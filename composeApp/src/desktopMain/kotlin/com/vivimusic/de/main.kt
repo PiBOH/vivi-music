@@ -15,9 +15,14 @@ import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
+import javax.swing.JButton
 import javax.swing.JOptionPane
+import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
+import java.awt.BorderLayout
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 
 private const val CRASH_LOG_FILE = "ViviMusicDE-crash.log"
 
@@ -117,13 +122,32 @@ private fun reportFatalError(title: String, throwable: Throwable) {
     System.err.println("$title\n$stackTrace")
 
     try {
-        val textArea = JTextArea("$title\n\n${throwable.message}\n\nStack trace and full details written to:\n$logFile\n\n$stackTrace")
+        val details = buildString {
+            appendLine(title)
+            appendLine()
+            appendLine(throwable.message ?: "No error message")
+            appendLine()
+            appendLine("Stack trace and full details written to:")
+            appendLine(logFile)
+            appendLine()
+            appendLine(stackTrace)
+        }
+        val textArea = JTextArea(details)
         textArea.isEditable = false
         textArea.rows = 20
         textArea.columns = 100
+
+        val copyButton = JButton("Copy error")
+        copyButton.addActionListener {
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(details), null)
+        }
+        val panel = JPanel(BorderLayout(8, 8))
+        panel.add(JScrollPane(textArea), BorderLayout.CENTER)
+        panel.add(copyButton, BorderLayout.SOUTH)
+
         JOptionPane.showMessageDialog(
             null,
-            JScrollPane(textArea),
+            panel,
             "Vivi Music DE - Error",
             JOptionPane.ERROR_MESSAGE,
         )

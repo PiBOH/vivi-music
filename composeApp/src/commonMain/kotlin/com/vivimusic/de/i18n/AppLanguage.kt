@@ -13,7 +13,8 @@ package com.vivimusic.de.i18n
  */
 data class AppLanguage(
     val code: String,
-    val nativeName: String,
+    /** The language's own name, never an English translation. */
+    val nameInOwnLanguage: String,
 )
 
 val supportedLanguages: List<AppLanguage> = listOf(

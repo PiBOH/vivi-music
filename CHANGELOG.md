@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1-alpha] - 2026-08-13
+
+### Fixed
+- Language choices now use an explicit `nameInOwnLanguage` field, so the
+  selector displays `Deutsch`, `Italiano`, `日本語`, `Ελληνικά` and the other
+  native names instead of English translations.
+- Startup errors now show the complete exception details and stack trace in a
+  scrollable, selectable view. `Copy error` is available at both the top and
+  bottom of the error view, and the native desktop fatal-error dialog also has
+  a copy button.
+- Sign-in and update errors now preserve their complete stack traces instead
+  of exposing only the short exception message.
+
 ## [0.13.0-alpha] - 2026-08-13
 
 ### Changed
