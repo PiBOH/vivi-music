@@ -30,7 +30,7 @@ var appThemeMode by mutableStateOf(readSetting("appearance.theme") ?: "system")
 
 /** User-selected accent color, persisted under `appearance.accent` (ARGB). */
 var appThemeColor by mutableStateOf(
-    readSetting("appearance.accent")?.toLongOrNull()?.let { Color(it) } ?: DefaultThemeColor,
+    readSetting("appearance.accent")?.toLongOrNull()?.let { Color(it.toULong()) } ?: DefaultThemeColor,
 )
     private set
 
@@ -113,7 +113,7 @@ private fun decodeScheme(encoded: String?): ColorScheme? {
     if (encoded.isNullOrBlank()) return null
     val longs = encoded.split(",").mapNotNull { it.toLongOrNull() }
     if (longs.size != SCHEME_COLOR_COUNT) return null
-    val c = longs.map { Color(it) }
+    val c = longs.map { Color(it.toULong()) }
     return ColorScheme(
         primary = c[0], onPrimary = c[1], primaryContainer = c[2], onPrimaryContainer = c[3],
         inversePrimary = c[4], secondary = c[5], onSecondary = c[6], secondaryContainer = c[7],

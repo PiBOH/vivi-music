@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1-alpha] - 2026-08-13
+
+### Fixed
+- Dark mode no longer shows light backgrounds: the cached color scheme was
+  decoded with the `Color(Long)` overload, which shifts the value and produced
+  a fully transparent scheme when read back from disk. Colors are now
+  reconstructed with the raw value constructor, so the persisted scheme renders
+  identically to the freshly computed one.
+- The accent color had the same round-trip bug when restored from settings on
+  startup (it would decode to a transparent color if the user had picked a
+  custom accent).
+
 ## [0.9.0-alpha] - 2026-08-13
 
 ### Changed
