@@ -40,7 +40,12 @@ jobs:
         run: |
           mkdir -p dist
           cp composeApp/build/compose/binaries/main/msi/*.msi dist/
-          cp composeApp/build/compose/binaries/main/exe/*.exe dist/
+          # The .exe is the portable app, not an installer: rename it so it is
+          # not confused with the .msi installer.
+          for f in composeApp/build/compose/binaries/main/exe/*.exe; do
+            base="$(basename "$f" .exe)"
+            cp "$f" "dist/${base}-portable.exe"
+          done
           ls -la dist
       - name: Sign installers
         if: ${{ env.WINDOWS_SIGNING_CERT != '' }}

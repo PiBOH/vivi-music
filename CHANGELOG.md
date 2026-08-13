@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1-alpha] - 2026-08-13
+
+### Fixed
+- Windows portable `.exe` no longer stacks duplicate instances: a single-instance
+  file lock makes a second launch detect the already-running app and exit with a
+  notice instead of opening another window (previously each double-click spawned
+  a new process that had to be killed from Task Manager).
+
+### Changed
+- The Windows `.exe` artifact is renamed to
+  `ViviMusicDE-<version>-portable.exe` and the workflow comments clarify it is
+  the portable app, not the installer. The `.msi` is the actual installer (the
+  one with the Start Menu entry and uninstaller); the `.exe` runs the app
+  directly and never shows an install GUI, which is expected jpackage behavior.
+
 ## [0.7.0-alpha] - 2026-08-13
 
 ### Changed

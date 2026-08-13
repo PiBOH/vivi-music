@@ -13,11 +13,17 @@ import kotlinx.coroutines.SupervisorJob
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.nio.channels.FileChannel
+import java.nio.file.StandardOpenOption
 import javax.swing.JOptionPane
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
 
 private const val CRASH_LOG_FILE = "ViviMusicDE-crash.log"
+
+// Single-instance lock, held for the whole process lifetime so a second launch
+// detects an already-running instance and exits instead of stacking duplicates.
+private var instanceLockChannel: FileChannel? = null
 
 fun main() {
     // Show uncaught exceptions (on any thread) as a detailed dialog instead of
@@ -27,11 +33,47 @@ fun main() {
         reportFatalError("Uncaught exception", throwable)
     }
 
+    if (!tryAcquireSingleInstanceLock()) {
+        JOptionPane.showMessageDialog(
+            null,
+            "Vivi Music DE is already running.",
+            "Vivi Music DE",
+            JOptionPane.INFORMATION_MESSAGE,
+        )
+        return
+    }
+
     try {
         runApplication()
     } catch (throwable: Throwable) {
         reportFatalError("Application failed to start", throwable)
     }
+}
+
+/**
+ * Acquires an exclusive OS file lock in the app data directory. Returns false
+ * when another instance already holds it (the app is already running).
+ */
+private fun tryAcquireSingleInstanceLock(): Boolean = try {
+    val lockFile = File(System.getProperty("user.home"), ".vivi-music-de/instance.lock")
+    lockFile.parentFile?.mkdirs()
+    val channel = FileChannel.open(
+        lockFile.toPath(),
+        StandardOpenOption.CREATE,
+        StandardOpenOption.WRITE,
+    )
+    val lock = channel.tryLock()
+    if (lock == null) {
+        channel.close()
+        false
+    } else {
+        // Keep the channel (and therefore the OS lock) alive for the whole run.
+        instanceLockChannel = channel
+        true
+    }
+} catch (e: Exception) {
+    // If locking is unavailable, allow the app to run rather than blocking it.
+    true
 }
 
 private fun runApplication() {
