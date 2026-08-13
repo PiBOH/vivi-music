@@ -20,7 +20,16 @@ jobs:
   # Builds are delegated to the per-OS reusable workflows below. This workflow
   # only collects their artifacts and publishes the release.
   build-windows:
-    name: Windows build
+    name: Windows standard build
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    uses: ./.github/workflows/build-windows.yml
+    secrets: inherit
+
+  # Optional branding: this job is intentionally not included in release.needs.
+  # A custom Inno Setup failure must never block a release when the standard
+  # Windows, Linux and macOS jobs succeed.
+  build-windows-custom:
+    name: Windows custom setup (optional)
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
     uses: ./.github/workflows/build-windows-custom.yml
     secrets: inherit

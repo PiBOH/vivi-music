@@ -66,7 +66,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Manual cleanup of downloaded update installers from the Updates settings.
 - [x] Branded Windows setup with optional shortcuts, clean install, taskbar and post-install launch.
 - [x] Hardened the Windows custom setup workflow with numeric versioning, correct app-image path and compiler diagnostics.
-- [x] Separated branded Windows packaging with automatic fallback to the standard jpackage workflow.
+- [x] Separated branded Windows packaging as an optional job that cannot block standard release publication.
 - [x] About (mascot, version, source link).
 
 ## Phase 6 — Menus and remaining components

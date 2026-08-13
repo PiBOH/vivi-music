@@ -12,9 +12,6 @@ jobs:
     name: Build branded Windows setup
     runs-on: windows-latest
     timeout-minutes: 20
-    continue-on-error: true
-    outputs:
-      custom_succeeded: ${{ steps.custom_setup.outputs.succeeded }}
     env:
       WINDOWS_SIGNING_CERT: ${{ secrets.WINDOWS_SIGNING_CERT }}
       WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
@@ -40,7 +37,6 @@ jobs:
         run: choco install innosetup --no-progress -y
       - name: Compile branded setup
         id: custom_setup
-        continue-on-error: true
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -110,13 +106,6 @@ jobs:
         if: ${{ steps.custom_setup.outputs.succeeded == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-windows
+          name: desktop-windows-custom
           path: dist/*
           if-no-files-found: error
-
-  fallback:
-    name: Fallback to standard Windows packages
-    needs: custom
-    if: ${{ always() && needs.custom.outputs.custom_succeeded != 'true' }}
-    uses: ./.github/workflows/build-windows.yml
-    secrets: inherit

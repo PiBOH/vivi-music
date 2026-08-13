@@ -42,7 +42,7 @@ Install Inno Setup 6 and run the Gradle packaging task first:
 
 The `build-windows-custom.yml` GitHub Actions workflow installs Inno Setup on
 the runner, builds the app image, locates `ISCC.exe` explicitly so the compiler
-does not depend on the runner's refreshed PATH, and compiles this setup. If the
-custom compiler fails, the workflow automatically invokes the standard
-`build-windows.yml` workflow and uploads its known-good MSI and portable
-packages instead.
+does not depend on the runner's refreshed PATH, and compiles this setup. The
+standard `build-windows.yml` workflow runs independently and remains the
+required source of the known-good MSI and portable packages; a custom compiler
+failure therefore never blocks release publication.
