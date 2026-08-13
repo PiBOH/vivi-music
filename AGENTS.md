@@ -76,11 +76,11 @@ inventing new styles:
 - Typography: `ui/theme/Type.kt` — the M3 Expressive type scale, copied 1:1.
 - Shapes: `ui/theme/Shapes.kt` — grouped list items (4dp connected / 16dp end
   corners, `surfaceContainerHigh` container).
-- Navigation: a side `NavigationRail` (Home / Search / Listen Together /
-  Library) on the left, with a mini player at the bottom of the content area
-  (tap to expand the full player with artwork, seek bar and controls);
-  Settings is a top-bar action. This is the desktop adaptation of the mobile
-  bottom `NavigationBar`.
+- Navigation: a side `NavigationRail` on the left, with the Axolotl logo and
+  app name as the rail header, the destinations Home / Search / Listen
+  Together / Library, and Settings pinned to the bottom. A mini player sits at
+  the bottom of the content area (tap to expand the full player). This is the
+  desktop adaptation of the mobile bottom `NavigationBar`.
 - Library: a scrolling filter chip row (`ui/Components.kt` `ChipsRow`, ported
   1:1 from upstream) toggles Playlists / Songs / Albums / Artists; tapping the
   active chip deselects it and returns to the combined "mix" view.

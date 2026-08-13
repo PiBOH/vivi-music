@@ -3,10 +3,13 @@ package com.vivimusic.de.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
@@ -14,7 +17,6 @@ import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
@@ -72,9 +74,10 @@ fun App(container: AppContainer) {
 private enum class Screen { Home, Search, Together, Library, Settings }
 
 /**
- * Root scaffold, adapted for the desktop: a side navigation rail on the left
- * (Home / Search / Listen Together / Library), the active screen and the mini
- * player on the right, and Settings in the top bar action.
+ * Root scaffold, adapted for the desktop: a side navigation rail with the
+ * Axolotl logo as header and the destinations Home / Search / Listen Together /
+ * Library plus Settings (pinned to the bottom). The active screen and the mini
+ * player live on the right.
  */
 @Composable
 private fun AppRoot(viewModel: AppViewModel) {
@@ -83,7 +86,23 @@ private fun AppRoot(viewModel: AppViewModel) {
 
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
-            NavigationRail {
+            NavigationRail(
+                header = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                    ) {
+                        AxolotlMascot(modifier = Modifier.size(44.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(Res.string.app_name),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                },
+            ) {
                 NavigationRailItem(
                     selected = screen == Screen.Home,
                     onClick = { screen = Screen.Home },
@@ -108,30 +127,16 @@ private fun AppRoot(viewModel: AppViewModel) {
                     icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_library)) },
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                NavigationRailItem(
+                    selected = screen == Screen.Settings,
+                    onClick = { screen = Screen.Settings },
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.nav_settings)) },
+                )
             }
 
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                ) {
-                    Text(
-                        text = stringResource(Res.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.align(Alignment.CenterStart),
-                    )
-                    IconButton(
-                        onClick = { screen = Screen.Settings },
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(Res.string.nav_settings),
-                        )
-                    }
-                }
-
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     when (screen) {
                         Screen.Home -> HomeScreen(viewModel)
