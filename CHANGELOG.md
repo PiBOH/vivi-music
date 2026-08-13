@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1-alpha] - 2026-08-13
+
+### Fixed
+- Side navigation rail no longer stretched across the whole window: the rail is
+  now pinned to its standard 80dp width (Material3 1.4 sizes the rail from its
+  content, so the `fillMaxWidth` header was expanding it).
+
 ## [0.6.0-alpha] - 2026-08-13
 
 ### Added

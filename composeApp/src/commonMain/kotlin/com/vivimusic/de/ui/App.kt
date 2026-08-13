@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
@@ -108,6 +109,10 @@ private fun AppRoot(viewModel: AppViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize()) {
             NavigationRail(
+                // Material3 1.4 sizes the rail from its content, so a
+                // fillMaxWidth header would stretch it across the window.
+                // Pin the rail to the standard 80dp collapsed width.
+                modifier = Modifier.width(80.dp),
                 header = {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
