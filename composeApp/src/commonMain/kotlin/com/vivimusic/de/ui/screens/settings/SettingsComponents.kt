@@ -82,12 +82,14 @@ fun SettingsPage(
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(Res.string.back),
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -221,7 +223,9 @@ fun ChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = {
+            Text(title, color = MaterialTheme.colorScheme.onSurface)
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -248,14 +252,21 @@ fun ChoiceDialog(
                             },
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(label, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.close))
+                Text(
+                    stringResource(Res.string.close),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         },
     )
@@ -272,8 +283,8 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(message) },
+        title = { Text(title, color = MaterialTheme.colorScheme.onSurface) },
+        text = { Text(message, color = MaterialTheme.colorScheme.onSurface) },
         confirmButton = {
             TextButton(
                 onClick = {
@@ -281,12 +292,15 @@ fun ConfirmDialog(
                     onDismiss()
                 },
             ) {
-                Text(confirmLabel)
+                Text(confirmLabel, color = MaterialTheme.colorScheme.primary)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.cancel))
+                Text(
+                    stringResource(Res.string.cancel),
+                    color = MaterialTheme.colorScheme.primary,
+                )
             }
         },
     )

@@ -63,7 +63,11 @@ fun PlaylistScreen(viewModel: AppViewModel, onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
         }
 

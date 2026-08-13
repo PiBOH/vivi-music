@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0-alpha] - 2026-08-13
+
+### Added
+- Update downloads now stay inside Vivi Music DE: the app selects the matching
+  Windows MSI, macOS DMG, Linux AppImage or Linux DEB asset from the GitHub
+  release, downloads it without opening a browser, and starts the native
+  installer/launcher.
+
+### Fixed
+- Settings page titles, back arrows, dialog text and related navigation text
+  now explicitly use the active theme colors, fixing remaining black text in
+  dark mode.
+
 ## [0.11.3-alpha] - 2026-08-13
 
 ### Fixed

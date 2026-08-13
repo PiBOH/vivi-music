@@ -27,6 +27,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,7 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vivimusic.de.data.AppContainer
 import com.vivimusic.de.data.readSetting
-import com.vivimusic.de.data.update.openUrl
+import com.vivimusic.de.data.update.UpdateDownloadState
 import com.vivimusic.de.i18n.AppEnvironment
 import com.vivimusic.de.i18n.customAppLocale
 import com.vivimusic.de.resources.*
@@ -104,6 +105,7 @@ private fun AppRoot(viewModel: AppViewModel) {
     var detail by remember { mutableStateOf<Detail?>(null) }
     var showFullPlayer by remember { mutableStateOf(false) }
     val updateStatus by viewModel.updateStatus.collectAsState()
+    val updateDownloadState by viewModel.updateDownloadState.collectAsState()
     var updateDismissed by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -239,24 +241,60 @@ private fun AppRoot(viewModel: AppViewModel) {
 
     val latest = updateStatus?.latest
     if (updateStatus?.updateAvailable == true && !updateDismissed && latest != null) {
+        val downloadError = (updateDownloadState as? UpdateDownloadState.Error)?.message
+        val isDownloading = updateDownloadState is UpdateDownloadState.Downloading
         AlertDialog(
-            onDismissRequest = { updateDismissed = true },
-            title = { Text(stringResource(Res.string.update_available)) },
+            onDismissRequest = {
+                if (!isDownloading) updateDismissed = true
+            },
+            title = { Text(stringResource(Res.string.update_available), color = MaterialTheme.colorScheme.onSurface) },
             text = {
-                Text("${stringResource(Res.string.update_available_message)} ${latest.tagName}")
+                Column {
+                    Text(
+                        text = "${stringResource(Res.string.update_available_message)} ${latest.tagName}",
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    when {
+                        isDownloading -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(Res.string.update_downloading), color = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                        downloadError != null -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "${stringResource(Res.string.update_download_error)} $downloadError",
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        updateDownloadState is UpdateDownloadState.Launched -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(stringResource(Res.string.update_launched), color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        openUrl(latest.htmlUrl)
-                        updateDismissed = true
-                    },
+                    onClick = { viewModel.downloadAndInstallUpdate(latest) },
+                    enabled = !isDownloading,
                 ) {
-                    Text(stringResource(Res.string.update_download))
+                    Text(
+                        text = if (downloadError != null) stringResource(Res.string.retry)
+                        else stringResource(Res.string.update_download),
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { updateDismissed = true }) {
+                TextButton(
+                    onClick = {
+                        viewModel.resetUpdateDownloadState()
+                        updateDismissed = true
+                    },
+                ) {
                     Text(stringResource(Res.string.update_dismiss))
                 }
             },

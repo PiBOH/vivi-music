@@ -15,7 +15,9 @@ import com.vivimusic.de.data.playback.PlaybackState
 import com.vivimusic.de.data.readSetting
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.data.sync.SyncStatus
+import com.vivimusic.de.data.update.AppRelease
 import com.vivimusic.de.data.update.UpdateChecker
+import com.vivimusic.de.data.update.UpdateDownloadState
 import com.vivimusic.de.data.update.UpdateStatus
 import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.domain.AccountInfo
@@ -185,6 +187,9 @@ class AppViewModel(
     private val _updateStatus = MutableStateFlow<UpdateStatus?>(null)
     val updateStatus: StateFlow<UpdateStatus?> = _updateStatus.asStateFlow()
 
+    private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
+    val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
+
     /**
      * Kicks off the initial (network) work. Called after the first frame is
      * composed so the window opens instantly instead of competing with these
@@ -207,6 +212,22 @@ class AppViewModel(
         scope.launch {
             _updateStatus.value = updateChecker.check(includePrereleases = _checkPrereleases.value)
         }
+    }
+
+    fun downloadAndInstallUpdate(release: AppRelease) {
+        if (_updateDownloadState.value is UpdateDownloadState.Downloading) return
+        scope.launch {
+            _updateDownloadState.value = UpdateDownloadState.Downloading
+            _updateDownloadState.value = try {
+                UpdateDownloadState.Launched(updateChecker.downloadAndLaunch(release))
+            } catch (t: Throwable) {
+                UpdateDownloadState.Error(t.message ?: "Update download failed")
+            }
+        }
+    }
+
+    fun resetUpdateDownloadState() {
+        _updateDownloadState.value = UpdateDownloadState.Idle
     }
 
     /** Fetches the raw Keep-a-Changelog markdown from the repository. */

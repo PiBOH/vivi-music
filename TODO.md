@@ -58,6 +58,7 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Privacy (synchronization toggle).
 - [x] Storage (clear search/history).
 - [x] Updates (pre-releases + manual check).
+- [x] In-app update download with automatic Windows/macOS/Linux asset selection.
 - [x] About (mascot, version, source link).
 
 ## Phase 6 — Menus and remaining components

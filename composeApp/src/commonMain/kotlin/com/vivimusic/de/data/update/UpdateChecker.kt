@@ -3,6 +3,7 @@ package com.vivimusic.de.data.update
 import com.vivimusic.de.data.AppConfig
 import com.vivimusic.de.data.network.sharedJson
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
@@ -15,12 +16,19 @@ import kotlinx.serialization.json.Json
  * A single GitHub release, with only the fields the update checker needs.
  */
 @Serializable
+data class AppAsset(
+    val name: String,
+    @SerialName("browser_download_url") val downloadUrl: String,
+)
+
+@Serializable
 data class AppRelease(
     @SerialName("tag_name") val tagName: String,
     val name: String? = null,
     val prerelease: Boolean = false,
     @SerialName("html_url") val htmlUrl: String = "",
     @SerialName("published_at") val publishedAt: String? = null,
+    val assets: List<AppAsset> = emptyList(),
 )
 
 /**
@@ -31,6 +39,13 @@ data class UpdateStatus(
     val latest: AppRelease? = null,
     val updateAvailable: Boolean = false,
 )
+
+sealed interface UpdateDownloadState {
+    data object Idle : UpdateDownloadState
+    data object Downloading : UpdateDownloadState
+    data class Launched(val path: String) : UpdateDownloadState
+    data class Error(val message: String) : UpdateDownloadState
+}
 
 /**
  * Checks the GitHub Releases API for the latest release and compares it against
@@ -63,6 +78,33 @@ class UpdateChecker(
         emptyList()
     }
 
+    /**
+     * Downloads the release asset matching this operating system and starts it
+     * with the native installer/launcher. The browser is never opened.
+     */
+    suspend fun downloadAndLaunch(release: AppRelease): String {
+        val asset = selectUpdateAsset(release.assets)
+            ?: error("No update asset is available for this operating system")
+        val response = httpClient.get(asset.downloadUrl) {
+            header("User-Agent", "vivi-music-de-updater")
+            header("Accept", "application/octet-stream")
+        }
+        if (response.status.value !in 200..299) {
+            error("Update download failed: HTTP ${response.status.value}")
+        }
+        val bytes = response.body<ByteArray>()
+        return saveAndLaunchUpdate(asset.name, bytes)
+    }
+
+    private fun selectUpdateAsset(assets: List<AppAsset>): AppAsset? {
+        val priorities = updateAssetSuffixes()
+        return priorities.asSequence()
+            .mapNotNull { suffix ->
+                assets.firstOrNull { asset -> asset.name.endsWith(suffix, ignoreCase = true) }
+            }
+            .firstOrNull()
+    }
+
     /** Fetches the raw `CHANGELOG.md` from the repository (Keep a Changelog). */
     suspend fun fetchChangelogMarkdown(): String = try {
         httpClient.get("$RAW_BASE/$REPOSITORY/main/CHANGELOG.md") {
@@ -79,8 +121,14 @@ class UpdateChecker(
     }
 }
 
-/** Opens a URL in the system default browser. */
+/** Opens a URL in the system default browser for source links. */
 expect fun openUrl(url: String)
+
+/** Returns update asset suffixes in preference order for the current OS. */
+expect fun updateAssetSuffixes(): List<String>
+
+/** Saves the downloaded asset and starts the native installer/launcher. */
+expect fun saveAndLaunchUpdate(fileName: String, bytes: ByteArray): String
 
 // ----- SemVer comparison -----
 

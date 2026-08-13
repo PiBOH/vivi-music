@@ -69,11 +69,16 @@ fun LoginScreen(viewModel: AppViewModel, onBack: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(Res.string.back),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
             }
             Text(
                 text = stringResource(Res.string.sign_in),
                 style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
             )
         }
 
