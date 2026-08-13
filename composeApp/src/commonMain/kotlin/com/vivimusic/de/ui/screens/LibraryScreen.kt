@@ -1,6 +1,7 @@
 package com.vivimusic.de.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -74,7 +75,12 @@ private sealed interface LibraryRow {
 }
 
 @Composable
-fun LibraryScreen(viewModel: AppViewModel) {
+fun LibraryScreen(
+    viewModel: AppViewModel,
+    onOpenAlbum: (Album) -> Unit,
+    onOpenArtist: (Artist) -> Unit,
+    onOpenPlaylist: (Playlist) -> Unit,
+) {
     val favorites by viewModel.favorites.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
     var filter by remember { mutableStateOf<LibraryFilter?>(null) }
@@ -98,11 +104,11 @@ fun LibraryScreen(viewModel: AppViewModel) {
         )
 
         when (filter) {
-            null -> LibraryMix(playlists, albums, artists, favorites, viewModel)
-            LibraryFilter.PLAYLISTS -> PlaylistsView(playlists, viewModel)
+            null -> LibraryMix(playlists, albums, artists, favorites, viewModel, onOpenAlbum, onOpenArtist, onOpenPlaylist)
+            LibraryFilter.PLAYLISTS -> PlaylistsView(playlists, viewModel, onOpenPlaylist)
             LibraryFilter.SONGS -> SongList(favorites, viewModel)
-            LibraryFilter.ALBUMS -> AlbumsView(albums)
-            LibraryFilter.ARTISTS -> ArtistsView(artists)
+            LibraryFilter.ALBUMS -> AlbumsView(albums, onOpenAlbum)
+            LibraryFilter.ARTISTS -> ArtistsView(artists, onOpenArtist)
         }
     }
 }
@@ -118,6 +124,7 @@ private fun deriveAlbums(songs: List<Song>): List<Album> =
                 title = name,
                 artist = group.first().artist,
                 thumbnailUrl = group.first().thumbnailUrl,
+                songs = group,
             )
         }
 
@@ -129,6 +136,7 @@ private fun deriveArtists(songs: List<Song>): List<Artist> =
                 id = "artist-$name",
                 name = name,
                 thumbnailUrl = group.first().thumbnailUrl,
+                songs = group,
             )
         }
 
@@ -141,6 +149,9 @@ private fun LibraryMix(
     artists: List<Artist>,
     songs: List<Song>,
     viewModel: AppViewModel,
+    onOpenAlbum: (Album) -> Unit,
+    onOpenArtist: (Artist) -> Unit,
+    onOpenPlaylist: (Playlist) -> Unit,
 ) {
     val rows = remember(playlists, albums, artists, songs) {
         buildList {
@@ -163,16 +174,19 @@ private fun LibraryMix(
                     playlist = row.value,
                     viewModel = viewModel,
                     shape = groupedItemShape(index, rows.size),
+                    onClick = { onOpenPlaylist(row.value) },
                 )
 
                 is LibraryRow.AlbumEntry -> AlbumRow(
                     album = row.value,
                     shape = groupedItemShape(index, rows.size),
+                    onClick = { onOpenAlbum(row.value) },
                 )
 
                 is LibraryRow.ArtistEntry -> ArtistRow(
                     artist = row.value,
                     shape = groupedItemShape(index, rows.size),
+                    onClick = { onOpenArtist(row.value) },
                 )
 
                 is LibraryRow.SongEntry -> SongRow(
@@ -188,7 +202,11 @@ private fun LibraryMix(
 // ----- playlists view -----
 
 @Composable
-private fun PlaylistsView(playlists: List<Playlist>, viewModel: AppViewModel) {
+private fun PlaylistsView(
+    playlists: List<Playlist>,
+    viewModel: AppViewModel,
+    onOpenPlaylist: (Playlist) -> Unit,
+) {
     var name by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -220,6 +238,7 @@ private fun PlaylistsView(playlists: List<Playlist>, viewModel: AppViewModel) {
                         playlist = playlist,
                         viewModel = viewModel,
                         shape = groupedItemShape(index, playlists.size),
+                        onClick = { onOpenPlaylist(playlist) },
                     )
                 }
             }
@@ -228,7 +247,12 @@ private fun PlaylistsView(playlists: List<Playlist>, viewModel: AppViewModel) {
 }
 
 @Composable
-private fun PlaylistRow(playlist: Playlist, viewModel: AppViewModel, shape: androidx.compose.ui.graphics.Shape) {
+private fun PlaylistRow(
+    playlist: Playlist,
+    viewModel: AppViewModel,
+    shape: androidx.compose.ui.graphics.Shape,
+    onClick: () -> Unit,
+) {
     ListItem(
         headlineContent = { Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingContent = { Thumbnail(playlist.thumbnailUrl) },
@@ -238,7 +262,7 @@ private fun PlaylistRow(playlist: Playlist, viewModel: AppViewModel, shape: andr
             }
         },
         colors = listItemColors(),
-        modifier = Modifier.clip(shape),
+        modifier = Modifier.clip(shape).clickable(onClick = onClick),
     )
 }
 
@@ -260,20 +284,20 @@ private fun SongList(songs: List<Song>, viewModel: AppViewModel) {
 // ----- albums view -----
 
 @Composable
-private fun AlbumsView(albums: List<Album>) {
+private fun AlbumsView(albums: List<Album>, onOpenAlbum: (Album) -> Unit) {
     if (albums.isEmpty()) {
         EmptyState(Res.string.empty_albums)
         return
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         itemsIndexed(albums, key = { _, album -> album.id }) { index, album ->
-            AlbumRow(album, shape = groupedItemShape(index, albums.size))
+            AlbumRow(album, shape = groupedItemShape(index, albums.size), onClick = { onOpenAlbum(album) })
         }
     }
 }
 
 @Composable
-private fun AlbumRow(album: Album, shape: androidx.compose.ui.graphics.Shape) {
+private fun AlbumRow(album: Album, shape: androidx.compose.ui.graphics.Shape, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(album.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
@@ -285,32 +309,32 @@ private fun AlbumRow(album: Album, shape: androidx.compose.ui.graphics.Shape) {
         },
         leadingContent = { Thumbnail(album.thumbnailUrl) },
         colors = listItemColors(),
-        modifier = Modifier.clip(shape),
+        modifier = Modifier.clip(shape).clickable(onClick = onClick),
     )
 }
 
 // ----- artists view -----
 
 @Composable
-private fun ArtistsView(artists: List<Artist>) {
+private fun ArtistsView(artists: List<Artist>, onOpenArtist: (Artist) -> Unit) {
     if (artists.isEmpty()) {
         EmptyState(Res.string.empty_artists)
         return
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         itemsIndexed(artists, key = { _, artist -> artist.id }) { index, artist ->
-            ArtistRow(artist, shape = groupedItemShape(index, artists.size))
+            ArtistRow(artist, shape = groupedItemShape(index, artists.size), onClick = { onOpenArtist(artist) })
         }
     }
 }
 
 @Composable
-private fun ArtistRow(artist: Artist, shape: androidx.compose.ui.graphics.Shape) {
+private fun ArtistRow(artist: Artist, shape: androidx.compose.ui.graphics.Shape, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(artist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingContent = { Thumbnail(artist.thumbnailUrl, circular = true) },
         colors = listItemColors(),
-        modifier = Modifier.clip(shape),
+        modifier = Modifier.clip(shape).clickable(onClick = onClick),
     )
 }
 

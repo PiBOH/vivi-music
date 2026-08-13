@@ -1,6 +1,7 @@
 package com.vivimusic.de.data.network
 
 import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Song
 import io.ktor.client.HttpClient
@@ -156,26 +157,90 @@ class InnerTubeClient(
 
     suspend fun getAlbumOrPlaylist(browseId: String): Album {
         val response = call("browse", bodyWith(Client.WEB_REMIX, "browseId" to JsonPrimitive(browseId)))
-        val sections = response.sectionListRendererContents() ?: emptyList()
-        val songs = sections.mapNotNull { section ->
-            val obj = section as? JsonObject ?: return@mapNotNull null
-            val shelf = obj["musicPlaylistShelfRenderer"] as? JsonObject
-                ?: obj["musicShelfRenderer"] as? JsonObject
-                ?: return@mapNotNull null
-            extractListItemSongs(shelf)
-        }.flatten()
+        // Albums/playlists use twoColumnBrowseResultsRenderer: the header sits
+        // in the first tab's section list, the songs in secondaryContents.
+        val twoCol = (response["contents"] as? JsonObject)?.get("twoColumnBrowseResultsRenderer") as? JsonObject
+        val header = twoCol?.tabSections()
+            ?.mapNotNull { (it as? JsonObject)?.get("musicResponsiveHeaderRenderer") as? JsonObject }
+            ?.firstOrNull()
+        val songs = twoCol?.secondarySongs().orEmpty()
 
-        val header = (response["header"] as? JsonObject)?.get("musicDetailHeaderRenderer") as? JsonObject
-        val title = header?.get("title")?.let { (it as? JsonObject)?.firstText() } ?: ""
-        val artist = header?.get("subtitle")?.let { (it as? JsonObject)?.joinedText() } ?: ""
-        val thumbnailUrl = header?.thumbnailUrl()
+        // Fallback for older renderer shapes (musicDetailHeaderRenderer +
+        // musicPlaylistShelfRenderer in a single-column browse).
+        val legacySongs = if (songs.isEmpty()) {
+            response.sectionListRendererContents()
+                .orEmpty()
+                .mapNotNull { section ->
+                    val obj = section as? JsonObject ?: return@mapNotNull null
+                    val shelf = obj["musicPlaylistShelfRenderer"] as? JsonObject
+                        ?: obj["musicShelfRenderer"] as? JsonObject
+                        ?: return@mapNotNull null
+                    extractListItemSongs(shelf)
+                }
+                .flatten()
+        } else {
+            emptyList()
+        }
+
+        val microformat = (response["microformat"] as? JsonObject)?.get("microformatDataRenderer") as? JsonObject
+        val title = header?.get("title")?.let { (it as? JsonObject)?.firstText() }
+            ?: microformat?.str("title")
+            ?: ""
+        val artist = microformat?.str("description")
+            ?.substringAfter("\u2022")
+            ?.trim()
+            ?.takeUnless { it == "Album" || it == "Playlist" }
+            .orEmpty()
+        val year = header?.get("subtitle")?.let { (it as? JsonObject)?.textRuns() }
+            ?.firstOrNull { it.length == 4 && it.all(Char::isDigit) }
+            ?: microformat?.str("year")
+        val thumbnailUrl = header?.thumbnailUrl() ?: microformat?.microformatThumbnailUrl()
 
         return Album(
             id = browseId,
             title = title,
             artist = artist,
+            year = year,
+            description = header?.get("description")?.let { (it as? JsonObject)?.firstText() },
             thumbnailUrl = thumbnailUrl,
+            songs = songs.ifEmpty { legacySongs },
+        )
+    }
+
+    /**
+     * Loads an artist page: the immersive header (name, thumbnail) plus the
+     * "Top songs" shelf and the album carousels.
+     */
+    suspend fun getArtist(browseId: String): Artist {
+        val response = call("browse", bodyWith(Client.WEB_REMIX, "browseId" to JsonPrimitive(browseId)))
+        val header = (response["header"] as? JsonObject)?.get("musicImmersiveHeaderRenderer") as? JsonObject
+        val name = header?.get("title")?.let { (it as? JsonObject)?.firstText() } ?: ""
+        val description = header?.get("description")?.let { (it as? JsonObject)?.firstText() }
+        val thumbnailUrl = header?.thumbnailUrl()
+
+        val sections = response.sectionListRendererContents().orEmpty()
+            .mapNotNull { it as? JsonObject }
+
+        val songs = sections
+            .mapNotNull { it["musicShelfRenderer"] as? JsonObject }
+            .flatMap { extractListItemSongs(it) }
+
+        val albums = sections
+            .mapNotNull { it["musicCarouselShelfRenderer"] as? JsonObject }
+            .flatMap { shelf ->
+                (shelf["contents"] as? JsonArray).orEmpty().mapNotNull { item ->
+                    ((item as? JsonObject)?.get("musicTwoRowItemRenderer") as? JsonObject)?.toAlbumFromTwoRow()
+                }
+            }
+            .distinctBy { it.id }
+
+        return Artist(
+            id = browseId,
+            name = name,
+            thumbnailUrl = thumbnailUrl,
+            description = description,
             songs = songs,
+            albums = albums,
         )
     }
 
@@ -217,6 +282,7 @@ class InnerTubeClient(
         (this["contents"] as? JsonObject)
             ?.get("singleColumnBrowseResultsRenderer")?.let { singleColumnOrTabs(it) }
             ?: (this["contents"] as? JsonObject)?.get("tabbedSearchResultsRenderer")?.let { singleColumnOrTabs(it) }
+            ?: (this["contents"] as? JsonObject)?.get("twoColumnBrowseResultsRenderer")?.let { twoColumnTabs(it) }
 
     private fun singleColumnOrTabs(renderer: JsonElement): JsonArray? {
         val rendererObj = renderer as? JsonObject ?: return null
@@ -224,6 +290,36 @@ class InnerTubeClient(
         val tab = tabs.firstOrNull() as? JsonObject ?: return null
         val content = (tab["tabRenderer"] as? JsonObject)?.get("content") as? JsonObject ?: return null
         return (content["sectionListRenderer"] as? JsonObject)?.get("contents") as? JsonArray
+    }
+
+    private fun twoColumnTabs(renderer: JsonElement): JsonArray? {
+        val rendererObj = renderer as? JsonObject ?: return null
+        val tabs = rendererObj["tabs"] as? JsonArray ?: return null
+        val tab = tabs.firstOrNull() as? JsonObject ?: return null
+        val content = (tab["tabRenderer"] as? JsonObject)?.get("content") as? JsonObject ?: return null
+        return (content["sectionListRenderer"] as? JsonObject)?.get("contents") as? JsonArray
+    }
+
+    /** Sections from a twoColumnBrowseResultsRenderer's first tab. */
+    private fun JsonObject.tabSections(): JsonArray? {
+        val tabs = this["tabs"] as? JsonArray ?: return null
+        val tab = tabs.firstOrNull() as? JsonObject ?: return null
+        val content = (tab["tabRenderer"] as? JsonObject)?.get("content") as? JsonObject ?: return null
+        return (content["sectionListRenderer"] as? JsonObject)?.get("contents") as? JsonArray
+    }
+
+    /** Songs from a twoColumnBrowseResultsRenderer's secondaryContents. */
+    private fun JsonObject.secondarySongs(): List<Song> {
+        val secondary = (this["secondaryContents"] as? JsonObject)?.get("sectionListRenderer") as? JsonObject
+            ?: return emptyList()
+        val sections = secondary["contents"] as? JsonArray ?: return emptyList()
+        return sections.mapNotNull { section ->
+            val obj = section as? JsonObject ?: return@mapNotNull null
+            val shelf = obj["musicShelfRenderer"] as? JsonObject
+                ?: obj["musicPlaylistShelfRenderer"] as? JsonObject
+                ?: return@mapNotNull null
+            extractListItemSongs(shelf)
+        }.flatten()
     }
 
     private fun extractListItemSongs(shelf: JsonObject): List<Song> {
@@ -252,6 +348,16 @@ class InnerTubeClient(
         return Song(id = id, title = title, artist = subtitle, thumbnailUrl = thumbnailUrl())
     }
 
+    private fun JsonObject.toAlbumFromTwoRow(): Album? {
+        val id = browseId() ?: return null
+        val title = (this["title"] as? JsonObject)?.firstText() ?: ""
+        val year = (this["subtitle"] as? JsonObject)?.firstText()
+        return Album(id = id, title = title, year = year, thumbnailUrl = thumbnailUrl())
+    }
+
+    private fun JsonObject.browseId(): String? =
+        ((this["navigationEndpoint"] as? JsonObject)?.get("browseEndpoint") as? JsonObject)?.str("browseId")
+
     private fun JsonObject.videoId(): String? {
         str("videoId")?.let { return it }
         val overlay = this["overlay"] as? JsonObject ?: return null
@@ -268,6 +374,12 @@ class InnerTubeClient(
         val renderer = (this["thumbnail"] as? JsonObject) ?: (this["thumbnailRenderer"] as? JsonObject) ?: return null
         val musicThumb = (renderer["musicThumbnailRenderer"] as? JsonObject) ?: renderer
         val thumbnails = ((musicThumb["thumbnail"] as? JsonObject)?.get("thumbnails") as? JsonArray) ?: return null
+        return (thumbnails.lastOrNull() as? JsonObject)?.str("url")
+    }
+
+    /** Microformat thumbnails are a bare `thumbnails` array (no wrapper). */
+    private fun JsonObject.microformatThumbnailUrl(): String? {
+        val thumbnails = (this["thumbnail"] as? JsonObject)?.get("thumbnails") as? JsonArray ?: return null
         return (thumbnails.lastOrNull() as? JsonObject)?.str("url")
     }
 

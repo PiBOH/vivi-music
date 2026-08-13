@@ -23,6 +23,7 @@ data class Album(
     val title: String,
     val artist: String = "",
     val year: String? = null,
+    val description: String? = null,
     val thumbnailUrl: String? = null,
     val songs: List<Song> = emptyList(),
 )
@@ -32,6 +33,9 @@ data class Artist(
     val id: String,
     val name: String,
     val thumbnailUrl: String? = null,
+    val description: String? = null,
+    val songs: List<Song> = emptyList(),
+    val albums: List<Album> = emptyList(),
 )
 
 @Serializable
@@ -42,6 +46,7 @@ data class Playlist(
     val thumbnailUrl: String? = null,
     val createdAtEpochMs: Long = 0L,
     val updatedAtEpochMs: Long = 0L,
+    val songs: List<Song> = emptyList(),
 )
 
 /**

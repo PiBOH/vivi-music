@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
@@ -39,8 +40,12 @@ import com.vivimusic.de.data.update.openUrl
 import com.vivimusic.de.i18n.AppEnvironment
 import com.vivimusic.de.i18n.customAppLocale
 import com.vivimusic.de.resources.*
+import com.vivimusic.de.ui.screens.AlbumScreen
+import com.vivimusic.de.ui.screens.ArtistScreen
+import com.vivimusic.de.ui.screens.HistoryScreen
 import com.vivimusic.de.ui.screens.HomeScreen
 import com.vivimusic.de.ui.screens.LibraryScreen
+import com.vivimusic.de.ui.screens.PlaylistScreen
 import com.vivimusic.de.ui.screens.SearchScreen
 import com.vivimusic.de.ui.screens.SettingsScreen
 import com.vivimusic.de.ui.screens.TogetherScreen
@@ -75,7 +80,14 @@ fun App(container: AppContainer) {
     }
 }
 
-private enum class Screen { Home, Search, Together, Library, Settings }
+private enum class Screen { Home, Search, Together, Library, History, Settings }
+
+/** A detail destination shown in place of the main content area. */
+private sealed interface Detail {
+    data class AlbumDetail(val browseId: String?) : Detail
+    data class ArtistDetail(val browseId: String?) : Detail
+    data class PlaylistDetail(val playlistId: String) : Detail
+}
 
 /**
  * Root scaffold, adapted for the desktop: a side navigation rail with the
@@ -86,6 +98,7 @@ private enum class Screen { Home, Search, Together, Library, Settings }
 @Composable
 private fun AppRoot(viewModel: AppViewModel) {
     var screen by remember { mutableStateOf(Screen.Home) }
+    var detail by remember { mutableStateOf<Detail?>(null) }
     var showFullPlayer by remember { mutableStateOf(false) }
     val updateStatus by viewModel.updateStatus.collectAsState()
     var updateDismissed by remember { mutableStateOf(false) }
@@ -110,33 +123,39 @@ private fun AppRoot(viewModel: AppViewModel) {
                 },
             ) {
                 NavigationRailItem(
-                    selected = screen == Screen.Home,
-                    onClick = { screen = Screen.Home },
+                    selected = screen == Screen.Home && detail == null,
+                    onClick = { screen = Screen.Home; detail = null },
                     icon = { Icon(Icons.Filled.Home, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_home)) },
                 )
                 NavigationRailItem(
-                    selected = screen == Screen.Search,
-                    onClick = { screen = Screen.Search },
+                    selected = screen == Screen.Search && detail == null,
+                    onClick = { screen = Screen.Search; detail = null },
                     icon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_search)) },
                 )
                 NavigationRailItem(
-                    selected = screen == Screen.Together,
-                    onClick = { screen = Screen.Together },
+                    selected = screen == Screen.Together && detail == null,
+                    onClick = { screen = Screen.Together; detail = null },
                     icon = { Icon(Icons.Filled.Group, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_together)) },
                 )
                 NavigationRailItem(
-                    selected = screen == Screen.Library,
-                    onClick = { screen = Screen.Library },
+                    selected = screen == Screen.Library && detail == null,
+                    onClick = { screen = Screen.Library; detail = null },
                     icon = { Icon(Icons.Filled.LibraryMusic, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_library)) },
+                )
+                NavigationRailItem(
+                    selected = screen == Screen.History,
+                    onClick = { screen = Screen.History; detail = null },
+                    icon = { Icon(Icons.Filled.History, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.nav_history)) },
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 NavigationRailItem(
                     selected = screen == Screen.Settings,
-                    onClick = { screen = Screen.Settings },
+                    onClick = { screen = Screen.Settings; detail = null },
                     icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_settings)) },
                 )
@@ -144,12 +163,41 @@ private fun AppRoot(viewModel: AppViewModel) {
 
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                    when (screen) {
-                        Screen.Home -> HomeScreen(viewModel)
-                        Screen.Search -> SearchScreen(viewModel)
-                        Screen.Together -> TogetherScreen()
-                        Screen.Library -> LibraryScreen(viewModel)
-                        Screen.Settings -> SettingsScreen(viewModel)
+                    when (val current = detail) {
+                        is Detail.AlbumDetail -> AlbumScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                        )
+                        is Detail.ArtistDetail -> ArtistScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                        )
+                        is Detail.PlaylistDetail -> PlaylistScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                        )
+                        null -> when (screen) {
+                            Screen.Home -> HomeScreen(viewModel)
+                            Screen.Search -> SearchScreen(viewModel)
+                            Screen.Together -> TogetherScreen()
+                            Screen.Library -> LibraryScreen(
+                                viewModel = viewModel,
+                                onOpenAlbum = { album ->
+                                    viewModel.showLocalAlbum(album)
+                                    detail = Detail.AlbumDetail(browseId = null)
+                                },
+                                onOpenArtist = { artist ->
+                                    viewModel.showLocalArtist(artist)
+                                    detail = Detail.ArtistDetail(browseId = null)
+                                },
+                                onOpenPlaylist = { playlist ->
+                                    viewModel.openPlaylist(playlist)
+                                    detail = Detail.PlaylistDetail(playlist.id)
+                                },
+                            )
+                            Screen.History -> HistoryScreen(viewModel)
+                            Screen.Settings -> SettingsScreen(viewModel)
+                        }
                     }
                 }
 

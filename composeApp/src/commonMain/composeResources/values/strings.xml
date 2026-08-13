@@ -54,4 +54,9 @@
     <string name="update_dismiss">Later</string>
     <string name="update_check_now">Check for updates</string>
     <string name="update_up_to_date">You are up to date</string>
+    <string name="songs">Songs</string>
+    <string name="top_songs">Top songs</string>
+    <string name="albums">Albums</string>
+    <string name="album_text">Album</string>
+    <string name="history">History</string>
 </resources>

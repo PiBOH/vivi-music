@@ -10,6 +10,7 @@ import com.vivimusic.de.data.update.UpdateChecker
 import com.vivimusic.de.data.update.UpdateStatus
 import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
@@ -77,6 +78,17 @@ class AppViewModel(
 
     private val _album = MutableStateFlow<Album?>(null)
     val album: StateFlow<Album?> = _album.asStateFlow()
+
+    private val _artist = MutableStateFlow<Artist?>(null)
+    val artist: StateFlow<Artist?> = _artist.asStateFlow()
+
+    private val _playlist = MutableStateFlow<Playlist?>(null)
+    val playlist: StateFlow<Playlist?> = _playlist.asStateFlow()
+
+    private val _playlistSongs = MutableStateFlow<List<Song>>(emptyList())
+    val playlistSongs: StateFlow<List<Song>> = _playlistSongs.asStateFlow()
+
+    private var playlistSongsJob: Job? = null
 
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -173,8 +185,54 @@ class AppViewModel(
         }
     }
 
+    /** Shows a locally derived album (from favorites) without a remote fetch. */
+    fun showLocalAlbum(album: Album) {
+        _album.value = album
+    }
+
     fun closeAlbum() {
         _album.value = null
+    }
+
+    fun openArtist(browseId: String) {
+        scope.launch {
+            _artist.value = repository.getArtist(browseId)
+        }
+    }
+
+    /** Shows a locally derived artist (from favorites) without a remote fetch. */
+    fun showLocalArtist(artist: Artist) {
+        _artist.value = artist
+    }
+
+    fun closeArtist() {
+        _artist.value = null
+    }
+
+    fun openPlaylist(playlist: Playlist) {
+        _playlist.value = playlist
+        _playlistSongs.value = emptyList()
+        playlistSongsJob?.cancel()
+        playlistSongsJob = scope.launch {
+            repository.observePlaylistSongs(playlist.id).collect { songs ->
+                _playlistSongs.value = songs
+            }
+        }
+    }
+
+    fun closePlaylist() {
+        _playlist.value = null
+        _playlistSongs.value = emptyList()
+    }
+
+    fun addToPlaylist(song: Song) {
+        val playlist = _playlist.value ?: return
+        repository.addSongToPlaylist(playlist.id, song)
+    }
+
+    fun removeFromPlaylist(song: Song) {
+        val playlist = _playlist.value ?: return
+        repository.removeSongFromPlaylist(playlist.id, song.id)
     }
 
     fun toggleFavorite(song: Song) = repository.toggleFavorite(song)

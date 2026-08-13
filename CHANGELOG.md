@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-alpha] - 2026-08-13
+
+### Added
+- Album detail screen (artwork header with title/artist/year, play button and
+  the track list), ported from ViVi Music's `AlbumScreen`.
+- Artist detail screen (circular avatar header, "Top songs" shelf and album
+  carousels), ported from ViVi Music's `ArtistScreen`.
+- Playlist detail screen (square thumbnail header and its songs, with a remove
+  button per row), ported from ViVi Music's `LocalPlaylistScreen`.
+- History screen listing recently played songs, reachable from the navigation
+  rail.
+- Library rows (albums, artists, playlists) now open their detail screen; local
+  albums/artists are shown from favorites without a remote fetch.
+- InnerTube `getArtist` endpoint and an album/playlist parser for the current
+  `twoColumnBrowseResultsRenderer` + `musicResponsiveHeaderRenderer` response
+  format (title, artist, year and thumbnail from the header/microformat).
+- Repository helpers to add/remove songs in a local playlist.
+
+### Fixed
+- Linux `.AppImage` artifact: the build now wraps the jpackage app-image
+  directory with `appimagetool` (AppRun + .desktop + icon) so Arch/other
+  distros get the portable AppImage, in addition to the `.deb`.
+
 ## [0.2.2-alpha] - 2026-08-13
 
 ### Fixed

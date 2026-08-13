@@ -25,6 +25,48 @@ jobs:
         env:
           INNERTUBE_API_KEY: ${{ secrets.INNERTUBE_API_KEY }}
         run: ./gradlew :composeApp:packageDistributionForCurrentOS --no-daemon
+      - name: Build AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Same MAJOR>=1 mapping as composeApp/build.gradle.kts so the asset
+          # name matches the other installers (0.2.2-alpha -> 1.2.2).
+          RAW="$(tr -d '\r\n' < version.txt | sed 's/-.*//')"
+          MAJOR="${RAW%%.*}"
+          REST="${RAW#*.}"
+          if [ -z "$MAJOR" ] || [ "$MAJOR" -le 0 ]; then MAJOR=1; fi
+          INSTALLER="$MAJOR.$REST"
+          APPDIR="composeApp/build/compose/binaries/main/app/ViviMusicDE"
+          # jpackage --type app-image produces a directory, not a .AppImage
+          # file. Wrap it into an AppDir (AppRun + .desktop + icon) and pack it
+          # with appimagetool so Arch/other distros get the portable AppImage.
+          cat > "$APPDIR/AppRun" <<'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          if [ -x "$HERE/bin/ViviMusicDE" ]; then
+            exec "$HERE/bin/ViviMusicDE" "$@"
+          fi
+          exec "$HERE/ViviMusicDE" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+          cat > "$APPDIR/vivi-music-de.desktop" <<'EOF'
+          [Desktop Entry]
+          Name=Vivi Music DE
+          Comment=Expressive Material 3 based YouTube Music client for desktop
+          Exec=AppRun
+          Icon=vivi-music-de
+          Terminal=false
+          Type=Application
+          Categories=AudioVideo;Audio;Player;
+          EOF
+          cp composeApp/icons/icon.png "$APPDIR/vivi-music-de.png"
+          # appimagetool is itself an AppImage; extract it to avoid the FUSE
+          # requirement on the runner, then run the extracted AppRun.
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O appimagetool.AppImage
+          chmod +x appimagetool.AppImage
+          ./appimagetool.AppImage --appimage-extract >/dev/null
+          mkdir -p composeApp/build/compose/binaries/main/appImage
+          ARCH=x86_64 ./squashfs-root/AppRun "$APPDIR" "composeApp/build/compose/binaries/main/appImage/ViviMusicDE-$INSTALLER.AppImage"
       - name: Collect packages
         shell: bash
         run: |

@@ -8,6 +8,7 @@ import com.vivimusic.de.data.db.SongEntity
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.Artist
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
@@ -35,6 +36,8 @@ class MusicRepository(
     suspend fun home(): List<HomeSection> = innerTube.getHome()
 
     suspend fun getAlbumOrPlaylist(browseId: String): Album = innerTube.getAlbumOrPlaylist(browseId)
+
+    suspend fun getArtist(browseId: String): Artist = innerTube.getArtist(browseId)
 
     suspend fun getSong(videoId: String): Song? = innerTube.getSong(videoId)
 
@@ -99,6 +102,31 @@ class MusicRepository(
         scope.launch {
             db.playlistDao().deletePlaylist(id)
             db.playlistSongDao().deleteByPlaylist(id)
+            syncManager.afterLocalChange()
+        }
+    }
+
+    fun observePlaylistSongs(playlistId: String): Flow<List<Song>> =
+        db.playlistSongDao().observeSongs(playlistId).map { list -> list.map { it.toDomain() } }
+
+    fun addSongToPlaylist(playlistId: String, song: Song) {
+        scope.launch {
+            db.songDao().upsert(song.toEntity())
+            db.playlistSongDao().upsert(
+                com.vivimusic.de.data.db.PlaylistSongEntity(
+                    id = "$playlistId-${song.id}",
+                    playlistId = playlistId,
+                    songId = song.id,
+                    position = nowEpochMillis().toInt(),
+                )
+            )
+            syncManager.afterLocalChange()
+        }
+    }
+
+    fun removeSongFromPlaylist(playlistId: String, songId: String) {
+        scope.launch {
+            db.playlistSongDao().deleteById("$playlistId-$songId")
             syncManager.afterLocalChange()
         }
     }
