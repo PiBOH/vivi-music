@@ -19,11 +19,6 @@ permissions:
 jobs:
   # Builds are delegated to the per-OS reusable workflows below. This workflow
   # only collects their artifacts and publishes the release.
-  build-android:
-    name: Android build
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
-    uses: ./.github/workflows/build-android.yml
-
   build-windows:
     name: Windows build
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
@@ -42,7 +37,6 @@ jobs:
   release:
     name: Publish GitHub Release
     needs:
-      - build-android
       - build-windows
       - build-linux
       - build-macos

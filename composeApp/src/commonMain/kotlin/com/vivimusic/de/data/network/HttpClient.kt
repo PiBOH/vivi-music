@@ -18,8 +18,7 @@ internal val sharedJson: Json = Json {
 }
 
 /**
- * Creates the platform HTTP client with the appropriate engine
- * (OkHttp on Android, CIO on the JVM desktop target).
+ * Creates the HTTP client with the CIO engine (JVM desktop target).
  */
 expect fun createHttpClient(): HttpClient
 

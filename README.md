@@ -1,15 +1,14 @@
 # Vivi Music DE
 
-A desktop and mobile music client built with **Kotlin Multiplatform** and
+A **desktop** music client built with **Kotlin Multiplatform** and
 **Compose Multiplatform**, recreating the experience of
 [ViVi Music](https://github.com/25huizengek1/ViMusic) (an open source YouTube
-Music client). The UI and logic are shared between **Android** and
-**Desktop (Windows/macOS/Linux)**, and user data (playlists, favorites,
-history) syncs in real time via **Supabase**.
+Music client). The app runs on **Windows, macOS and Linux**, and user data
+(playlists, favorites, history) syncs in real time via **Supabase**.
 
 ## Features
 
-- **Android** and **Desktop (JVM)** targets from a single codebase.
+- **Desktop (JVM)** app for Windows, macOS and Linux from a single codebase.
 - **Compose Multiplatform** (Material 3) UI: Home with search, Library,
   Settings, and a "now playing" bar.
 - **YouTube Music** catalog via an InnerTube client (search, home feed,
@@ -24,7 +23,6 @@ history) syncs in real time via **Supabase**.
 
 - JDK 17+ (Gradle 8.x does not support JDK 25; packaging with JDK 17 lowers the
   runtime requirement to macOS 10.15+ and Windows 10+).
-- Android SDK with platform 36 (only for the Android target).
 - A Supabase project (optional, for sync).
 
 ## System requirements (runtime)
@@ -40,17 +38,11 @@ history) syncs in real time via **Supabase**.
 ## Build and run
 
 ```bash
-# Desktop: compile and run
+# Compile and run the app
 ./gradlew :composeApp:run
 
-# Desktop: native installer for the current OS
+# Native installer for the current OS
 ./gradlew :composeApp:packageDistributionForCurrentOS
-
-# Android: debug APK
-./gradlew :composeApp:assembleDebug
-
-# Android: install on a connected device/emulator
-./gradlew :composeApp:installDebug
 
 # All checks
 ./gradlew build
@@ -66,7 +58,7 @@ To publish a GitHub Release:
 2. Commit and push with a message starting with `v` (e.g. `v0.0.1-alpha: ...`),
    or run the `auto-release.yml` workflow manually.
 
-The per-OS build workflows produce the Android APK and the desktop installers
+The per-OS build workflows produce the desktop installers
 (Windows/macOS/Linux), and `auto-release.yml` publishes the release with those
 artifacts attached.
 
@@ -75,15 +67,9 @@ artifacts attached.
 1. Create a project on [Supabase](https://supabase.com).
 2. Run `supabase/migrations/0001_init.sql` in the SQL editor (creates tables,
    RLS, and enables Realtime).
-3. Provide the credentials:
-   - **Android**: add to `local.properties` (a git-ignored file):
-     ```properties
-     supabase.url=https://your-project.supabase.co
-     supabase.anonKey=your-anon-key
-     ```
-   - **Desktop**: set the `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment
-     variables, or create a `supabase.env` file with
-     `SUPABASE_URL=...` and `SUPABASE_ANON_KEY=...`.
+3. Provide the credentials by setting the `SUPABASE_URL` and
+   `SUPABASE_ANON_KEY` environment variables, or by creating a `supabase.env`
+   file with `SUPABASE_URL=...` and `SUPABASE_ANON_KEY=...`.
 
 Without credentials the app runs in local-only mode.
 

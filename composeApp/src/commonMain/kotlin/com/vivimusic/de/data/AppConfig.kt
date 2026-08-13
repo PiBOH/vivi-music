@@ -1,12 +1,10 @@
 package com.vivimusic.de.data
 
 /**
- * Runtime configuration, populated by each platform entry point.
+ * Runtime configuration, populated by the desktop entry point (`main.kt`).
  *
- * On Android these values come from `BuildConfig` (injected by Gradle from
- * `local.properties`, see `composeApp/build.gradle.kts`). On desktop they come
- * from the `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment variables or from
- * a `supabase.env` file next to the executable.
+ * Values come from the `SUPABASE_URL` and `SUPABASE_ANON_KEY` environment
+ * variables or from a `supabase.env` file next to the executable.
  *
  * When the values are empty, remote sync is disabled and the app runs in a
  * local-only mode.

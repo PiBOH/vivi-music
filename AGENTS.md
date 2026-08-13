@@ -5,12 +5,11 @@ repository. Read this file in full before modifying the code.
 
 ## 1. Project overview
 
-**Vivi Music DE** is a desktop and mobile music client built with
+**Vivi Music DE** is a **desktop** music client built with
 **Kotlin Multiplatform (KMP)** and **Compose Multiplatform**, recreating the
 experience of ViVi Music (an open source YouTube Music client). Code and UI are
-shared between the **Android** and **Desktop (JVM: Windows/macOS/Linux)**
-targets, and user data (playlists, favorites, history) syncs in real time via
-**Supabase**.
+shared across the **Desktop (JVM: Windows/macOS/Linux)** targets, and user data
+(playlists, favorites, history) syncs in real time via **Supabase**.
 
 ### Tech stack
 
@@ -19,7 +18,7 @@ targets, and user data (playlists, favorites, history) syncs in real time via
 | Language  | Kotlin (2.4.x)                                                       |
 | UI        | Compose Multiplatform + Material 3                                   |
 | Build     | Gradle (Kotlin DSL), version catalog in `gradle/libs.versions.toml`  |
-| Network   | Ktor Client (OkHttp on Android, CIO on Desktop)                      |
+| Network   | Ktor Client (CIO engine)                                              |
 | Database  | Room KMP (`androidx.room3`), bundled SQLite driver                   |
 | Sync      | Supabase (supabase-kt: PostgREST + Realtime + Auth)                  |
 | i18n      | Compose Multiplatform resources (`composeResources/**`)              |
@@ -33,7 +32,7 @@ vivi-music-de/
 ├── gradle/
 │   ├── libs.versions.toml      # version catalog
 │   └── wrapper/                # Gradle wrapper
-├── composeApp/                 # single KMP module (Android + Desktop app)
+├── composeApp/                 # single KMP module (Desktop app)
 │   ├── build.gradle.kts
 │   └── src/
 │       ├── commonMain/         # shared code
@@ -43,17 +42,16 @@ vivi-music-de/
 │       │       ├── domain/         # domain models (Song, Playlist, ...)
 │       │       ├── i18n/           # languages and locale handling
 │       │       └── ui/             # shared Compose screens
-│       ├── androidMain/        # MainActivity, manifest, Android actuals
 │       └── desktopMain/        # main.kt, Desktop actuals
 ├── supabase/migrations/        # SQL schema + RLS + Realtime
 ├── AGENTS.md
 └── CHANGELOG.md
 ```
 
-The project uses a **single Gradle module** (`composeApp`) with the three source
-sets `commonMain`, `androidMain` and `desktopMain`. The `expect`/`actual`
-pattern is used for platform-specific parts (HTTP engine, database builder,
-settings persistence, locale handling).
+The project uses a **single Gradle module** (`composeApp`) with the two source
+sets `commonMain` and `desktopMain`. The `expect`/`actual` pattern is used for
+platform-specific parts (HTTP engine, database builder, settings persistence,
+locale handling).
 
 ### Data flow
 
@@ -103,8 +101,7 @@ Every version bump must strictly follow **Semantic Versioning**
 - **PATCH**: backwards-compatible bug fixes.
 
 The canonical app version is declared in `version.txt` at the repository root
-(SemVer format, e.g. `0.0.1-alpha`). The build reads it and uses it as
-`defaultConfig.versionName` on Android. The `packageVersion` of the desktop
+(SemVer format, e.g. `0.0.1-alpha`). The `packageVersion` of the desktop
 installers is a separate numeric value (jpackage requires `MAJOR >= 1` and does
 not accept prerelease suffixes).
 
@@ -150,11 +147,9 @@ past entries.
 
 ## 7. Supabase sync
 
-- Configuration is read at runtime in `data/AppConfig.kt`:
-  - **Android**: from `local.properties` (`supabase.url`, `supabase.anonKey`)
-    injected into `BuildConfig` (see `composeApp/build.gradle.kts`).
-  - **Desktop**: from the `SUPABASE_URL`/`SUPABASE_ANON_KEY` environment
-    variables or from the `supabase.env` file.
+- Configuration is read at runtime in `data/AppConfig.kt` from the
+  `SUPABASE_URL`/`SUPABASE_ANON_KEY` environment variables or from the
+  `supabase.env` file.
 - The schema (tables, RLS, Realtime) is in `supabase/migrations/0001_init.sql`.
 - If credentials are missing, the app runs in local-only mode
   (`SyncStatus.Disabled`).
@@ -165,21 +160,14 @@ past entries.
 ## 8. Build, test and run
 
 Requirements: JDK 17+ (17 recommended for packaging with maximum compatibility;
-Gradle 8.x does not support JDK 25), Android SDK with platform 36 (for the
-Android target), network access to download dependencies.
+Gradle 8.x does not support JDK 25), network access to download dependencies.
 
 ```bash
-# Desktop: compile and run the app
+# Compile and run the app
 ./gradlew :composeApp:run
 
-# Desktop: native installer for the current OS (.msi/.dmg/.deb/...)
+# Native installer for the current OS (.msi/.dmg/.deb/.AppImage)
 ./gradlew :composeApp:packageDistributionForCurrentOS
-
-# Android: debug APK
-./gradlew :composeApp:assembleDebug
-
-# Android: install and run on a connected device/emulator
-./gradlew :composeApp:installDebug
 
 # All checks (tests + build)
 ./gradlew build
@@ -194,10 +182,8 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
 ## 9. GitHub Actions workflows
 
 - **CI** (`.github/workflows/ci.yml`): on every push to `main` and pull request
-  it compiles the Android target (`assembleDebug`) and the Desktop target
-  (`compileKotlinDesktop`) and uploads the debug APK as an artifact.
+  it builds the desktop target (`./gradlew :composeApp:build`).
 - **Build workflows** (reusable, invoked by Auto Release):
-  - `build-android.yml` -> `assembleRelease` (APK) on `ubuntu-latest` (JDK 21);
   - `build-windows.yml` -> `.msi`/`.exe` on `windows-latest` (JDK 17);
   - `build-linux.yml` -> `.deb`/`.AppImage` on `ubuntu-latest` (JDK 17);
   - `build-macos.yml` -> `.dmg` on `macos-15-intel` and `macos-15` (JDK 17).
@@ -209,8 +195,8 @@ Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
     `v0.0.1-alpha: ...`), or
   - a manual `workflow_dispatch` (with an optional version).
   The version is read from `version.txt` (tag = version without the `v` prefix).
-- For signed APK releases and for MSI packaging on Windows (which requires
-  WiX) consult the documentation and add the required secrets/tools.
+- For MSI packaging on Windows (which requires WiX) consult the documentation
+  and add the required tools.
 
 ### Releasing a new version
 

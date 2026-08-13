@@ -39,13 +39,13 @@ expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase> {
 
 /**
  * Returns a platform specific builder pointing at the database file location.
- * Android and desktop use different filesystem APIs, hence the expect/actual.
+ * The database is backed by a file on the local filesystem.
  */
 expect fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase>
 
 /**
  * Builds the database using the bundled SQLite driver, which guarantees a
- * consistent SQLite version across Android and desktop.
+ * consistent SQLite version across platforms.
  */
 fun getRoomDatabase(): AppDatabase =
     getDatabaseBuilder()

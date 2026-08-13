@@ -1,5 +1,5 @@
 name: "🐛 Bug Report (English)"
-description: "Report a reproducible problem with Vivi Music DE on Android or Desktop."
+description: "Report a reproducible problem with Vivi Music DE."
 title: "[Bug]: "
 labels:
   - bug
@@ -28,7 +28,6 @@ body:
       label: Platform
       description: Where does the problem occur?
       options:
-        - "Android"
         - "Windows"
         - "macOS (Intel)"
         - "macOS (Apple Silicon)"
@@ -61,8 +60,8 @@ body:
   - type: input
     id: os_version
     attributes:
-      label: Operating system / Android version
-      description: For example `Android 14`, `Windows 11 23H2`, `macOS 13 Ventura (Intel)`, or `Arch Linux`.
+      label: Operating system
+      description: For example `Windows 11 23H2`, `macOS 13 Ventura (Intel)`, or `Arch Linux`.
       placeholder: "Windows 11 23H2"
     validations:
       required: true

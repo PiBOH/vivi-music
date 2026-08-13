@@ -17,7 +17,6 @@ A clear and concise description of the changes and why they are needed.
 ## 🧪 How has this been tested?
 Describe how you verified the changes and include commands so others can reproduce.
 - [ ] Local build: `./gradlew build`
-- [ ] Android: `./gradlew :composeApp:assembleDebug` and verified on a device/emulator
 - [ ] Desktop: `./gradlew :composeApp:run` and verified on my platform
 - [ ] Manual UI / sync verification
 

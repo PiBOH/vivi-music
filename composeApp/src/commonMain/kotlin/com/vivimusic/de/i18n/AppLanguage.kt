@@ -2,7 +2,7 @@ package com.vivimusic.de.i18n
 
 /**
  * The languages the application supports. [code] is a BCP-47 language tag used
- * both for the Android resource qualifiers (e.g. `values-zh-rCN`) and for the
+ * both for the Compose resource qualifiers (e.g. `values-zh-rCN`) and for the
  * platform locale that Compose Multiplatform resolves string resources with.
  *
  * To add a new language:

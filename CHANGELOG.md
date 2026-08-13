@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.1-alpha] - 2026-08-13
 
 ### Added
-- Initial Kotlin Multiplatform project with Android and Desktop (JVM) targets.
+- Initial Kotlin Multiplatform project with a Desktop (JVM) target for
+  Windows/macOS/Linux.
 - Shared Compose Multiplatform UI: Home with search, Library (favorites,
   history, playlists), Settings and a "now playing" bar.
 - InnerTube (YouTube Music) client in `commonMain` for search, home feed,
@@ -21,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SyncManager` with bidirectional pull/push and real-time mirroring.
 - Multilingual support for 49 languages with manual or system-language
   selection.
-- GitHub Actions CI (build on push/PR) and auto-release (Android and desktop
-  artifacts for Windows/macOS/Linux) workflows.
+- GitHub Actions CI (build on push/PR) and auto-release (desktop artifacts
+  for Windows/macOS/Linux) workflows.
 - Initial Supabase SQL migration with Row Level Security and Realtime.
 - `AGENTS.md` with project conventions, SemVer and changelog rules.

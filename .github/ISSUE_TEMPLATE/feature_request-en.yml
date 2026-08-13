@@ -9,7 +9,7 @@ body:
     attributes:
       value: |
         ## 💡 Vivi Music DE feature proposal
-        Please explain the user problem first. Vivi Music DE keeps the Android and Desktop experience consistent, syncs user data via Supabase, and never ships emoji inside application code or resources.
+        Please explain the user problem first. Vivi Music DE is a desktop app (Windows/macOS/Linux) that syncs user data via Supabase, and never ships emoji inside application code or resources.
   - type: checkboxes
     id: preflight
     attributes:
@@ -30,7 +30,6 @@ body:
         - "Supabase sync / account"
         - "UI / design"
         - "Internationalization (i18n) / translations"
-        - "Android-specific"
         - "Desktop-specific (Windows / macOS / Linux)"
         - "CI/CD, packaging, or releases"
         - "Documentation"
@@ -60,11 +59,12 @@ body:
     id: platform_scope
     attributes:
       label: Platform scope
-      description: Should the feature apply to Android, Desktop, or both?
+      description: Which desktop platform should the feature apply to?
       options:
-        - "Both Android and Desktop"
-        - "Android only"
-        - "Desktop only"
+        - "All desktop platforms"
+        - "Windows"
+        - "macOS"
+        - "Linux"
     validations:
       required: true
   - type: dropdown
