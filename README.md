@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="logo.png" alt="Vivi Music DE logo" width="160" />
   <h1>Vivi Music DE</h1>
   <h3>The desktop edition of VIVI Music — a premium YouTube Music experience for Windows, macOS and Linux.</h3>
 
