@@ -4,6 +4,7 @@ import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.Song
 import io.ktor.client.HttpClient
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -26,8 +27,9 @@ import kotlinx.serialization.json.put
  * resolution.
  *
  * Note: this is a working subset of the full inner-tube module available in the
- * original ViVi Music project. The response shapes parsed here match the
- * ANDROID_MUSIC InnerTube client.
+ * original ViVi Music project. Read endpoints (search, browse, suggestions)
+ * use the WEB_REMIX client, which returns the classic renderer format; the
+ * `player` endpoint uses ANDROID_MUSIC for stream URL resolution.
  */
 class InnerTubeClient(
     private val httpClient: HttpClient,
@@ -35,18 +37,42 @@ class InnerTubeClient(
     private val json: Json = sharedJson,
 ) {
     private val baseUrl = "https://music.youtube.com/youtubei/v1"
-    private val clientVersion = "7.16.53"
 
-    private fun context(): JsonObject = buildJsonObject {
+    /**
+     * InnerTube clients. WEB_REMIX is used for read endpoints (search, browse,
+     * suggestions) because it returns the classic renderer format.
+     * ANDROID_MUSIC is kept for the `player` endpoint (direct stream URL
+     * resolution).
+     */
+    private enum class Client(
+        val clientName: String,
+        val version: String,
+        val id: String,
+        val userAgent: String,
+    ) {
+        WEB_REMIX(
+            clientName = "WEB_REMIX",
+            version = "1.20260213.01.00",
+            id = "67",
+            userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0",
+        ),
+        ANDROID_MUSIC(
+            clientName = "ANDROID_MUSIC",
+            version = "6.37.50",
+            id = "73",
+            userAgent = "com.google.android.apps.youtube.music/6.37.50 (Linux; U; Android 14) gzip",
+        ),
+    }
+
+    private fun context(client: Client): JsonObject = buildJsonObject {
         put(
             "context",
             buildJsonObject {
                 put(
                     "client",
                     buildJsonObject {
-                        put("clientName", "ANDROID_MUSIC")
-                        put("clientVersion", clientVersion)
-                        put("androidSdkVersion", 30)
+                        put("clientName", client.clientName)
+                        put("clientVersion", client.version)
                         put("hl", "en")
                         put("gl", "US")
                     }
@@ -55,24 +81,32 @@ class InnerTubeClient(
         )
     }
 
-    private fun bodyWith(vararg pairs: Pair<String, JsonElement>): JsonObject = buildJsonObject {
-        put("context", context())
+    private fun bodyWith(client: Client, vararg pairs: Pair<String, JsonElement>): JsonObject = buildJsonObject {
+        put("context", context(client))
         pairs.forEach { (key, value) -> put(key, value) }
     }
 
-    private suspend fun call(endpoint: String, body: JsonObject): JsonObject {
+    private suspend fun call(endpoint: String, body: JsonObject, client: Client = Client.WEB_REMIX): JsonObject {
         val response = httpClient.post("$baseUrl/$endpoint?key=$apiKey") {
             contentType(ContentType.Application.Json)
+            header("X-Goog-Api-Format-Version", "1")
+            header("X-YouTube-Client-Name", client.id)
+            header("X-YouTube-Client-Version", client.version)
+            header("X-Origin", "https://music.youtube.com")
+            header("Referer", "https://music.youtube.com/")
+            header("User-Agent", client.userAgent)
             setBody(body.toString())
         }
         return json.parseToJsonElement(response.bodyAsText()).jsonObject
     }
 
     suspend fun search(query: String): List<Song> {
-        val response = call("search", bodyWith("query" to JsonPrimitive(query)))
+        val response = call("search", bodyWith(Client.WEB_REMIX, "query" to JsonPrimitive(query)))
         val sections = response.sectionListRendererContents() ?: return emptyList()
         return sections.mapNotNull { section ->
-            val shelf = (section as? JsonObject)?.get("musicShelfRenderer") as? JsonObject
+            val obj = section as? JsonObject ?: return@mapNotNull null
+            val shelf = obj["musicShelfRenderer"] as? JsonObject
+                ?: obj["itemSectionRenderer"] as? JsonObject
                 ?: return@mapNotNull null
             extractListItemSongs(shelf)
         }.flatten()
@@ -83,7 +117,7 @@ class InnerTubeClient(
      * endpoint, returned as plain query strings.
      */
     suspend fun getSearchSuggestions(query: String): List<String> {
-        val response = call("music/get_search_suggestions", bodyWith("input" to JsonPrimitive(query)))
+        val response = call("music/get_search_suggestions", bodyWith(Client.WEB_REMIX, "input" to JsonPrimitive(query)))
         val contents = response["contents"] as? JsonArray ?: return emptyList()
         val sectionRenderer = (contents.firstOrNull() as? JsonObject)
             ?.get("searchSuggestionsSectionRenderer") as? JsonObject
@@ -101,7 +135,7 @@ class InnerTubeClient(
     }
 
     suspend fun getHome(): List<HomeSection> {
-        val response = call("browse", bodyWith("browseId" to JsonPrimitive("FEmusic_home")))
+        val response = call("browse", bodyWith(Client.WEB_REMIX, "browseId" to JsonPrimitive("FEmusic_home")))
         val sections = response.sectionListRendererContents() ?: return emptyList()
         return sections.mapNotNull { section ->
             val obj = section as? JsonObject ?: return@mapNotNull null
@@ -121,7 +155,7 @@ class InnerTubeClient(
     }
 
     suspend fun getAlbumOrPlaylist(browseId: String): Album {
-        val response = call("browse", bodyWith("browseId" to JsonPrimitive(browseId)))
+        val response = call("browse", bodyWith(Client.WEB_REMIX, "browseId" to JsonPrimitive(browseId)))
         val sections = response.sectionListRendererContents() ?: emptyList()
         val songs = sections.mapNotNull { section ->
             val obj = section as? JsonObject ?: return@mapNotNull null
@@ -146,7 +180,7 @@ class InnerTubeClient(
     }
 
     suspend fun getSong(videoId: String): Song? {
-        val response = call("player", bodyWith("videoId" to JsonPrimitive(videoId)))
+        val response = call("player", bodyWith(Client.ANDROID_MUSIC, "videoId" to JsonPrimitive(videoId)), client = Client.ANDROID_MUSIC)
         val details = response["videoDetails"] as? JsonObject ?: return null
         val title = details.str("title") ?: return null
         val artist = details.str("author") ?: ""
