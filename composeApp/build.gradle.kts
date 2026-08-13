@@ -109,6 +109,21 @@ compose.desktop {
                 TargetFormat.Deb,
                 TargetFormat.AppImage
             )
+            // LavaPlayer (the audio engine) and its bundled Apache HttpClient
+            // need modules that jdeps does not detect automatically:
+            // `java.management` (JMX NotificationListener), `java.scripting`,
+            // `jdk.management`, `java.naming` + `jdk.naming.dns` (JNDI DNS
+            // resolution used by the HTTP client). Without them the packaged
+            // app fails at startup with a cryptic "Failed to launch JVM"
+            // dialog.
+            modules(
+                "java.management",
+                "java.scripting",
+                "jdk.management",
+                "java.naming",
+                "jdk.naming.dns",
+            )
+
             packageName = "ViviMusicDE"
             packageVersion = installerVersion
             description = "Vivi Music DE, desktop client for ViVi Music."

@@ -26,3 +26,6 @@ captures/
 
 # local reference material (e.g. mascot drafts) kept out of version control
 .ignore/
+
+# runtime crash log written next to the executable
+ViviMusicDE-crash.log

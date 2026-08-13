@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2-alpha] - 2026-08-13
+
+### Fixed
+- Packaged app no longer fails to start with "Failed to launch JVM": the
+  runtime image now includes the JDK modules LavaPlayer and its HTTP client
+  need but jdeps does not detect (`java.management`, `java.scripting`,
+  `jdk.management`, `java.naming`, `jdk.naming.dns`).
+
+### Changed
+- Startup errors are now shown in a detailed dialog (full message + stack
+  trace) and written to a `ViviMusicDE-crash.log` file next to the executable,
+  instead of a silent/cryptic exit.
+
 ## [0.2.1-alpha] - 2026-08-13
 
 ### Fixed

@@ -10,8 +10,31 @@ import com.vivimusic.de.ui.App
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import java.io.File
+import java.io.PrintWriter
+import java.io.StringWriter
+import javax.swing.JOptionPane
+import javax.swing.JScrollPane
+import javax.swing.JTextArea
+
+private const val CRASH_LOG_FILE = "ViviMusicDE-crash.log"
 
 fun main() {
+    // Show uncaught exceptions (on any thread) as a detailed dialog instead of
+    // a silent exit, and always write the stack trace to a crash log next to
+    // the executable.
+    Thread.setDefaultUncaughtExceptionHandler { _, throwable ->
+        reportFatalError("Uncaught exception", throwable)
+    }
+
+    try {
+        runApplication()
+    } catch (throwable: Throwable) {
+        reportFatalError("Application failed to start", throwable)
+    }
+}
+
+private fun runApplication() {
     AppConfig.supabaseUrl = readConfig("SUPABASE_URL")
     AppConfig.supabaseAnonKey = readConfig("SUPABASE_ANON_KEY")
     AppConfig.innerTubeApiKey = readConfig("INNERTUBE_API_KEY")
@@ -30,6 +53,47 @@ fun main() {
             App(container)
         }
     }
+}
+
+/**
+ * Logs a fatal error to a crash log file and shows a dialog with the full
+ * message and stack trace so the user can report it.
+ */
+private fun reportFatalError(title: String, throwable: Throwable) {
+    val stackTrace = stackTraceOf(throwable)
+    val logFile = try {
+        val file = File(CRASH_LOG_FILE)
+        file.writeText("$title\n\n$stackTrace")
+        file.absoluteFile.toString()
+    } catch (e: Throwable) {
+        "unable to write crash log: ${e.message}"
+    }
+
+    // Best effort: also print to stderr so it is visible when launched from a
+    // terminal (e.g. `./gradlew :composeApp:run`).
+    System.err.println("$title\n$stackTrace")
+
+    try {
+        val textArea = JTextArea("$title\n\n${throwable.message}\n\nStack trace and full details written to:\n$logFile\n\n$stackTrace")
+        textArea.isEditable = false
+        textArea.rows = 20
+        textArea.columns = 100
+        JOptionPane.showMessageDialog(
+            null,
+            JScrollPane(textArea),
+            "Vivi Music DE - Error",
+            JOptionPane.ERROR_MESSAGE,
+        )
+    } catch (e: Throwable) {
+        // The dialog itself failed; nothing more we can do. The crash log and
+        // stderr already contain the details.
+    }
+}
+
+private fun stackTraceOf(throwable: Throwable): String {
+    val sw = StringWriter()
+    throwable.printStackTrace(PrintWriter(sw))
+    return sw.toString()
 }
 
 /**
