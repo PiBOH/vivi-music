@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generated pixel-art icon; `tools/generate_icons.py` reads `logo.png` to
   produce the Linux/macOS/Windows icons.
 
+### Fixed
+- macOS release build: set a reverse-DNS bundle identifier and use only the
+  standard ICNS icon types, so `packageDistributionForCurrentOS` (DMG) no
+  longer fails on the macOS runners.
+
 ## [0.0.1-alpha] - 2026-08-13
 
 ### Added

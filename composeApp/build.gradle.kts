@@ -110,6 +110,9 @@ compose.desktop {
             }
             macOS {
                 iconFile.set(project.file("icons/icon.icns"))
+                // Reverse-DNS bundle identifier required by jpackage for a
+                // valid macOS app bundle.
+                bundleID = "com.vivimusic.de"
             }
         }
     }

@@ -17,10 +17,10 @@ import struct
 
 from PIL import Image
 
+# Only the standard ICNS types (128-1024) are included; the legacy Icon
+# Composer types (icp4/icp5/icp6) are omitted because some validators
+# (including jpackage) reject them.
 ICNS_TYPES = [
-    ("icp4", 16),
-    ("icp5", 32),
-    ("icp6", 64),
     ("ic07", 128),
     ("ic08", 256),
     ("ic09", 512),
