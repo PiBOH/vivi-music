@@ -162,7 +162,12 @@ class AppViewModel(
     private val _updateStatus = MutableStateFlow<UpdateStatus?>(null)
     val updateStatus: StateFlow<UpdateStatus?> = _updateStatus.asStateFlow()
 
-    init {
+    /**
+     * Kicks off the initial (network) work. Called after the first frame is
+     * composed so the window opens instantly instead of competing with these
+     * coroutines for the first frame.
+     */
+    fun loadInitialData() {
         loadHome()
         checkForUpdates()
         refreshAuthState()

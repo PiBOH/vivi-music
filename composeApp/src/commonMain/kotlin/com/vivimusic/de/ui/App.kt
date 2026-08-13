@@ -72,6 +72,10 @@ fun App(container: AppContainer) {
                 if (!saved.isNullOrBlank()) {
                     customAppLocale = saved
                 }
+                // Defer the initial network work (home feed, update check,
+                // auth restore) until after the first frame is composed, so the
+                // window opens as fast as possible.
+                viewModel.loadInitialData()
             }
             AppRoot(viewModel)
         }

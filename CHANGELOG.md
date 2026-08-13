@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0-alpha] - 2026-08-13
+
+### Changed
+- Faster startup: the Material 3 color scheme (materialKolor) is now cached in
+  memory and on disk keyed by the accent color and theme mode, so it is no
+  longer recomputed from the seed on every launch (and every theme toggle).
+- Faster startup: the initial network work (home feed, update check and auth
+  session restore) is deferred until after the first frame is composed instead
+  of being scheduled during the initial composition.
+- The `.env` file is now parsed once and reused for all config lookups instead
+  of being re-read for every key.
+
 ## [0.8.0-alpha] - 2026-08-13
 
 ### Added

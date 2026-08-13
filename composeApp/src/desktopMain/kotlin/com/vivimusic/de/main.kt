@@ -138,6 +138,9 @@ private fun stackTraceOf(throwable: Throwable): String {
     return sw.toString()
 }
 
+/** Parsed `.env` file, read once and reused for every config lookup. */
+private val envFile: Map<String, String> by lazy { readEnvFile() }
+
 /**
  * Reads a config value from (in order) a JVM system property, the process
  * environment, or a `.env` file next to the executable.
@@ -145,7 +148,7 @@ private fun stackTraceOf(throwable: Throwable): String {
 private fun readConfig(key: String): String =
     System.getProperty(key)?.takeIf { it.isNotBlank() }
         ?: System.getenv(key)?.takeIf { it.isNotBlank() }
-        ?: readEnvFile()[key]?.takeIf { it.isNotBlank() }
+        ?: envFile[key]?.takeIf { it.isNotBlank() }
         ?: ""
 
 private fun readEnvFile(): Map<String, String> {
