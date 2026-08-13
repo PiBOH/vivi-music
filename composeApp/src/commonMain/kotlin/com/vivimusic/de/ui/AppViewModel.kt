@@ -1,6 +1,7 @@
 package com.vivimusic.de.ui
 
 import com.vivimusic.de.data.MusicRepository
+import com.vivimusic.de.data.lyrics.LyricsLine
 import com.vivimusic.de.data.playback.AudioEngine
 import com.vivimusic.de.data.playback.PlaybackState
 import com.vivimusic.de.data.readSetting
@@ -25,9 +26,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 private const val UPDATE_CHECK_PRERELEASES_KEY = "update.check_prereleases"
 private const val SYNC_ENABLED_KEY = "sync.enabled"
+
+enum class RepeatMode { Off, All, One }
 
 /**
  * Holds the UI state and exposes the repository/sync operations to the Compose
@@ -83,6 +87,26 @@ class AppViewModel(
 
     val isPlaying: StateFlow<Boolean> =
         playbackState.map { it.isPlaying }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    // Play queue state.
+    private val _queue = MutableStateFlow<List<Song>>(emptyList())
+    val queue: StateFlow<List<Song>> = _queue.asStateFlow()
+
+    private val _queueIndex = MutableStateFlow(-1)
+    val queueIndex: StateFlow<Int> = _queueIndex.asStateFlow()
+
+    private val _shuffleEnabled = MutableStateFlow(false)
+    val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(RepeatMode.Off)
+    val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
+
+    // Lyrics for the current song.
+    private val _lyrics = MutableStateFlow<List<LyricsLine>>(emptyList())
+    val lyrics: StateFlow<List<LyricsLine>> = _lyrics.asStateFlow()
+
+    private val _lyricsLoading = MutableStateFlow(false)
+    val lyricsLoading: StateFlow<Boolean> = _lyricsLoading.asStateFlow()
 
     private val _album = MutableStateFlow<Album?>(null)
     val album: StateFlow<Album?> = _album.asStateFlow()
@@ -165,7 +189,107 @@ class AppViewModel(
 
     fun deleteSearchHistory(query: String) = repository.deleteSearchHistory(query)
 
+    /** Plays a single song, resetting the queue to just that song. */
     fun play(song: Song) {
+        _queue.value = listOf(song)
+        _queueIndex.value = 0
+        playInternal(song)
+    }
+
+    /** Replaces the queue with [songs] and plays [startIndex]. */
+    fun playQueue(songs: List<Song>, startIndex: Int = 0) {
+        if (songs.isEmpty()) return
+        _queue.value = songs
+        val index = startIndex.coerceIn(0, songs.lastIndex)
+        _queueIndex.value = index
+        playInternal(songs[index])
+    }
+
+    /** Plays [song] in the context of [songs] (used when tapping a list row). */
+    fun playInQueue(song: Song, songs: List<Song>) {
+        if (songs.isEmpty()) {
+            play(song)
+            return
+        }
+        _queue.value = songs
+        val index = songs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+        _queueIndex.value = index
+        playInternal(songs[index])
+    }
+
+    fun enqueue(song: Song) {
+        _queue.value = _queue.value + song
+    }
+
+    fun playAt(index: Int) {
+        val songs = _queue.value
+        if (index !in songs.indices) return
+        _queueIndex.value = index
+        playInternal(songs[index])
+    }
+
+    fun playNext() {
+        val songs = _queue.value
+        if (songs.isEmpty()) return
+        val index = when {
+            _repeatMode.value == RepeatMode.One -> _queueIndex.value.coerceIn(0, songs.lastIndex)
+            _shuffleEnabled.value -> Random.nextInt(songs.size)
+            _queueIndex.value < songs.lastIndex -> _queueIndex.value + 1
+            _repeatMode.value == RepeatMode.All -> 0
+            else -> _queueIndex.value.coerceIn(0, songs.lastIndex)
+        }
+        _queueIndex.value = index
+        playInternal(songs[index])
+    }
+
+    fun playPrevious() {
+        val songs = _queue.value
+        if (songs.isEmpty()) return
+        val index = (_queueIndex.value - 1).coerceAtLeast(0)
+        _queueIndex.value = index
+        playInternal(songs[index])
+    }
+
+    fun removeFromQueue(index: Int) {
+        val songs = _queue.value.toMutableList()
+        if (index !in songs.indices) return
+        songs.removeAt(index)
+        _queue.value = songs
+        _queueIndex.value = when {
+            songs.isEmpty() -> -1
+            index < _queueIndex.value -> _queueIndex.value - 1
+            index == _queueIndex.value -> index.coerceIn(0, songs.lastIndex)
+            else -> _queueIndex.value
+        }
+    }
+
+    fun clearQueue() {
+        _queue.value = emptyList()
+        _queueIndex.value = -1
+    }
+
+    fun toggleShuffle() {
+        _shuffleEnabled.value = !_shuffleEnabled.value
+    }
+
+    fun cycleRepeatMode() {
+        _repeatMode.value = when (_repeatMode.value) {
+            RepeatMode.Off -> RepeatMode.All
+            RepeatMode.All -> RepeatMode.One
+            RepeatMode.One -> RepeatMode.Off
+        }
+    }
+
+    fun loadLyrics(song: Song) {
+        _lyricsLoading.value = true
+        _lyrics.value = emptyList()
+        scope.launch {
+            _lyrics.value = repository.getLyrics(song)
+            _lyricsLoading.value = false
+        }
+    }
+
+    private fun playInternal(song: Song) {
         scope.launch {
             val full = repository.getSong(song.id) ?: song
             _currentSong.value = full
@@ -176,6 +300,7 @@ class AppViewModel(
             } else {
                 audioEngine.play(songId = full.id, url = url, durationMs = full.durationMs ?: 0L)
             }
+            loadLyrics(full)
         }
     }
 

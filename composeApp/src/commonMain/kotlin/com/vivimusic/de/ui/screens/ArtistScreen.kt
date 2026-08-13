@@ -85,7 +85,7 @@ fun ArtistScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                 item(key = "top_songs_title") {
                     NavigationTitle(
                         title = stringResource(Res.string.top_songs),
-                        onPlayAllClick = { current.songs.firstOrNull()?.let(viewModel::play) },
+                        onPlayAllClick = { viewModel.playQueue(current.songs, 0) },
                     )
                 }
                 itemsIndexed(current.songs, key = { _, song -> song.id }) { index, song ->
@@ -93,6 +93,7 @@ fun ArtistScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                         song = song,
                         viewModel = viewModel,
                         shape = groupedItemShape(index, current.songs.size),
+                        queue = current.songs,
                     )
                 }
             }

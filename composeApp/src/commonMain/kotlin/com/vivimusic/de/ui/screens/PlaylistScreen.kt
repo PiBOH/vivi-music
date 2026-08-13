@@ -126,6 +126,7 @@ fun PlaylistScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                         song = song,
                         viewModel = viewModel,
                         shape = groupedItemShape(index, songs.size),
+                        queue = songs,
                     )
                 }
             }
@@ -134,7 +135,12 @@ fun PlaylistScreen(viewModel: AppViewModel, onBack: () -> Unit) {
 }
 
 @Composable
-private fun PlaylistSongRow(song: Song, viewModel: AppViewModel, shape: androidx.compose.ui.graphics.Shape) {
+private fun PlaylistSongRow(
+    song: Song,
+    viewModel: AppViewModel,
+    shape: androidx.compose.ui.graphics.Shape,
+    queue: List<Song>? = null,
+) {
     ListItem(
         headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
@@ -152,6 +158,8 @@ private fun PlaylistSongRow(song: Song, viewModel: AppViewModel, shape: androidx
         colors = listItemColors(),
         modifier = Modifier
             .clip(shape)
-            .clickable { viewModel.play(song) },
+            .clickable {
+                if (queue != null) viewModel.playInQueue(song, queue) else viewModel.play(song)
+            },
     )
 }

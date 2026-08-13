@@ -45,7 +45,12 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun SongRow(song: Song, viewModel: AppViewModel, shape: Shape) {
+fun SongRow(
+    song: Song,
+    viewModel: AppViewModel,
+    shape: Shape,
+    queue: List<Song>? = null,
+) {
     val isFavorite by viewModel.isFavorite(song.id).collectAsState(initial = false)
     ListItem(
         headlineContent = { Text(song.title) },
@@ -61,7 +66,9 @@ fun SongRow(song: Song, viewModel: AppViewModel, shape: Shape) {
             }
         },
         colors = listItemColors(),
-        modifier = Modifier.clip(shape).clickable { viewModel.play(song) },
+        modifier = Modifier.clip(shape).clickable {
+            if (queue != null) viewModel.playInQueue(song, queue) else viewModel.play(song)
+        },
     )
 }
 
@@ -78,7 +85,7 @@ fun SongList(
     }
     LazyColumn(modifier.fillMaxSize()) {
         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-            SongRow(song, viewModel, shape = groupedItemShape(index, songs.size))
+            SongRow(song, viewModel, shape = groupedItemShape(index, songs.size), queue = songs)
         }
     }
 }

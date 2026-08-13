@@ -5,6 +5,8 @@ import com.vivimusic.de.data.db.FavoriteEntity
 import com.vivimusic.de.data.db.HistoryEntity
 import com.vivimusic.de.data.db.SearchHistoryEntity
 import com.vivimusic.de.data.db.SongEntity
+import com.vivimusic.de.data.lyrics.LyricsClient
+import com.vivimusic.de.data.lyrics.LyricsLine
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.domain.Album
@@ -24,6 +26,7 @@ import kotlinx.coroutines.launch
 class MusicRepository(
     private val db: AppDatabase,
     private val innerTube: InnerTubeClient,
+    private val lyricsClient: LyricsClient,
     private val syncManager: SyncManager,
     private val scope: CoroutineScope,
 ) {
@@ -40,6 +43,11 @@ class MusicRepository(
     suspend fun getArtist(browseId: String): Artist = innerTube.getArtist(browseId)
 
     suspend fun getSong(videoId: String): Song? = innerTube.getSong(videoId)
+
+    // ----- lyrics -----
+
+    suspend fun getLyrics(song: Song): List<LyricsLine> =
+        lyricsClient.getLyrics(song.title, song.artist, song.durationMs?.div(1_000))
 
     // ----- favorites -----
 

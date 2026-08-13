@@ -77,7 +77,7 @@ fun AlbumScreen(viewModel: AppViewModel, onBack: () -> Unit) {
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item(key = "album_header") {
-                AlbumHeader(current, onPlay = { current.songs.firstOrNull()?.let(viewModel::play) })
+                AlbumHeader(current, onPlay = { viewModel.playQueue(current.songs, 0) })
             }
             item(key = "songs_title") {
                 Row(
@@ -101,6 +101,7 @@ fun AlbumScreen(viewModel: AppViewModel, onBack: () -> Unit) {
                     song = song,
                     viewModel = viewModel,
                     shape = groupedItemShape(index + 1, current.songs.size + 1),
+                    queue = current.songs,
                 )
             }
         }

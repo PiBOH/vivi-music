@@ -138,6 +138,7 @@ private fun ResultsSection(
                     song = song,
                     viewModel = viewModel,
                     shape = groupedItemShape(index, results.size),
+                    queue = results,
                 )
             }
         }

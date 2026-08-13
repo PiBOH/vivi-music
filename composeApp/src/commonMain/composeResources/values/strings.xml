@@ -90,4 +90,11 @@
     <string name="storage_location">Data is stored locally on this device.</string>
     <string name="about_source">Source code</string>
     <string name="about_source_desc">View the project on GitHub</string>
+    <string name="queue">Queue</string>
+    <string name="up_next">Up next</string>
+    <string name="queue_empty">Queue is empty</string>
+    <string name="lyrics">Lyrics</string>
+    <string name="no_lyrics">No lyrics found</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="repeat">Repeat</string>
 </resources>

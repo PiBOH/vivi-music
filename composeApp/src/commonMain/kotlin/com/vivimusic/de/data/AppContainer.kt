@@ -2,6 +2,7 @@ package com.vivimusic.de.data
 
 import com.vivimusic.de.data.db.AppDatabase
 import com.vivimusic.de.data.db.getRoomDatabase
+import com.vivimusic.de.data.lyrics.LyricsClient
 import com.vivimusic.de.data.network.InnerTubeClient
 import com.vivimusic.de.data.network.createHttpClient
 import com.vivimusic.de.data.playback.AudioEngine
@@ -23,12 +24,14 @@ class AppContainer(val scope: CoroutineScope) {
 
     val innerTube: InnerTubeClient = InnerTubeClient(httpClient, AppConfig.innerTubeApiKey)
 
+    val lyricsClient: LyricsClient = LyricsClient(httpClient)
+
     private val syncClient: SupabaseSyncClient? =
         if (AppConfig.isSyncConfigured) SupabaseSyncClient.create() else null
 
     val syncManager: SyncManager = SyncManager(database, syncClient, scope)
 
-    val repository: MusicRepository = MusicRepository(database, innerTube, syncManager, scope)
+    val repository: MusicRepository = MusicRepository(database, innerTube, lyricsClient, syncManager, scope)
 
     val audioEngine: AudioEngine = createAudioEngine()
 

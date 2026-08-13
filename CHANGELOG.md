@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0-alpha] - 2026-08-13
+
+### Added
+- Play queue, ported from ViVi Music: next/previous, shuffle and repeat
+  (off / all / one), play-a-row, remove and clear. Tapping a song in any list
+  (search, library, album, artist, history, playlist) plays it within that list
+  as the queue, and "Play all" enqueues the whole list.
+- Queue screen with shuffle/repeat pills, a track count + clear action and the
+  currently playing song highlighted.
+- Synchronized lyrics screen: lyrics are fetched from LrcLib (cleaned
+  title/artist search, synced LRC preferred, plain-text fallback), parsed into
+  timed lines, and the current line is highlighted and auto-scrolls with
+  playback.
+- LrcLib lyrics client + LRC parser in `commonMain`.
+
+### Changed
+- The full player now has a page switcher (Player / Queue / Lyrics) and its
+  shuffle/previous/next/repeat controls are wired to the play queue.
+
 ## [0.4.0-alpha] - 2026-08-13
 
 ### Added

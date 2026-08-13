@@ -276,7 +276,7 @@ private fun SongList(songs: List<Song>, viewModel: AppViewModel) {
     }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-            SongRow(song, viewModel, shape = groupedItemShape(index, songs.size))
+            SongRow(song, viewModel, shape = groupedItemShape(index, songs.size), queue = songs)
         }
     }
 }

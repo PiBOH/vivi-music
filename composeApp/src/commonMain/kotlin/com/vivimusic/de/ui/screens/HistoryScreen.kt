@@ -37,6 +37,7 @@ fun HistoryScreen(viewModel: AppViewModel) {
                         song = song,
                         viewModel = viewModel,
                         shape = groupedItemShape(index, history.size),
+                        queue = history,
                     )
                 }
             }
