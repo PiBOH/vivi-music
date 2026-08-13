@@ -88,6 +88,15 @@ compose.desktop {
             }
             windows {
                 iconFile.set(project.file("icons/icon.ico"))
+                // Add the app to the Start Menu and create a desktop shortcut
+                // (both default to false in Compose, so the app is otherwise
+                // invisible after install).
+                menu = true
+                shortcut = true
+                menuGroup = "Vivi Music DE"
+                // Stable GUID so future MSI versions upgrade the existing
+                // install instead of failing with "already installed".
+                upgradeUuid = "a1e8f3d2-4b5c-4d6e-8f90-1a2b3c4d5e6f"
             }
             macOS {
                 iconFile.set(project.file("icons/icon.icns"))

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Windows installer: add a Start Menu entry and desktop shortcut
+  (`menu = true`, `shortcut = true`) and a stable `upgradeUuid`, so the app is
+  discoverable and upgradable after install.
+
 ### Added
 - Original pixel-art Axolotl mascot (splash screen, About section, and desktop
   app icons for Windows/macOS/Linux).
