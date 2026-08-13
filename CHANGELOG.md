@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1-alpha] - 2026-08-13
+
+### Fixed
+- Dark mode no longer leaves the main content area with a light background: the
+  app root did not paint `MaterialTheme.colorScheme.background`, so the Compose
+  Desktop window's default (white) background showed through every screen that
+  does not draw its own background (the navigation rail and the full player
+  looked dark while the content stayed light). The root scaffold now fills the
+  window with the theme background.
+
 ## [0.11.0-alpha] - 2026-08-13
 
 ### Added

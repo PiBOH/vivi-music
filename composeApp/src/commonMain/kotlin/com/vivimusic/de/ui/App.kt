@@ -1,5 +1,6 @@
 package com.vivimusic.de.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -105,7 +106,7 @@ private fun AppRoot(viewModel: AppViewModel) {
     val updateStatus by viewModel.updateStatus.collectAsState()
     var updateDismissed by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Row(modifier = Modifier.fillMaxSize()) {
             NavigationRail(
                 // Material3 1.4 sizes the rail from its content, so a
