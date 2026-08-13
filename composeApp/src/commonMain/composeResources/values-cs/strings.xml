@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Domů</string>
+    <string name="nav_library">Knihovna</string>
+    <string name="nav_settings">Nastavení</string>
+    <string name="nav_favorites">Oblíbené</string>
+    <string name="nav_history">Historie</string>
+    <string name="nav_playlists">Seznamy skladeb</string>
+    <string name="search_placeholder">Hledat skladby, interprety, alba</string>
+    <string name="settings_language">Jazyk aplikace</string>
+    <string name="system_language">Výchozí jazyk systému</string>
+    <string name="playing_now">Právě hraje</string>
+    <string name="sync_status">Stav synchronizace</string>
+    <string name="sync_synced">Synchronizováno</string>
+    <string name="sync_syncing">Synchronizuje se</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Zkusit znovu</string>
+    <string name="play">Přehrát</string>
+    <string name="favorite_add">Uložit</string>
+    <string name="favorite_remove">Odebrat</string>
+    <string name="new_playlist">Nový seznam skladeb</string>
+    <string name="delete">Smazat</string>
+</resources>

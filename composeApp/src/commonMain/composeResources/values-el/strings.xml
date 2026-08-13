@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Αρχική</string>
+    <string name="nav_library">Βιβλιοθήκη</string>
+    <string name="nav_settings">Ρυθμίσεις</string>
+    <string name="nav_favorites">Αγαπημένα</string>
+    <string name="nav_history">Ιστορικό</string>
+    <string name="nav_playlists">Λίστες αναπαραγωγής</string>
+    <string name="search_placeholder">Αναζήτηση τραγουδιών, καλλιτεχνών, άλμπουμ</string>
+    <string name="settings_language">Γλώσσα εφαρμογής</string>
+    <string name="system_language">Προεπιλογή συστήματος</string>
+    <string name="playing_now">Παίζει τώρα</string>
+    <string name="sync_status">Κατάσταση συγχρονισμού</string>
+    <string name="sync_synced">Συγχρονίστηκε</string>
+    <string name="sync_syncing">Συγχρονισμός</string>
+    <string name="sync_offline">Εκτός σύνδεσης</string>
+    <string name="retry">Δοκιμή ξανά</string>
+    <string name="play">Αναπαραγωγή</string>
+    <string name="favorite_add">Αποθήκευση</string>
+    <string name="favorite_remove">Αφαίρεση</string>
+    <string name="new_playlist">Νέα λίστα αναπαραγωγής</string>
+    <string name="delete">Διαγραφή</string>
+</resources>

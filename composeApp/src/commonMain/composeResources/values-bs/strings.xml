@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Početna</string>
+    <string name="nav_library">Biblioteka</string>
+    <string name="nav_settings">Postavke</string>
+    <string name="nav_favorites">Omiljeno</string>
+    <string name="nav_history">Historija</string>
+    <string name="nav_playlists">Plejliste</string>
+    <string name="search_placeholder">Pretraži pjesme, izvođače, albume</string>
+    <string name="settings_language">Jezik aplikacije</string>
+    <string name="system_language">Podrazumijevano sistema</string>
+    <string name="playing_now">Sada svira</string>
+    <string name="sync_status">Status sinhronizacije</string>
+    <string name="sync_synced">Sinhronizovano</string>
+    <string name="sync_syncing">Sinhronizuje se</string>
+    <string name="sync_offline">Oflajn</string>
+    <string name="retry">Pokušaj ponovo</string>
+    <string name="play">Pusti</string>
+    <string name="favorite_add">Sačuvaj</string>
+    <string name="favorite_remove">Ukloni</string>
+    <string name="new_playlist">Nova plejlista</string>
+    <string name="delete">Izbriši</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Ana səhifə</string>
+    <string name="nav_library">Kitabxana</string>
+    <string name="nav_settings">Parametrlər</string>
+    <string name="nav_favorites">Sevimlilər</string>
+    <string name="nav_history">Tarixçə</string>
+    <string name="nav_playlists">Pleylistlər</string>
+    <string name="search_placeholder">Mahnı, sənətçi, albom axtar</string>
+    <string name="settings_language">Tətbiq dili</string>
+    <string name="system_language">Sistem dili</string>
+    <string name="playing_now">İndi oxunur</string>
+    <string name="sync_status">Sinxronizasiya vəziyyəti</string>
+    <string name="sync_synced">Sinxronlaşdırıldı</string>
+    <string name="sync_syncing">Sinxronlaşdırılır</string>
+    <string name="sync_offline">Oflayn</string>
+    <string name="retry">Təkrar cəhd</string>
+    <string name="play">Oxut</string>
+    <string name="favorite_add">Yadda saxla</string>
+    <string name="favorite_remove">Sil</string>
+    <string name="new_playlist">Yeni pleylist</string>
+    <string name="delete">Sil</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">首頁</string>
+    <string name="nav_library">音樂庫</string>
+    <string name="nav_settings">設定</string>
+    <string name="nav_favorites">我的最愛</string>
+    <string name="nav_history">歷史記錄</string>
+    <string name="nav_playlists">播放清單</string>
+    <string name="search_placeholder">搜尋歌曲、歌手、專輯</string>
+    <string name="settings_language">應用程式語言</string>
+    <string name="system_language">跟隨系統</string>
+    <string name="playing_now">正在播放</string>
+    <string name="sync_status">同步狀態</string>
+    <string name="sync_synced">已同步</string>
+    <string name="sync_syncing">正在同步</string>
+    <string name="sync_offline">離線</string>
+    <string name="retry">重試</string>
+    <string name="play">播放</string>
+    <string name="favorite_add">儲存</string>
+    <string name="favorite_remove">移除</string>
+    <string name="new_playlist">新增播放清單</string>
+    <string name="delete">刪除</string>
+</resources>

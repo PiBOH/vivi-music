@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Hjem</string>
+    <string name="nav_library">Bibliotek</string>
+    <string name="nav_settings">Innstillinger</string>
+    <string name="nav_favorites">Favoritter</string>
+    <string name="nav_history">Historikk</string>
+    <string name="nav_playlists">Spillelister</string>
+    <string name="search_placeholder">Søk etter sanger, artister, album</string>
+    <string name="settings_language">Appens språk</string>
+    <string name="system_language">Systemets standard</string>
+    <string name="playing_now">Spilles nå</string>
+    <string name="sync_status">Synkroniseringsstatus</string>
+    <string name="sync_synced">Synkronisert</string>
+    <string name="sync_syncing">Synkroniserer</string>
+    <string name="sync_offline">Frakoblet</string>
+    <string name="retry">Prøv igjen</string>
+    <string name="play">Spill av</string>
+    <string name="favorite_add">Lagre</string>
+    <string name="favorite_remove">Fjern</string>
+    <string name="new_playlist">Ny spilleliste</string>
+    <string name="delete">Slett</string>
+</resources>

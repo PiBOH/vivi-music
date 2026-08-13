@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Галоўная</string>
+    <string name="nav_library">Бібліятэка</string>
+    <string name="nav_settings">Налады</string>
+    <string name="nav_favorites">Улюбёнае</string>
+    <string name="nav_history">Гісторыя</string>
+    <string name="nav_playlists">Спісы прайгравання</string>
+    <string name="search_placeholder">Пошук песень, выканаўцаў, альбомаў</string>
+    <string name="settings_language">Мова праграмы</string>
+    <string name="system_language">Па змаўчанні сістэмы</string>
+    <string name="playing_now">Цяпер прайграецца</string>
+    <string name="sync_status">Стан сінхранізацыі</string>
+    <string name="sync_synced">Сінхранізавана</string>
+    <string name="sync_syncing">Сінхранізацыя</string>
+    <string name="sync_offline">Афлайн</string>
+    <string name="retry">Паспрабаваць зноў</string>
+    <string name="play">Прайграць</string>
+    <string name="favorite_add">Захаваць</string>
+    <string name="favorite_remove">Выдаліць</string>
+    <string name="new_playlist">Новы спіс прайгравання</string>
+    <string name="delete">Выдаліць</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Avaleht</string>
+    <string name="nav_library">Kogu</string>
+    <string name="nav_settings">Seaded</string>
+    <string name="nav_favorites">Lemmikud</string>
+    <string name="nav_history">Ajalugu</string>
+    <string name="nav_playlists">Esitusloendid</string>
+    <string name="search_placeholder">Otsi lugusid, artiste, albumeid</string>
+    <string name="settings_language">Rakenduse keel</string>
+    <string name="system_language">Süsteemi vaikeseade</string>
+    <string name="playing_now">Nüüd mängib</string>
+    <string name="sync_status">Sünkroonimise olek</string>
+    <string name="sync_synced">Sünkroonitud</string>
+    <string name="sync_syncing">Sünkroonimine</string>
+    <string name="sync_offline">Võrguühenduseta</string>
+    <string name="retry">Proovi uuesti</string>
+    <string name="play">Esita</string>
+    <string name="favorite_add">Salvesta</string>
+    <string name="favorite_remove">Eemalda</string>
+    <string name="new_playlist">Uus esitusloend</string>
+    <string name="delete">Kustuta</string>
+</resources>

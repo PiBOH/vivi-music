@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Koti</string>
+    <string name="nav_library">Kirjasto</string>
+    <string name="nav_settings">Asetukset</string>
+    <string name="nav_favorites">Suosikit</string>
+    <string name="nav_history">Historia</string>
+    <string name="nav_playlists">Soittolistat</string>
+    <string name="search_placeholder">Hae kappaleita, artisteja, albumeita</string>
+    <string name="settings_language">Sovelluksen kieli</string>
+    <string name="system_language">Järjestelmän oletus</string>
+    <string name="playing_now">Toistetaan nyt</string>
+    <string name="sync_status">Synkronoinnin tila</string>
+    <string name="sync_synced">Synkronoitu</string>
+    <string name="sync_syncing">Synkronoidaan</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Yritä uudelleen</string>
+    <string name="play">Toista</string>
+    <string name="favorite_add">Tallenna</string>
+    <string name="favorite_remove">Poista</string>
+    <string name="new_playlist">Uusi soittolista</string>
+    <string name="delete">Poista</string>
+</resources>

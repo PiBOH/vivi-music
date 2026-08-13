@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Hem</string>
+    <string name="nav_library">Bibliotek</string>
+    <string name="nav_settings">Inställningar</string>
+    <string name="nav_favorites">Favoriter</string>
+    <string name="nav_history">Historik</string>
+    <string name="nav_playlists">Spellistor</string>
+    <string name="search_placeholder">Sök låtar, artister, album</string>
+    <string name="settings_language">Appens språk</string>
+    <string name="system_language">Systemstandard</string>
+    <string name="playing_now">Spelas nu</string>
+    <string name="sync_status">Synkroniseringsstatus</string>
+    <string name="sync_synced">Synkroniserad</string>
+    <string name="sync_syncing">Synkroniserar</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Försök igen</string>
+    <string name="play">Spela</string>
+    <string name="favorite_add">Spara</string>
+    <string name="favorite_remove">Ta bort</string>
+    <string name="new_playlist">Ny spellista</string>
+    <string name="delete">Ta bort</string>
+</resources>

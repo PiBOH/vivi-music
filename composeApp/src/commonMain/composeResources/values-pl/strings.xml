@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Start</string>
+    <string name="nav_library">Biblioteka</string>
+    <string name="nav_settings">Ustawienia</string>
+    <string name="nav_favorites">Ulubione</string>
+    <string name="nav_history">Historia</string>
+    <string name="nav_playlists">Playlisty</string>
+    <string name="search_placeholder">Szukaj utworów, artystów, albumów</string>
+    <string name="settings_language">Język aplikacji</string>
+    <string name="system_language">Domyślny systemu</string>
+    <string name="playing_now">Teraz odtwarzane</string>
+    <string name="sync_status">Status synchronizacji</string>
+    <string name="sync_synced">Zsynchronizowano</string>
+    <string name="sync_syncing">Synchronizowanie</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Spróbuj ponownie</string>
+    <string name="play">Odtwórz</string>
+    <string name="favorite_add">Zapisz</string>
+    <string name="favorite_remove">Usuń</string>
+    <string name="new_playlist">Nowa playlista</string>
+    <string name="delete">Usuń</string>
+</resources>

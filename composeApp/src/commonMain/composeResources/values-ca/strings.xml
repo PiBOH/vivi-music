@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Inici</string>
+    <string name="nav_library">Biblioteca</string>
+    <string name="nav_settings">Configuració</string>
+    <string name="nav_favorites">Preferits</string>
+    <string name="nav_history">Historial</string>
+    <string name="nav_playlists">Llistes de reproducció</string>
+    <string name="search_placeholder">Cerca cançons, artistes, àlbums</string>
+    <string name="settings_language">Idioma de l'aplicació</string>
+    <string name="system_language">Per defecte del sistema</string>
+    <string name="playing_now">S'està reproduint</string>
+    <string name="sync_status">Estat de sincronització</string>
+    <string name="sync_synced">Sincronitzat</string>
+    <string name="sync_syncing">Sincronitzant</string>
+    <string name="sync_offline">Fora de línia</string>
+    <string name="retry">Torna-ho a provar</string>
+    <string name="play">Reprodueix</string>
+    <string name="favorite_add">Desa</string>
+    <string name="favorite_remove">Elimina</string>
+    <string name="new_playlist">Nova llista de reproducció</string>
+    <string name="delete">Suprimeix</string>
+</resources>

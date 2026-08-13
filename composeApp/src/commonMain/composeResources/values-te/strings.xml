@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">హోమ్</string>
+    <string name="nav_library">లైబ్రరీ</string>
+    <string name="nav_settings">సెట్టింగులు</string>
+    <string name="nav_favorites">ఇష్టమైనవి</string>
+    <string name="nav_history">చరిత్ర</string>
+    <string name="nav_playlists">ప్లేలిస్టులు</string>
+    <string name="search_placeholder">పాటలు, కళాకారులు, ఆల్బమ్‌లను వెతకండి</string>
+    <string name="settings_language">యాప్ భాష</string>
+    <string name="system_language">సిస్టమ్ డిఫాల్ట్</string>
+    <string name="playing_now">ఇప్పుడు ప్లే అవుతోంది</string>
+    <string name="sync_status">సింక్ స్థితి</string>
+    <string name="sync_synced">సింక్ అయింది</string>
+    <string name="sync_syncing">సింక్ అవుతోంది</string>
+    <string name="sync_offline">ఆఫ్‌లైన్</string>
+    <string name="retry">మళ్లీ ప్రయత్నించండి</string>
+    <string name="play">ప్లే చేయి</string>
+    <string name="favorite_add">సేవ్ చేయి</string>
+    <string name="favorite_remove">తొలగించు</string>
+    <string name="new_playlist">కొత్త ప్లేలిస్ట్</string>
+    <string name="delete">తొలగించు</string>
+</resources>

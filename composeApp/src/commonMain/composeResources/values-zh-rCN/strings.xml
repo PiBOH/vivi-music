@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">首页</string>
+    <string name="nav_library">音乐库</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_favorites">收藏</string>
+    <string name="nav_history">历史记录</string>
+    <string name="nav_playlists">播放列表</string>
+    <string name="search_placeholder">搜索歌曲、歌手、专辑</string>
+    <string name="settings_language">应用语言</string>
+    <string name="system_language">跟随系统</string>
+    <string name="playing_now">正在播放</string>
+    <string name="sync_status">同步状态</string>
+    <string name="sync_synced">已同步</string>
+    <string name="sync_syncing">正在同步</string>
+    <string name="sync_offline">离线</string>
+    <string name="retry">重试</string>
+    <string name="play">播放</string>
+    <string name="favorite_add">保存</string>
+    <string name="favorite_remove">移除</string>
+    <string name="new_playlist">新建播放列表</string>
+    <string name="delete">删除</string>
+</resources>

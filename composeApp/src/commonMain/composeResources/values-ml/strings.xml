@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">ഹോം</string>
+    <string name="nav_library">ലൈബ്രറി</string>
+    <string name="nav_settings">ക്രമീകരണങ്ങൾ</string>
+    <string name="nav_favorites">പ്രിയപ്പെട്ടവ</string>
+    <string name="nav_history">ചരിത്രം</string>
+    <string name="nav_playlists">പ്ലേലിസ്റ്റുകൾ</string>
+    <string name="search_placeholder">പാട്ടുകൾ, കലാകാരന്മാർ, ആൽബങ്ങൾ തിരയുക</string>
+    <string name="settings_language">ആപ്പ് ഭാഷ</string>
+    <string name="system_language">സിസ്റ്റം ഡിഫോൾട്ട്</string>
+    <string name="playing_now">ഇപ്പോൾ പ്ലേ ചെയ്യുന്നു</string>
+    <string name="sync_status">സമന്വയ നില</string>
+    <string name="sync_synced">സമന്വയിച്ചു</string>
+    <string name="sync_syncing">സമന്വയിക്കുന്നു</string>
+    <string name="sync_offline">ഓഫ്ലൈൻ</string>
+    <string name="retry">വീണ്ടും ശ്രമിക്കുക</string>
+    <string name="play">പ്ലേ ചെയ്യുക</string>
+    <string name="favorite_add">സംരക്ഷിക്കുക</string>
+    <string name="favorite_remove">നീക്കം ചെയ്യുക</string>
+    <string name="new_playlist">പുതിയ പ്ലേലിസ്റ്റ്</string>
+    <string name="delete">ഇല്ലാതാക്കുക</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">หน้าแรก</string>
+    <string name="nav_library">คลัง</string>
+    <string name="nav_settings">การตั้งค่า</string>
+    <string name="nav_favorites">รายการโปรด</string>
+    <string name="nav_history">ประวัติ</string>
+    <string name="nav_playlists">เพลย์ลิสต์</string>
+    <string name="search_placeholder">ค้นหาเพลง ศิลปิน อัลบั้ม</string>
+    <string name="settings_language">ภาษาของแอป</string>
+    <string name="system_language">ค่าเริ่มต้นของระบบ</string>
+    <string name="playing_now">กำลังเล่น</string>
+    <string name="sync_status">สถานะการซิงค์</string>
+    <string name="sync_synced">ซิงค์แล้ว</string>
+    <string name="sync_syncing">กำลังซิงค์</string>
+    <string name="sync_offline">ออฟไลน์</string>
+    <string name="retry">ลองอีกครั้ง</string>
+    <string name="play">เล่น</string>
+    <string name="favorite_add">บันทึก</string>
+    <string name="favorite_remove">ลบ</string>
+    <string name="new_playlist">เพลย์ลิสต์ใหม่</string>
+    <string name="delete">ลบ</string>
+</resources>

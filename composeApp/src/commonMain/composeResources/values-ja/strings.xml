@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">ホーム</string>
+    <string name="nav_library">ライブラリ</string>
+    <string name="nav_settings">設定</string>
+    <string name="nav_favorites">お気に入り</string>
+    <string name="nav_history">履歴</string>
+    <string name="nav_playlists">プレイリスト</string>
+    <string name="search_placeholder">曲、アーティスト、アルバムを検索</string>
+    <string name="settings_language">アプリの言語</string>
+    <string name="system_language">システムのデフォルト</string>
+    <string name="playing_now">再生中</string>
+    <string name="sync_status">同期ステータス</string>
+    <string name="sync_synced">同期済み</string>
+    <string name="sync_syncing">同期中</string>
+    <string name="sync_offline">オフライン</string>
+    <string name="retry">再試行</string>
+    <string name="play">再生</string>
+    <string name="favorite_add">保存</string>
+    <string name="favorite_remove">削除</string>
+    <string name="new_playlist">新しいプレイリスト</string>
+    <string name="delete">削除</string>
+</resources>

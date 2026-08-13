@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Bibliotheek</string>
+    <string name="nav_settings">Instellingen</string>
+    <string name="nav_favorites">Favorieten</string>
+    <string name="nav_history">Geschiedenis</string>
+    <string name="nav_playlists">Afspeellijsten</string>
+    <string name="search_placeholder">Zoek nummers, artiesten, albums</string>
+    <string name="settings_language">Taal van de app</string>
+    <string name="system_language">Standaard van het systeem</string>
+    <string name="playing_now">Nu aan het afspelen</string>
+    <string name="sync_status">Synchronisatiestatus</string>
+    <string name="sync_synced">Gesynchroniseerd</string>
+    <string name="sync_syncing">Synchroniseren</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Opnieuw proberen</string>
+    <string name="play">Afspelen</string>
+    <string name="favorite_add">Opslaan</string>
+    <string name="favorite_remove">Verwijderen</string>
+    <string name="new_playlist">Nieuwe afspeellijst</string>
+    <string name="delete">Verwijderen</string>
+</resources>

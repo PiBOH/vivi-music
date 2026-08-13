@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">হোম</string>
+    <string name="nav_library">লাইব্ৰেৰী</string>
+    <string name="nav_settings">ছেটিংছ</string>
+    <string name="nav_favorites">প্ৰিয়</string>
+    <string name="nav_history">ইতিহাস</string>
+    <string name="nav_playlists">প্লেলিষ্ট</string>
+    <string name="search_placeholder">গান, শিল্পী, এলবাম সন্ধান</string>
+    <string name="settings_language">এপৰ ভাষা</string>
+    <string name="system_language">চিস্টেম ডিফল্ট</string>
+    <string name="playing_now">এতিয়া চলি আছে</string>
+    <string name="sync_status">চিংক স্থিতি</string>
+    <string name="sync_synced">চিংক হৈছে</string>
+    <string name="sync_syncing">চিংক হৈ আছে</string>
+    <string name="sync_offline">অফলাইন</string>
+    <string name="retry">পুনৰ চেষ্টা</string>
+    <string name="play">প্লে</string>
+    <string name="favorite_add">সংৰক্ষণ</string>
+    <string name="favorite_remove">আঁতৰাওক</string>
+    <string name="new_playlist">নতুন প্লেলিষ্ট</string>
+    <string name="delete">মচি দিয়ক</string>
+</resources>

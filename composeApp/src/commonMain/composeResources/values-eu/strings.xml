@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Hasiera</string>
+    <string name="nav_library">Liburutegia</string>
+    <string name="nav_settings">Ezarpenak</string>
+    <string name="nav_favorites">Gogokoak</string>
+    <string name="nav_history">Historia</string>
+    <string name="nav_playlists">Erreprodukzio-zerrendak</string>
+    <string name="search_placeholder">Bilatu abestiak, artistak, albumak</string>
+    <string name="settings_language">Aplikazioaren hizkuntza</string>
+    <string name="system_language">Sistemaren lehenetsia</string>
+    <string name="playing_now">Orain erreproduzitzen</string>
+    <string name="sync_status">Sinkronizazio-egoera</string>
+    <string name="sync_synced">Sinkronizatuta</string>
+    <string name="sync_syncing">Sinkronizatzen</string>
+    <string name="sync_offline">Lineaz kanpo</string>
+    <string name="retry">Saiatu berriro</string>
+    <string name="play">Erreproduzitu</string>
+    <string name="favorite_add">Gorde</string>
+    <string name="favorite_remove">Kendu</string>
+    <string name="new_playlist">Erreprodukzio-zerrenda berria</string>
+    <string name="delete">Ezabatu</string>
+</resources>

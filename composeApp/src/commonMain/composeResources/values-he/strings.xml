@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">בית</string>
+    <string name="nav_library">ספרייה</string>
+    <string name="nav_settings">הגדרות</string>
+    <string name="nav_favorites">מועדפים</string>
+    <string name="nav_history">היסטוריה</string>
+    <string name="nav_playlists">פלייליסטים</string>
+    <string name="search_placeholder">חיפוש שירים, אמנים, אלבומים</string>
+    <string name="settings_language">שפת האפליקציה</string>
+    <string name="system_language">ברירת מחדל של המערכת</string>
+    <string name="playing_now">מתנגן כעת</string>
+    <string name="sync_status">סטטוס סנכרון</string>
+    <string name="sync_synced">סונכרן</string>
+    <string name="sync_syncing">מסנכרן</string>
+    <string name="sync_offline">לא מקוון</string>
+    <string name="retry">נסה שוב</string>
+    <string name="play">נגן</string>
+    <string name="favorite_add">שמור</string>
+    <string name="favorite_remove">הסר</string>
+    <string name="new_playlist">פלייליסט חדש</string>
+    <string name="delete">מחק</string>
+</resources>

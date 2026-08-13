@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_library">المكتبة</string>
+    <string name="nav_settings">الإعدادات</string>
+    <string name="nav_favorites">المفضلة</string>
+    <string name="nav_history">السجل</string>
+    <string name="nav_playlists">قوائم التشغيل</string>
+    <string name="search_placeholder">البحث عن الأغاني والفنانين والألبومات</string>
+    <string name="settings_language">لغة التطبيق</string>
+    <string name="system_language">الافتراضي للنظام</string>
+    <string name="playing_now">يتم التشغيل الآن</string>
+    <string name="sync_status">حالة المزامنة</string>
+    <string name="sync_synced">تمت المزامنة</string>
+    <string name="sync_syncing">جارٍ المزامنة</string>
+    <string name="sync_offline">غير متصل</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="play">تشغيل</string>
+    <string name="favorite_add">حفظ</string>
+    <string name="favorite_remove">إزالة</string>
+    <string name="new_playlist">قائمة تشغيل جديدة</string>
+    <string name="delete">حذف</string>
+</resources>
