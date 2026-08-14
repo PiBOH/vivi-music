@@ -71,7 +71,8 @@ Status legend: `[x]` = done, `[ ]` = pending.
 
 ## Phase 6 — Menus and remaining components
 
-- [ ] Long-press / context menus on songs, albums, artists, playlists.
+- [x] Desktop song actions on shared rows: play, add to queue and favorite.
+- [ ] Context menus on albums, artists and playlists.
 - [ ] Song recognition.
 - [ ] Yearly "Wrapped" summary.
 - [ ] Remaining screens and components from ViVi Music.

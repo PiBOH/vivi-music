@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.2-alpha] - 2026-08-14
+
+### Added
+- Added desktop-adapted song actions to shared song rows: play the song,
+  add it to the queue, and save or remove it from favorites. The actions are
+  available consistently across Home, Search, Library, History and detail
+  screens without changing the existing playback flow.
+
 ## [0.16.1-alpha] - 2026-08-13
 
 ### Fixed
