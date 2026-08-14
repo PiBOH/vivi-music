@@ -79,6 +79,7 @@ fun AccountScreen(
     viewModel: AppViewModel,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
+    onOpenPlaylist: (String) -> Unit = {},
     onOpenStats: () -> Unit = {},
 ) {
     var page by remember { mutableStateOf<AccountPage?>(null) }
@@ -92,6 +93,7 @@ fun AccountScreen(
             onOpenStats = onOpenStats,
             onOpenAlbum = onOpenAlbum,
             onOpenArtist = onOpenArtist,
+            onOpenPlaylist = onOpenPlaylist,
         )
         AccountPage.YtLogin -> YtLoginScreen(viewModel, onBack = { page = null })
         AccountPage.SupabaseLogin -> LoginScreen(viewModel, onBack = { page = null })
@@ -108,8 +110,8 @@ private fun AccountMain(
     onOpenStats: () -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
+    onOpenPlaylist: (String) -> Unit,
 ) {
-    val info by viewModel.ytAccountInfo.collectAsState()
     val signedIn by viewModel.ytSignedIn.collectAsState()
     val library by viewModel.ytLibrary.collectAsState()
     val libraryLoading by viewModel.ytLibraryLoading.collectAsState()
@@ -141,11 +143,8 @@ private fun AccountMain(
         }
 
         // ----- YouTube Music account -----
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            val currentInfo = info
-            if (signedIn && currentInfo != null) {
-                YtProfileHeader(currentInfo, onSignOut = viewModel::signOutYt)
-            } else {
+        if (!signedIn) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 YtSignInCard(onLogin = onLoginYt)
             }
         }
@@ -172,7 +171,8 @@ private fun AccountMain(
                     onClick = {
                         when (item) {
                             is LibraryItem.Artist -> onOpenArtist(item.id)
-                            else -> onOpenAlbum(item.id)
+                            is LibraryItem.Playlist -> onOpenPlaylist(item.id)
+                            is LibraryItem.Album -> onOpenAlbum(item.id)
                         }
                     },
                 )

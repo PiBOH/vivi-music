@@ -40,6 +40,8 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Original ViVi Music token-bundle import with cookie sanitization.
 - [x] Copy detailed authentication errors to the clipboard.
 - [x] Account library (liked playlists, albums, artists) with filter chips.
+- [x] Account library layout aligned with ViVi Music's adaptive grid and
+  remote playlist navigation.
 - [ ] Real Listen Together (currently a placeholder).
 
 ## Phase 4 — Player screens + playback controls

@@ -377,6 +377,13 @@ private fun AppRoot(viewModel: AppViewModel) {
                                     viewModel.openArtist(browseId)
                                     detail = Detail.ArtistDetail(browseId)
                                 },
+                                onOpenPlaylist = { playlistId ->
+                                    // Account playlists are remote YouTube Music playlists;
+                                    // the shared browse parser already handles their
+                                    // artwork and track list through the album detail UI.
+                                    viewModel.openAlbum(playlistId)
+                                    detail = Detail.AlbumDetail(playlistId)
+                                },
                                 onOpenStats = { detail = Detail.StatsDetail },
                             )
                             Screen.Settings -> SettingsScreen(viewModel)
