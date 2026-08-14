@@ -23,11 +23,11 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Playlist detail screen.
 - [x] History screen.
 - [x] InnerTube album/playlist/artist endpoints and models.
-- [ ] Explore screen.
-- [ ] Charts screen.
-- [ ] New releases screen.
-- [ ] Moods & genres screen.
-- [ ] Statistics screen.
+- [x] Explore screen.
+- [x] Charts screen.
+- [x] New releases screen.
+- [x] Moods & genres screen.
+- [x] Statistics screen.
 
 ## Phase 3 — Account / auth
 

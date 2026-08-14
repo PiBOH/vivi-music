@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -78,6 +79,7 @@ fun AccountScreen(
     viewModel: AppViewModel,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
+    onOpenStats: () -> Unit = {},
 ) {
     var page by remember { mutableStateOf<AccountPage?>(null) }
 
@@ -87,6 +89,7 @@ fun AccountScreen(
             onLoginYt = { page = AccountPage.YtLogin },
             onLoginSupabase = { page = AccountPage.SupabaseLogin },
             onActivityHistory = { page = AccountPage.ActivityHistory },
+            onOpenStats = onOpenStats,
             onOpenAlbum = onOpenAlbum,
             onOpenArtist = onOpenArtist,
         )
@@ -102,6 +105,7 @@ private fun AccountMain(
     onLoginYt: () -> Unit,
     onLoginSupabase: () -> Unit,
     onActivityHistory: () -> Unit,
+    onOpenStats: () -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
 ) {
@@ -227,6 +231,12 @@ private fun AccountMain(
                         title = stringResource(Res.string.activity_history),
                         icon = Icons.Filled.History,
                         onClick = onActivityHistory,
+                    )
+                    SettingsDivider()
+                    SettingsItem(
+                        title = stringResource(Res.string.stats),
+                        icon = Icons.Filled.BarChart,
+                        onClick = onOpenStats,
                     )
                 }
             }

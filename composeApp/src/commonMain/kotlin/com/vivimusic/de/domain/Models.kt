@@ -60,6 +60,68 @@ data class HomeSection(
 )
 
 /**
+ * One mood or genre tile shown on the Explore screen and on the dedicated
+ * Moods & genres screen. [browseId] and [params] drive the InnerTube browse
+ * request used to open the tile's content.
+ */
+@Serializable
+data class MoodGenre(
+    val title: String,
+    val browseId: String,
+    val params: String? = null,
+)
+
+/** A titled group of mood/genre tiles, parsed from the moods & genres browse page. */
+@Serializable
+data class MoodGenreSection(
+    val title: String,
+    val items: List<MoodGenre>,
+)
+
+/** The Explore screen payload: new release albums plus the mood/genre tiles. */
+@Serializable
+data class ExploreData(
+    val newReleaseAlbums: List<Album>,
+    val moodGenres: List<MoodGenre>,
+)
+
+/** A single entry in a charts section: either a playable song or an album. */
+sealed interface ChartItem {
+    val id: String
+    val title: String
+    val thumbnailUrl: String?
+
+    data class SongItem(
+        override val id: String,
+        override val title: String,
+        val artist: String,
+        override val thumbnailUrl: String?,
+    ) : ChartItem
+
+    data class AlbumItem(
+        override val id: String,
+        override val title: String,
+        val artist: String,
+        val year: String?,
+        override val thumbnailUrl: String?,
+    ) : ChartItem
+}
+
+/** A titled section of the charts page (e.g. "Trending", "Top music videos"). */
+@Serializable
+data class ChartSection(
+    val title: String,
+    val items: List<ChartItem>,
+)
+
+/** A generic browse results page, used when opening a mood/genre tile. */
+@Serializable
+data class BrowseData(
+    val title: String,
+    val items: List<ChartItem>,
+)
+
+/**
  * The signed-in YouTube Music account profile, fetched from the
  * `account/account_menu` InnerTube endpoint.
  */

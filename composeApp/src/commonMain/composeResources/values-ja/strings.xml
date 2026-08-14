@@ -43,4 +43,19 @@
     <string name="update_cleanup_partial">一部のファイルを削除できませんでした。インストーラーを閉じて再試行してください。</string>
     <string name="update_cleanup_error">アップデートファイルを削除できませんでした：</string>
     <string name="update_up_to_date">最新バージョンを使用しています</string>
+    <string name="nav_explore">見つける</string>
+    <string name="explore">見つける</string>
+    <string name="charts">チャート</string>
+    <string name="open_charts">チャートを開く</string>
+    <string name="mood_and_genres">ムードとジャンル</string>
+    <string name="new_release_albums">新着アルバム</string>
+    <string name="browse">閲覧</string>
+    <string name="empty_charts">利用可能なチャートはありません</string>
+    <string name="empty_browse">結果がありません</string>
+    <string name="empty_mood_genres">利用可能なムードやジャンルはありません</string>
+    <string name="top_artists">よく聴くアーティスト</string>
+    <string name="stats">統計</string>
+    <string name="unique_songs">ユニークな曲</string>
+    <string name="unique_artists">ユニークなアーティスト</string>
+    <string name="unique_albums">ユニークなアルバム</string>
 </resources>

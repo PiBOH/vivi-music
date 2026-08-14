@@ -43,4 +43,19 @@
     <string name="update_cleanup_partial">Alguns arquivos não puderam ser removidos. Feche o instalador e tente novamente.</string>
     <string name="update_cleanup_error">Não foi possível limpar os arquivos de atualização:</string>
     <string name="update_up_to_date">Você está usando a versão mais recente</string>
+    <string name="nav_explore">Explorar</string>
+    <string name="explore">Explorar</string>
+    <string name="charts">Paradas</string>
+    <string name="open_charts">Abrir paradas</string>
+    <string name="mood_and_genres">Humor e géneros</string>
+    <string name="new_release_albums">Lançamentos</string>
+    <string name="browse">Navegar</string>
+    <string name="empty_charts">Nenhuma parada disponível</string>
+    <string name="empty_browse">Sem resultados</string>
+    <string name="empty_mood_genres">Nenhum humor ou género disponível</string>
+    <string name="top_artists">Artistas mais ouvidos</string>
+    <string name="stats">Estatísticas</string>
+    <string name="unique_songs">Canções únicas</string>
+    <string name="unique_artists">Artistas únicos</string>
+    <string name="unique_albums">Álbuns únicos</string>
 </resources>

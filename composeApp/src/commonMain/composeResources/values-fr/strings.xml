@@ -43,4 +43,19 @@
     <string name="update_cleanup_partial">Certains fichiers n'ont pas pu être supprimés. Fermez l'installateur et réessayez.</string>
     <string name="update_cleanup_error">Impossible de supprimer les fichiers de mise à jour :</string>
     <string name="update_up_to_date">Vous utilisez la dernière version</string>
+    <string name="nav_explore">Explorer</string>
+    <string name="explore">Explorer</string>
+    <string name="charts">Classements</string>
+    <string name="open_charts">Ouvrir les classements</string>
+    <string name="mood_and_genres">Ambiances &amp; genres</string>
+    <string name="new_release_albums">Nouveautés</string>
+    <string name="browse">Parcourir</string>
+    <string name="empty_charts">Aucun classement disponible</string>
+    <string name="empty_browse">Aucun résultat</string>
+    <string name="empty_mood_genres">Aucune ambiance ou genre disponible</string>
+    <string name="top_artists">Artistes les plus écoutés</string>
+    <string name="stats">Statistiques</string>
+    <string name="unique_songs">Titres uniques</string>
+    <string name="unique_artists">Artistes uniques</string>
+    <string name="unique_albums">Albums uniques</string>
 </resources>

@@ -43,4 +43,19 @@
     <string name="update_cleanup_partial">部分檔案無法刪除。請關閉安裝程式後再試。</string>
     <string name="update_cleanup_error">無法清理更新檔案：</string>
     <string name="update_up_to_date">你已使用最新版本</string>
+    <string name="nav_explore">探索</string>
+    <string name="explore">探索</string>
+    <string name="charts">排行榜</string>
+    <string name="open_charts">開啟排行榜</string>
+    <string name="mood_and_genres">心情與曲風</string>
+    <string name="new_release_albums">新專輯</string>
+    <string name="browse">瀏覽</string>
+    <string name="empty_charts">暫無排行榜</string>
+    <string name="empty_browse">無結果</string>
+    <string name="empty_mood_genres">暫無心情或曲風</string>
+    <string name="top_artists">常聽藝術家</string>
+    <string name="stats">統計</string>
+    <string name="unique_songs">不同歌曲</string>
+    <string name="unique_artists">不同藝術家</string>
+    <string name="unique_albums">不同專輯</string>
 </resources>

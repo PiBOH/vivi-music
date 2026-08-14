@@ -43,4 +43,19 @@
     <string name="update_cleanup_partial">Некоторые файлы удалить не удалось. Закройте установщик и повторите попытку.</string>
     <string name="update_cleanup_error">Не удалось очистить файлы обновлений:</string>
     <string name="update_up_to_date">Установлена последняя версия</string>
+    <string name="nav_explore">Обзор</string>
+    <string name="explore">Обзор</string>
+    <string name="charts">Чарты</string>
+    <string name="open_charts">Открыть чарты</string>
+    <string name="mood_and_genres">Настроения и жанры</string>
+    <string name="new_release_albums">Новинки</string>
+    <string name="browse">Просмотр</string>
+    <string name="empty_charts">Нет доступных чартов</string>
+    <string name="empty_browse">Нет результатов</string>
+    <string name="empty_mood_genres">Нет доступных настроений или жанров</string>
+    <string name="top_artists">Самые прослушиваемые исполнители</string>
+    <string name="stats">Статистика</string>
+    <string name="unique_songs">Уникальные треки</string>
+    <string name="unique_artists">Уникальные исполнители</string>
+    <string name="unique_albums">Уникальные альбомы</string>
 </resources>

@@ -3,11 +3,15 @@ package com.vivimusic.de.ui
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,7 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.vivimusic.de.domain.Album
+import com.vivimusic.de.domain.ChartItem
 import com.vivimusic.de.domain.Song
 import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.theme.groupedItemShape
@@ -98,6 +107,123 @@ fun EmptyState(text: StringResource, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyLarge,
         )
     }
+}
+
+/**
+ * Square album card used by Explore, New releases and Charts: a thumbnail,
+ * title, artist and optional year.
+ */
+@Composable
+fun AlbumCard(
+    album: Album,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnailSize: androidx.compose.ui.unit.Dp = 128.dp,
+) {
+    Column(
+        modifier = modifier
+            .let { if (thumbnailSize > 0.dp) it.width(thumbnailSize) else it }
+            .clickable(onClick = onClick),
+    ) {
+        Box(
+            modifier = Modifier
+                .let { if (thumbnailSize > 0.dp) it.size(thumbnailSize) else it.fillMaxWidth() }
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(6.dp)),
+        ) {
+            if (album.thumbnailUrl.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                )
+            } else {
+                AsyncImage(
+                    model = album.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        Text(
+            text = album.title,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = album.artist.ifBlank { stringResource(Res.string.unknown_artist) },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        album.year?.let { year ->
+            Text(
+                text = year,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * A row card for a chart entry: thumbnail on the left, title and subtitle on
+ * the right. Used by the Charts screen and the generic browse screen.
+ */
+@Composable
+fun ChartItemRow(
+    item: ChartItem,
+    viewModel: AppViewModel,
+    onOpenAlbum: (String) -> Unit,
+    shape: Shape,
+) {
+    ListItem(
+        headlineContent = { Text(item.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                when (item) {
+                    is ChartItem.SongItem -> item.artist.ifBlank { stringResource(Res.string.unknown_artist) }
+                    is ChartItem.AlbumItem -> item.artist.ifBlank { stringResource(Res.string.unknown_artist) }
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        leadingContent = {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                if (!item.thumbnailUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = item.thumbnailUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        },
+        colors = listItemColors(),
+        modifier = Modifier.clip(shape).clickable {
+            when (item) {
+                is ChartItem.SongItem -> viewModel.play(
+                    Song(
+                        id = item.id,
+                        title = item.title,
+                        artist = item.artist,
+                        thumbnailUrl = item.thumbnailUrl,
+                    )
+                )
+                is ChartItem.AlbumItem -> onOpenAlbum(item.id)
+            }
+        },
+    )
 }
 
 /**

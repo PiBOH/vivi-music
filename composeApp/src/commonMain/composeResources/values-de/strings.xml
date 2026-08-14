@@ -43,4 +43,19 @@
     <string name="update_cleanup_partial">Einige Dateien konnten nicht entfernt werden. Schließe das Installationsprogramm und versuche es erneut.</string>
     <string name="update_cleanup_error">Update-Dateien konnten nicht gelöscht werden:</string>
     <string name="update_up_to_date">Du verwendest die neueste Version</string>
+    <string name="nav_explore">Entdecken</string>
+    <string name="explore">Entdecken</string>
+    <string name="charts">Charts</string>
+    <string name="open_charts">Charts öffnen</string>
+    <string name="mood_and_genres">Stimmungen &amp; Genres</string>
+    <string name="new_release_albums">Neuerscheinungen</string>
+    <string name="browse">Durchsuchen</string>
+    <string name="empty_charts">Keine Charts verfügbar</string>
+    <string name="empty_browse">Keine Ergebnisse</string>
+    <string name="empty_mood_genres">Keine Stimmungen oder Genres verfügbar</string>
+    <string name="top_artists">Meistgehörte Künstler</string>
+    <string name="stats">Statistiken</string>
+    <string name="unique_songs">Eindeutige Songs</string>
+    <string name="unique_artists">Eindeutige Künstler</string>
+    <string name="unique_albums">Eindeutige Alben</string>
 </resources>

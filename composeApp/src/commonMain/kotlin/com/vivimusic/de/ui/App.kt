@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
@@ -50,12 +51,18 @@ import com.vivimusic.de.resources.*
 import com.vivimusic.de.ui.screens.AccountScreen
 import com.vivimusic.de.ui.screens.AlbumScreen
 import com.vivimusic.de.ui.screens.ArtistScreen
+import com.vivimusic.de.ui.screens.BrowseScreen
+import com.vivimusic.de.ui.screens.ChartsScreen
+import com.vivimusic.de.ui.screens.ExploreScreen
 import com.vivimusic.de.ui.screens.HistoryScreen
 import com.vivimusic.de.ui.screens.HomeScreen
 import com.vivimusic.de.ui.screens.LibraryScreen
+import com.vivimusic.de.ui.screens.MoodGenresScreen
+import com.vivimusic.de.ui.screens.NewReleaseScreen
 import com.vivimusic.de.ui.screens.PlaylistScreen
 import com.vivimusic.de.ui.screens.SearchScreen
 import com.vivimusic.de.ui.screens.SettingsScreen
+import com.vivimusic.de.ui.screens.StatsScreen
 import com.vivimusic.de.ui.screens.TogetherScreen
 import com.vivimusic.de.ui.theme.ViviTheme
 import kotlinx.coroutines.CoroutineScope
@@ -171,13 +178,18 @@ private fun AppContent(container: AppContainer) {
     AppRoot(viewModel)
 }
 
-private enum class Screen { Home, Search, Together, Library, History, Account, Settings }
+private enum class Screen { Home, Explore, Search, Together, Library, History, Account, Settings }
 
 /** A detail destination shown in place of the main content area. */
 private sealed interface Detail {
     data class AlbumDetail(val browseId: String?) : Detail
     data class ArtistDetail(val browseId: String?) : Detail
     data class PlaylistDetail(val playlistId: String) : Detail
+    data object ChartsDetail : Detail
+    data object NewReleasesDetail : Detail
+    data object MoodGenresDetail : Detail
+    data object StatsDetail : Detail
+    data class BrowseDetail(val browseId: String, val params: String?) : Detail
 }
 
 /**
@@ -223,6 +235,12 @@ private fun AppRoot(viewModel: AppViewModel) {
                     onClick = { screen = Screen.Home; detail = null },
                     icon = { Icon(Icons.Filled.Home, contentDescription = null) },
                     label = { Text(stringResource(Res.string.nav_home)) },
+                )
+                NavigationRailItem(
+                    selected = screen == Screen.Explore && detail == null,
+                    onClick = { screen = Screen.Explore; detail = null },
+                    icon = { Icon(Icons.Filled.Explore, contentDescription = null) },
+                    label = { Text(stringResource(Res.string.nav_explore)) },
                 )
                 NavigationRailItem(
                     selected = screen == Screen.Search && detail == null,
@@ -278,8 +296,59 @@ private fun AppRoot(viewModel: AppViewModel) {
                             viewModel = viewModel,
                             onBack = { detail = null },
                         )
+                        is Detail.ChartsDetail -> ChartsScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                            onOpenAlbum = { browseId ->
+                                viewModel.openAlbum(browseId)
+                                detail = Detail.AlbumDetail(browseId)
+                            },
+                        )
+                        is Detail.NewReleasesDetail -> NewReleaseScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                            onOpenAlbum = { browseId ->
+                                viewModel.openAlbum(browseId)
+                                detail = Detail.AlbumDetail(browseId)
+                            },
+                        )
+                        is Detail.MoodGenresDetail -> MoodGenresScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                            onOpenBrowse = { browseId, params ->
+                                detail = Detail.BrowseDetail(browseId, params)
+                            },
+                        )
+                        is Detail.BrowseDetail -> BrowseScreen(
+                            viewModel = viewModel,
+                            browseId = current.browseId,
+                            params = current.params,
+                            onBack = { detail = Detail.MoodGenresDetail },
+                            onOpenAlbum = { browseId ->
+                                viewModel.openAlbum(browseId)
+                                detail = Detail.AlbumDetail(browseId)
+                            },
+                        )
+                        is Detail.StatsDetail -> StatsScreen(
+                            viewModel = viewModel,
+                            onBack = { detail = null },
+                        )
                         null -> when (screen) {
                             Screen.Home -> HomeScreen(viewModel)
+                            Screen.Explore -> ExploreScreen(
+                                viewModel = viewModel,
+                                onBack = null,
+                                onOpenCharts = { detail = Detail.ChartsDetail },
+                                onOpenNewReleases = { detail = Detail.NewReleasesDetail },
+                                onOpenMoodGenres = { detail = Detail.MoodGenresDetail },
+                                onOpenAlbum = { browseId ->
+                                    viewModel.openAlbum(browseId)
+                                    detail = Detail.AlbumDetail(browseId)
+                                },
+                                onOpenBrowse = { browseId, params ->
+                                    detail = Detail.BrowseDetail(browseId, params)
+                                },
+                            )
                             Screen.Search -> SearchScreen(viewModel)
                             Screen.Together -> TogetherScreen()
                             Screen.Library -> LibraryScreen(
@@ -308,6 +377,7 @@ private fun AppRoot(viewModel: AppViewModel) {
                                     viewModel.openArtist(browseId)
                                     detail = Detail.ArtistDetail(browseId)
                                 },
+                                onOpenStats = { detail = Detail.StatsDetail },
                             )
                             Screen.Settings -> SettingsScreen(viewModel)
                         }

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0-alpha] - 2026-08-13
+
+### Added
+- Explore screen (Phase 2) as a new navigation-rail destination: new release
+  album carousel and mood/genre tiles, ported from ViVi Music.
+- Charts screen with trending/top song sections and album grids, parsed from
+  the `FEmusic_charts` browse endpoint.
+- New releases screen (adaptive album grid) from `FEmusic_new_releases_albums`.
+- Moods & genres screen with grouped tiles from `FEmusic_moods_and_genres`,
+  plus a generic browse screen for the tile targets.
+- Statistics screen with listening totals and the most played songs/artists,
+  reachable from the Account screen.
+- InnerTube explore/charts/new-releases/moods/browse endpoints and the related
+  domain models, repository and view-model state.
+- Translations for the new Explore/Charts/Stats strings in Italian, German,
+  French, Spanish, Portuguese, Russian, Japanese and Simplified/Traditional
+  Chinese.
+
 ## [0.15.6-alpha] - 2026-08-13
 
 ### Changed

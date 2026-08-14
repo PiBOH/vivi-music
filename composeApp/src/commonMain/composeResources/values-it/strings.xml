@@ -136,4 +136,19 @@
     <string name="about_changelog">Changelog</string>
     <string name="changelog">Changelog</string>
     <string name="changelog_error">Impossibile caricare il changelog. Controlla la connessione e riprova.</string>
+    <string name="nav_explore">Esplora</string>
+    <string name="explore">Esplora</string>
+    <string name="charts">Classifiche</string>
+    <string name="open_charts">Apri le classifiche</string>
+    <string name="mood_and_genres">Mood e generi</string>
+    <string name="new_release_albums">Nuove uscite</string>
+    <string name="browse">Sfoglia</string>
+    <string name="empty_charts">Nessuna classifica disponibile</string>
+    <string name="empty_browse">Nessun risultato</string>
+    <string name="empty_mood_genres">Nessun mood o genere disponibile</string>
+    <string name="top_artists">Artisti più ascoltati</string>
+    <string name="stats">Statistiche</string>
+    <string name="unique_songs">Brani unici</string>
+    <string name="unique_artists">Artisti unici</string>
+    <string name="unique_albums">Album unici</string>
 </resources>

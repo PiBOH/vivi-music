@@ -25,8 +25,12 @@ import com.vivimusic.de.data.writeSetting
 import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
+import com.vivimusic.de.domain.BrowseData
+import com.vivimusic.de.domain.ChartSection
+import com.vivimusic.de.domain.ExploreData
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.LibraryItem
+import com.vivimusic.de.domain.MoodGenreSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
@@ -95,6 +99,26 @@ class AppViewModel(
 
     private val _homeSections = MutableStateFlow<List<HomeSection>>(emptyList())
     val homeSections: StateFlow<List<HomeSection>> = _homeSections.asStateFlow()
+
+    // ----- Explore / Charts / New releases / Moods & genres / Browse -----
+
+    private val _explore = MutableStateFlow<ExploreData?>(null)
+    val explore: StateFlow<ExploreData?> = _explore.asStateFlow()
+
+    private val _charts = MutableStateFlow<List<ChartSection>>(emptyList())
+    val charts: StateFlow<List<ChartSection>> = _charts.asStateFlow()
+
+    private val _newReleaseAlbums = MutableStateFlow<List<Album>>(emptyList())
+    val newReleaseAlbums: StateFlow<List<Album>> = _newReleaseAlbums.asStateFlow()
+
+    private val _moodGenres = MutableStateFlow<List<MoodGenreSection>>(emptyList())
+    val moodGenres: StateFlow<List<MoodGenreSection>> = _moodGenres.asStateFlow()
+
+    private val _browse = MutableStateFlow<BrowseData?>(null)
+    val browse: StateFlow<BrowseData?> = _browse.asStateFlow()
+
+    private val _exploreLoading = MutableStateFlow(false)
+    val exploreLoading: StateFlow<Boolean> = _exploreLoading.asStateFlow()
 
     private val _searchResults = MutableStateFlow<List<Song>>(emptyList())
     val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
@@ -165,6 +189,16 @@ class AppViewModel(
             uniqueAlbums = songs.map { it.album }.filter { it.isNotBlank() }.distinct().size,
         )
     }.stateIn(scope, SharingStarted.Eagerly, ListeningStats())
+
+    /** Most listened artists, ranked by how many history songs they appear in. */
+    val topArtists: StateFlow<List<Pair<String, Int>>> = history.map { songs ->
+        songs.filter { it.artist.isNotBlank() }
+            .groupingBy { it.artist }
+            .eachCount()
+            .entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .map { it.key to it.value }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val _album = MutableStateFlow<Album?>(null)
     val album: StateFlow<Album?> = _album.asStateFlow()
@@ -268,6 +302,51 @@ class AppViewModel(
             _loading.value = true
             _homeSections.value = repository.home()
             _loading.value = false
+        }
+    }
+
+    /** Loads the Explore screen payload once (new releases + mood/genre tiles). */
+    fun loadExplore() {
+        if (_explore.value != null) return
+        scope.launch {
+            _exploreLoading.value = true
+            _explore.value = repository.explore()
+            _exploreLoading.value = false
+        }
+    }
+
+    fun loadCharts() {
+        if (_charts.value.isNotEmpty()) return
+        scope.launch {
+            _exploreLoading.value = true
+            _charts.value = repository.charts()
+            _exploreLoading.value = false
+        }
+    }
+
+    fun loadNewReleases() {
+        if (_newReleaseAlbums.value.isNotEmpty()) return
+        scope.launch {
+            _exploreLoading.value = true
+            _newReleaseAlbums.value = repository.newReleaseAlbums()
+            _exploreLoading.value = false
+        }
+    }
+
+    fun loadMoodGenres() {
+        if (_moodGenres.value.isNotEmpty()) return
+        scope.launch {
+            _exploreLoading.value = true
+            _moodGenres.value = repository.moodGenres()
+            _exploreLoading.value = false
+        }
+    }
+
+    fun openBrowse(browseId: String, params: String?) {
+        scope.launch {
+            _exploreLoading.value = true
+            _browse.value = repository.browse(browseId, params)
+            _exploreLoading.value = false
         }
     }
 

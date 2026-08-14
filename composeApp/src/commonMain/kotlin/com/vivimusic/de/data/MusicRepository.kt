@@ -12,8 +12,12 @@ import com.vivimusic.de.data.sync.SyncManager
 import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
+import com.vivimusic.de.domain.BrowseData
+import com.vivimusic.de.domain.ChartSection
+import com.vivimusic.de.domain.ExploreData
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.LibraryItem
+import com.vivimusic.de.domain.MoodGenreSection
 import com.vivimusic.de.domain.Playlist
 import com.vivimusic.de.domain.Song
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +47,17 @@ class MusicRepository(
     suspend fun getAlbumOrPlaylist(browseId: String): Album = innerTube.getAlbumOrPlaylist(browseId)
 
     suspend fun getArtist(browseId: String): Artist = innerTube.getArtist(browseId)
+
+    suspend fun explore(): ExploreData = innerTube.getExplore()
+
+    suspend fun charts(): List<ChartSection> = innerTube.getCharts()
+
+    suspend fun newReleaseAlbums(): List<Album> = innerTube.getNewReleaseAlbums()
+
+    suspend fun moodGenres(): List<MoodGenreSection> = innerTube.getMoodGenres()
+
+    suspend fun browse(browseId: String, params: String? = null): BrowseData =
+        innerTube.getBrowseData(browseId, params)
 
     suspend fun getSong(videoId: String): Song? = innerTube.getSong(videoId)
 

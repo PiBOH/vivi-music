@@ -5,8 +5,14 @@ import com.vivimusic.de.data.readSetting
 import com.vivimusic.de.domain.AccountInfo
 import com.vivimusic.de.domain.Album
 import com.vivimusic.de.domain.Artist
+import com.vivimusic.de.domain.BrowseData
+import com.vivimusic.de.domain.ChartItem
+import com.vivimusic.de.domain.ChartSection
+import com.vivimusic.de.domain.ExploreData
 import com.vivimusic.de.domain.HomeSection
 import com.vivimusic.de.domain.LibraryItem
+import com.vivimusic.de.domain.MoodGenre
+import com.vivimusic.de.domain.MoodGenreSection
 import com.vivimusic.de.domain.Song
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
@@ -182,6 +188,160 @@ class InnerTubeClient(
             if (songs.isEmpty()) return@mapNotNull null
             HomeSection(title = shelf.shelfTitle().orEmpty(), songs = songs)
         }
+    }
+
+    /** A generic browse request with an optional extra `params` query token. */
+    private suspend fun browse(browseId: String, params: String? = null): JsonObject {
+        val pairs = buildList {
+            add("browseId" to JsonPrimitive(browseId))
+            if (!params.isNullOrBlank()) add("params" to JsonPrimitive(params))
+        }
+        return call("browse", bodyWith(Client.WEB_REMIX, *pairs.toTypedArray()))
+    }
+
+    /**
+     * The Explore screen: the new-release album carousel and the mood/genre
+     * tiles from `FEmusic_explore`.
+     */
+    suspend fun getExplore(): ExploreData {
+        val response = browse("FEmusic_explore")
+        val sections = response.sectionListRendererContents() ?: return ExploreData(emptyList(), emptyList())
+        val objs = sections.mapNotNull { it as? JsonObject }
+
+        val newReleaseAlbums = objs
+            .mapNotNull { it["musicCarouselShelfRenderer"] as? JsonObject }
+            .firstOrNull { shelf ->
+                (shelf["header"] as? JsonObject)
+                    ?.get("musicCarouselShelfBasicHeaderRenderer")
+                    ?.let { (it as? JsonObject)?.get("moreContentButton") }
+                    ?.let { (it as? JsonObject)?.get("buttonRenderer") }
+                    ?.let { (it as? JsonObject)?.get("navigationEndpoint") }
+                    ?.let { (it as? JsonObject)?.get("browseEndpoint") }
+                    ?.let { (it as? JsonObject)?.str("browseId") } == "FEmusic_new_releases_albums"
+            }
+            ?.let { shelf ->
+                (shelf["contents"] as? JsonArray).orEmpty()
+                    .mapNotNull { item ->
+                        ((item as? JsonObject)?.get("musicTwoRowItemRenderer") as? JsonObject)?.toAlbumFromTwoRow()
+                    }
+                    .distinctBy { it.id }
+            }
+            .orEmpty()
+
+        val moodGenres = objs
+            .mapNotNull { it["musicCarouselShelfRenderer"] as? JsonObject }
+            .firstOrNull { shelf ->
+                (shelf["header"] as? JsonObject)
+                    ?.get("musicCarouselShelfBasicHeaderRenderer")
+                    ?.let { (it as? JsonObject)?.get("moreContentButton") }
+                    ?.let { (it as? JsonObject)?.get("buttonRenderer") }
+                    ?.let { (it as? JsonObject)?.get("navigationEndpoint") }
+                    ?.let { (it as? JsonObject)?.get("browseEndpoint") }
+                    ?.let { (it as? JsonObject)?.str("browseId") } == "FEmusic_moods_and_genres"
+            }
+            ?.let { shelf ->
+                (shelf["contents"] as? JsonArray).orEmpty()
+                    .mapNotNull { item ->
+                        ((item as? JsonObject)?.get("musicNavigationButtonRenderer") as? JsonObject)?.toMoodGenre()
+                    }
+            }
+            .orEmpty()
+
+        return ExploreData(newReleaseAlbums = newReleaseAlbums, moodGenres = moodGenres)
+    }
+
+    /** New release albums from `FEmusic_new_releases_albums`. */
+    suspend fun getNewReleaseAlbums(): List<Album> {
+        val response = browse("FEmusic_new_releases_albums")
+        val sections = response.sectionListRendererContents() ?: return emptyList()
+        return sections.mapNotNull { it as? JsonObject }
+            .mapNotNull { it["gridRenderer"] as? JsonObject }
+            .flatMap { grid ->
+                (grid["items"] as? JsonArray).orEmpty()
+                    .mapNotNull { item ->
+                        ((item as? JsonObject)?.get("musicTwoRowItemRenderer") as? JsonObject)?.toAlbumFromTwoRow()
+                    }
+            }
+            .distinctBy { it.id }
+    }
+
+    /** Mood and genre tiles grouped by section from `FEmusic_moods_and_genres`. */
+    suspend fun getMoodGenres(): List<MoodGenreSection> {
+        val response = browse("FEmusic_moods_and_genres")
+        val sections = response.sectionListRendererContents() ?: return emptyList()
+        return sections.mapNotNull { section ->
+            val obj = section as? JsonObject ?: return@mapNotNull null
+            val grid = obj["gridRenderer"] as? JsonObject ?: return@mapNotNull null
+            val title = ((grid["header"] as? JsonObject)?.get("gridHeaderRenderer") as? JsonObject)
+                ?.get("title")
+                ?.let { (it as? JsonObject)?.firstText() }
+                ?: return@mapNotNull null
+            val items = (grid["items"] as? JsonArray).orEmpty()
+                .mapNotNull { item ->
+                    ((item as? JsonObject)?.get("musicNavigationButtonRenderer") as? JsonObject)?.toMoodGenre()
+                }
+            if (items.isEmpty()) return@mapNotNull null
+            MoodGenreSection(title = title, items = items)
+        }
+    }
+
+    /** The charts page (`FEmusic_charts`): trending/top sections plus the videos grid. */
+    suspend fun getCharts(): List<ChartSection> {
+        val response = browse("FEmusic_charts", params = "ggMGCgQIgAQ%3D")
+        val sections = response.sectionListRendererContents() ?: return emptyList()
+        return sections.mapNotNull { section ->
+            val obj = section as? JsonObject ?: return@mapNotNull null
+            val carousel = obj["musicCarouselShelfRenderer"] as? JsonObject
+            if (carousel != null) {
+                val title = carousel.shelfTitle() ?: return@mapNotNull null
+                val items = (carousel["contents"] as? JsonArray).orEmpty()
+                    .mapNotNull { item ->
+                        val renderer = item as? JsonObject ?: return@mapNotNull null
+                        (renderer["musicResponsiveListItemRenderer"] as? JsonObject)?.toChartSong()
+                            ?: (renderer["musicTwoRowItemRenderer"] as? JsonObject)?.toChartItem()
+                    }
+                if (items.isEmpty()) return@mapNotNull null
+                ChartSection(title = title, items = items)
+            } else {
+                val grid = obj["gridRenderer"] as? JsonObject ?: return@mapNotNull null
+                val title = ((grid["header"] as? JsonObject)?.get("gridHeaderRenderer") as? JsonObject)
+                    ?.get("title")
+                    ?.let { (it as? JsonObject)?.firstText() }
+                    ?: return@mapNotNull null
+                val items = (grid["items"] as? JsonArray).orEmpty()
+                    .mapNotNull { item ->
+                        ((item as? JsonObject)?.get("musicTwoRowItemRenderer") as? JsonObject)?.toChartItem()
+                    }
+                if (items.isEmpty()) return@mapNotNull null
+                ChartSection(title = title, items = items)
+            }
+        }
+    }
+
+    /** A generic browse page (used for mood/genre tiles). */
+    suspend fun getBrowseData(browseId: String, params: String? = null): BrowseData {
+        val response = browse(browseId, params)
+        val title = (response["header"] as? JsonObject)
+            ?.get("musicHeaderRenderer")
+            ?.let { (it as? JsonObject)?.get("title") }
+            ?.let { (it as? JsonObject)?.firstText() }
+            .orEmpty()
+        val sections = response.sectionListRendererContents() ?: return BrowseData(title, emptyList())
+        val items = sections.mapNotNull { section ->
+            val obj = section as? JsonObject ?: return@mapNotNull null
+            val grid = obj["gridRenderer"] as? JsonObject
+                ?: obj["musicCarouselShelfRenderer"] as? JsonObject
+                ?: return@mapNotNull null
+            val rawItems = (grid["items"] as? JsonArray) ?: (grid["contents"] as? JsonArray) ?: return@mapNotNull null
+            rawItems.mapNotNull { item ->
+                val renderer = (item as? JsonObject)
+                    ?.get("musicTwoRowItemRenderer") as? JsonObject
+                    ?: (item as? JsonObject)?.get("musicResponsiveListItemRenderer") as? JsonObject
+                    ?: return@mapNotNull null
+                renderer.toChartItem()
+            }
+        }.flatten().distinctBy { it.id }
+        return BrowseData(title = title, items = items)
     }
 
     suspend fun getAlbumOrPlaylist(browseId: String): Album {
@@ -449,8 +609,56 @@ class InnerTubeClient(
     private fun JsonObject.toAlbumFromTwoRow(): Album? {
         val id = browseId() ?: return null
         val title = (this["title"] as? JsonObject)?.firstText() ?: ""
-        val year = (this["subtitle"] as? JsonObject)?.firstText()
-        return Album(id = id, title = title, year = year, thumbnailUrl = thumbnailUrl())
+        val subtitleRuns = (this["subtitle"] as? JsonObject)?.textRuns().orEmpty()
+        val year = subtitleRuns.lastOrNull { it.length == 4 && it.all(Char::isDigit) }
+        val artist = subtitleRuns
+            .filter { it != year && it.isNotBlank() && it != "Album" && it != "Playlist" }
+            .joinToString(separator = ", ")
+        return Album(id = id, title = title, artist = artist, year = year, thumbnailUrl = thumbnailUrl())
+    }
+
+    /** A mood/genre button (`musicNavigationButtonRenderer`). */
+    private fun JsonObject.toMoodGenre(): MoodGenre? {
+        val title = (this["buttonText"] as? JsonObject)?.firstText() ?: return null
+        val endpoint = (this["navigationEndpoint"] as? JsonObject)
+            ?: (this["clickCommand"] as? JsonObject)
+            ?: return null
+        val browse = endpoint["browseEndpoint"] as? JsonObject ?: return null
+        val browseId = browse.str("browseId") ?: return null
+        return MoodGenre(title = title, browseId = browseId, params = browse.str("params"))
+    }
+
+    /** A chart song from `musicResponsiveListItemRenderer`. */
+    private fun JsonObject.toChartSong(): ChartItem.SongItem? {
+        val id = videoId() ?: return null
+        val flexColumns = this["flexColumns"] as? JsonArray ?: return null
+        val title = flexColumns.getOrNull(0)
+            ?.let { (it as? JsonObject)?.get("musicResponsiveListItemFlexColumnRenderer") as? JsonObject }
+            ?.firstText() ?: ""
+        val artist = flexColumns.getOrNull(1)
+            ?.let { (it as? JsonObject)?.get("musicResponsiveListItemFlexColumnRenderer") as? JsonObject }
+            ?.joinedText() ?: ""
+        return ChartItem.SongItem(id = id, title = title, artist = artist, thumbnailUrl = thumbnailUrl())
+    }
+
+    /** A chart entry from `musicTwoRowItemRenderer` (song or album). */
+    private fun JsonObject.toChartItem(): ChartItem? {
+        watchVideoId()?.let { videoId ->
+            return ChartItem.SongItem(
+                id = videoId,
+                title = (this["title"] as? JsonObject)?.firstText() ?: "",
+                artist = (this["subtitle"] as? JsonObject)?.joinedText() ?: "",
+                thumbnailUrl = thumbnailUrl(),
+            )
+        }
+        val album = toAlbumFromTwoRow() ?: return null
+        return ChartItem.AlbumItem(
+            id = album.id,
+            title = album.title,
+            artist = album.artist,
+            year = album.year,
+            thumbnailUrl = album.thumbnailUrl,
+        )
     }
 
     private fun JsonObject.browseId(): String? =
