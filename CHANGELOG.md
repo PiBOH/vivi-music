@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.4-alpha] - 2026-08-14
+
+### Added
+- Completed the Account library interaction states from the mobile flow:
+  desktop card menus can open, play remotely and add the songs represented by
+  playlists, albums and artists to the queue.
+- Remote Account library items now use type-specific actions while preserving
+  the existing filter and adaptive-grid state.
+
 ## [0.16.3-alpha] - 2026-08-14
 
 ### Changed

@@ -143,6 +143,7 @@
     <string name="mood_and_genres">Mood e generi</string>
     <string name="new_release_albums">Nuove uscite</string>
     <string name="browse">Sfoglia</string>
+    <string name="open">Apri</string>
     <string name="empty_charts">Nessuna classifica disponibile</string>
     <string name="empty_browse">Nessun risultato</string>
     <string name="empty_mood_genres">Nessun mood o genere disponibile</string>

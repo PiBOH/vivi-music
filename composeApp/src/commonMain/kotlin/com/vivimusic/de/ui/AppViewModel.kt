@@ -706,6 +706,27 @@ class AppViewModel(
             }
         }
     }
+
+    /** Plays all songs represented by a remote account-library card. */
+    fun playRemoteLibraryItem(item: LibraryItem) {
+        scope.launch {
+            val songs = remoteLibrarySongs(item)
+            if (songs.isNotEmpty()) playQueue(songs)
+        }
+    }
+
+    /** Adds all songs represented by a remote account-library card to the queue. */
+    fun enqueueRemoteLibraryItem(item: LibraryItem) {
+        scope.launch {
+            remoteLibrarySongs(item).forEach(::enqueue)
+        }
+    }
+
+    private suspend fun remoteLibrarySongs(item: LibraryItem): List<Song> = when (item) {
+        is LibraryItem.Artist -> repository.getArtist(item.id).songs
+        is LibraryItem.Album -> repository.getAlbumOrPlaylist(item.id).songs
+        is LibraryItem.Playlist -> repository.getAlbumOrPlaylist(item.id).songs
+    }
 }
 
 private fun fullErrorDetails(context: String, throwable: Throwable): String = buildString {

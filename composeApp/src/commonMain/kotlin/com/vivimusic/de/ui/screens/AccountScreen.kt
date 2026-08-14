@@ -28,9 +28,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -175,6 +178,8 @@ private fun AccountMain(
                             is LibraryItem.Album -> onOpenAlbum(item.id)
                         }
                     },
+                    onPlay = { viewModel.playRemoteLibraryItem(item) },
+                    onEnqueue = { viewModel.enqueueRemoteLibraryItem(item) },
                 )
             }
 
@@ -316,14 +321,22 @@ private fun YtSignInCard(onLogin: () -> Unit) {
 }
 
 @Composable
-private fun LibraryGridItem(item: LibraryItem, onClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+private fun LibraryGridItem(
+    item: LibraryItem,
+    onClick: () -> Unit,
+    onPlay: () -> Unit,
+    onEnqueue: () -> Unit,
+) {
+    var menuExpanded by remember(item.id) { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(onClick = onClick),
         ) {
             if (!item.thumbnailUrl.isNullOrBlank()) {
                 AsyncImage(
@@ -339,6 +352,50 @@ private fun LibraryGridItem(item: LibraryItem, onClick: () -> Unit) {
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(32.dp).align(Alignment.Center),
                 )
+            }
+
+            Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+                IconButton(
+                    onClick = { menuExpanded = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                            shape = CircleShape,
+                        ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.open)) },
+                        onClick = {
+                            menuExpanded = false
+                            onClick()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.play)) },
+                        onClick = {
+                            menuExpanded = false
+                            onPlay()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.up_next)) },
+                        onClick = {
+                            menuExpanded = false
+                            onEnqueue()
+                        },
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))

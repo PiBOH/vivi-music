@@ -149,6 +149,7 @@
     <string name="mood_and_genres">Moods &amp; genres</string>
     <string name="new_release_albums">New release albums</string>
     <string name="browse">Browse</string>
+    <string name="open">Open</string>
     <string name="empty_charts">No charts available</string>
     <string name="empty_browse">No results</string>
     <string name="empty_mood_genres">No moods or genres available</string>

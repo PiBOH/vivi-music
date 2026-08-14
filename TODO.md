@@ -42,6 +42,8 @@ Status legend: `[x]` = done, `[ ]` = pending.
 - [x] Account library (liked playlists, albums, artists) with filter chips.
 - [x] Account library layout aligned with ViVi Music's adaptive grid and
   remote playlist navigation.
+- [x] Account card transitions and desktop menus for opening, playing and
+  queuing remote playlists, albums and artists.
 - [ ] Real Listen Together (currently a placeholder).
 
 ## Phase 4 — Player screens + playback controls
