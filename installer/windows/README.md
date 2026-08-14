@@ -5,6 +5,11 @@ The Windows release contains a branded Inno Setup executable named
 The jpackage MSI and portable executable remain available as compatibility
 artifacts.
 
+The setup installs into the system Program Files folder
+(`C:\Program Files\ViviMusicDE`, or the localized equivalent such as
+`C:\Programmi\ViviMusicDE` on Italian Windows). Because it writes to Program
+Files, the installer requests administrator privileges.
+
 ## Installer options
 
 The setup wizard uses the Axolotl logo and lets the user select:

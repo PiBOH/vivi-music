@@ -37,7 +37,7 @@ AppPublisher={#AppPublisher}
 AppPublisherURL={#AppUrl}
 AppSupportURL={#AppUrl}
 AppUpdatesURL=https://github.com/PiBOH/vivi-music-de/releases
-DefaultDirName={localappdata}\Programs\ViviMusicDE
+DefaultDirName={autopf}\ViviMusicDE
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=no
 OutputDir={#OutputDir}
@@ -50,7 +50,7 @@ WizardImageStretch=no
 ; Keep the 200+ MB jpackage image quick to compile on GitHub runners.
 Compression=lzma
 SolidCompression=no
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=yes
