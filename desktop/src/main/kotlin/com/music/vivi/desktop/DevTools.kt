@@ -42,6 +42,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.sun.jna.Function
+import com.sun.jna.Memory
+import com.sun.jna.Native
+import com.sun.jna.Pointer
 import java.awt.GraphicsEnvironment
 import java.io.File
 import java.lang.management.ManagementFactory
@@ -127,6 +131,7 @@ data class SystemStats(
     val heapMaxBytes: Long,
     val sysRamUsedBytes: Long,    // -1 when unknown
     val sysRamTotalBytes: Long,   // -1 when unknown
+    val processRamBytes: Long,    // real program RSS/working set, -1 when unknown
     val threadCount: Int,
     val netDownBps: Long,         // -1 when unknown
     val netUpBps: Long,           // -1 when unknown
@@ -152,6 +157,7 @@ object SystemMonitor {
     private val threadBean = ManagementFactory.getThreadMXBean()
     private val runtimeBean = ManagementFactory.getRuntimeMXBean()
     private val runtime = Runtime.getRuntime()
+    private val memoryBean = ManagementFactory.getMemoryMXBean()
 
     // Declared before `_stats` on purpose: `emptyStats()` reads this during the
     // object's initialization, and reading a Kotlin `val` before its initializer
@@ -191,6 +197,7 @@ object SystemMonitor {
         cpuProcess = -1.0, cpuSystem = -1.0,
         heapUsedBytes = 0, heapMaxBytes = 0,
         sysRamUsedBytes = -1, sysRamTotalBytes = -1,
+        processRamBytes = -1,
         threadCount = 0,
         netDownBps = -1, netUpBps = -1, netDownTotalBytes = -1, netUpTotalBytes = -1,
         availableProcessors = runtime.availableProcessors(),
@@ -208,6 +215,7 @@ object SystemMonitor {
         val ramTotal = osBean?.totalMemorySize ?: -1
         val ramFree = osBean?.freeMemorySize ?: -1
         val ramUsed = if (ramTotal >= 0 && ramFree >= 0) ramTotal - ramFree else -1
+        val processRam = readProcessRam()
         val threads = threadBean.threadCount
 
         val (rx, tx) = readNetworkTotals()
@@ -232,6 +240,7 @@ object SystemMonitor {
             heapMaxBytes = heapMax,
             sysRamUsedBytes = ramUsed,
             sysRamTotalBytes = ramTotal,
+            processRamBytes = processRam,
             threadCount = threads,
             netDownBps = downBps,
             netUpBps = upBps,
@@ -244,6 +253,44 @@ object SystemMonitor {
             gpuDevice = gpuDevice,
         )
     }
+
+    /** Real process memory (RSS / working set) where the OS provides it, else the
+     *  JVM's committed heap + non-heap. This is what Task Manager reports for the
+     *  process, unlike the heap-only figure previously shown. */
+    private fun readProcessRam(): Long = when (Platform.os) {
+        DesktopOs.WINDOWS -> windowsProcessRam()
+        DesktopOs.LINUX -> linuxProcessRam()
+        DesktopOs.MACOS -> committedMemory()
+    }.takeIf { it > 0 } ?: committedMemory()
+
+    /** JVM committed heap + non-heap (metaspace/code cache) — cross-platform fallback. */
+    private fun committedMemory(): Long = runCatching {
+        memoryBean.heapMemoryUsage.committed + memoryBean.nonHeapMemoryUsage.committed
+    }.getOrDefault(-1L)
+
+    private fun windowsProcessRam(): Long = runCatching {
+        // psapi!GetProcessMemoryInfo(GetCurrentProcess(), &counters, cb) → WorkingSetSize.
+        val getProcessMemoryInfo = Function.getFunction("psapi", "GetProcessMemoryInfo", Function.ALT_CONVENTION)
+        val is64 = Native.POINTER_SIZE == 8
+        val size = if (is64) 72 else 40
+        val counters = Memory(size.toLong())
+        counters.clear()
+        counters.setInt(0, size) // cb
+        val ok = getProcessMemoryInfo.invoke(
+            Integer::class.java,
+            arrayOf(Pointer.createConstant(-1L), counters, size), // -1 = GetCurrentProcess()
+        )
+        if (ok == 0) -1L
+        else if (is64) counters.getLong(16)
+        else Integer.toUnsignedLong(counters.getInt(12))
+    }.getOrDefault(-1L)
+
+    private fun linuxProcessRam(): Long = runCatching {
+        val line = File("/proc/self/status").readLines().firstOrNull { it.startsWith("VmRSS:") }
+            ?: return@runCatching -1L
+        val kb = line.split(Regex("\\s+")).getOrNull(1)?.toLongOrNull() ?: return@runCatching -1L
+        kb * 1024
+    }.getOrDefault(-1L)
 
     private fun readNetworkTotals(): Pair<Long, Long> = runCatching {
         when (Platform.os) {
@@ -348,7 +395,7 @@ private fun formatUptime(ms: Long): String {
 }
 
 /** Compact, title-bar friendly suffix with the most important live stats. */
-internal fun SystemStats.titleBarText(): String = " · CPU ${pct(cpuProcess)} · RAM ${formatBytes(heapUsedBytes)}"
+internal fun SystemStats.titleBarText(): String = " · CPU ${pct(cpuProcess)} · RAM ${formatBytes(processRamBytes)}"
 
 @Composable
 private fun StatRow(label: String, value: String) {
@@ -385,20 +432,24 @@ fun DevToolsPanel(syncManager: DesktopSyncManager?, language: String) {
             pct(stats.cpuSystem),
         )
         StatRow(
-            "${Localization.get(language, "memory")} · ${Localization.get(language, "heap")}",
-            "${formatBytes(stats.heapUsedBytes)} / ${formatBytes(stats.heapMaxBytes)}",
-        )
-        StatRow(
-            "${Localization.get(language, "memory")} · ${Localization.get(language, "system")}",
-            if (stats.sysRamTotalBytes >= 0) {
-                "${formatBytes(stats.sysRamUsedBytes)} / ${formatBytes(stats.sysRamTotalBytes)}"
-            } else "—",
+            "${Localization.get(language, "memory")} · ${Localization.get(language, "process")}",
+            formatBytes(stats.processRamBytes),
         )
         StatRow(
             Localization.get(language, "gpu"),
             stats.gpuDevice.ifBlank { "—" },
         )
         if (!performance) {
+            StatRow(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "heap")}",
+                "${formatBytes(stats.heapUsedBytes)} / ${formatBytes(stats.heapMaxBytes)}",
+            )
+            StatRow(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "system")}",
+                if (stats.sysRamTotalBytes >= 0) {
+                    "${formatBytes(stats.sysRamUsedBytes)} / ${formatBytes(stats.sysRamTotalBytes)}"
+                } else "—",
+            )
             StatRow(
                 "${Localization.get(language, "network")} ↓",
                 formatSpeed(stats.netDownBps),
@@ -472,7 +523,7 @@ fun BoxScope.DevToolsOverlay(syncManager: DesktopSyncManager?, language: String,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "CPU ${pct(stats.cpuProcess)} · RAM ${formatBytes(stats.heapUsedBytes)}",
+                    "CPU ${pct(stats.cpuProcess)} · RAM ${formatBytes(stats.processRamBytes)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

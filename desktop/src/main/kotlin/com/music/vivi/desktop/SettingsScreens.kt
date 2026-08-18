@@ -1356,28 +1356,30 @@ fun DeveloperSection(language: String, syncManager: DesktopSyncManager) {
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            if (mode == DevToolsMode.OVERLAY) {
+                Spacer(Modifier.height(24.dp))
 
-            // Overlay behaviour
-            Card(
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            ) {
-                Column {
-                    DevSwitchRow(
-                        title = Localization.get(language, "dev_tools_movable"),
-                        desc = Localization.get(language, "dev_tools_movable_desc"),
-                        checked = movable,
-                        onCheckedChange = { DeveloperOptions.setOverlayMovable(it) },
-                    )
-                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                    DevSwitchRow(
-                        title = Localization.get(language, "dev_tools_title_bar"),
-                        desc = Localization.get(language, "dev_tools_title_bar_desc"),
-                        checked = titleBar,
-                        onCheckedChange = { DeveloperOptions.setShowInTitleBar(it) },
-                    )
+                // Overlay behaviour (only relevant in overlay mode)
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column {
+                        DevSwitchRow(
+                            title = Localization.get(language, "dev_tools_movable"),
+                            desc = Localization.get(language, "dev_tools_movable_desc"),
+                            checked = movable,
+                            onCheckedChange = { DeveloperOptions.setOverlayMovable(it) },
+                        )
+                        HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                        DevSwitchRow(
+                            title = Localization.get(language, "dev_tools_title_bar"),
+                            desc = Localization.get(language, "dev_tools_title_bar_desc"),
+                            checked = titleBar,
+                            onCheckedChange = { DeveloperOptions.setShowInTitleBar(it) },
+                        )
+                    }
                 }
             }
         } else {
@@ -1415,8 +1417,8 @@ private fun DevLiveMonitor(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DevStatTile(
-                "${Localization.get(language, "memory")} · ${Localization.get(language, "heap")}",
-                "${devFormatBytes(stats.heapUsedBytes)} / ${devFormatBytes(stats.heapMaxBytes)}",
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "process")}",
+                devFormatBytes(stats.processRamBytes),
                 Modifier.weight(1f),
             )
             DevStatTile(
@@ -1428,6 +1430,12 @@ private fun DevLiveMonitor(
             )
         }
         DevStatRow(Localization.get(language, "gpu"), stats.gpuDevice.ifBlank { "—" })
+        if (!performance) {
+            DevStatRow(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "heap")}",
+                "${devFormatBytes(stats.heapUsedBytes)} / ${devFormatBytes(stats.heapMaxBytes)}",
+            )
+        }
         if (!performance) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 DevStatTile(

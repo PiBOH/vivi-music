@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.108] - 2026-08-18
+
+### Fixed
+
+- [DE] Developer options RAM now shows the program's real usage instead of the
+  JVM heap-only figure. A new "Memory · Process" row reports the process RSS /
+  working set (via psapi on Windows, `/proc/self/status` on Linux, committed
+  heap+non-heap elsewhere); heap and system RAM remain as detail rows in the
+  Full profile. Title-bar and overlay pill RAM also use the real figure.
+- [DE] Developer options overlay switches (movable / show in title bar) now
+  appear only when "Overlay" display mode is selected.
+
 ## [6.4.29_DE-1.33.107] - 2026-08-18
 
 ### Added
