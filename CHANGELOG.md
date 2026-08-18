@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.97] - 2026-08-18
+
+### Added
+
+- [DE] "Show intro on startup" toggle also available in Settings → Appearance
+  (same setting as System → Intro).
+
 ## [6.4.28_DE-1.33.96] - 2026-08-18
 
 ### Fixed

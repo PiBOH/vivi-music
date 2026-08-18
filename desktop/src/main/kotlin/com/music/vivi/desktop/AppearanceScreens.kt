@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +54,8 @@ fun AppearanceSection(
     selectedFont: AppFont,
     densityScale: Float,
     screenTransition: String,
+    showIntroSplash: Boolean,
+    onShowIntroSplashChange: (Boolean) -> Unit,
     onOpenTheme: () -> Unit,
     onOpenFont: () -> Unit,
     onOpenCanvas: () -> Unit,
@@ -110,6 +113,15 @@ fun AppearanceSection(
             else -> "transition_fade"
         }),
         onClick = onOpenTransitions,
+    )
+
+    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+    SwitchRow(
+        title = Localization.get(language, "show_intro_on_startup"),
+        desc = Localization.get(language, "intro_desc"),
+        checked = showIntroSplash,
+        onCheckedChange = onShowIntroSplashChange,
     )
 }
 

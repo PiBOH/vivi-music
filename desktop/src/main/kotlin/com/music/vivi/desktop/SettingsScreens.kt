@@ -287,6 +287,8 @@ fun SettingsAppearanceScreen(
     selectedFont: AppFont,
     densityScale: Float,
     screenTransition: String,
+    showIntroSplash: Boolean,
+    onShowIntroSplashChange: (Boolean) -> Unit,
     onOpenTheme: () -> Unit,
     onOpenFont: () -> Unit,
     onOpenCanvas: () -> Unit,
@@ -297,6 +299,7 @@ fun SettingsAppearanceScreen(
     SettingsSubScreen(language, onBack) {
         AppearanceSection(
             language, selectedFont, densityScale, screenTransition,
+            showIntroSplash, onShowIntroSplashChange,
             onOpenTheme, onOpenFont, onOpenCanvas, onOpenDensity, onOpenTransitions, onOpenPlayerDesign,
         )
     }
