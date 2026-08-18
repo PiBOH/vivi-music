@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.104] - 2026-08-18
+
+### Fixed
+
+- [DE] A failed track auto-skipped through the whole queue. `AudioPlayer` fired
+  `onComplete` (in a `finally`) even after an error, so `PlayerController`
+  treated every failure as "track ended" and advanced to the next one. `onComplete`
+  now fires only on a normal finish, so a 403/resolution failure retries and then
+  stops instead of looping. This also stopped the constant queue/resolving churn
+  that was flooding the sync channel and suppressing play/pause sync.
+
 ## [6.4.29_DE-1.33.103] - 2026-08-18
 
 ### Fixed

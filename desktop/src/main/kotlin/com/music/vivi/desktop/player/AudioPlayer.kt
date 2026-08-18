@@ -148,15 +148,21 @@ class AudioPlayer {
         if (knownDurationMs > 0) onDuration?.invoke(knownDurationMs)
 
         thread = Thread {
+            var failed = false
             try {
                 val file = ensureDownloaded(streams, cacheKey)
                 decodeAndPlay(file, gen, startAtMs, knownDurationMs)
             } catch (e: Exception) {
+                failed = true
                 if (gen == generation) {
                     onError?.invoke(e.message ?: e::class.simpleName ?: "Unknown playback error")
                 }
             } finally {
-                if (gen == generation) onComplete?.invoke()
+                // `onComplete` means the track *finished normally*: it must NOT
+                // fire after an error, otherwise a failed track (e.g. a 403) is
+                // treated as "ended" and auto-advances to the next one, looping
+                // through the whole queue.
+                if (gen == generation && !failed) onComplete?.invoke()
             }
         }.apply {
             isDaemon = true
