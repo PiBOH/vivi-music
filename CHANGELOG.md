@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.106] - 2026-08-18
+
+### Fixed
+
+- [DE] Songs failing to start or "ending" after a few seconds when the stream
+  cache is set to "Forever". Two causes: (1) a retry re-used the same expired
+  googlevideo URL because the resolver cached it forever — a failed stream now
+  evicts its cache entry so the retry re-resolves a fresh URL; (2) `isValidMp4`
+  only checked the `ftyp` header, so a truncated cache file was reused and the
+  track "finished" early (auto-skip or auto-pause) — it now also requires at
+  least one `moof` box and re-downloads on any parse error.
+
 ## [6.4.29_DE-1.33.105] - 2026-08-18
 
 ### Fixed

@@ -98,6 +98,15 @@ object StreamResolver {
     }
 
     /**
+     * Evicts a cached resolution so the next resolve fetches a fresh URL.
+     * googlevideo URLs are single-use / expire, so a cached "forever" URL must
+     * not be returned again after it has failed with a 403.
+     */
+    fun invalidate(videoId: String) {
+        cache.remove(videoId)
+    }
+
+    /**
      * Returns a direct HTTP URL to an AAC audio stream, or null if it cannot be
      * resolved. Callers should invoke this from a background coroutine: the
      * NewPipe path is blocking and the player path performs network I/O.

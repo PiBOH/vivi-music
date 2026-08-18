@@ -421,6 +421,9 @@ class PlayerController {
                 startAtMs = startAtMs,
                 startPaused = startPaused,
                 onError = { msg ->
+                    // Evict the cached resolution: a stale, single-use
+                    // googlevideo URL must not be returned again by the retry.
+                    StreamResolver.invalidate(track.videoId)
                     if (attempt + 1 < MAX_PLAY_ATTEMPTS) {
                         // Download/decode failure (e.g. stale googlevideo 403):
                         // rotate the guest identity and re-resolve, then retry.

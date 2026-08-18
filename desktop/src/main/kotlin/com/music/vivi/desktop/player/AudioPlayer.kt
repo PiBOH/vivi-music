@@ -224,18 +224,20 @@ class AudioPlayer {
         }
     }
 
-    /** Cheap integrity check: a valid (fragmented) MP4 starts with an `ftyp` box. */
+    /**
+     * Integrity check: a valid fragmented MP4 starts with an `ftyp` box AND
+     * contains at least one `moof` (where the audio samples live). Checking only
+     * `ftyp` let a truncated/interrupted cache file pass and then "end" after a
+     * few seconds, auto-skipping to the next track. A parse error here means the
+     * file is corrupt and must be re-downloaded.
+     */
     private fun isValidMp4(file: File): Boolean = runCatching {
-        if (file.length() < 8) return@runCatching false
-        file.inputStream().use { input ->
-            val head = ByteArray(8)
-            var read = 0
-            while (read < 8) {
-                val n = input.read(head, read, 8 - read)
-                if (n < 0) break
-                read += n
-            }
-            read == 8 && String(head, 4, 4, Charsets.ISO_8859_1) == "ftyp"
+        if (file.length() < 16) return@runCatching false
+        NIOUtils.readableChannel(file).use { channel ->
+            val atoms = MP4Util.getRootAtoms(channel)
+            atoms.isNotEmpty() &&
+                atoms.first().header.fourcc == "ftyp" &&
+                atoms.any { it.header.fourcc == "moof" }
         }
     }.getOrDefault(false)
 
