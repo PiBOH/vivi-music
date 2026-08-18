@@ -19,6 +19,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,8 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.music.innertube.YouTube
+import com.music.innertube.models.AlbumItem
+import com.music.innertube.models.BrowseEndpoint
 import com.music.innertube.models.SongItem
 import com.music.innertube.pages.AlbumPage
+import com.music.innertube.pages.ArtistItemsPage
 import com.music.innertube.pages.ArtistPage
 import com.music.innertube.pages.HistoryPage
 import com.music.innertube.pages.PlaylistPage
@@ -125,12 +130,28 @@ fun ArtistScreen(
 ) {
     var page by remember { mutableStateOf<ArtistPage?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var tab by remember { mutableStateOf(0) } // 0 = Songs, 1 = Albums, 2 = Items
+    var itemsPage by remember { mutableStateOf<ArtistItemsPage?>(null) }
+    var itemsEndpoint by remember { mutableStateOf<BrowseEndpoint?>(null) }
 
     LaunchedEffect(browseId) {
         YouTube.artist(browseId).fold(
-            onSuccess = { page = it },
+            onSuccess = { p ->
+                page = p
+                // Prefer the first section with a "See all" endpoint for the Items tab.
+                itemsEndpoint = p.sections.firstNotNullOfOrNull { it.moreEndpoint }
+            },
             onFailure = { error = it.message },
         )
+    }
+
+    LaunchedEffect(tab, itemsEndpoint) {
+        if (tab == 2 && itemsEndpoint != null) {
+            YouTube.artistItems(itemsEndpoint!!).fold(
+                onSuccess = { itemsPage = it },
+                onFailure = { itemsPage = null },
+            )
+        }
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -161,24 +182,72 @@ fun ArtistScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-                LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                    page!!.sections.forEach { section ->
-                        item(key = "header-${section.title}") {
-                            Text(section.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
-                        }
-                        val songs = section.items.filterIsInstance<SongItem>()
-                        val others = section.items.filterNot { it is SongItem }
-                        if (songs.isNotEmpty()) {
-                            items(songs, key = { "song-${it.id}" }) { song ->
+                Spacer(Modifier.height(12.dp))
+
+                val tabs = listOf(Localization.get(language, "songs"), Localization.get(language, "albums"), Localization.get(language, "items"))
+                TabRow(selectedTabIndex = tab) {
+                    tabs.forEachIndexed { i, title ->
+                        Tab(selected = tab == i, onClick = { tab = i }, text = { Text(title) })
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+
+                if (tab == 2) {
+                    val items = itemsPage?.items.orEmpty()
+                    if (items.isEmpty()) {
+                        LoadingBox(language)
+                    } else if (items.all { it is SongItem }) {
+                        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                            items(items.filterIsInstance<SongItem>(), key = { it.id }) { song ->
                                 SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
                             }
                         }
-                        if (others.isNotEmpty()) {
-                            item(key = "carousel-${section.title}") {
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    items(others, key = { it.id }) { item ->
-                                        YtItemCard(item = item, onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) })
+                    } else {
+                        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                            items(items, key = { it.id }) { item ->
+                                YtItemCard(item = item, width = null, onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) })
+                            }
+                        }
+                    }
+                } else {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                        page!!.sections.forEach { section ->
+                            val songs = section.items.filterIsInstance<SongItem>()
+                            val albums = section.items.filterIsInstance<AlbumItem>()
+                            val others = section.items.filterNot { it is SongItem || it is AlbumItem }
+                            val visible = when (tab) {
+                                0 -> songs
+                                1 -> albums
+                                else -> emptyList()
+                            }
+                            val mixed = tab == 1 && (albums.isNotEmpty() || others.isNotEmpty())
+
+                            if (visible.isNotEmpty()) {
+                                item(key = "header-${tab}-${section.title}") {
+                                    Text(section.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                                }
+                                if (tab == 0) {
+                                    items(visible.filterIsInstance<SongItem>().distinctBy { it.id }, key = { "song-${it.id}" }) { song ->
+                                        SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                                    }
+                                } else {
+                                    item(key = "grid-${tab}-${section.title}") {
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            items((albums + others).distinctBy { it.id }, key = { it.id }) { item ->
+                                                YtItemCard(item = item, onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) })
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (mixed && albums.isNotEmpty()) {
+                                item(key = "header-${tab}-${section.title}") {
+                                    Text(section.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                                }
+                                item(key = "grid-${tab}-${section.title}") {
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        items((albums + others).distinctBy { it.id }, key = { it.id }) { item ->
+                                            YtItemCard(item = item, onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) })
+                                        }
                                     }
                                 }
                             }

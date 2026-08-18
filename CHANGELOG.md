@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.89] - 2026-08-18
+
+### Added
+
+- [DE] Artist page sub-tabs: Songs / Albums / Items (TabRow). Items loads
+  the section's "see all" endpoint via `YouTube.artistItems`.
+- [DE] Song recognition (Shazam): records the microphone, resamples to
+  16 kHz mono, generates a Shazam fingerprint (pure-JVM port) and queries
+  `shazamkit`. Recognitions are saved to a history list in Settings.
+- [DE] Keyboard navigation: Ctrl+Z / Ctrl+Y undo/redo the screen history,
+  and Backspace or Alt+Left go back.
+
 ## [6.4.28_DE-1.33.88] - 2026-08-18
 
 ### Added

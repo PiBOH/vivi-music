@@ -115,9 +115,10 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] New Release albums screen (DE 1.33.88).
 - [x] Charts screen (DE 1.33.88).
 - [x] Wrapped screen: Settings → VIVI Wrapped sub-screen with the session stats card + "Show on Home" toggle (default off) (DE 1.33.80).
-- [ ] Song recognition (Shazam) + recognition history.
+- [x] Song recognition (Shazam) + recognition history (DE 1.33.89: mic capture → 16 kHz resample → fingerprint → `shazamkit`, with persisted history).
 - [x] Commit screen (`settings/commits`) — Settings → Updates → Commits lists the selected source branch's recent commits (DE 1.33.87).
-- [ ] Artist sub-tabs: Songs / Albums / Items (mobile `artist/{id}/songs|albums|items`); the DE has a single Artist page.
+- [x] Artist sub-tabs: Songs / Albums / Items (DE 1.33.89: TabRow on the artist page; Items uses `YouTube.artistItems`).
+- [x] Keyboard shortcuts: Ctrl+Z / Ctrl+Y undo/redo navigation and Backspace/Alt+Left back (DE 1.33.89).
 - [x] Auto-playlist detail screens (Liked / Top / etc.) — `AutoPlaylistScreen` loads a library browse-id as its own pushed screen (DE 1.33.88).
 - [x] Dedicated Mood & genres screen (DE 1.33.88).
 

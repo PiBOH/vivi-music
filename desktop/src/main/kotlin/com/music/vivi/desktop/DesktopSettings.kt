@@ -104,6 +104,8 @@ data class DesktopSyncState(
     val syncViviVolume: Boolean = true,
     /** Last username used for Listen Together. */
     val listenTogetherUsername: String = "",
+    /** Song recognition (Shazam) history, newest first. */
+    val recognitionHistory: List<RecognitionHistoryItem> = emptyList(),
 )
 
 object DesktopSettings {

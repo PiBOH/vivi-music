@@ -61,6 +61,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
@@ -122,6 +124,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -461,9 +471,49 @@ fun App(
 
     val current = backStack.last()
 
-    val navigate: (Screen) -> Unit = { backStack = backStack + it }
+    // Undo/redo stacks for keyboard navigation history (Ctrl+Z / Ctrl+Y).
+    var undoStack by remember { mutableStateOf(listOf<Screen>()) }
+    var redoStack by remember { mutableStateOf(listOf<Screen>()) }
+    val navigate: (Screen) -> Unit = {
+        redoStack = emptyList()
+        undoStack = undoStack + current
+        backStack = backStack + it
+    }
     val openRoot: (Screen) -> Unit = { backStack = listOf(it) }
-    val goBack: () -> Unit = { if (backStack.size > 1) backStack = backStack.dropLast(1) }
+    val goBack: () -> Unit = {
+        if (backStack.size > 1) {
+            undoStack = undoStack + backStack.last()
+            backStack = backStack.dropLast(1)
+        }
+    }
+    val undo: () -> Unit = {
+        if (undoStack.isNotEmpty()) {
+            redoStack = redoStack + backStack.last()
+            backStack = backStack + undoStack.last()
+            undoStack = undoStack.dropLast(1)
+        }
+    }
+    val redo: () -> Unit = {
+        if (redoStack.isNotEmpty()) {
+            undoStack = undoStack + backStack.last()
+            backStack = backStack + redoStack.last()
+            redoStack = redoStack.dropLast(1)
+        }
+    }
+
+    // Global keyboard navigation: Backspace/Alt+Left goes back, Ctrl+Z/Ctrl+Y
+    // undo/redo the navigation history.
+    val onGlobalKey: (KeyEvent) -> Boolean = { event ->
+        when {
+            event.type != KeyEventType.KeyDown -> false
+            event.key == Key.Backspace || (event.isAltPressed && event.key == Key.DirectionLeft) -> {
+                goBack(); true
+            }
+            event.isCtrlPressed && event.key == Key.Z -> { undo(); true }
+            event.isCtrlPressed && event.key == Key.Y -> { redo(); true }
+            else -> false
+        }
+    }
 
     // Toast / command-line "open section" requests: navigate and bring the
     // window to the foreground (handled once at startup, then polled for the
@@ -490,6 +540,7 @@ fun App(
 
     val playSong: (SongItem) -> Unit = { song -> player.play(songToNowPlaying(song)) }
     val addToQueue: (SongItem) -> Unit = { song -> player.addToQueue(songToNowPlaying(song)) }
+    var recognitionHistory by remember { mutableStateOf(DesktopSettings.load().recognitionHistory) }
     var addToPlaylistSong by remember { mutableStateOf<SyncedSong?>(null) }
     val addToPlaylist: (SongItem) -> Unit = { song -> addToPlaylistSong = song.toSyncedSong() }
     // Same, but for the Player / Queue (which carry NowPlaying, not SongItem).
@@ -899,7 +950,7 @@ fun App(
     CompositionLocalProvider(
         LocalDensity provides Density(baseDensity.density * densityScale, baseDensity.fontScale)
     ) {
-    Row(Modifier.fillMaxSize()) {
+    Row(Modifier.fillMaxSize().onPreviewKeyEvent(onGlobalKey)) {
         Sidebar(
             hideHistory = pauseListenHistory,
             language = language,
@@ -1020,6 +1071,15 @@ fun App(
                             topSongCount = sessionTopCount,
                         ),
                         topSongs = sessionTopSongs,
+                    )
+                    is Screen.SongRecognition -> SongRecognitionScreen(
+                        language = language,
+                        onBack = goBack,
+                        history = recognitionHistory,
+                        onHistoryChange = { h ->
+                            recognitionHistory = h
+                            DesktopSettings.update { it.copy(recognitionHistory = h) }
+                        },
                     )
                     is Screen.Settings -> SettingsScreen(
                         language = language,
@@ -1628,6 +1688,7 @@ fun Sidebar(
         SidebarEntry(Screen.Charts, "charts", Icons.Outlined.Leaderboard, Icons.Filled.Leaderboard),
         SidebarEntry(Screen.Stats, "stats", Icons.Outlined.BarChart, Icons.Filled.BarChart),
         SidebarEntry(Screen.ListenTogether, "listen_together", Icons.Outlined.Group, Icons.Filled.Group),
+        SidebarEntry(Screen.SongRecognition, "song_recognition", Icons.Outlined.MusicNote, Icons.Filled.MusicNote),
         SidebarEntry(Screen.History, "history", Icons.Outlined.History, Icons.Filled.History),
         SidebarEntry(Screen.Settings, "settings", Icons.Outlined.Settings, Icons.Filled.Settings),
     )
