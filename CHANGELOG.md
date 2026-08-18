@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.99] - 2026-08-18
+
+### Added
+
+- [DE] "Preview intro" button in the Intro screen: plays the startup intro
+  fullscreen (click or end dismisses it) without restarting.
+
+### Changed
+
+- [DE] In Settings → Appearance the intro is now a dedicated entry ("Intro") that
+  opens the Intro sub-screen, instead of a raw toggle in the Appearance list.
+
 ## [6.4.28_DE-1.33.98] - 2026-08-18
 
 ### Fixed

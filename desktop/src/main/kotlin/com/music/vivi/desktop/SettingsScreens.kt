@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.music.innertube.models.YouTubeLocale
 import java.io.File
 import java.time.LocalDateTime
@@ -287,20 +289,18 @@ fun SettingsAppearanceScreen(
     selectedFont: AppFont,
     densityScale: Float,
     screenTransition: String,
-    showIntroSplash: Boolean,
-    onShowIntroSplashChange: (Boolean) -> Unit,
     onOpenTheme: () -> Unit,
     onOpenFont: () -> Unit,
     onOpenCanvas: () -> Unit,
     onOpenDensity: () -> Unit,
     onOpenTransitions: () -> Unit,
+    onOpenIntro: () -> Unit,
     onOpenPlayerDesign: () -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         AppearanceSection(
             language, selectedFont, densityScale, screenTransition,
-            showIntroSplash, onShowIntroSplashChange,
-            onOpenTheme, onOpenFont, onOpenCanvas, onOpenDensity, onOpenTransitions, onOpenPlayerDesign,
+            onOpenTheme, onOpenFont, onOpenCanvas, onOpenDensity, onOpenTransitions, onOpenIntro, onOpenPlayerDesign,
         )
     }
 }
@@ -560,6 +560,18 @@ fun SettingsIntroScreen(
     showIntroSplash: Boolean,
     onShowIntroSplashChange: (Boolean) -> Unit,
 ) {
+    var previewing by remember { mutableStateOf(false) }
+
+    // Fullscreen preview of the actual startup intro (click or end dismisses it).
+    if (previewing) {
+        Dialog(
+            onDismissRequest = { previewing = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            IntroSplash(language = language, onFinished = { previewing = false })
+        }
+    }
+
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "intro"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
         Row(
@@ -576,6 +588,15 @@ fun SettingsIntroScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = { previewing = true },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(Localization.get(language, "preview_intro"))
         }
     }
 }

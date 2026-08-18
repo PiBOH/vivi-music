@@ -1109,16 +1109,12 @@ fun App(
                         selectedFont = font,
                         densityScale = densityScale,
                         screenTransition = screenTransition,
-                        showIntroSplash = showIntroSplash,
-                        onShowIntroSplashChange = { v ->
-                            showIntroSplash = v
-                            DesktopSettings.update { it.copy(showIntroSplash = v) }
-                        },
                         onOpenTheme = { navigate(Screen.SettingsTheme) },
                         onOpenFont = { navigate(Screen.SettingsFont) },
                         onOpenCanvas = { navigate(Screen.SettingsCanvas) },
                         onOpenDensity = { navigate(Screen.SettingsDensity) },
                         onOpenTransitions = { navigate(Screen.SettingsTransitions) },
+                        onOpenIntro = { navigate(Screen.SettingsIntro) },
                         onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
                     )
                     is Screen.SettingsTransitions -> SettingsTransitionsScreen(

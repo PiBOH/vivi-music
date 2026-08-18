@@ -31,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,13 +53,12 @@ fun AppearanceSection(
     selectedFont: AppFont,
     densityScale: Float,
     screenTransition: String,
-    showIntroSplash: Boolean,
-    onShowIntroSplashChange: (Boolean) -> Unit,
     onOpenTheme: () -> Unit,
     onOpenFont: () -> Unit,
     onOpenCanvas: () -> Unit,
     onOpenDensity: () -> Unit,
     onOpenTransitions: () -> Unit,
+    onOpenIntro: () -> Unit,
     onOpenPlayerDesign: () -> Unit = {},
 ) {
     Text(Localization.get(language, "appearance"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -114,14 +112,12 @@ fun AppearanceSection(
         }),
         onClick = onOpenTransitions,
     )
-
-    HorizontalDivider(Modifier.padding(vertical = 8.dp))
-
-    SwitchRow(
-        title = Localization.get(language, "show_intro_on_startup"),
-        desc = Localization.get(language, "intro_desc"),
-        checked = showIntroSplash,
-        onCheckedChange = onShowIntroSplashChange,
+    AppearanceEntryRow(
+        language = language,
+        icon = { Icon(Icons.Filled.Movie, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        title = Localization.get(language, "intro"),
+        subtitle = Localization.get(language, "show_intro_on_startup"),
+        onClick = onOpenIntro,
     )
 }
 
