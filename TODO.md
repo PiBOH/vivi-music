@@ -120,6 +120,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Commit screen (`settings/commits`) — Settings → Updates → Commits lists the selected source branch's recent commits (DE 1.33.87).
 - [x] Artist sub-tabs: Songs / Albums / Items (DE 1.33.89: TabRow on the artist page; Items uses `YouTube.artistItems`).
 - [x] Keyboard shortcuts: Ctrl+Z / Ctrl+Y undo/redo navigation and Backspace/Alt+Left back (DE 1.33.89).
+- [x] Back navigation fix: no duplicate stack entries (navigating to the screen already on top is ignored) and sidebar roots keep Home at the base so back from Settings reaches Home instead of bouncing/sticking (DE 1.33.93).
 - [x] Auto-playlist detail screens (Liked / Top / etc.) — `AutoPlaylistScreen` loads a library browse-id as its own pushed screen (DE 1.33.88).
 - [x] Dedicated Mood & genres screen (DE 1.33.88).
 - [x] Translations for the whole Phase 10 port filled across all 47 languages (Listen Together, recognition, Stats/Charts/New releases/Mood & genres, comments, username, Undo/Redo/Items) (DE 1.33.90).

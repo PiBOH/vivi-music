@@ -474,12 +474,19 @@ fun App(
     // Undo/redo stacks for keyboard navigation history (Ctrl+Z / Ctrl+Y).
     var undoStack by remember { mutableStateOf(listOf<Screen>()) }
     var redoStack by remember { mutableStateOf(listOf<Screen>()) }
-    val navigate: (Screen) -> Unit = {
+    val navigate: (Screen) -> Unit = navigate@{ target ->
+        // Never push a duplicate of the screen already on top (double-clicks
+        // or a stale click handler must not create [X, X] entries).
+        if (backStack.last() == target) return@navigate
         redoStack = emptyList()
-        undoStack = undoStack + current
-        backStack = backStack + it
+        undoStack = undoStack + backStack.last()
+        backStack = backStack + target
     }
-    val openRoot: (Screen) -> Unit = { backStack = listOf(it) }
+    val openRoot: (Screen) -> Unit = { screen ->
+        // Keep Home at the base so "back" from a root (e.g. Settings) returns
+        // to Home instead of getting stuck with nothing to pop.
+        backStack = if (screen == Screen.Home) listOf(Screen.Home) else listOf(Screen.Home, screen)
+    }
     val goBack: () -> Unit = {
         if (backStack.size > 1) {
             undoStack = undoStack + backStack.last()

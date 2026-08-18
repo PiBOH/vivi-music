@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.93] - 2026-08-18
+
+### Fixed
+
+- [DE] Back navigation no longer bounces between repeated screens: navigating
+  to the screen already on top is ignored (no duplicate stack entries), and
+  sidebar roots now keep Home at the base so pressing back from Settings
+  returns to Home instead of getting stuck.
+
 ## [6.4.28_DE-1.33.92] - 2026-08-18
 
 ### Added
