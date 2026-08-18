@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.91] - 2026-08-18
+
+### Removed
+
+- [DE] Removed the standalone Stats screen (duplicate of VIVI Wrapped) and
+  replaced its sidebar entry with a direct link to VIVI Wrapped.
+
 ## [6.4.28_DE-1.33.90] - 2026-08-18
 
 ### Added

@@ -111,7 +111,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 
 ### Screens / sections missing entirely
 - [~] Listen Together (mobile main tab) + its chat and "from topbar" variants (DE 1.33.88: JSON WebSocket client + create/join room, connected users, join approvals and chat).
-- [x] Stats screen (session listening stats + top songs) (DE 1.33.88).
+- [x] Stats screen — removed as a duplicate of VIVI Wrapped; the sidebar entry now links straight to Settings → VIVI Wrapped (DE 1.33.91).
 - [x] New Release albums screen (DE 1.33.88).
 - [x] Charts screen (DE 1.33.88).
 - [x] Wrapped screen: Settings → VIVI Wrapped sub-screen with the session stats card + "Show on Home" toggle (default off) (DE 1.33.80).

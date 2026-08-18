@@ -27,7 +27,6 @@ sealed interface Screen {
     data object NewReleases : Screen
     data object Charts : Screen
     data object MoodGenres : Screen
-    data object Stats : Screen
     data object ListenTogether : Screen
     data object SongRecognition : Screen
     data class ArtistItems(val browseId: String, val params: String?) : Screen
