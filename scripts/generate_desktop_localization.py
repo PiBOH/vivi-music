@@ -619,6 +619,14 @@ ENGLISH = {
     "show_intro_on_startup": "Show intro on startup",
     "click_to_skip": "Click to skip",
     "preview_intro": "Preview intro",
+    "intro_style": "Intro content",
+    "intro_style_logo": "Logo only",
+    "intro_style_logo_name": "Logo + app name",
+    "intro_style_logo_tagline": "Logo + name + version",
+    "intro_background": "Background",
+    "intro_background_gradient": "Gradient",
+    "intro_background_glow": "Glow",
+    "intro_background_dark": "Dark",
 }
 
 # Desktop-only translations (keys with no Android source string) plus gap-fills
@@ -1166,8 +1174,9 @@ from desktop_extra_translations_16 import EXTRA_TRANSLATIONS as _EXTRA_16
 from desktop_extra_translations_17 import EXTRA_TRANSLATIONS as _EXTRA_17
 from desktop_extra_translations_18 import EXTRA_TRANSLATIONS as _EXTRA_18
 from desktop_extra_translations_19 import EXTRA_TRANSLATIONS as _EXTRA_19
+from desktop_extra_translations_20 import EXTRA_TRANSLATIONS as _EXTRA_20
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20):
     TRANSLATIONS.update(_extra)
 
 

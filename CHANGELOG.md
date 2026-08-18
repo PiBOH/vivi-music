@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.100] - 2026-08-18
+
+### Changed
+
+- [DE] Rebuilt the intro splash from scratch as a fully native Compose animation
+  (logo fade/scale-in with a breathing pulse) instead of playing a frame
+  sequence extracted from the MP4. Removed the bundled JPEG frames and the
+  extraction tool. Two new selectors in the Intro screen: **Intro content**
+  (Logo only / Logo + app name / Logo + name + version) and **Background**
+  (Gradient / Glow / Dark). The original `desktop/icons/*.mp4`/`.gif` files are
+  kept as source assets only.
+
 ## [6.4.28_DE-1.33.99] - 2026-08-18
 
 ### Added

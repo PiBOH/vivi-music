@@ -244,6 +244,8 @@ fun main(args: Array<String>) {
                 when {
                     intro -> IntroSplash(
                         language = language,
+                        style = DesktopSettings.load().introStyle,
+                        background = DesktopSettings.load().introBackground,
                         onFinished = { showIntro = false },
                     )
                     language.isBlank() -> LanguageSelectionScreen { selected ->
@@ -336,6 +338,8 @@ fun App(
     var randomizeHomeOrder by remember { mutableStateOf(DesktopSettings.load().randomizeHomeOrder) }
     var showWrappedOnHome by remember { mutableStateOf(DesktopSettings.load().showWrappedOnHome) }
     var showIntroSplash by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
+    var introStyle by remember { mutableStateOf(DesktopSettings.load().introStyle) }
+    var introBackground by remember { mutableStateOf(DesktopSettings.load().introBackground) }
     var pauseSearchHistory by remember { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
     var pauseListenHistory by remember { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
     var searchHistory by remember { mutableStateOf(DesktopSettings.load().searchHistory) }
@@ -1409,6 +1413,16 @@ fun App(
                         onShowIntroSplashChange = { v ->
                             showIntroSplash = v
                             DesktopSettings.update { it.copy(showIntroSplash = v) }
+                        },
+                        introStyle = introStyle,
+                        onIntroStyleChange = { v ->
+                            introStyle = v
+                            DesktopSettings.update { it.copy(introStyle = v) }
+                        },
+                        introBackground = introBackground,
+                        onIntroBackgroundChange = { v ->
+                            introBackground = v
+                            DesktopSettings.update { it.copy(introBackground = v) }
                         },
                     )
                     is Screen.SettingsBackup -> SettingsBackupScreen(

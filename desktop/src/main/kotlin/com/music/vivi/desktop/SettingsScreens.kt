@@ -559,6 +559,10 @@ fun SettingsIntroScreen(
     onBack: () -> Unit,
     showIntroSplash: Boolean,
     onShowIntroSplashChange: (Boolean) -> Unit,
+    introStyle: String,
+    onIntroStyleChange: (String) -> Unit,
+    introBackground: String,
+    onIntroBackgroundChange: (String) -> Unit,
 ) {
     var previewing by remember { mutableStateOf(false) }
 
@@ -568,12 +572,18 @@ fun SettingsIntroScreen(
             onDismissRequest = { previewing = false },
             properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
-            IntroSplash(language = language, onFinished = { previewing = false })
+            IntroSplash(
+                language = language,
+                style = introStyle,
+                background = introBackground,
+                onFinished = { previewing = false },
+            )
         }
     }
 
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "intro"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
+
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -590,7 +600,37 @@ fun SettingsIntroScreen(
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(20.dp))
+
+        IntroSectionLabel(Localization.get(language, "intro_style"))
+        listOf(
+            "logo" to "intro_style_logo",
+            "logo_name" to "intro_style_logo_name",
+            "logo_tagline" to "intro_style_logo_tagline",
+        ).forEach { (value, key) ->
+            IntroRadioRow(
+                title = Localization.get(language, key),
+                selected = introStyle == value,
+                onClick = { onIntroStyleChange(value) },
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        IntroSectionLabel(Localization.get(language, "intro_background"))
+        listOf(
+            "gradient" to "intro_background_gradient",
+            "glow" to "intro_background_glow",
+            "dark" to "intro_background_dark",
+        ).forEach { (value, key) ->
+            IntroRadioRow(
+                title = Localization.get(language, key),
+                selected = introBackground == value,
+                onClick = { onIntroBackgroundChange(value) },
+            )
+        }
+
+        Spacer(Modifier.height(20.dp))
 
         OutlinedButton(
             onClick = { previewing = true },
@@ -598,6 +638,38 @@ fun SettingsIntroScreen(
         ) {
             Text(Localization.get(language, "preview_intro"))
         }
+    }
+}
+
+@Composable
+private fun IntroSectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun IntroRadioRow(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 12.dp),
+        )
     }
 }
 
