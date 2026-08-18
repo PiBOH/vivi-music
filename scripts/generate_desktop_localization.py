@@ -1154,8 +1154,10 @@ from desktop_extra_translations_11 import EXTRA_TRANSLATIONS as _EXTRA_11
 from desktop_extra_translations_12 import EXTRA_TRANSLATIONS as _EXTRA_12
 from desktop_extra_translations_13 import EXTRA_TRANSLATIONS as _EXTRA_13
 from desktop_extra_translations_14 import EXTRA_TRANSLATIONS as _EXTRA_14
+from desktop_extra_translations_15 import EXTRA_TRANSLATIONS as _EXTRA_15
+from desktop_extra_translations_16 import EXTRA_TRANSLATIONS as _EXTRA_16
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16):
     TRANSLATIONS.update(_extra)
 
 

@@ -121,6 +121,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Keyboard shortcuts: Ctrl+Z / Ctrl+Y undo/redo navigation and Backspace/Alt+Left back (DE 1.33.89).
 - [x] Auto-playlist detail screens (Liked / Top / etc.) — `AutoPlaylistScreen` loads a library browse-id as its own pushed screen (DE 1.33.88).
 - [x] Dedicated Mood & genres screen (DE 1.33.88).
+- [x] Translations for the whole Phase 10 port filled across all 47 languages (Listen Together, recognition, Stats/Charts/New releases/Mood & genres, comments, username, Undo/Redo/Items) (DE 1.33.90).
 
 ### Settings sub-screens missing
 - [ ] Listen Together settings (hub entry).

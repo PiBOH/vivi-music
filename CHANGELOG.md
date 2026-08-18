@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.90] - 2026-08-18
+
+### Added
+
+- [DE] Completed translations for the Phase 10 port across all 47 languages:
+  Listen Together (title, descriptions, room code, leave room, connected
+  users), song recognition (recognize, listening, history, error), Stats /
+  Charts / New releases / Mood & genres, comments, username, and the
+  desktop-only Undo / Redo / Items labels.
+
 ## [6.4.28_DE-1.33.89] - 2026-08-18
 
 ### Added
