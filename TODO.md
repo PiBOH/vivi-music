@@ -119,7 +119,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Song recognition (Shazam) + recognition history (DE 1.33.89: mic capture → 16 kHz resample → fingerprint → `shazamkit`, with persisted history). DE 1.33.103: fixed persistent "No match found" by reading the mic's actual format and replacing the aliasing linear-interpolation resampler with a band-limited sinc + Hann anti-aliased resampler.
 - [x] Commit screen (`settings/commits`) — Settings → Updates → Commits lists the selected source branch's recent commits (DE 1.33.87).
 - [x] Artist sub-tabs: Songs / Albums / Items (DE 1.33.89: TabRow on the artist page; Items uses `YouTube.artistItems`).
-- [x] Keyboard shortcuts: Ctrl+Z / Ctrl+Y undo/redo navigation and Backspace/Alt+Left back (DE 1.33.89).
+- [x] Keyboard shortcuts: Ctrl+Z / Ctrl+Y undo/redo navigation and Backspace/Alt+Left back (DE 1.33.89). DE 1.33.105: moved the global handler from the preview (tunnel) key phase to the bubble phase so a focused text field consumes Backspace / Ctrl+Z / Ctrl+Y first — no more navigating away while editing a search field.
 - [x] Back navigation fix: no duplicate stack entries (navigating to the screen already on top is ignored) and sidebar roots keep Home at the base so back from Settings reaches Home instead of bouncing/sticking (DE 1.33.93).
 - [x] Auto-playlist detail screens (Liked / Top / etc.) — `AutoPlaylistScreen` loads a library browse-id as its own pushed screen (DE 1.33.88).
 - [x] Dedicated Mood & genres screen (DE 1.33.88).

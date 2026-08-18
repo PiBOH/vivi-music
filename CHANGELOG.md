@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.105] - 2026-08-18
+
+### Fixed
+
+- [DE] Backspace no longer navigates back while typing in a search/text field.
+  The global shortcut used the preview (tunnel) key phase, so it swallowed the
+  key before the focused text field saw it. It now uses the bubble phase, so a
+  text field consumes Backspace (and Ctrl+Z/Ctrl+Y for text undo) first; the
+  shortcut only fires when no text field handled the key.
+
 ## [6.4.29_DE-1.33.104] - 2026-08-18
 
 ### Fixed

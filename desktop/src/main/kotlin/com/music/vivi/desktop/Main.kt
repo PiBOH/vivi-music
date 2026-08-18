@@ -131,7 +131,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
@@ -972,7 +972,7 @@ fun App(
     CompositionLocalProvider(
         LocalDensity provides Density(baseDensity.density * densityScale, baseDensity.fontScale)
     ) {
-    Row(Modifier.fillMaxSize().onPreviewKeyEvent(onGlobalKey)) {
+    Row(Modifier.fillMaxSize().onKeyEvent(onGlobalKey)) {
         Sidebar(
             hideHistory = pauseListenHistory,
             language = language,
