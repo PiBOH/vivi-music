@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.95] - 2026-08-18
+
+### Changed
+
+- [DE] Full redesign of the Developer options screen: a prominent enable
+  card, a live monitor card with real-time CPU / memory / GPU / network / thread
+  / uptime tiles (respecting the Full vs Performance profile), display mode and
+  profile as radio groups, and the overlay / title-bar switches grouped in a
+  card. Functionality is unchanged (same settings, same persistence).
+
 ## [6.4.28_DE-1.33.94] - 2026-08-18
 
 ### Changed

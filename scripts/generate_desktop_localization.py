@@ -567,6 +567,7 @@ ENGLISH = {
     "dev_tools_title_bar": "Show in title bar",
     "dev_tools_title_bar_desc": "Show CPU and memory usage in the window title",
     "dev_tools_disabled": "Disabled",
+    "dev_tools_live_monitor": "Live monitor",
     "dev_unlocked_title": "Developer options enabled",
     "dev_unlocked_desc": "Configure them in Settings → Developer options",
     "dev_unlocked_open": "Open",
@@ -1162,8 +1163,9 @@ from desktop_extra_translations_14 import EXTRA_TRANSLATIONS as _EXTRA_14
 from desktop_extra_translations_15 import EXTRA_TRANSLATIONS as _EXTRA_15
 from desktop_extra_translations_16 import EXTRA_TRANSLATIONS as _EXTRA_16
 from desktop_extra_translations_17 import EXTRA_TRANSLATIONS as _EXTRA_17
+from desktop_extra_translations_18 import EXTRA_TRANSLATIONS as _EXTRA_18
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18):
     TRANSLATIONS.update(_extra)
 
 

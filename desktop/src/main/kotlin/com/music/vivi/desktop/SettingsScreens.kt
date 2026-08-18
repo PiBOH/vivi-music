@@ -1,5 +1,7 @@
 package com.music.vivi.desktop
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,12 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -25,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -39,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.music.innertube.models.YouTubeLocale
@@ -1115,118 +1122,356 @@ fun DeveloperSection(language: String, syncManager: DesktopSyncManager) {
     val profile by DeveloperOptions.profile.collectAsState()
     val movable by DeveloperOptions.overlayMovable.collectAsState()
     val titleBar by DeveloperOptions.showInTitleBar.collectAsState()
+    val stats by SystemMonitor.stats.collectAsState()
+    val peerName = syncManager.peerDeviceName.collectAsState().value.orEmpty()
+    val paired = syncManager.paired.collectAsState().value == true
 
-    Text(
-        Localization.get(language, "developer_options"),
-        style = MaterialTheme.typography.titleLarge,
-        modifier = Modifier.padding(top = 12.dp),
-    )
-    Text(
-        Localization.get(language, "developer_options_desc"),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 8.dp),
-    )
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp)) {
+        Text(
+            Localization.get(language, "developer_options"),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            Localization.get(language, "developer_options_desc"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
 
-    // Master switch, always visible (unlock is also available from About).
-    Row(
-        Modifier.fillMaxWidth().padding(top = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Switch(checked = enabled, onCheckedChange = { DeveloperOptions.setEnabled(it) })
-        Column(Modifier.clickable { DeveloperOptions.setEnabled(!enabled) }) {
-            Text(Localization.get(language, "developer_options_enabled"))
-        }
-    }
+        Spacer(Modifier.height(16.dp))
 
-    if (enabled) {
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-        // ---- Display: where the live stats are shown ----
-        DevSectionHeader(language, "dev_tools_mode")
-        Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { DeveloperOptions.setMode(DevToolsMode.OVERLAY) },
-                    enabled = mode != DevToolsMode.OVERLAY,
-                ) { Text(Localization.get(language, "dev_tools_overlay")) }
-                OutlinedButton(
-                    onClick = { DeveloperOptions.setMode(DevToolsMode.WINDOW) },
-                    enabled = mode != DevToolsMode.WINDOW,
-                ) { Text(Localization.get(language, "dev_tools_window")) }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { DeveloperOptions.setMode(DevToolsMode.TITLE_BAR) },
-                    enabled = mode != DevToolsMode.TITLE_BAR,
-                ) { Text(Localization.get(language, "dev_tools_title_bar_only")) }
-            }
-        }
-
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-        // ---- Monitoring: how much detail is shown ----
-        DevSectionHeader(language, "dev_tools_profile")
-        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = { DeveloperOptions.setProfile(DevToolsProfile.FULL) },
-                enabled = profile != DevToolsProfile.FULL,
-            ) { Text(Localization.get(language, "dev_tools_profile_full")) }
-            OutlinedButton(
-                onClick = { DeveloperOptions.setProfile(DevToolsProfile.PERFORMANCE) },
-                enabled = profile != DevToolsProfile.PERFORMANCE,
-            ) { Text(Localization.get(language, "dev_tools_profile_performance")) }
-        }
-
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
-
-        // ---- Overlay behaviour ----
-        DevSectionHeader(language, "dev_tools_movable")
-        Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        // Master switch, always visible (unlock is also available from About).
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
-            Switch(checked = movable, onCheckedChange = { DeveloperOptions.setOverlayMovable(it) })
-            Column(Modifier.clickable { DeveloperOptions.setOverlayMovable(!movable) }) {
-                Text(
-                    Localization.get(language, "dev_tools_movable_desc"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { DeveloperOptions.setEnabled(!enabled) }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        Localization.get(language, "developer_options"),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        Localization.get(language, if (enabled) "developer_options_enabled" else "dev_tools_disabled"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = enabled, onCheckedChange = { DeveloperOptions.setEnabled(it) })
             }
         }
 
-        HorizontalDivider(Modifier.padding(vertical = 16.dp))
+        if (enabled) {
+            Spacer(Modifier.height(16.dp))
 
-        // ---- Title bar ----
-        DevSectionHeader(language, "dev_tools_title_bar")
-        Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Switch(checked = titleBar, onCheckedChange = { DeveloperOptions.setShowInTitleBar(it) })
-            Column(Modifier.clickable { DeveloperOptions.setShowInTitleBar(!titleBar) }) {
-                Text(
-                    Localization.get(language, "dev_tools_title_bar_desc"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            // Live monitor
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            Localization.get(language, "dev_tools_live_monitor"),
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Box(
+                            Modifier
+                                .width(8.dp)
+                                .height(8.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    DevLiveMonitor(
+                        stats = stats,
+                        performance = profile == DevToolsProfile.PERFORMANCE,
+                        language = language,
+                        paired = paired,
+                        peerName = peerName,
+                    )
+                }
             }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Display mode
+            DevSectionHeader(language, "dev_tools_mode")
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column {
+                    DevRadioRow(
+                        title = Localization.get(language, "dev_tools_overlay"),
+                        selected = mode == DevToolsMode.OVERLAY,
+                        onClick = { DeveloperOptions.setMode(DevToolsMode.OVERLAY) },
+                    )
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                    DevRadioRow(
+                        title = Localization.get(language, "dev_tools_window"),
+                        selected = mode == DevToolsMode.WINDOW,
+                        onClick = { DeveloperOptions.setMode(DevToolsMode.WINDOW) },
+                    )
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                    DevRadioRow(
+                        title = Localization.get(language, "dev_tools_title_bar_only"),
+                        selected = mode == DevToolsMode.TITLE_BAR,
+                        onClick = { DeveloperOptions.setMode(DevToolsMode.TITLE_BAR) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Display profile
+            DevSectionHeader(language, "dev_tools_profile")
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column {
+                    DevRadioRow(
+                        title = Localization.get(language, "dev_tools_profile_full"),
+                        selected = profile == DevToolsProfile.FULL,
+                        onClick = { DeveloperOptions.setProfile(DevToolsProfile.FULL) },
+                    )
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                    DevRadioRow(
+                        title = Localization.get(language, "dev_tools_profile_performance"),
+                        selected = profile == DevToolsProfile.PERFORMANCE,
+                        onClick = { DeveloperOptions.setProfile(DevToolsProfile.PERFORMANCE) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Overlay behaviour
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Column {
+                    DevSwitchRow(
+                        title = Localization.get(language, "dev_tools_movable"),
+                        desc = Localization.get(language, "dev_tools_movable_desc"),
+                        checked = movable,
+                        onCheckedChange = { DeveloperOptions.setOverlayMovable(it) },
+                    )
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                    DevSwitchRow(
+                        title = Localization.get(language, "dev_tools_title_bar"),
+                        desc = Localization.get(language, "dev_tools_title_bar_desc"),
+                        checked = titleBar,
+                        onCheckedChange = { DeveloperOptions.setShowInTitleBar(it) },
+                    )
+                }
+            }
+        } else {
+            Text(
+                Localization.get(language, "tap_version_code_hint"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp, start = 4.dp),
+            )
         }
     }
 }
 
-/** Section heading inside the (reorganized) developer options screen. */
+/** Compact live preview of [SystemMonitor] metrics shown inside the developer options. */
+@Composable
+private fun DevLiveMonitor(
+    stats: SystemStats,
+    performance: Boolean,
+    language: String,
+    paired: Boolean,
+    peerName: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DevStatTile(
+                "${Localization.get(language, "cpu")} · ${Localization.get(language, "process")}",
+                devPct(stats.cpuProcess),
+                Modifier.weight(1f),
+            )
+            DevStatTile(
+                "${Localization.get(language, "cpu")} · ${Localization.get(language, "system")}",
+                devPct(stats.cpuSystem),
+                Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DevStatTile(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "heap")}",
+                "${devFormatBytes(stats.heapUsedBytes)} / ${devFormatBytes(stats.heapMaxBytes)}",
+                Modifier.weight(1f),
+            )
+            DevStatTile(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "system")}",
+                if (stats.sysRamTotalBytes >= 0) {
+                    "${devFormatBytes(stats.sysRamUsedBytes)} / ${devFormatBytes(stats.sysRamTotalBytes)}"
+                } else "—",
+                Modifier.weight(1f),
+            )
+        }
+        DevStatRow(Localization.get(language, "gpu"), stats.gpuDevice.ifBlank { "—" })
+        if (!performance) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DevStatTile(
+                    "${Localization.get(language, "network")} ↓",
+                    devFormatSpeed(stats.netDownBps),
+                    Modifier.weight(1f),
+                )
+                DevStatTile(
+                    "${Localization.get(language, "network")} ↑",
+                    devFormatSpeed(stats.netUpBps),
+                    Modifier.weight(1f),
+                )
+            }
+            DevStatRow(
+                Localization.get(language, "total_traffic"),
+                "↓ ${devFormatBytes(stats.netDownTotalBytes)} · ↑ ${devFormatBytes(stats.netUpTotalBytes)}",
+            )
+            DevStatRow(
+                Localization.get(language, "paired_device"),
+                if (paired && peerName.isNotBlank()) peerName else Localization.get(language, "no_paired_device"),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DevStatTile(Localization.get(language, "threads"), stats.threadCount.toString(), Modifier.weight(1f))
+                DevStatTile(Localization.get(language, "uptime"), devFormatUptime(stats.uptimeMs), Modifier.weight(1f))
+            }
+            DevStatRow(
+                Localization.get(language, "system_info"),
+                "${stats.osName} · Java ${stats.javaVersion} · ${stats.availableProcessors} cores",
+            )
+        }
+    }
+}
+
+/** Single labelled metric row (label left, value right). */
+@Composable
+private fun DevStatRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(value, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** A rounded metric tile (small label above a bold value). */
+@Composable
+private fun DevStatTile(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(12.dp),
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+/** A radio row used for exclusive choices (display mode / profile). */
+@Composable
+private fun DevRadioRow(title: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
+    }
+}
+
+/** A switch row used inside the developer options cards. */
+@Composable
+private fun DevSwitchRow(title: String, desc: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                desc,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+/** Section heading inside the (redesigned) developer options screen. */
 @Composable
 private fun DevSectionHeader(language: String, key: String) {
     Text(
         Localization.get(language, key),
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
     )
+}
+
+// Local formatting helpers (mirror the dev-tools overlay formatting).
+private fun devFormatBytes(bytes: Long): String {
+    if (bytes < 0) return "—"
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "%.1f KB".format(kb)
+    if (kb / 1024.0 < 1024) return "%.1f MB".format(kb / 1024.0)
+    return "%.2f GB".format(kb / 1024.0 / 1024.0)
+}
+
+private fun devFormatSpeed(bps: Long): String = if (bps < 0) "—" else "${devFormatBytes(bps)}/s"
+
+private fun devPct(x: Double): String = if (x < 0) "—" else "%.1f%%".format(x * 100)
+
+private fun devFormatUptime(ms: Long): String {
+    if (ms < 0) return "—"
+    val totalSec = ms / 1000
+    val d = totalSec / 86400
+    val h = (totalSec % 86400) / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (d > 0) "${d}d ${h}h" else if (h > 0) "${h}h ${m}m" else "${m}m ${s}s"
 }
 
 /** Notification preferences: where update notifications are shown. */
