@@ -105,7 +105,7 @@ The desktop should look exactly like the Android app, except:
 - [x] Developer options: Settings entry always visible but disabled by default; unlockable via 7 taps on the version code or the dedicated toggle; unlock notification pointing to Settings → Developer options. Moved into the new **Settings → System** sub-menu (System → Developer options) in DE 1.33.92, which also hosts the **Intro** splash toggle.
 - [x] Performance overlay with two profiles — Full (all metrics) and Performance (CPU + RAM + GPU) — movable by dragging (default on), plus an option to show CPU/RAM in the window title bar and a "Title bar only" display mode. Network down/up speed + total traffic are read culture-invariantly via `Get-NetAdapterStatistics` on Windows (the old `netstat -e` parser only matched the English "Bytes" label and showed "—" on localized Windows).
 - [x] Developer options screen reorganized into clear, dividers-separated sections (Display, Monitoring profile, Overlay behaviour, Title bar) for a more "developer" layout.
-- [x] Animated intro splash: the bundled `intro.gif` plays once at startup (click to skip), toggled in Settings → System → Intro (default on) (DE 1.33.92). Changelog button removed from the About screen (still under Settings → Updates).
+- [x] Animated intro splash: a pre-extracted JPEG frame sequence (from the MP4) plays once at startup (click to skip), toggled in Settings → System → Intro (default on) (DE 1.33.92, GIF→JPEG in 1.33.94). Changelog button removed from the About screen (still under Settings → Updates).
 
 ## Phase 10 — Remaining gaps to reach 100% UI parity (mobile → desktop)
 Only allowed difference: the bottom navigation bar becomes the collapsible/expandable sidebar. Everything below is still missing or divergent.

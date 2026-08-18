@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.94] - 2026-08-18
+
+### Changed
+
+- [DE] The startup intro is no longer a GIF: it now plays a sequence of
+  full-color JPEG frames pre-extracted from the MP4 (`scripts/ExtractIntroFrames.java`).
+  The GIF showed visible color banding (256-color limit); the JPEG sequence
+  keeps the original quality while staying smooth and cross-platform (no native
+  video decoder needed).
+
 ## [6.4.28_DE-1.33.93] - 2026-08-18
 
 ### Fixed

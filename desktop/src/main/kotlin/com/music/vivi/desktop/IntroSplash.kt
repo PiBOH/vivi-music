@@ -22,27 +22,44 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import javax.imageio.ImageIO
-import javax.imageio.ImageReader
-import javax.imageio.metadata.IIOMetadata
-import javax.imageio.metadata.IIOMetadataNode
-import javax.imageio.stream.ImageInputStream
+
+/** Number of frames pre-extracted from `desktop/icons/Vivi DE intro.mp4`. */
+private const val INTRO_FRAME_COUNT = 139
+
+/** Playback rate of the source video (30 fps → ~33 ms per frame). */
+private const val INTRO_FPS = 30
 
 /**
  * Full-screen animated intro played once at startup (Settings → System → Intro).
- * Clicking anywhere skips it; when the animation ends it calls [onFinished].
+ *
+ * The intro is a sequence of full-color JPEG frames extracted from the MP4 in
+ * `desktop/icons/` (see `scripts/ExtractIntroFrames.java`). JPEG is used instead
+ * of the original GIF because GIF is limited to 256 colors and showed visible
+ * banding on gradients. Clicking anywhere skips it; when the animation ends it
+ * calls [onFinished].
  */
 @Composable
 fun IntroSplash(language: String, onFinished: () -> Unit) {
     var frame by remember { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(Unit) {
-        playIntroGif { bmp ->
+        val frameDelay = (1000L / INTRO_FPS)
+        var index = 0
+        while (index < INTRO_FRAME_COUNT) {
+            val bmp = withContext(Dispatchers.IO) { loadIntroFrame(index) }
+            if (bmp == null) {
+                // Asset missing — never block startup on a broken intro.
+                onFinished()
+                return@LaunchedEffect
+            }
             frame = bmp
+            index++
+            if (index < INTRO_FRAME_COUNT) delay(frameDelay)
         }
-        // Hold the last frame briefly so the ending isn't abrupt.
-        delay(120)
         onFinished()
     }
 
@@ -73,55 +90,9 @@ fun IntroSplash(language: String, onFinished: () -> Unit) {
     }
 }
 
-/**
- * Decodes and plays the bundled `intro.gif` once, invoking [onFrame] for each
- * decoded frame. Frames are read lazily so only one bitmap is held in memory at
- * a time. Returns immediately (no frames) if the resource is missing.
- */
-private suspend fun playIntroGif(onFrame: (ImageBitmap) -> Unit) {
-    val stream = AppInfo::class.java.getResourceAsStream("/images/intro.gif") ?: return
-    stream.use { s ->
-        val input: ImageInputStream = ImageIO.createImageInputStream(s) ?: return
-        val readers = ImageIO.getImageReaders(input)
-        val reader: ImageReader = readers.asSequence()
-            .firstOrNull { it.formatName.equals("gif", ignoreCase = true) }
-            ?: return
-        reader.setInput(input)
-        try {
-            val count = reader.getNumImages(true)
-            for (i in 0 until count) {
-                val delayMs = gifFrameDelayMs(reader.getImageMetadata(i))
-                val buffered = reader.read(i) ?: continue
-                onFrame(buffered.toComposeImageBitmap())
-                delay(delayMs.toLong())
-            }
-        } catch (_: Exception) {
-            // Never let a broken/intro GIF block startup.
-        } finally {
-            runCatching { reader.dispose() }
-        }
-    }
-}
-
-/** Frame delay in milliseconds, read from the GIF Graphic Control Extension. */
-private fun gifFrameDelayMs(meta: IIOMetadata?): Int {
-    if (meta == null) return 100
-    return try {
-        val root = meta.getAsTree("javax_imageio_gif_image_1.0") as? IIOMetadataNode
-        val gce = findChild(root, "GraphicControlExtension")
-        val hundredths = gce?.getAttribute("delayTime")?.toIntOrNull() ?: 0
-        (if (hundredths <= 0) 10 else hundredths) * 10
-    } catch (_: Exception) {
-        100
-    }
-}
-
-private fun findChild(node: IIOMetadataNode?, name: String): IIOMetadataNode? {
-    if (node == null) return null
-    for (i in 0 until node.length) {
-        val child = node.item(i) as? IIOMetadataNode ?: continue
-        if (child.nodeName == name) return child
-        findChild(child, name)?.let { return it }
-    }
-    return null
+/** Loads one intro frame (`/images/intro/frame_NNN.jpg`) from the bundled resources. */
+private fun loadIntroFrame(index: Int): ImageBitmap? {
+    val name = "frame_" + index.toString().padStart(3, '0') + ".jpg"
+    val stream = AppInfo::class.java.getResourceAsStream("/images/intro/$name") ?: return null
+    return stream.use { s -> ImageIO.read(s)?.toComposeImageBitmap() }
 }
