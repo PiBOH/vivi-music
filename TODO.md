@@ -110,16 +110,16 @@ The desktop should look exactly like the Android app, except:
 Only allowed difference: the bottom navigation bar becomes the collapsible/expandable sidebar. Everything below is still missing or divergent.
 
 ### Screens / sections missing entirely
-- [ ] Listen Together (mobile main tab) + its chat and "from topbar" variants.
-- [ ] Stats screen.
-- [ ] New Release albums screen.
-- [ ] Charts screen.
+- [~] Listen Together (mobile main tab) + its chat and "from topbar" variants (DE 1.33.88: JSON WebSocket client + create/join room, connected users, join approvals and chat).
+- [x] Stats screen (session listening stats + top songs) (DE 1.33.88).
+- [x] New Release albums screen (DE 1.33.88).
+- [x] Charts screen (DE 1.33.88).
 - [x] Wrapped screen: Settings → VIVI Wrapped sub-screen with the session stats card + "Show on Home" toggle (default off) (DE 1.33.80).
 - [ ] Song recognition (Shazam) + recognition history.
 - [x] Commit screen (`settings/commits`) — Settings → Updates → Commits lists the selected source branch's recent commits (DE 1.33.87).
 - [ ] Artist sub-tabs: Songs / Albums / Items (mobile `artist/{id}/songs|albums|items`); the DE has a single Artist page.
-- [ ] Auto-playlist detail screens (Liked / Downloaded / Top / Cached); the DE only shows them as Library filters.
-- [ ] Dedicated Mood & genres screen (the DE navigates to a generic Browse screen).
+- [x] Auto-playlist detail screens (Liked / Top / etc.) — `AutoPlaylistScreen` loads a library browse-id as its own pushed screen (DE 1.33.88).
+- [x] Dedicated Mood & genres screen (DE 1.33.88).
 
 ### Settings sub-screens missing
 - [ ] Listen Together settings (hub entry).

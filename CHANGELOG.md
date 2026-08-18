@@ -11,6 +11,23 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.88] - 2026-08-18
+
+### Added
+
+- [DE] New Release albums screen (grid of the latest albums, from the
+  sidebar).
+- [DE] Charts screen (trending + top songs/videos sections, from the
+  sidebar).
+- [DE] Dedicated Mood & genres screen (full list instead of the Home preview).
+- [DE] Stats screen (session listening time, tracks played and top songs,
+  from the sidebar).
+- [DE] Auto-playlist detail screens: Liked / Top / etc. now open as their
+  own pushed screen (`AutoPlaylistScreen`) instead of being a Library filter.
+- [DE] Listen Together screen: a JSON WebSocket client (same protocol as the
+  mobile app) with create/join room, connected users, host join-request
+  approval and a chat panel.
+
 ## [6.4.28_DE-1.33.87] - 2026-08-18
 
 ### Added

@@ -53,6 +53,14 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.NewReleases
+import androidx.compose.material.icons.outlined.NewReleases
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.outlined.Leaderboard
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
@@ -319,6 +327,7 @@ fun App(
     var sessionPlayedMs by remember { mutableStateOf(0L) }
     var sessionTopSong by remember { mutableStateOf<Pair<String, String>?>(null) } // videoId to title
     var sessionTopCount by remember { mutableStateOf(0) }
+    var sessionTopSongs by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) } // title to count (desc)
     var lastSessionSongId by remember { mutableStateOf<String?>(null) }
     var lastSessionPosition by remember { mutableStateOf(0L) }
     LaunchedEffect(nowPlaying?.videoId, isPlaying, playerState.positionMs) {
@@ -333,6 +342,13 @@ fun App(
                 sessionTopSong = id to (nowPlaying?.title ?: "")
                 sessionTopCount = 1
             }
+            val title = nowPlaying?.title ?: ""
+            val existing = sessionTopSongs.find { it.first == title }
+            sessionTopSongs = if (existing != null) {
+                sessionTopSongs.map { if (it.first == title) title to ((it.second.toIntOrNull() ?: 0) + 1).toString() else it }
+            } else {
+                sessionTopSongs + (title to "1")
+            }.sortedByDescending { it.second.toIntOrNull() ?: 0 }.take(20)
             sessionTrackStarts++
             lastSessionPosition = pos
         } else if (isPlaying) {
@@ -973,6 +989,38 @@ fun App(
                         onAddToQueue = addToQueue,
                         onAddToPlaylist = addToPlaylist,
                     )
+                    is Screen.NewReleases -> NewReleasesScreen(
+                        language = language,
+                        gridItemSize = gridItemSize,
+                        onBack = goBack,
+                        onOpenAlbum = { navigate(Screen.Album(it)) },
+                    )
+                    is Screen.Charts -> ChartsScreen(
+                        language = language,
+                        onBack = goBack,
+                        onOpenAlbum = { navigate(Screen.Album(it)) },
+                        onOpenArtist = { navigate(Screen.Artist(it)) },
+                        onOpenPlaylist = { navigate(Screen.Playlist(it)) },
+                        onPlaySong = playSong,
+                        onAddToQueue = addToQueue,
+                        onAddToPlaylist = addToPlaylist,
+                    )
+                    is Screen.MoodGenres -> MoodGenresScreen(
+                        language = language,
+                        onBack = goBack,
+                        onOpenBrowse = { browseId, params -> navigate(Screen.Browse(browseId, params)) },
+                    )
+                    is Screen.Stats -> StatsScreen(
+                        language = language,
+                        onBack = goBack,
+                        wrappedStats = WrappedStats(
+                            trackStarts = sessionTrackStarts,
+                            playedMs = sessionPlayedMs,
+                            topSongTitle = sessionTopSong?.second,
+                            topSongCount = sessionTopCount,
+                        ),
+                        topSongs = sessionTopSongs,
+                    )
                     is Screen.Settings -> SettingsScreen(
                         language = language,
                         themeMode = themeMode,
@@ -1433,6 +1481,35 @@ fun App(
                         language = language,
                         onBack = goBack,
                     )
+                    is Screen.ListenTogether -> ListenTogetherScreen(
+                        language = language,
+                        onBack = goBack,
+                        onPlaySong = playSong,
+                    )
+                    is Screen.ArtistItems -> BrowseScreen(
+                        browseId = screen.browseId,
+                        params = screen.params,
+                        language = language,
+                        gridItemSize = gridItemSize,
+                        onBack = goBack,
+                        onOpenAlbum = { navigate(Screen.Album(it)) },
+                        onOpenArtist = { navigate(Screen.Artist(it)) },
+                        onOpenPlaylist = { navigate(Screen.Playlist(it)) },
+                        onPlaySong = playSong,
+                    )
+                    is Screen.AutoPlaylist -> AutoPlaylistScreen(
+                        browseId = screen.browseId,
+                        title = screen.title,
+                        language = language,
+                        gridItemSize = gridItemSize,
+                        onBack = goBack,
+                        onOpenAlbum = { navigate(Screen.Album(it)) },
+                        onOpenArtist = { navigate(Screen.Artist(it)) },
+                        onOpenPlaylist = { navigate(Screen.Playlist(it)) },
+                        onPlaySong = playSong,
+                        onAddToQueue = addToQueue,
+                        onAddToPlaylist = addToPlaylist,
+                    )
                     is Screen.Login -> LoginScreen(
                         language = language,
                         onBack = goBack,
@@ -1547,6 +1624,10 @@ fun Sidebar(
         SidebarEntry(Screen.Library, "library", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
         SidebarEntry(Screen.LocalPlaylists, "playlists", Icons.AutoMirrored.Outlined.PlaylistAdd, Icons.AutoMirrored.Filled.PlaylistAdd),
         SidebarEntry(Screen.Queue, "queue", Icons.AutoMirrored.Outlined.QueueMusic, Icons.AutoMirrored.Filled.QueueMusic),
+        SidebarEntry(Screen.NewReleases, "new_release_albums", Icons.Outlined.NewReleases, Icons.Filled.NewReleases),
+        SidebarEntry(Screen.Charts, "charts", Icons.Outlined.Leaderboard, Icons.Filled.Leaderboard),
+        SidebarEntry(Screen.Stats, "stats", Icons.Outlined.BarChart, Icons.Filled.BarChart),
+        SidebarEntry(Screen.ListenTogether, "listen_together", Icons.Outlined.Group, Icons.Filled.Group),
         SidebarEntry(Screen.History, "history", Icons.Outlined.History, Icons.Filled.History),
         SidebarEntry(Screen.Settings, "settings", Icons.Outlined.Settings, Icons.Filled.Settings),
     )

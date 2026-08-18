@@ -102,6 +102,8 @@ data class DesktopSyncState(
     val autoBackupBeforeUpdate: Boolean = true,
     /** Sync the in-app (VIVI) player volume slider between devices. */
     val syncViviVolume: Boolean = true,
+    /** Last username used for Listen Together. */
+    val listenTogetherUsername: String = "",
 )
 
 object DesktopSettings {

@@ -24,6 +24,13 @@ sealed interface Screen {
     data object Queue : Screen
     data object Changelog : Screen
     data object Login : Screen
+    data object NewReleases : Screen
+    data object Charts : Screen
+    data object MoodGenres : Screen
+    data object Stats : Screen
+    data object ListenTogether : Screen
+    data class ArtistItems(val browseId: String, val params: String?) : Screen
+    data class AutoPlaylist(val browseId: String, val title: String) : Screen
 
     // Settings sub-screens (ported from the mobile settings structure).
     data object SettingsLanguage : Screen
