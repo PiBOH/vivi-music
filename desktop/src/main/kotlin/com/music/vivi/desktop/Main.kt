@@ -1940,6 +1940,13 @@ fun MiniPlayer(
     }
 }
 
+private data class SettingsRowSpec(
+    val title: String,
+    val subtitle: String?,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
 @Composable
 fun SettingsScreen(
     language: String,
@@ -1951,131 +1958,88 @@ fun SettingsScreen(
     onOpen: (Screen) -> Unit,
 ) {
     val devEnabled by DeveloperOptions.enabled.collectAsState()
+    var searchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val themeLabel = when (themeMode) {
+        ThemeMode.SYSTEM -> Localization.get(language, "theme_system")
+        ThemeMode.LIGHT -> Localization.get(language, "theme_light")
+        ThemeMode.DARK -> Localization.get(language, "theme_dark")
+    }
+    val rows = listOf(
+        SettingsRowSpec(Localization.get(language, "language"), Languages.name(language), Icons.Filled.Translate) { onOpen(Screen.SettingsLanguage) },
+        SettingsRowSpec(Localization.get(language, "updates"), if (updateStatus is UpdateStatus.Available) Localization.get(language, "update_available") else AppInfo.FULL_VERSION, Icons.Filled.Refresh) { onOpen(Screen.SettingsUpdates) },
+        SettingsRowSpec(Localization.get(language, "notifications"), Localization.get(language, if (DesktopSettings.load().notificationMode == "native") "notification_native" else "notification_main_window"), Icons.Filled.Notifications) { onOpen(Screen.SettingsNotifications) },
+        SettingsRowSpec(Localization.get(language, "appearance"), themeLabel, Icons.Filled.Palette) { onOpen(Screen.SettingsAppearance) },
+        SettingsRowSpec(Localization.get(language, "player_audio"), null, Icons.Filled.GraphicEq) { onOpen(Screen.SettingsPlayer) },
+        SettingsRowSpec(Localization.get(language, "account"), if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in"), Icons.Filled.Person) { onOpen(Screen.SettingsAccount) },
+        SettingsRowSpec(Localization.get(language, "device_sync"), null, Icons.Filled.Devices) { onOpen(Screen.SettingsDevices) },
+        SettingsRowSpec(Localization.get(language, "content"), null, Icons.Filled.Language) { onOpen(Screen.SettingsContent) },
+        SettingsRowSpec(Localization.get(language, "lyrics"), null, Icons.Filled.Lyrics) { onOpen(Screen.SettingsLyrics) },
+        SettingsRowSpec(Localization.get(language, "privacy"), null, Icons.Filled.Security) { onOpen(Screen.SettingsPrivacy) },
+        SettingsRowSpec(Localization.get(language, "storage"), null, Icons.Filled.Storage) { onOpen(Screen.SettingsStorage) },
+        SettingsRowSpec(Localization.get(language, "wrapped_title"), "${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}", Icons.Filled.AutoAwesome) { onOpen(Screen.SettingsWrapped) },
+        SettingsRowSpec(Localization.get(language, "integrations"), if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"), Icons.Filled.Tune) { onOpen(Screen.SettingsIntegrations) },
+        SettingsRowSpec(Localization.get(language, "backup_restore"), null, Icons.Filled.SettingsBackupRestore) { onOpen(Screen.SettingsBackup) },
+        SettingsRowSpec(Localization.get(language, "system"), if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"), Icons.Filled.Build) { onOpen(Screen.SettingsSystem) },
+        SettingsRowSpec(Localization.get(language, "about"), null, Icons.Filled.Info) { onOpen(Screen.SettingsAbout) },
+    )
+
+    val query = searchQuery.trim()
+    val visible = rows.filter { row ->
+        query.isEmpty() ||
+            row.title.contains(query, ignoreCase = true) ||
+            (row.subtitle?.contains(query, ignoreCase = true) == true)
+    }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
     ) {
-        Text(Localization.get(language, "settings"), style = MaterialTheme.typography.headlineMedium)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(Localization.get(language, "settings"), style = MaterialTheme.typography.headlineMedium)
+            Spacer(Modifier.width(16.dp))
+            if (searchActive) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    placeholder = { Text(Localization.get(language, "search")) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { searchActive = false; searchQuery = "" }) {
+                            Icon(Icons.Filled.Close, contentDescription = Localization.get(language, "dismiss"))
+                        }
+                    },
+                )
+            } else {
+                IconButton(onClick = { searchActive = true }) {
+                    Icon(Icons.Filled.Search, contentDescription = Localization.get(language, "search"))
+                }
+            }
+        }
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Translate,
-            title = Localization.get(language, "language"),
-            subtitle = Languages.name(language),
-            onClick = { onOpen(Screen.SettingsLanguage) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Refresh,
-            title = Localization.get(language, "updates"),
-            subtitle = if (updateStatus is UpdateStatus.Available) {
-                Localization.get(language, "update_available")
-            } else {
-                AppInfo.FULL_VERSION
-            },
-            onClick = { onOpen(Screen.SettingsUpdates) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Notifications,
-            title = Localization.get(language, "notifications"),
-            subtitle = Localization.get(
-                language,
-                if (DesktopSettings.load().notificationMode == "native") "notification_native" else "notification_main_window",
-            ),
-            onClick = { onOpen(Screen.SettingsNotifications) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Palette,
-            title = Localization.get(language, "appearance"),
-            subtitle = when (themeMode) {
-                ThemeMode.SYSTEM -> Localization.get(language, "theme_system")
-                ThemeMode.LIGHT -> Localization.get(language, "theme_light")
-                ThemeMode.DARK -> Localization.get(language, "theme_dark")
-            },
-            onClick = { onOpen(Screen.SettingsAppearance) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.GraphicEq,
-            title = Localization.get(language, "player_audio"),
-            onClick = { onOpen(Screen.SettingsPlayer) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Person,
-            title = Localization.get(language, "account"),
-            subtitle = if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in"),
-            onClick = { onOpen(Screen.SettingsAccount) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Devices,
-            title = Localization.get(language, "device_sync"),
-            onClick = { onOpen(Screen.SettingsDevices) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Language,
-            title = Localization.get(language, "content"),
-            onClick = { onOpen(Screen.SettingsContent) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Lyrics,
-            title = Localization.get(language, "lyrics"),
-            onClick = { onOpen(Screen.SettingsLyrics) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Security,
-            title = Localization.get(language, "privacy"),
-            onClick = { onOpen(Screen.SettingsPrivacy) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Storage,
-            title = Localization.get(language, "storage"),
-            onClick = { onOpen(Screen.SettingsStorage) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.AutoAwesome,
-            title = Localization.get(language, "wrapped_title"),
-            subtitle = "${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}",
-            onClick = { onOpen(Screen.SettingsWrapped) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Tune,
-            title = Localization.get(language, "integrations"),
-            subtitle = if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) {
-                Localization.get(language, "integrations_active")
-            } else {
-                Localization.get(language, "integrations_inactive")
-            },
-            onClick = { onOpen(Screen.SettingsIntegrations) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.SettingsBackupRestore,
-            title = Localization.get(language, "backup_restore"),
-            onClick = { onOpen(Screen.SettingsBackup) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Build,
-            title = Localization.get(language, "system"),
-            subtitle = if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"),
-            onClick = { onOpen(Screen.SettingsSystem) },
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Info,
-            title = Localization.get(language, "about"),
-            onClick = { onOpen(Screen.SettingsAbout) },
-        )
+        visible.forEach { row ->
+            SettingsEntryRow(
+                language = language,
+                icon = row.icon,
+                title = row.title,
+                subtitle = row.subtitle,
+                onClick = row.onClick,
+            )
+        }
+        if (query.isNotEmpty() && visible.isEmpty()) {
+            Text(
+                Localization.get(language, "no_results_found"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 24.dp),
+            )
+        }
     }
 }
 

@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.102] - 2026-08-18
+
+### Added
+
+- [DE] Settings search: a search icon sits next to the "Settings" title; it
+  expands into a text field that live-filters the settings list by title and
+  subtitle, with a "no results" state.
+
 ## [6.4.29_DE-1.33.101] - 2026-08-18
 
 ### Fixed
