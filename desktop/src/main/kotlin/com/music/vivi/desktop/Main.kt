@@ -869,7 +869,11 @@ fun App(
                 if (!player.state.value.isResolving) {
                     val target = syncManager.effectivePosition(pb)
                     when {
-                        pb.isResolving -> player.seekRemoteCatchUp(target, isPlaying = false, SyncServer.RESYNC_TOLERANCE_MS)
+                        pb.isResolving -> {
+                            // Peer is mid-song buffering (position frozen): keep
+                            // playing and skip the seek instead of pausing, so a
+                            // brief rebuffer on the phone doesn't stop the desktop.
+                        }
                         pb.userSeek -> player.seekRemote(target, pb.isPlaying, toleranceMs = 0L)
                         else -> player.seekRemoteCatchUp(target, pb.isPlaying, SyncServer.RESYNC_TOLERANCE_MS)
                     }

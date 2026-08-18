@@ -1596,10 +1596,12 @@ class MusicService :
         // within tolerance so it doesn't glitch the audio.
         val currentId = player.currentMetadata?.id
         if (snapshot.trackId != null && currentId == snapshot.trackId && player.mediaItemCount > 0) {
-            // While the desktop is still resolving, its position is frozen: hold
-            // (pause) instead of seeking to a stale point.
+            // While the peer is buffering its position is frozen: skip the seek
+            // to a stale point and keep playing instead of pausing, so a brief
+            // rebuffer doesn't stop local playback. New-track resolution is
+            // handled by the queue-replacement branch below (`playWhenReady =
+            // isPlaying && !isResolving`).
             if (snapshot.isResolving) {
-                player.playWhenReady = false
                 return
             }
             val local = player.currentPosition

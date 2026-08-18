@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.101] - 2026-08-18
+
+### Fixed
+
+- [DE+APK] Players no longer freeze/pause at random while paired. The mobile
+  marked `isResolving` on every mid-song rebuffer, and both devices paused the
+  other whenever the peer was "resolving"; now a same-track `isResolving` only
+  skips the stale-position re-sync and keeps playing (initial track resolution
+  still holds the peer until audio actually starts).
+
 ## [6.4.28_DE-1.33.100] - 2026-08-18
 
 ### Changed
