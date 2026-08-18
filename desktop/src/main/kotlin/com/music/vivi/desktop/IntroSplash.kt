@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import javax.imageio.ImageIO
+import org.jetbrains.skia.Image
 
 /** Number of frames pre-extracted from `desktop/icons/Vivi DE intro.mp4`. */
 private const val INTRO_FRAME_COUNT = 139
@@ -90,9 +90,14 @@ fun IntroSplash(language: String, onFinished: () -> Unit) {
     }
 }
 
-/** Loads one intro frame (`/images/intro/frame_NNN.jpg`) from the bundled resources. */
+/**
+ * Loads one intro frame (`/images/intro/frame_NNN.jpg`) from the bundled
+ * resources. Decodes with Skia (`Image.makeFromEncoded`) instead of
+ * `ImageIO` + a pixel copy, which is much faster and keeps 30 fps smooth.
+ */
 private fun loadIntroFrame(index: Int): ImageBitmap? {
     val name = "frame_" + index.toString().padStart(3, '0') + ".jpg"
     val stream = AppInfo::class.java.getResourceAsStream("/images/intro/$name") ?: return null
-    return stream.use { s -> ImageIO.read(s)?.toComposeImageBitmap() }
+    val bytes = stream.use { it.readBytes() }
+    return Image.makeFromEncoded(bytes).toComposeImageBitmap()
 }

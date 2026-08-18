@@ -76,7 +76,14 @@ public class ExtractIntroFrames {
                 + (totalBytes / 1024 / 1024) + " MB)");
     }
 
-    /** Converts a jcodec YUV420J frame to an RGB BufferedImage (BT.601 limited range). */
+    /**
+     * Converts a jcodec YUV420 frame to an RGB BufferedImage.
+     *
+     * jcodec's H.264 decoder outputs full-range (0..255) YUV420 — not the
+     * limited-range YUV420J (16..235) used by JPEG. Using the limited-range
+     * formula (Y-16, scaled coefficients) shifted/clamped every channel and
+     * produced the wrong colours, so this uses the full-range BT.601 matrix.
+     */
     private static BufferedImage toRgb(Picture p) {
         int w = p.getPlaneWidth(0), h = p.getPlaneHeight(0);
         byte[] y = p.getPlaneData(0);
@@ -90,14 +97,11 @@ public class ExtractIntroFrames {
             for (int col = 0; col < w; col++) {
                 int ux = (col * uw) / w;
                 int yy = y[row * w + col] & 0xff;
-                int uu = u[uy * uw + ux] & 0xff;
-                int vv = v[uy * uw + ux] & 0xff;
-                int c = yy - 16;
-                int d = uu - 128;
-                int e = vv - 128;
-                int r = clamp((298 * c + 409 * e + 128) >> 8);
-                int g = clamp((298 * c - 100 * d - 208 * e + 128) >> 8);
-                int b = clamp((298 * c + 516 * d + 128) >> 8);
+                double cb = (u[uy * uw + ux] & 0xff) - 128.0;
+                double cr = (v[uy * uw + ux] & 0xff) - 128.0;
+                int r = clamp((int) Math.round(yy + 1.402 * cr));
+                int g = clamp((int) Math.round(yy - 0.344136 * cb - 0.714136 * cr));
+                int b = clamp((int) Math.round(yy + 1.772 * cb));
                 rgb[row * w + col] = (r << 16) | (g << 8) | b;
             }
         }

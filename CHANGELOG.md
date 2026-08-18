@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.98] - 2026-08-18
+
+### Fixed
+
+- [DE] Intro splash now plays with correct colours and smooth fps. The frames
+  were extracted with a limited-range BT.601 YUV→RGB formula while jcodec
+  outputs full-range YUV420, which shifted/clamped every channel (the "wrong
+  colours"). Re-extracted with the correct full-range matrix, downscaled to
+  960×540, and the player now decodes each JPEG with Skia
+  (`Image.makeFromEncoded`) instead of `ImageIO` + a pixel copy, so 30 fps
+  stays smooth.
+
 ## [6.4.28_DE-1.33.97] - 2026-08-18
 
 ### Added
