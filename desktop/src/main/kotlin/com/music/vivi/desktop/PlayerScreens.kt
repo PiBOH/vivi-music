@@ -850,8 +850,15 @@ fun LyricsScreen(
             return@LaunchedEffect
         }
         loading = true
+        val cached = LyricsCache.get(np.videoId)
+        if (cached != null) {
+            lyrics = cached
+            error = null
+            loading = false
+            return@LaunchedEffect
+        }
         LrcLib.getLyrics(title = np.title, artist = np.artist, duration = -1).fold(
-            onSuccess = { lyrics = it; error = null },
+            onSuccess = { lyrics = it; error = null; LyricsCache.put(np.videoId, it) },
             onFailure = { error = it.message },
         )
         loading = false

@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.107] - 2026-08-18
+
+### Added
+
+- [DE] Look-ahead cache prefetch: while a track is loaded (playing or paused)
+  the next 3 tracks are resolved and downloaded to the audio cache in the
+  background, and their lyrics are fetched and cached too (in-memory + on-disk
+  under `~/.vivimusic/cache/lyrics`). The Lyrics screen now reads the cache
+  first instead of re-fetching on every open.
+
 ## [6.4.29_DE-1.33.106] - 2026-08-18
 
 ### Fixed

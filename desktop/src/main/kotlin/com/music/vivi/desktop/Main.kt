@@ -152,8 +152,10 @@ import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 import com.music.innertube.YouTubeExtractor
 import com.music.innertube.models.SongItem
+import com.music.lrclib.LrcLib
 import com.music.vivi.desktop.player.PlayerController
 import com.music.vivi.desktop.player.RepeatMode
+import com.music.vivi.desktop.player.StreamResolver
 import com.music.vivi.sync.LibrarySnapshot
 import com.music.vivi.sync.PlaybackSnapshot
 import com.music.vivi.sync.SyncServer
@@ -731,6 +733,36 @@ fun App(
                 }
             }
         }
+    }
+
+    // Look-ahead prefetch: cache the next few tracks' audio and lyrics in the
+    // background so they start instantly when skipped to. Runs regardless of
+    // play/pause, so pausing still fills the cache for the upcoming tracks.
+    LaunchedEffect(player) {
+        player.state
+            .map { it.queue to it.index }
+            .distinctUntilChanged()
+            .collect { (queue, index) ->
+                for (track in queue.drop(index + 1).take(3)) {
+                    // Audio: resolve + download to the on-disk cache (no play).
+                    if (!player.isCached(track.videoId)) {
+                        launch(Dispatchers.IO) {
+                            val streams = StreamResolver.resolveAacStream(
+                                track.videoId,
+                                StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                            )
+                            if (streams.isNotEmpty()) player.prefetch(streams, track.videoId)
+                        }
+                    }
+                    // Lyrics: fetch + keep in the persistent cache.
+                    if (LyricsCache.get(track.videoId) == null) {
+                        launch(Dispatchers.IO) {
+                            LrcLib.getLyrics(title = track.title, artist = track.artist, duration = -1)
+                                .onSuccess { LyricsCache.put(track.videoId, it) }
+                        }
+                    }
+                }
+            }
     }
 
     // Push the local playback state to the peer when the track, play/pause

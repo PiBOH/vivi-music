@@ -291,6 +291,13 @@ class PlayerController {
         _state.update { it.copy(volume = v.coerceIn(0f, 1f)) }
     }
 
+    /** True when [videoId] already has a valid on-disk cache file (prefetch check). */
+    fun isCached(videoId: String): Boolean = player.isCached(videoId)
+
+    /** Downloads [streams] for [videoId] without playing (look-ahead prefetch). */
+    fun prefetch(streams: List<StreamResolver.ResolvedStream>, videoId: String) =
+        player.prefetch(streams, videoId)
+
     fun toggleShuffle() {
         val s = _state.value
         val newShuffle = !s.isShuffle

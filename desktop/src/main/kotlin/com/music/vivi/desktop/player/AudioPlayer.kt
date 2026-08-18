@@ -171,6 +171,21 @@ class AudioPlayer {
         }
     }
 
+    /** True when [cacheKey] already has a valid, non-truncated local cache file. */
+    fun isCached(cacheKey: String): Boolean {
+        val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val file = File(cacheDir, "$safe.m4a")
+        return file.exists() && file.length() > 0 && isValidMp4(file)
+    }
+
+    /** Downloads [streams] to the local cache without playing (look-ahead prefetch). */
+    fun prefetch(streams: List<StreamResolver.ResolvedStream>, cacheKey: String) {
+        if (isCached(cacheKey)) return
+        Thread {
+            runCatching { ensureDownloaded(streams, cacheKey) }
+        }.apply { isDaemon = true; name = "vivimusic-prefetch"; start() }
+    }
+
     private fun ensureDownloaded(streams: List<StreamResolver.ResolvedStream>, cacheKey: String): File {
         val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val file = File(cacheDir, "$safe.m4a")
