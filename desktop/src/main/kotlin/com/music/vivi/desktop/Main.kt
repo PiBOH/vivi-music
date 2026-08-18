@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -35,6 +36,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -236,42 +238,48 @@ fun main(args: Array<String>) {
             // registrar and crash with "layouts are not part of the same
             // hierarchy" on pointer events (see Compose CMP-2326). Use targeted
             // SelectionContainer wrappers on individual text instead.
-            if (language.isBlank()) {
-                LanguageSelectionScreen { selected ->
-                    language = selected
-                    DesktopSettings.update { it.copy(language = selected) }
-                }
-            } else {
-                App(
-                    language = language,
-                    onLanguageChange = { selected ->
+            var showIntro by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
+            Crossfade(targetState = showIntro, animationSpec = tween(400), label = "intro") { intro ->
+                when {
+                    intro -> IntroSplash(
+                        language = language,
+                        onFinished = { showIntro = false },
+                    )
+                    language.isBlank() -> LanguageSelectionScreen { selected ->
                         language = selected
                         DesktopSettings.update { it.copy(language = selected) }
-                    },
-                    themeMode = themeMode,
-                    accent = accent,
-                    onThemeModeChange = {
-                        themeMode = it
-                        saveTheme()
-                    },
-                    onAccentChange = {
-                        accent = it
-                        saveTheme()
-                    },
-                    pureBlack = pureBlack,
-                    onPureBlackChange = {
-                        pureBlack = it
-                        saveTheme()
-                    },
-                    initialSection = openSection,
-                    bringToFront = {
-                        runCatching {
-                            frameWindow.state = java.awt.Frame.NORMAL
-                            frameWindow.toFront()
-                            frameWindow.requestFocus()
-                        }
-                    },
-                )
+                    }
+                    else -> App(
+                        language = language,
+                        onLanguageChange = { selected ->
+                            language = selected
+                            DesktopSettings.update { it.copy(language = selected) }
+                        },
+                        themeMode = themeMode,
+                        accent = accent,
+                        onThemeModeChange = {
+                            themeMode = it
+                            saveTheme()
+                        },
+                        onAccentChange = {
+                            accent = it
+                            saveTheme()
+                        },
+                        pureBlack = pureBlack,
+                        onPureBlackChange = {
+                            pureBlack = it
+                            saveTheme()
+                        },
+                        initialSection = openSection,
+                        bringToFront = {
+                            runCatching {
+                                frameWindow.state = java.awt.Frame.NORMAL
+                                frameWindow.toFront()
+                                frameWindow.requestFocus()
+                            }
+                        },
+                    )
+                }
             }
         }
     }
@@ -320,6 +328,7 @@ fun App(
     var homeUseLastListen by remember { mutableStateOf(DesktopSettings.load().homeUseLastListen) }
     var randomizeHomeOrder by remember { mutableStateOf(DesktopSettings.load().randomizeHomeOrder) }
     var showWrappedOnHome by remember { mutableStateOf(DesktopSettings.load().showWrappedOnHome) }
+    var showIntroSplash by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
     var pauseSearchHistory by remember { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
     var pauseListenHistory by remember { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
     var searchHistory by remember { mutableStateOf(DesktopSettings.load().searchHistory) }
@@ -1368,12 +1377,27 @@ fun App(
                     is Screen.SettingsAbout -> SettingsAboutScreen(
                         language = language,
                         onBack = goBack,
-                        onOpenChangelog = { navigate(Screen.Changelog) },
                     )
                     is Screen.SettingsDeveloper -> SettingsDeveloperScreen(
                         language = language,
                         onBack = goBack,
                         syncManager = syncManager,
+                    )
+                    is Screen.SettingsSystem -> SettingsSystemScreen(
+                        language = language,
+                        onBack = goBack,
+                        showIntroSplash = showIntroSplash,
+                        onOpenDeveloper = { navigate(Screen.SettingsDeveloper) },
+                        onOpenIntro = { navigate(Screen.SettingsIntro) },
+                    )
+                    is Screen.SettingsIntro -> SettingsIntroScreen(
+                        language = language,
+                        onBack = goBack,
+                        showIntroSplash = showIntroSplash,
+                        onShowIntroSplashChange = { v ->
+                            showIntroSplash = v
+                            DesktopSettings.update { it.copy(showIntroSplash = v) }
+                        },
                     )
                     is Screen.SettingsBackup -> SettingsBackupScreen(
                         language = language,
@@ -2012,19 +2036,43 @@ fun SettingsScreen(
         SettingsEntryRow(
             language = language,
             icon = Icons.Filled.Build,
-            title = Localization.get(language, "developer_options"),
-            subtitle = if (devEnabled) {
-                Localization.get(language, "developer_options_enabled")
-            } else {
-                Localization.get(language, "dev_tools_disabled")
-            },
-            onClick = { onOpen(Screen.SettingsDeveloper) },
+            title = Localization.get(language, "system"),
+            subtitle = if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"),
+            onClick = { onOpen(Screen.SettingsSystem) },
         )
         SettingsEntryRow(
             language = language,
             icon = Icons.Filled.Info,
             title = Localization.get(language, "about"),
             onClick = { onOpen(Screen.SettingsAbout) },
+        )
+    }
+}
+
+@Composable
+fun SettingsSystemScreen(
+    language: String,
+    onBack: () -> Unit,
+    showIntroSplash: Boolean,
+    onOpenDeveloper: () -> Unit,
+    onOpenIntro: () -> Unit,
+) {
+    val devEnabled by DeveloperOptions.enabled.collectAsState()
+    SettingsSubScreen(language, onBack) {
+        Text(Localization.get(language, "system"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
+        SettingsEntryRow(
+            language = language,
+            icon = Icons.Filled.Build,
+            title = Localization.get(language, "developer_options"),
+            subtitle = if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"),
+            onClick = onOpenDeveloper,
+        )
+        SettingsEntryRow(
+            language = language,
+            icon = Icons.Filled.Movie,
+            title = Localization.get(language, "intro"),
+            subtitle = if (showIntroSplash) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"),
+            onClick = onOpenIntro,
         )
     }
 }
@@ -2785,7 +2833,7 @@ private const val GITHUB_MARK_PATH =
     "M12,2A10,10 0,0 0,2 12c0,4.42 2.87,8.17 6.84,9.5c0.5,0.08 0.66,-0.23 0.66,-0.5c0,-0.23 0,-0.86 0,-1.69c-2.77,0.6 -3.36,-1.34 -3.36,-1.34c-0.46,-1.16 -1.11,-1.47 -1.11,-1.47c-0.91,-0.62 0.07,-0.6 0.07,-0.6c1,0.07 1.53,1.03 1.53,1.03c0.87,1.52 2.34,1.07 2.91,0.83c0.09,-0.65 0.35,-1.09 0.63,-1.34c-2.22,-0.25 -4.55,-1.11 -4.55,-4.92c0,-1.11 0.38,-2 1.03,-2.71c-0.1,-0.25 -0.45,-1.29 0.1,-2.64c0,0 0.84,-0.27 2.75,1.02c0.79,-0.22 1.65,-0.33 2.5,-0.33c0.85,0 1.71,0.11 2.5,0.33c1.91,-1.29 2.75,-1.02 2.75,-1.02c0.55,1.35 0.2,2.39 0.1,2.64c0.65,0.71 1.03,1.6 1.03,2.71c0,3.82 -2.34,4.66 -4.57,4.91c0.36,0.31 0.69,0.92 0.69,1.85c0,1.34 0,2.42 0,2.74c0,0.27 0.16,0.59 0.67,0.5C19.14,20.16 22,16.42 22,12A10,10 0,0 0,12 2Z"
 
 @Composable
-fun AboutSection(language: String, onOpenChangelog: () -> Unit) {
+fun AboutSection(language: String) {
     val firstLaunchDate = remember { DesktopSettings.load().firstLaunchDate }
     var versionCodeTaps by remember { mutableStateOf(0) }
     val devEnabled by DeveloperOptions.enabled.collectAsState()
@@ -2812,13 +2860,6 @@ fun AboutSection(language: String, onOpenChangelog: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
         }
-    }
-
-    Button(
-        onClick = onOpenChangelog,
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-    ) {
-        Text(Localization.get(language, "changelog"))
     }
 
     AboutSectionHeader(Localization.get(language, "developer_section"))

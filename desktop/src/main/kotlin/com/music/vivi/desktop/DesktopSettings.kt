@@ -42,6 +42,8 @@ data class DesktopSyncState(
     val randomizeHomeOrder: Boolean = false,
     /** Show the "VIVI Wrapped" card on the Home screen. */
     val showWrappedOnHome: Boolean = false,
+    /** Play the animated intro GIF as a splash screen at startup. */
+    val showIntroSplash: Boolean = true,
     val pauseSearchHistory: Boolean = false,
     val pauseListenHistory: Boolean = false,
     val searchHistory: List<String> = emptyList(),

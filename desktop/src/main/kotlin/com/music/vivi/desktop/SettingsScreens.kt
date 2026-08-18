@@ -534,13 +534,40 @@ fun SettingsUpdatesScreen(
 }
 
 @Composable
-fun SettingsAboutScreen(language: String, onBack: () -> Unit, onOpenChangelog: () -> Unit) {
-    SettingsSubScreen(language, onBack) { AboutSection(language, onOpenChangelog) }
+fun SettingsAboutScreen(language: String, onBack: () -> Unit) {
+    SettingsSubScreen(language, onBack) { AboutSection(language) }
 }
 
 @Composable
 fun SettingsDeveloperScreen(language: String, onBack: () -> Unit, syncManager: DesktopSyncManager) {
     SettingsSubScreen(language, onBack) { DeveloperSection(language, syncManager) }
+}
+
+@Composable
+fun SettingsIntroScreen(
+    language: String,
+    onBack: () -> Unit,
+    showIntroSplash: Boolean,
+    onShowIntroSplashChange: (Boolean) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        Text(Localization.get(language, "intro"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Switch(checked = showIntroSplash, onCheckedChange = onShowIntroSplashChange)
+            Column(Modifier.clickable { onShowIntroSplashChange(!showIntroSplash) }) {
+                Text(Localization.get(language, "show_intro_on_startup"))
+                Text(
+                    Localization.get(language, "intro_desc"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 @Composable

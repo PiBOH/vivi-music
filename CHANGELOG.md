@@ -11,6 +11,20 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.92] - 2026-08-18
+
+### Added
+
+- [DE] Animated intro splash screen (the bundled GIF) played once at startup,
+  with click-to-skip and a toggle in Settings → System → Intro.
+- [DE] Settings → System sub-menu: Developer options moved here (under
+  System → Developer options) alongside the new Intro option.
+
+### Removed
+
+- [DE] Removed the changelog button from the About screen (still available in
+  Settings → Updates).
+
 ## [6.4.28_DE-1.33.91] - 2026-08-18
 
 ### Removed
