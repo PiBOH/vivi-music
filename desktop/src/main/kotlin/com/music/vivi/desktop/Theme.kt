@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
@@ -180,6 +182,7 @@ fun AppTheme(
     mode: ThemeMode,
     accent: Color,
     pureBlack: Boolean = false,
+    font: AppFont = AppFont.SYSTEM,
     content: @Composable () -> Unit,
 ) {
     val useDark = when (mode) {
@@ -201,7 +204,29 @@ fun AppTheme(
     } else {
         colorScheme
     }
-    MaterialTheme(colorScheme = effective) {
+    // Apply the selected app font to every text style (headlines down to labels).
+    val typography = remember(font) {
+        val family = AppFonts.familyFor(font)
+        val base = Typography()
+        Typography(
+            displayLarge = base.displayLarge.copy(fontFamily = family),
+            displayMedium = base.displayMedium.copy(fontFamily = family),
+            displaySmall = base.displaySmall.copy(fontFamily = family),
+            headlineLarge = base.headlineLarge.copy(fontFamily = family),
+            headlineMedium = base.headlineMedium.copy(fontFamily = family),
+            headlineSmall = base.headlineSmall.copy(fontFamily = family),
+            titleLarge = base.titleLarge.copy(fontFamily = family),
+            titleMedium = base.titleMedium.copy(fontFamily = family),
+            titleSmall = base.titleSmall.copy(fontFamily = family),
+            bodyLarge = base.bodyLarge.copy(fontFamily = family),
+            bodyMedium = base.bodyMedium.copy(fontFamily = family),
+            bodySmall = base.bodySmall.copy(fontFamily = family),
+            labelLarge = base.labelLarge.copy(fontFamily = family),
+            labelMedium = base.labelMedium.copy(fontFamily = family),
+            labelSmall = base.labelSmall.copy(fontFamily = family),
+        )
+    }
+    MaterialTheme(colorScheme = effective, typography = typography) {
         // Material3's MaterialTheme does NOT set LocalContentColor, so any Text
         // without an explicit color would fall back to the default (black) and
         // never adapt to the theme. Provide it explicitly so text follows the

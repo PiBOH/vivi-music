@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.28_DE-1.33.96] - 2026-08-18
+
+### Fixed
+
+- [DE] Changing the app font now actually changes the whole interface: the
+  selected font was only used in the App font picker preview, never applied to
+  the theme. `AppTheme` now builds the Material typography from the selected
+  `AppFont` (hoisted to the app root and passed to both the main window and
+  the developer-tools window), so every text style updates immediately.
+
 ## [6.4.28_DE-1.33.95] - 2026-08-18
 
 ### Changed

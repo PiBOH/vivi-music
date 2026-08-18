@@ -206,6 +206,7 @@ fun main(args: Array<String>) {
     var themeMode by remember { mutableStateOf(ThemeMode.from(DesktopSettings.load().darkMode)) }
     var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
     var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
+    var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
 
     fun saveTheme() {
         DesktopSettings.update {
@@ -232,7 +233,7 @@ fun main(args: Array<String>) {
 
     Window(onCloseRequest = ::exitApplication, title = windowTitle) {
         val frameWindow = window
-        AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack) {
+        AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = selectedFont) {
             // NOTE: do NOT wrap this in a global SelectionContainer. Popup-based
             // components (DropdownMenu, AlertDialog) inherit the selection
             // registrar and crash with "layouts are not part of the same
@@ -254,6 +255,11 @@ fun main(args: Array<String>) {
                         onLanguageChange = { selected ->
                             language = selected
                             DesktopSettings.update { it.copy(language = selected) }
+                        },
+                        font = selectedFont,
+                        onFontChange = { f ->
+                            selectedFont = f
+                            DesktopSettings.update { it.copy(selectedFont = f.value) }
                         },
                         themeMode = themeMode,
                         accent = accent,
@@ -298,6 +304,8 @@ private fun screenForSection(section: String?): Screen? = when (section) {
 fun App(
     language: String,
     onLanguageChange: (String) -> Unit,
+    font: AppFont,
+    onFontChange: (AppFont) -> Unit,
     themeMode: ThemeMode,
     accent: Color,
     onThemeModeChange: (ThemeMode) -> Unit,
@@ -316,7 +324,6 @@ fun App(
     var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
 
-    var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
     var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
@@ -1099,7 +1106,7 @@ fun App(
                     is Screen.SettingsAppearance -> SettingsAppearanceScreen(
                         language = language,
                         onBack = goBack,
-                        selectedFont = selectedFont,
+                        selectedFont = font,
                         densityScale = densityScale,
                         screenTransition = screenTransition,
                         onOpenTheme = { navigate(Screen.SettingsTheme) },
@@ -1145,11 +1152,8 @@ fun App(
                     is Screen.SettingsFont -> SettingsFontScreen(
                         language = language,
                         onBack = goBack,
-                        selectedFont = selectedFont,
-                        onFontChange = { f ->
-                            selectedFont = f
-                            DesktopSettings.update { it.copy(selectedFont = f.value) }
-                        },
+                        selectedFont = font,
+                        onFontChange = onFontChange,
                     )
                     is Screen.SettingsCanvas -> SettingsCanvasScreen(
                         language = language,
@@ -1659,7 +1663,7 @@ fun App(
             onCloseRequest = { DeveloperOptions.setMode(DevToolsMode.OVERLAY) },
             title = "VIVI Music DE — Developer tools",
         ) {
-            AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack) {
+            AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = font) {
                 SelectionContainer {
                     DevToolsPanel(syncManager = syncManager, language = language)
                 }
