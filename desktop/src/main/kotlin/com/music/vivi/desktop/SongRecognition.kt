@@ -45,6 +45,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.max
+import kotlin.math.sin
 
 // ---------------------------------------------------------------------------
 // Pure-JVM Shazam fingerprint (ported from the mobile ShazamSignatureGenerator,
@@ -304,54 +305,124 @@ object ShazamFingerprint {
 // ---------------------------------------------------------------------------
 
 object DesktopRecognition {
-    private const val RECORD_SAMPLE_RATE = 44100f
     private const val RECORD_DURATION_MS = 10_000L
     private const val REQUIRED_SAMPLE_RATE = 16_000
 
+    private data class Capture(
+        val data: ByteArray,
+        val sampleRate: Float,
+        val channels: Int,
+        val bigEndian: Boolean,
+    )
+
     suspend fun recognize(): RecognitionResult = withContext(Dispatchers.IO) {
-        val raw = record()
-        val resampled = resample(raw, RECORD_SAMPLE_RATE.toInt(), REQUIRED_SAMPLE_RATE)
+        val captured = record()
+        val mono = toMonoLittleEndian(captured)
+        val resampled = resample(mono, captured.sampleRate.toInt(), REQUIRED_SAMPLE_RATE)
         val signature = ShazamFingerprint.fromI16(resampled)
         val sampleDurationMs = (resampled.size / 2) * 1000L / REQUIRED_SAMPLE_RATE
         Shazam.recognize(signature, sampleDurationMs).getOrThrow()
     }
 
-    private fun record(): ByteArray {
-        val format = AudioFormat(RECORD_SAMPLE_RATE, 16, 1, true, false)
-        val info = DataLine.Info(TargetDataLine::class.java, format)
-        val line = AudioSystem.getLine(info) as TargetDataLine
-        line.open(format)
-        line.start()
-        val out = ByteArrayOutputStream()
-        val buffer = ByteArray(4096)
-        val start = System.currentTimeMillis()
-        try {
-            while (System.currentTimeMillis() - start < RECORD_DURATION_MS) {
-                val read = line.read(buffer, 0, buffer.size)
-                if (read > 0) out.write(buffer, 0, read)
+    /**
+     * Records ~10s from the default microphone. Tries a few well-supported rates
+     * and reads back the *actual* negotiated line format, so a driver that only
+     * supports 48 kHz (or stereo) is handled correctly instead of producing a
+     * time-scaled / interleaved fingerprint that never matches.
+     */
+    private fun record(): Capture {
+        val candidates = floatArrayOf(48_000f, 44_100f, 16_000f, 22_050f)
+        var lastError: Throwable? = null
+        for (rate in candidates) {
+            try {
+                val format = AudioFormat(rate, 16, 1, true, false)
+                val info = DataLine.Info(TargetDataLine::class.java, format)
+                if (!AudioSystem.isLineSupported(info)) continue
+                val line = AudioSystem.getLine(info) as TargetDataLine
+                try {
+                    line.open(format)
+                    line.start()
+                    val out = ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    val start = System.currentTimeMillis()
+                    while (System.currentTimeMillis() - start < RECORD_DURATION_MS) {
+                        val read = line.read(buffer, 0, buffer.size)
+                        if (read > 0) out.write(buffer, 0, read)
+                    }
+                    val actual = line.format
+                    return Capture(out.toByteArray(), actual.sampleRate, actual.channels, actual.isBigEndian)
+                } finally {
+                    runCatching { line.stop() }
+                    runCatching { line.close() }
+                }
+            } catch (t: Throwable) {
+                lastError = t
             }
-        } finally {
-            line.stop()
-            line.close()
         }
-        return out.toByteArray()
+        throw IllegalStateException("No microphone available", lastError)
     }
 
-    /** Linear-interpolation resampler (16-bit mono little-endian PCM). */
-    private fun resample(input: ByteArray, fromRate: Int, toRate: Int): ByteArray {
-        if (fromRate == toRate) return input
-        val inShorts = ShortArray(input.size / 2)
-        ByteBuffer.wrap(input).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(inShorts)
-        val ratio = fromRate.toDouble() / toRate.toDouble()
-        val outShorts = ShortArray((inShorts.size / ratio).toInt())
-        for (i in outShorts.indices) {
-            val pos = i * ratio
-            val idx = pos.toInt()
-            val frac = pos - idx
-            val a = inShorts[idx].toDouble()
-            val b = inShorts[if (idx + 1 < inShorts.size) idx + 1 else idx].toDouble()
-            outShorts[i] = (a + (b - a) * frac).toInt().toShort()
+    /** Downmixes to mono and normalizes byte order to little-endian 16-bit PCM. */
+    private fun toMonoLittleEndian(c: Capture): ByteArray {
+        val srcOrder = if (c.bigEndian) ByteOrder.BIG_ENDIAN else ByteOrder.LITTLE_ENDIAN
+        if (c.channels <= 1) {
+            if (!c.bigEndian) return c.data
+            val shorts = ShortArray(c.data.size / 2)
+            ByteBuffer.wrap(c.data).order(srcOrder).asShortBuffer().get(shorts)
+            val out = ByteArray(c.data.size)
+            ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(shorts)
+            return out
         }
+        val frameSize = c.channels * 2
+        val frames = c.data.size / frameSize
+        val out = ByteArray(frames * 2)
+        val src = ByteBuffer.wrap(c.data).order(srcOrder)
+        val dst = ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN)
+        for (f in 0 until frames) {
+            var sum = 0
+            for (ch in 0 until c.channels) sum += src.short.toInt()
+            dst.putShort((sum / c.channels).toShort())
+        }
+        return out
+    }
+
+    /**
+     * Anti-aliased resampler (band-limited sinc + Hann window). Replaces the old
+     * linear-interpolation resampler, whose aliasing corrupted the 4–5.5 kHz band
+     * Shazam relies on and caused persistent "no match".
+     */
+    private fun resample(inputMonoLE: ByteArray, fromRate: Int, toRate: Int): ByteArray {
+        val inShorts = ShortArray(inputMonoLE.size / 2)
+        ByteBuffer.wrap(inputMonoLE).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(inShorts)
+        if (fromRate == toRate) return inputMonoLE
+
+        val ratio = fromRate.toDouble() / toRate.toDouble()
+        val outLen = (inShorts.size / ratio).toInt()
+        val outShorts = ShortArray(outLen)
+        val cutoff = 0.5 * minOf(1.0, toRate.toDouble() / fromRate.toDouble())
+        val taps = 48
+
+        for (i in outShorts.indices) {
+            val t = i * ratio
+            val t0 = t.toInt()
+            val frac = t - t0
+            var acc = 0.0
+            var norm = 0.0
+            for (j in -taps..taps) {
+                val idx = t0 + j
+                if (idx < 0 || idx >= inShorts.size) continue
+                val x = frac - j
+                val s = if (x == 0.0) 2.0 * cutoff
+                    else 2.0 * cutoff * sin(2.0 * PI * cutoff * x) / (2.0 * PI * cutoff * x)
+                val w = 0.5 + 0.5 * cos(PI * x / taps)
+                val h = s * w
+                acc += inShorts[idx].toDouble() * h
+                norm += h
+            }
+            if (norm != 0.0) acc /= norm
+            outShorts[i] = acc.coerceIn(-32768.0, 32767.0).toInt().toShort()
+        }
+
         val out = ByteArray(outShorts.size * 2)
         ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(outShorts)
         return out

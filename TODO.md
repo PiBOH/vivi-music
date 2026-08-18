@@ -116,7 +116,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] New Release albums screen (DE 1.33.88).
 - [x] Charts screen (DE 1.33.88).
 - [x] Wrapped screen: Settings → VIVI Wrapped sub-screen with the session stats card + "Show on Home" toggle (default off) (DE 1.33.80).
-- [x] Song recognition (Shazam) + recognition history (DE 1.33.89: mic capture → 16 kHz resample → fingerprint → `shazamkit`, with persisted history).
+- [x] Song recognition (Shazam) + recognition history (DE 1.33.89: mic capture → 16 kHz resample → fingerprint → `shazamkit`, with persisted history). DE 1.33.103: fixed persistent "No match found" by reading the mic's actual format and replacing the aliasing linear-interpolation resampler with a band-limited sinc + Hann anti-aliased resampler.
 - [x] Commit screen (`settings/commits`) — Settings → Updates → Commits lists the selected source branch's recent commits (DE 1.33.87).
 - [x] Artist sub-tabs: Songs / Albums / Items (DE 1.33.89: TabRow on the artist page; Items uses `YouTube.artistItems`).
 - [x] Keyboard shortcuts: Ctrl+Z / Ctrl+Y undo/redo navigation and Backspace/Alt+Left back (DE 1.33.89).

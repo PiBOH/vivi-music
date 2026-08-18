@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.29_DE-1.33.103] - 2026-08-18
+
+### Fixed
+
+- [DE] Song recognition (Shazam) always returned "No match found". The desktop
+  recorder assumed a fixed 44.1 kHz mono little-endian capture and resampled
+  with naive linear interpolation, whose aliasing corrupted the spectral band
+  Shazam fingerprints. It now reads the mic's actual negotiated format (rate,
+  channels, endianness), downmixes to mono, and uses a band-limited sinc + Hann
+  anti-aliased resampler.
+
 ## [6.4.29_DE-1.33.102] - 2026-08-18
 
 ### Added
