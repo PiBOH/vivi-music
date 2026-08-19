@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.33_DE-1.33.108] - 2026-08-19
+
+### Fixed
+
+- [APK] Mobile stream resolution now prefers a NewPipe-signed URL (matched to
+  the selected audio format) over the shared ANDROID_VR client URL. NewPipe
+  resolves its own signature with a browser-like user-agent, so its URLs are
+  far less prone to the CDN bot-flagging that caused `IO_UNSPECIFIED (2000)`;
+  the client URL remains the fallback. Mirrors the desktop edition's
+  NewPipe-first resolver.
+
 ## [6.4.32_DE-1.33.108] - 2026-08-19
 
 ### Changed

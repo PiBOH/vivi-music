@@ -725,6 +725,21 @@ object YTPlayerUtils {
             throw Exception("Could not find stream url")
         }
 
+        // Prefer a NewPipe-signed URL for the selected audio format. NewPipe
+        // resolves its own signature (browser-like UA, fresh n/sig params) and
+        // its URLs are far less prone to CDN bot-flagging than the shared
+        // ANDROID_VR client. This mirrors the desktop edition, which resolves
+        // NewPipe first and plays reliably. The client URL stays as fallback.
+        val newPipeUrl = runCatching {
+            val urls = YouTube.getNewPipeStreamUrls(videoId)
+            urls.firstOrNull { it.first == format.itag }?.second
+                ?: urls.firstOrNull { it.first == 140 || it.first == 141 || it.first == 251 }?.second
+        }.getOrNull()
+        if (!newPipeUrl.isNullOrBlank()) {
+            Timber.tag(logTag).d("Using NewPipe-signed stream URL (format itag ${format.itag})")
+            streamUrl = newPipeUrl
+        }
+
         Timber.tag(logTag).d("Successfully obtained playback data with format: ${format.mimeType}, bitrate: ${format.bitrate}")
         PlaybackData(
             audioConfig,
