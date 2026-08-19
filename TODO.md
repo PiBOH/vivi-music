@@ -142,7 +142,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [ ] JioSaavn (`settings/player/jio`).
 - [ ] Equalizer (`settings/equalizer` + dialog).
 - [ ] Spotify import (`settings/spotify`).
-- [ ] Integrations hub + Discord / Last.fm / Listen Together settings.
+- [x] Integrations hub (Discord Rich Presence + Last.fm scrobbling) — Settings → Integrations (DE 1.33.76).
 - [ ] Discord login.
 - [ ] Notification permission (`settings/update/notification_permission`).
 
