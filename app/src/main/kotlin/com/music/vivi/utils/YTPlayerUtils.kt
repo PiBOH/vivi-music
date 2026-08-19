@@ -12,11 +12,13 @@ import com.music.innertube.NewPipeExtractor
 import com.music.innertube.YouTube
 import com.music.innertube.models.YouTubeClient
 import com.music.innertube.models.YouTubeClient.Companion.ANDROID_CREATOR
+import com.music.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC
 import com.music.vivi.utils.BotDetectionMitigator
 import com.music.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_43_32
 import com.music.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_61_48
 import com.music.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
 import com.music.innertube.models.YouTubeClient.Companion.IOS
+import com.music.innertube.models.YouTubeClient.Companion.IOS_MUSIC
 import com.music.innertube.models.YouTubeClient.Companion.IPADOS
 import com.music.innertube.models.YouTubeClient.Companion.MOBILE
 import com.music.innertube.models.YouTubeClient.Companion.TVHTML5
@@ -105,6 +107,11 @@ object YTPlayerUtils {
 
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
         ANDROID_VR_1_61_48,
+        // Music-specific clients resolve tracks that the generic clients report
+        // as "Video non disponibile" (music-only / YouTube-Music-signed URLs).
+        // The desktop edition uses these and plays those tracks reliably.
+        IOS_MUSIC,
+        ANDROID_MUSIC,
         WEB_REMIX,
         TVHTML5_SIMPLY_EMBEDDED_PLAYER,  // Try embedded player first for age-restricted content
         TVHTML5,

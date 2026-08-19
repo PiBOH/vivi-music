@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.36_DE-1.33.109] - 2026-08-19
+
+### Fixed
+
+- [APK] Some tracks still failed with `IO_UNSPECIFIED (2000): Video
+  non disponibile`. The mobile fallback client chain was missing the
+  music-specific clients (`IOS_MUSIC`, `ANDROID_MUSIC`) that resolve
+  music-only / YouTube-Music-signed streams the generic clients report as
+  "Video unavailable". These clients are now tried right after the main VR
+  client, matching the desktop edition which plays those tracks reliably.
+
 ## [6.4.35_DE-1.33.109] - 2026-08-19
 
 ### Changed
