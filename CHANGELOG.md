@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.37_DE-1.33.109] - 2026-08-19
+
+### Fixed
+
+- [APK] Added `VISIONOS` and `ANDROID_NO_SDK` to the mobile fallback client
+  chain, completing parity with the desktop edition's proven resolver. These
+  clients cover the remaining music-only tracks that the generic clients still
+  report as `Video non disponibile`.
+
 ## [6.4.36_DE-1.33.109] - 2026-08-19
 
 ### Fixed

@@ -51,6 +51,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 - [x] APK 6.4.34: mobile stream downloads now send a browser-like `User-Agent` (Firefox, same as the URL validation and the desktop's NewPipe download) instead of the default media3 UA, which the googlevideo CDN was resetting (`IO_UNSPECIFIED (2000): Source error`). The playback-error toast now also shows the nested cause (real reason) instead of just the `Source error` wrapper.
 - [x] APK 6.4.35: when every innerTube client is bot-flagged (`Video unavailable`), the mobile now falls back to a NewPipe-resolved stream URL (NewPipe resolves its own signature independently, like the desktop's NewPipe-first resolver). A minimal audio format is synthesized from the NewPipe itag.
 - [x] APK 6.4.36: added `IOS_MUSIC` and `ANDROID_MUSIC` to the mobile fallback client chain (right after the main VR client), so music-only / YouTube-Music-signed tracks that the generic clients report as `Video non disponibile` now resolve — matching the desktop, which already plays them reliably.
+- [x] APK 6.4.37: added `VISIONOS` and `ANDROID_NO_SDK` to the mobile fallback client chain, completing parity with the desktop's proven resolver for the remaining music-only tracks.
 
 ## Phase 5 — Desktop persistence + authentication
 - [x] Persistence: the desktop uses a JSON file store (`DesktopSettings` under `~/.vivimusic/device-sync.json`); Room is Android-only and stays there.
