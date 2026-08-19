@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.30_DE-1.33.108] - 2026-08-19
+
+### Fixed
+
+- [APK] Stream-resolution retry now rotates the guest identity (visitorData)
+  before re-resolving on a 403/IO error, so a bot-flagged or expired
+  googlevideo URL isn't reused verbatim. This stops tracks failing to start,
+  auto-skipping, or pausing by themselves in the first seconds — even when the
+  phone is not paired to the desktop.
+
 ## [6.4.29_DE-1.33.108] - 2026-08-18
 
 ### Fixed

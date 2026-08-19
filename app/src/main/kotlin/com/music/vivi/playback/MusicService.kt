@@ -180,6 +180,7 @@ import coil3.imageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.allowHardware
+import com.music.vivi.utils.BotDetectionMitigator
 import com.music.vivi.utils.CoilBitmapLoader
 import com.music.vivi.utils.DiscordRPC
 import com.music.vivi.utils.NetworkConnectivityObserver
@@ -2941,6 +2942,12 @@ class MusicService :
         retryJob = scope.launch {
             delay(RETRY_DELAY_MS)
 
+            // Rotate the guest identity before re-resolving so a bot-flagged or
+            // expired googlevideo URL isn't returned verbatim again.
+            if (YouTube.cookie == null) {
+                BotDetectionMitigator.rotateGuestSession()
+            }
+
             // Seek to current position to force URL re-resolution
             val currentPosition = player.currentPosition
             val currentIndex = player.currentMediaItemIndex
@@ -2966,6 +2973,12 @@ class MusicService :
         retryJob = scope.launch {
             performAggressiveCacheClear(mediaId)
             delay(RETRY_DELAY_MS)
+
+            // Rotate the guest identity before re-resolving so a bot-flagged or
+            // expired googlevideo URL isn't returned verbatim again.
+            if (YouTube.cookie == null) {
+                BotDetectionMitigator.rotateGuestSession()
+            }
 
             val currentPosition = player.currentPosition
             val currentIndex = player.currentMediaItemIndex
