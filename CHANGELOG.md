@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.35_DE-1.33.109] - 2026-08-19
+
+### Changed
+
+- [DE] On Debian (and Debian-derived distros such as Ubuntu) the updater now
+  prefers the `.deb` installer over the AppImage. Detection reads
+  `/etc/os-release` (`ID`/`ID_LIKE` containing `debian` or `ubuntu`); other
+  Linux distros keep the AppImage as the preferred installer.
+
 ## [6.4.35_DE-1.33.108] - 2026-08-19
 
 ### Fixed

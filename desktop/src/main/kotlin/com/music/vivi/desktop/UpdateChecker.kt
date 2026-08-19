@@ -77,16 +77,17 @@ object UpdateChecker {
 
     /**
      * Picks the installer asset for the host OS/arch. Windows: EXE then MSI
-     * (the Inno Setup .exe is lighter and more user-friendly); Linux: AppImage
-     * then DEB; macOS: DMG then PKG. Prefers an arch-specific asset, then
-     * falls back to any matching extension.
+     * (the Inno Setup .exe is lighter and more user-friendly); macOS: DMG then
+     * PKG; Linux: DEB then AppImage on Debian/Ubuntu (a `.deb` is the native
+     * package there), AppImage then DEB elsewhere. Prefers an arch-specific
+     * asset, then falls back to any matching extension.
      */
     fun selectAsset(assets: List<GitHubAsset>): UpdateAsset? {
         if (assets.isEmpty()) return null
         val preferred = when (Platform.os) {
             DesktopOs.WINDOWS -> listOf(".exe", ".msi")
             DesktopOs.MACOS -> listOf(".dmg", ".pkg")
-            DesktopOs.LINUX -> listOf(".AppImage", ".deb")
+            DesktopOs.LINUX -> if (Platform.isDebianBased) listOf(".deb", ".AppImage") else listOf(".AppImage", ".deb")
         }
         val archTokens = if (Platform.arch == DesktopArch.ARM64) {
             listOf("arm64", "aarch64")
