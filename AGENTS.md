@@ -55,6 +55,20 @@ dependencies there, or you break the desktop build.
 ## 3. Code conventions and development guidelines
 
 - **Branch**: `vivi-music-de`.
+- **Branch policy for mobile changes (mandatory)**:
+  - The desktop edition work is maintained on `vivi-music-de`; DE-only changes
+    are committed and pushed **only** there.
+  - Mobile/APK changes must be applied and committed on **both** `vivi-music-de`
+    (the branch used to build the APK for the DE release) and `main` (the
+    canonical mobile branch). Keep the mobile diff equivalent on both branches.
+  - For combined DE + mobile changes, commit the DE-specific part only on
+    `vivi-music-de`, and apply the mobile part to both branches. Never merge the
+    whole DE branch into `main`, because DE-only code and release metadata must
+    not enter the mobile branch.
+  - Before committing mobile work, verify the affected mobile files on both
+    branches, compile the relevant target, and push both branch commits. The
+    commits may have different hashes because the branches have different
+    histories, but they must contain the same mobile behavior.
 - **Commit style**: Conventional Commits (`feat:`, `fix:`, `ci:`, `refactor:`,
   `docs:`, `chore:`, `perf:`, …) with an optional scope, e.g.
   `feat(sync): …`.
