@@ -2741,13 +2741,6 @@ class MusicService :
             Timber.tag(TAG).e(e, "Failed to clear player cache for $mediaId")
         }
 
-        // Clear decryption caches
-        try {
-            YTPlayerUtils.forceRefreshForVideo(mediaId)
-            Timber.tag(TAG).d("Cleared decryption caches for $mediaId")
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear decryption caches for $mediaId")
-        }
     }
 
     /**
@@ -2936,42 +2929,29 @@ class MusicService :
     /**
      * Handles expired URL (403) errors by clearing caches and retrying.
      */
+    /** Rotates the guest identity, then re-seeks and re-prepares the track. */
+    private suspend fun reResolveCurrentTrack(mediaId: String, reason: String) {
+        // Rotate the guest identity so a bot-flagged/expired googlevideo URL
+        // isn't returned verbatim again.
+        if (YouTube.cookie == null) BotDetectionMitigator.rotateGuestSession()
+        val currentPosition = player.currentPosition
+        val currentIndex = player.currentMediaItemIndex
+        player.seekTo(currentIndex, currentPosition)
+        player.prepare()
+        Timber.tag(TAG).d("Retrying playback for $mediaId after $reason")
+    }
+
     private fun handleExpiredUrlError(mediaId: String?) {
         if (mediaId == null) {
             handleFinalFailure()
             return
         }
-
         incrementRetryCount(mediaId)
-
-        // Clear the cached URL
         songUrlCache.remove(mediaId)
-        Timber.tag(TAG).d("Cleared cached URL for $mediaId")
-
-        // Clear decryption caches
-        try {
-            YTPlayerUtils.forceRefreshForVideo(mediaId)
-        } catch (e: Exception) {
-            Timber.tag(TAG).e(e, "Failed to clear decryption caches")
-        }
-
         retryJob?.cancel()
         retryJob = scope.launch {
             delay(RETRY_DELAY_MS)
-
-            // Rotate the guest identity before re-resolving so a bot-flagged or
-            // expired googlevideo URL isn't returned verbatim again.
-            if (YouTube.cookie == null) {
-                BotDetectionMitigator.rotateGuestSession()
-            }
-
-            // Seek to current position to force URL re-resolution
-            val currentPosition = player.currentPosition
-            val currentIndex = player.currentMediaItemIndex
-            player.seekTo(currentIndex, currentPosition)
-            player.prepare()
-
-            Timber.tag(TAG).d("Retrying playback for $mediaId after 403 error")
+            reResolveCurrentTrack(mediaId, "403 error")
         }
     }
 
@@ -2983,26 +2963,12 @@ class MusicService :
             handleFinalFailure()
             return
         }
-
         incrementRetryCount(mediaId)
-
         retryJob?.cancel()
         retryJob = scope.launch {
             performAggressiveCacheClear(mediaId)
             delay(RETRY_DELAY_MS)
-
-            // Rotate the guest identity before re-resolving so a bot-flagged or
-            // expired googlevideo URL isn't returned verbatim again.
-            if (YouTube.cookie == null) {
-                BotDetectionMitigator.rotateGuestSession()
-            }
-
-            val currentPosition = player.currentPosition
-            val currentIndex = player.currentMediaItemIndex
-            player.seekTo(currentIndex, currentPosition)
-            player.prepare()
-
-            Timber.tag(TAG).d("Retrying playback for $mediaId after generic IO error")
+            reResolveCurrentTrack(mediaId, "generic IO error")
         }
     }
 

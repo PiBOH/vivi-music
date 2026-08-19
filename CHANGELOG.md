@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.32_DE-1.33.108] - 2026-08-19
+
+### Changed
+
+- [APK] Simplified the mobile stream-retry path: extracted a shared
+  `reResolveCurrentTrack` helper (removes the duplicated rotate/seek/prepare
+  block) and deleted the no-op `YTPlayerUtils.forceRefreshForVideo` stub. No
+  behavior change.
+
 ## [6.4.31_DE-1.33.108] - 2026-08-19
 
 ### Added

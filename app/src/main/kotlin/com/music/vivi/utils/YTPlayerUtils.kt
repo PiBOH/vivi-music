@@ -905,8 +905,4 @@ object YTPlayerUtils {
         Timber.tag(logTag).e("Failed to get stream URL")
         return null
     }
-
-    fun forceRefreshForVideo(videoId: String) {
-        Timber.tag(logTag).d("Force refreshing for videoId: $videoId")
-    }
 }
