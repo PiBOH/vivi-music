@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.111] - 2026-08-19
+
+### Added
+
+- [APK] Complete translations for the Devices section in all 54 supported
+  languages: Devices, Device sync, Relay server, Find desktop, Scan QR code,
+  pairing code, Pair/Unpair, paired state and Sync VIVI volume (plus their
+  descriptions). Previously the whole section fell back to English.
+- [DE] A "How to connect your phone" step-by-step card on the Device sync
+  screen (same Wi-Fi, Start LAN server, scan the QR code, confirm the code),
+  translated in all 47 desktop languages and recommending the LAN server.
+
 ## [6.4.38_DE-1.33.110] - 2026-08-19
 
 ### Fixed

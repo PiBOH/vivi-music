@@ -387,6 +387,11 @@ ENGLISH = {
     "lan_address": "Phone connects to",
     "scan_qr": "Scan to connect",
     "lan_hint": "On your phone, open Settings → Devices, set the relay server to the address above, then enter the code.",
+    "how_to_connect": "How to connect your phone",
+    "how_to_step1": "Connect your phone and this computer to the same Wi-Fi network.",
+    "how_to_step2": "Tap \"Start LAN server\" — a QR code and a 6-digit code appear (recommended).",
+    "how_to_step3": "On your phone, open Settings → Devices and tap \"Scan QR code\" to fill in the address and code automatically.",
+    "how_to_step4": "Check the code and tap \"Pair\". The two devices are now synchronized.",
     "status": "Status",
     "connected": "Connected",
     "disconnected": "Disconnected",
@@ -1175,8 +1180,9 @@ from desktop_extra_translations_17 import EXTRA_TRANSLATIONS as _EXTRA_17
 from desktop_extra_translations_18 import EXTRA_TRANSLATIONS as _EXTRA_18
 from desktop_extra_translations_19 import EXTRA_TRANSLATIONS as _EXTRA_19
 from desktop_extra_translations_20 import EXTRA_TRANSLATIONS as _EXTRA_20
+from desktop_extra_translations_21 import EXTRA_TRANSLATIONS as _EXTRA_21
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21):
     TRANSLATIONS.update(_extra)
 
 

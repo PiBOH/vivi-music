@@ -2184,6 +2184,8 @@ fun DeviceSyncSection(
 
     Text(Localization.get(language, "device_sync"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
+    DeviceSyncHowTo(language)
+
     SettingSwitch(
         language = language,
         key = "sync_vivi_volume",
@@ -2284,6 +2286,46 @@ fun DeviceSyncSection(
                 Text("$k = $v", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 1.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun DeviceSyncHowTo(language: String) {
+    Surface(
+        tonalElevation = 2.dp,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                Localization.get(language, "how_to_connect"),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(8.dp))
+            HowToStep(1, Localization.get(language, "how_to_step1"))
+            HowToStep(2, Localization.get(language, "how_to_step2"))
+            HowToStep(3, Localization.get(language, "how_to_step3"))
+            HowToStep(4, Localization.get(language, "how_to_step4"))
+        }
+    }
+}
+
+@Composable
+private fun HowToStep(number: Int, text: String) {
+    Row(Modifier.padding(vertical = 4.dp)) {
+        Text(
+            number.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.widthIn(min = 20.dp),
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(start = 8.dp),
+        )
     }
 }
 
