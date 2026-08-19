@@ -470,7 +470,17 @@ class PlayerController {
                     if (resumeWhenReady && _state.value.isResolving) player.resume()
                     _state.update { s ->
                         if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
-                            s.copy(positionMs = pos, isResolving = false, isPlaying = resumeWhenReady)
+                            if (s.isResolving) {
+                                // Only on the resolving→ready transition apply the
+                                // held-back intent. After that, keep the latest
+                                // user/peer play-pause choice: a stale
+                                // resumeWhenReady must not overwrite a manual
+                                // toggle (that left the button stuck on "play"
+                                // while audio kept playing).
+                                s.copy(positionMs = pos, isResolving = false, isPlaying = resumeWhenReady)
+                            } else {
+                                s.copy(positionMs = pos)
+                            }
                         } else s
                     }
                 },

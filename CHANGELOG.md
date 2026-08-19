@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.112] - 2026-08-19
+
+### Fixed
+
+- [DE] The play/pause button could stay stuck on "play" while audio kept
+  playing (and pausing then did nothing). The player's position callback was
+  re-applying the initial `resumeWhenReady` intent as `isPlaying` on every
+  ~100 ms report, so a manual play/pause toggle (e.g. after the phone started
+  a track paused/resolving while paired) was overwritten the next tick. The
+  intent is now applied only on the resolving→ready transition; later reports
+  just advance the position.
+
 ## [6.4.39_DE-1.33.111] - 2026-08-19
 
 ### Added
