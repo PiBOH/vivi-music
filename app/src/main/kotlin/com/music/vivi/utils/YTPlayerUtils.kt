@@ -346,12 +346,84 @@ object YTPlayerUtils {
             PlaybackLogManager.log(PlaybackLogLevel.BOT, "Playback failed for guest", "Triggering bot detection mitigation (rotating guest session)")
             BotDetectionMitigator.rotateGuestSession()
             val retryResult = resolvePlaybackData(videoId, playlistId, audioQuality, connectivityManager)
-            retryResult.onSuccess { BotDetectionMitigator.notifyPlaybackSuccess() }
-            return retryResult
+            if (retryResult.isSuccess) {
+                retryResult.onSuccess { BotDetectionMitigator.notifyPlaybackSuccess() }
+                return retryResult
+            }
         }
         
         firstAttempt.onSuccess { BotDetectionMitigator.notifyPlaybackSuccess() }
+
+        // Last resort: every innerTube client was bot-flagged ("Video
+        // unavailable"). NewPipe resolves its own signature independently, so it
+        // works where the shared clients don't — the desktop edition uses
+        // NewPipe first for exactly this reason.
+        if (firstAttempt.isFailure) {
+            val newPipeData = runCatching { resolveViaNewPipe(videoId) }.getOrNull()
+            if (newPipeData != null) {
+                PlaybackLogManager.log(
+                    PlaybackLogLevel.BOT,
+                    "NewPipe fallback",
+                    "Using NewPipe stream URL after innerTube clients failed",
+                )
+                return Result.success(newPipeData)
+            }
+        }
+
         return firstAttempt
+    }
+
+    /** Resolves a playable stream via NewPipe alone, used when every innerTube
+     *  client is bot-flagged ("Video unavailable"). NewPipe resolves its own
+     *  player response and signature, so it works where the shared clients don't. */
+    private fun resolveViaNewPipe(videoId: String): PlaybackData? {
+        val streams = runCatching { YouTube.getNewPipeStreamUrls(videoId) }.getOrNull()
+            ?: return null
+        val audioItags = listOf(141, 140, 251, 250, 249, 139, 171)
+        val picked = audioItags.firstNotNullOfOrNull { tag ->
+            streams.firstOrNull { it.first == tag }
+        } ?: streams.firstOrNull { it.first in audioItags } ?: return null
+        val itag = picked.first
+        val url = picked.second
+
+        val (mimeType, bitrate) = when (itag) {
+            141 -> "audio/mp4; codecs=\"mp4a.40.2\"" to 256000
+            140 -> "audio/mp4; codecs=\"mp4a.40.2\"" to 129000
+            139 -> "audio/mp4; codecs=\"mp4a.40.5\"" to 64000
+            251 -> "audio/webm; codecs=\"opus\"" to 160000
+            250 -> "audio/webm; codecs=\"opus\"" to 64000
+            else -> "audio/webm; codecs=\"opus\"" to 48000
+        }
+        val format = PlayerResponse.StreamingData.Format(
+            itag = itag,
+            url = url,
+            mimeType = mimeType,
+            bitrate = bitrate,
+            width = null,
+            height = null,
+            contentLength = null,
+            quality = "",
+            fps = null,
+            qualityLabel = null,
+            averageBitrate = null,
+            audioQuality = null,
+            approxDurationMs = null,
+            audioSampleRate = null,
+            audioChannels = null,
+            loudnessDb = null,
+            lastModified = null,
+            signatureCipher = null,
+            cipher = null,
+            audioTrack = null,
+        )
+        return PlaybackData(
+            audioConfig = null,
+            videoDetails = null,
+            playbackTracking = null,
+            format = format,
+            streamUrl = url,
+            streamExpiresInSeconds = 21600,
+        )
     }
 
     private suspend fun resolvePlaybackData(

@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.35_DE-1.33.108] - 2026-08-19
+
+### Fixed
+
+- [APK] When every innerTube client is bot-flagged (`Video unavailable`), the
+  mobile now falls back to a NewPipe-resolved stream URL instead of failing.
+  NewPipe resolves its own signature independently, which is why the desktop
+  edition (NewPipe-first) plays where the shared clients were refused. A
+  minimal audio format is synthesized from the NewPipe itag so playback works
+  without the client response.
+
 ## [6.4.34_DE-1.33.108] - 2026-08-19
 
 ### Fixed
