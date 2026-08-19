@@ -74,6 +74,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.music.innertube.YouTube
+import com.music.innertube.models.YouTubeClient
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
 import com.music.lastfm.LastFM
@@ -2655,9 +2656,16 @@ class MusicService :
             lastErrorToastKey = errorToastKey
             val codeName = error.errorCodeName.removePrefix("ERROR_CODE_")
             val summary = "Playback error $codeName (${error.errorCode})"
-            PlaybackLogManager.log(PlaybackLogLevel.ERROR, summary, error.message)
+            // "Source error" is just the media3 wrapper; the real reason (403,
+            // connection reset, premature end of stream, …) is nested two levels
+            // down in the cause chain.
+            val detail = error.cause?.cause?.message
+                ?: error.cause?.message
+                ?: error.message
+                ?: "unknown"
+            PlaybackLogManager.log(PlaybackLogLevel.ERROR, summary, detail)
             Handler(Looper.getMainLooper()).post {
-                Toast.makeText(this@MusicService, "$summary: ${error.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MusicService, "$summary: $detail", Toast.LENGTH_LONG).show()
             }
         }
         reportException(error)
@@ -3037,7 +3045,7 @@ class MusicService :
                                         } ?: response.request
                                     }
                                     .build(),
-                            ),
+                            ).setUserAgent(YouTubeClient.USER_AGENT_WEB),
                         ),
                     ),
             ).setCacheWriteDataSinkFactory(null)

@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.34_DE-1.33.108] - 2026-08-19
+
+### Fixed
+
+- [APK] Stream downloads now send a browser-like `User-Agent` (Firefox),
+  matching the UA already used to validate the URL and the one the desktop
+  edition uses to download NewPipe URLs. The previous default media3 UA was
+  getting the connection reset by the googlevideo CDN, surfacing as
+  `IO_UNSPECIFIED (2000): Source error`. The on-screen playback error now also
+  shows the nested cause (the real reason) instead of just the `Source error`
+  wrapper.
+
 ## [6.4.33_DE-1.33.108] - 2026-08-19
 
 ### Fixed

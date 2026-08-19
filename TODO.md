@@ -48,6 +48,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 - [x] APK 6.4.31: playback errors now show a visible on-screen toast with the exact error code (`IO_UNSPECIFIED (2000)`, etc.) plus the message, de-duplicated per (track, code) so the retry loop doesn't spam; the same error is also written to `PlaybackLogManager` (Settings → Content → Playback logs).
 - [x] APK 6.4.32: refactored the mobile stream-retry path — shared `reResolveCurrentTrack` helper (removed the duplicated rotate/seek/prepare block) and deleted the no-op `YTPlayerUtils.forceRefreshForVideo` stub. No behavior change.
 - [x] APK 6.4.33: mobile stream resolution now prefers a NewPipe-signed URL (matched to the selected audio format) over the shared ANDROID_VR client URL — mirrors the desktop's NewPipe-first resolver and avoids the CDN bot-flagging behind `IO_UNSPECIFIED (2000)`. The client URL stays as fallback.
+- [x] APK 6.4.34: mobile stream downloads now send a browser-like `User-Agent` (Firefox, same as the URL validation and the desktop's NewPipe download) instead of the default media3 UA, which the googlevideo CDN was resetting (`IO_UNSPECIFIED (2000): Source error`). The playback-error toast now also shows the nested cause (real reason) instead of just the `Source error` wrapper.
 
 ## Phase 5 — Desktop persistence + authentication
 - [x] Persistence: the desktop uses a JSON file store (`DesktopSettings` under `~/.vivimusic/device-sync.json`); Room is Android-only and stays there.
