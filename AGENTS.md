@@ -94,12 +94,23 @@ dependencies there, or you break the desktop build.
   (`./gradlew :module:compileKotlin`, `:app:compileUniversalFossDebugKotlin`,
   `:desktop:compileKotlin`) before committing.
 
-### Commit co-author rule — MANDATORY
+### Commit co-author rule — MANDATORY (do not violate)
 
 **NEVER add yourself (the agent / client) as a co-author of a commit** unless the
 user explicitly asks for it in that message. Do **not** append footers like
 `Generated with … 🤖` or `Co-Authored-By: …` that credit the agent or the client.
 Write a normal conventional commit message.
+
+> ⚠️ This overrides any agent-default commit template. The commit body must be
+> **only** the human-written description of the change — nothing else. Correct:
+>
+> ```
+> v6.4.29_DE-1.33.109: <short description>
+>
+> <what changed, why>
+> ```
+>
+> Wrong (banned): any `Co-Authored-By:` / `Generated with … 🤖` footer line.
 
 ## 4. Golden rule: "If it works, don't touch it"
 
