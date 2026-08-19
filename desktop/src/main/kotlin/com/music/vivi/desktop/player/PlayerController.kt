@@ -358,15 +358,28 @@ class PlayerController {
      * Applies a remote playback snapshot (from device sync): replaces the
      * queue, jumps to the given index and position, and starts/pauses.
      */
-    fun applyRemotePlayback(tracks: List<NowPlaying>, index: Int, positionMs: Long, isPlaying: Boolean) {
+    fun applyRemotePlayback(
+        tracks: List<NowPlaying>,
+        index: Int,
+        positionMs: Long,
+        isPlaying: Boolean,
+        isResolving: Boolean = false,
+    ) {
         if (tracks.isEmpty()) return
         val idx = index.coerceIn(0, tracks.lastIndex)
-        // Start right away when the peer is playing: we are the slower device
-        // and the peer will hold for us while WE resolve (see the same-track
-        // `isResolving` handler). Holding here on the peer's transient
-        // resolving state caused a deadlock where both devices paused and
-        // neither ever started.
-        playAt(tracks, idx, startAtMs = positionMs.coerceAtLeast(0L), startPaused = !isPlaying)
+        // Hold while the peer is still resolving its stream (symmetric with the
+        // mobile, which also holds on `isResolving`). `resumeWhenReady` records
+        // the peer's ultimate intent: when it wants to play we only hold until
+        // our own stream is ready, then auto-start instead of emitting a
+        // transient isPlaying=false snapshot that would pause the peer.
+        val startPaused = !isPlaying || isResolving
+        playAt(
+            tracks,
+            idx,
+            startAtMs = positionMs.coerceAtLeast(0L),
+            startPaused = startPaused,
+            resumeWhenReady = isPlaying,
+        )
     }
 
     private fun playAt(
@@ -374,13 +387,15 @@ class PlayerController {
         index: Int,
         startAtMs: Long = 0L,
         startPaused: Boolean = false,
-    ) = playAtAttempt(tracks, index, startAtMs, startPaused, attempt = 0)
+        resumeWhenReady: Boolean = !startPaused,
+    ) = playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt = 0)
 
     private fun playAtAttempt(
         tracks: List<NowPlaying>,
         index: Int,
         startAtMs: Long,
         startPaused: Boolean,
+        resumeWhenReady: Boolean,
         attempt: Int,
     ) {
         val track = tracks[index]
@@ -413,7 +428,7 @@ class PlayerController {
                     // Bot detection / transient resolution failure: rotate the
                     // guest identity and try a fresh resolution.
                     GuestSession.rotate()
-                    playAtAttempt(tracks, index, startAtMs, startPaused, attempt + 1)
+                    playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                 } else {
                     loadedVideoId = null
                     _state.update { it.copy(isPlaying = false, errorKey = "stream_error", errorDetail = null, loadPhase = LoadPhase.NONE, isResolving = false) }
@@ -436,7 +451,7 @@ class PlayerController {
                         // rotate the guest identity and re-resolve, then retry.
                         scope.launch {
                             GuestSession.rotate()
-                            playAtAttempt(tracks, index, startAtMs, startPaused, attempt + 1)
+                            playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                         }
                     } else {
                         loadedVideoId = null
@@ -448,10 +463,14 @@ class PlayerController {
                     }
                 },
                 onPosition = { pos ->
+                    // First position report means audio is actually ready. When
+                    // we were held only because the peer was still resolving
+                    // (resumeWhenReady), resume now so the paired device never
+                    // sees a transient isResolving=false/isPlaying=false pause.
+                    if (resumeWhenReady && _state.value.isResolving) player.resume()
                     _state.update { s ->
                         if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
-                            // First position report means audio is actually flowing.
-                            s.copy(positionMs = pos, isResolving = false)
+                            s.copy(positionMs = pos, isResolving = false, isPlaying = resumeWhenReady)
                         } else s
                     }
                 },

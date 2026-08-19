@@ -920,7 +920,7 @@ fun App(
                         NowPlaying(videoId = ref.id, title = ref.title, artist = ref.artist.orEmpty(), thumbnail = ref.thumbnail, durationMs = ref.durationMs)
                     }
                     if (tracks.isNotEmpty()) {
-                        player.applyRemotePlayback(tracks, pb.queueIndex, syncManager.effectivePosition(pb), pb.isPlaying)
+                        player.applyRemotePlayback(tracks, pb.queueIndex, syncManager.effectivePosition(pb), pb.isPlaying, pb.isResolving)
                         syncManager.noteQueueApplied(pb)
                     }
                 }

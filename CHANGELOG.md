@@ -11,6 +11,22 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.38_DE-1.33.110] - 2026-08-19
+
+### Fixed
+
+- [DE+APK] Player sync no longer stutters ("va a salti") when paired: the
+  periodic drift tolerance was raised from 250 ms to 1 s, so the relay
+  clock-offset jitter (especially on a phone hotspot) no longer triggers a
+  forward catch-up seek every 5 s — only genuine drift is corrected.
+- [DE] The desktop now waits for the phone while the phone is still resolving
+  a new track (symmetric with the phone already waiting for the desktop):
+  `applyRemotePlayback` holds playback on the peer's `isResolving` state and
+  auto-resumes the moment the desktop's own stream is ready, without emitting
+  a transient `isPlaying=false` snapshot that paused the phone. This stops the
+  desktop from playing ahead/behind and jumping to catch up on a phone-initiated
+  track change.
+
 ## [6.4.37_DE-1.33.109] - 2026-08-19
 
 ### Fixed
