@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.31_DE-1.33.108] - 2026-08-19
+
+### Added
+
+- [APK] A visible on-screen toast now appears when playback fails, showing the
+  exact error code (e.g. `IO_UNSPECIFIED (2000)`) and message so stream
+  failures can be identified without logcat. The same error is also appended to
+  the playback log (Settings → Content → Playback logs).
+
 ## [6.4.30_DE-1.33.108] - 2026-08-19
 
 ### Fixed

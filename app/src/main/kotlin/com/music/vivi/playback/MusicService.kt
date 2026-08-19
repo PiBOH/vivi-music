@@ -184,6 +184,8 @@ import com.music.vivi.utils.BotDetectionMitigator
 import com.music.vivi.utils.CoilBitmapLoader
 import com.music.vivi.utils.DiscordRPC
 import com.music.vivi.utils.NetworkConnectivityObserver
+import com.music.vivi.utils.PlaybackLogLevel
+import com.music.vivi.utils.PlaybackLogManager
 import com.music.vivi.utils.ScrobbleManager
 import com.music.vivi.utils.SyncUtils
 import com.music.vivi.utils.YTPlayerUtils
@@ -408,6 +410,8 @@ class MusicService :
     private var consecutivePlaybackErr = 0
     private var retryJob: Job? = null
     private var retryCount = 0
+    /** Dedupes the visible on-screen error toast so retries don't spam it. */
+    private var lastErrorToastKey: String? = null
     private var silenceSkipJob: Job? = null
     /** Background job that pre-resolves the next track's stream URL into [songUrlCache]. */
     private var prefetchJob: Job? = null
@@ -2643,6 +2647,19 @@ class MusicService :
 
         val mediaId = player.currentMediaItem?.mediaId
         Timber.tag(TAG).w(error, "Player error occurred for $mediaId: errorCode=${error.errorCode}, message=${error.message}")
+        // Visible, on-screen feedback so the exact error code is seen without
+        // digging into logcat. De-duplicated per (track, code) so the retry
+        // loop doesn't spam a toast per attempt.
+        val errorToastKey = "$mediaId:${error.errorCode}"
+        if (errorToastKey != lastErrorToastKey) {
+            lastErrorToastKey = errorToastKey
+            val codeName = error.errorCodeName.removePrefix("ERROR_CODE_")
+            val summary = "Playback error $codeName (${error.errorCode})"
+            PlaybackLogManager.log(PlaybackLogLevel.ERROR, summary, error.message)
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(this@MusicService, "$summary: ${error.message}", Toast.LENGTH_LONG).show()
+            }
+        }
         reportException(error)
 
         // Check if this song has failed too many times
