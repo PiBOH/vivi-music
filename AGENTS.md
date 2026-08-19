@@ -93,6 +93,12 @@ dependencies there, or you break the desktop build.
 - Verify non-trivial changes by compiling the affected module
   (`./gradlew :module:compileKotlin`, `:app:compileUniversalFossDebugKotlin`,
   `:desktop:compileKotlin`) before committing.
+- **Ponytail (always):** on every coding task, apply the `ponytail` skill
+  (installed in `.agents/skills/ponytail`): smallest working solution, reuse
+  what already exists in the codebase, stdlib/native over new code and new
+  dependencies, one line before fifty. It complements the golden rule in §4 and
+  never overrides explicit user requests, the trust-boundary/error-handling
+  rules, or the localization rule in §6.
 
 ### Commit co-author rule — MANDATORY (do not violate)
 
