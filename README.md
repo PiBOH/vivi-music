@@ -19,7 +19,7 @@
     <a href="https://piboh.github.io/vivi-music/">
       <img src="https://img.shields.io/badge/Website-VIVI%20Music%20DE-ED5564?style=for-the-badge" alt="Website">
     </a>
-    <a href="https://t.me/vivimusicapp">
+    <a href="https://t.me/vivimusicde">
       <img src="https://img.shields.io/badge/Telegram-Join%20Community-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram">
     </a>
   </p>
