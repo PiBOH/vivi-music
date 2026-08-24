@@ -225,7 +225,7 @@
         <h3>💬 Community &amp; Support</h3>
         <p>Connect with other music lovers, suggest new features, report bugs, and stay updated with the latest releases!</p>
         <br>
-        <a href="https://t.me/vivimusicapp">
+        <a href="https://t.me/vivimusicde">
           <img src="https://img.shields.io/badge/Telegram-Join%20Community-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Join Telegram">
         </a>
         <br><br>
