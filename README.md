@@ -253,7 +253,7 @@
       <td width="50%" align="left">
         <b>💡 Special Thanks</b>
         <ul>
-          <li><strong><a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a></strong> – the original Android app that VIVI Music DE ports to the desktop.</li>
+          <li><strong><a href="https://github.com/vivizzz007/vivi-music">vivizzz007</a></strong> – the original Android app that VIVI Music DE ports to the desktop.</li>
           <li><strong><a href="https://github.com/PiBOH">@PiBOH</a></strong> – for having created and maintaining VIVI Music DE.</li>
           <li><strong><a href="https://github.com/mostafaalagamy">Mostafa Alagamy</a></strong> – inspiration and contributions to the open source community.</li>
           <li><strong><a href="https://github.com/ZemerTeam/zemer-cipher">@Zemer</a></strong> – for inventing the new playback method! 🎉</li>
