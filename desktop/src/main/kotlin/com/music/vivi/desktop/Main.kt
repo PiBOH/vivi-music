@@ -1078,7 +1078,10 @@ fun App(
                         language = language,
                         isLoggedIn = isLoggedIn,
                         gridItemSize = gridItemSize,
-                        onOpenLogin = { navigate(Screen.Login) },
+                        onLoggedIn = {
+                            isLoggedIn = true
+                            accountName = DesktopSettings.load().accountName
+                        },
                         onOpenAlbum = { navigate(Screen.Album(it)) },
                         onOpenArtist = { navigate(Screen.Artist(it)) },
                         onOpenPlaylist = { navigate(Screen.Playlist(it)) },
