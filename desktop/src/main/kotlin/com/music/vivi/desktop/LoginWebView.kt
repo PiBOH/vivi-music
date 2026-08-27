@@ -46,6 +46,9 @@ object LoginWebView {
     @Volatile
     private var windowOpen = false
 
+    @Volatile
+    private var unavailable = false
+
     fun isWindowOpen(): Boolean = windowOpen
 
     /**
@@ -57,6 +60,7 @@ object LoginWebView {
      */
     fun openEmbedded(language: String, onCaptured: (String?) -> Unit): Boolean =
         try {
+            if (unavailable) return false
             Class.forName("javafx.embed.swing.JFXPanel")
             if (windowOpen) return true // already open, don't spawn a second one
             windowOpen = true
@@ -65,6 +69,7 @@ object LoginWebView {
                     showWindow(language, onCaptured)
                 } catch (t: Throwable) {
                     windowOpen = false
+                    unavailable = true
                     runCatching { onCaptured(null) }
                 }
             }.apply { name = "vivimusic-login-webview"; isDaemon = true }.start()

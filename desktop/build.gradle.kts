@@ -130,7 +130,7 @@ compose.desktop {
             // tools (CPU/RAM/thread stats) use `java.lang.management` and the
             // richer `com.sun.management` bean; without these modules the
             // packaged launcher crashes on startup with "Failed to launch JVM".
-            modules("java.management", "jdk.management")
+            modules("java.management", "jdk.management", "jdk.swing.interop")
             packageName = "VIVIMusic"
             packageVersion = numericPackageVersion
             description = "VIVI Music — desktop client"
