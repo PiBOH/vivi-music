@@ -93,7 +93,7 @@ dependencies {
     implementation("org.openjfx:javafx-base:$javafxVersion:$javafxClassifier")
     implementation("org.openjfx:javafx-graphics:$javafxVersion:$javafxClassifier")
     implementation("org.openjfx:javafx-controls:$javafxVersion:$javafxClassifier")
-    implementation("org.openjfx:javafx-swing:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-media:$javafxVersion:$javafxClassifier")
     implementation("org.openjfx:javafx-web:$javafxVersion:$javafxClassifier")
 
     implementation(libs.ktor.client.core)
@@ -133,7 +133,10 @@ compose.desktop {
             // jlink includes only JDK modules. JavaFX is shipped as regular runtime
             // dependencies in the application image and is launched via Stage,
             // so the packaged embedded WebView does not need Swing interop.
-            modules("java.management", "jdk.management")
+            // jdk.jsobject provides netscape.javascript.JSObject, which the
+            // JavaFX WebView requires at runtime — without it WebView creation
+            // throws NoClassDefFoundError in packaged builds.
+            modules("java.management", "jdk.management", "jdk.jsobject")
             packageName = "VIVIMusic"
             packageVersion = numericPackageVersion
             description = "VIVI Music — desktop client"

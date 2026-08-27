@@ -59,6 +59,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 - [x] YouTube login: cookie-based login with `DATASYNC_ID`/`VISITOR_DATA` fallback remains available. The DE now exposes a cross-platform JavaFX embedded Google sign-in window with direct sign-in instructions, automatic cookie capture, persistent session storage, and a system-browser fallback when JavaFX/WebView cannot start.
 - [x] JavaFX packaged runtime: replaced the Swing-dependent `JFXPanel` with a direct JavaFX `Stage`, so the embedded WebView is included in the application image without `jdk.swing.interop`; browser fallback remains available if JavaFX itself cannot start. Verified `createDistributable` and confirmed JavaFX runtime jars are packaged (DE 1.33.122).
 - [x] JavaFX startup stability: initialize the embedded WebView toolkit once via `Platform.startup` instead of the single-use `Application.launch`, preventing false unavailability/repeated fallback after the first attempt (DE 1.33.123).
+- [x] Embedded WebView packaging fixed for real: package the platform `javafx-media` jar (WebView's missing runtime dependency) and include `jdk.jsobject` in the jlink image; verified with a packaged-app smoke test that creates a WebView successfully (DE 1.33.124).
 - [x] Full desktop settings layer (same keys as the Android app).
 
 ## Phase 6 — Full desktop UI

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.124-nightly] - 2026-08-27
+
+### Fixed
+- [DE] Fixed the embedded YouTube login WebView failing in packaged builds with `NoClassDefFoundError: com/sun/media/jfxmedia/events/PlayerStateListener`: the platform-specific `javafx-media` jar is now packaged alongside `javafx-web`, and the runtime image includes the required `jdk.jsobject` module. Verified with a packaged-app smoke test (`SMOKE: WEBVIEW OK`).
+
 ## [6.4.39_DE-1.33.123-nightly] - 2026-08-27
 
 ### Fixed
