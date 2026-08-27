@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +47,7 @@ fun LibraryScreen(
     language: String,
     isLoggedIn: Boolean,
     gridItemSize: Int,
-    onOpenLogin: () -> Unit,
+    onLoggedIn: () -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenPlaylist: (String) -> Unit,
@@ -67,9 +66,10 @@ fun LibraryScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 16.dp),
             )
-            Button(onClick = onOpenLogin, modifier = Modifier.padding(top = 12.dp)) {
-                Text(Localization.get(language, "login"))
-            }
+            // Show the sign-in options directly here instead of a "Log in" button
+            // that opens a second screen: the user picks Google or manual cookies
+            // without an extra navigation step.
+            LoginContent(language = language, onLoggedIn = onLoggedIn)
             return@Column
         }
 

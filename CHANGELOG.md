@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.129-nightly] - 2026-08-28
+
+### Changed
+- [DE] The Library sidebar entry (when not signed in) now shows the two sign-in options (Accedi con Google / manual cookie) directly instead of a "Log in" button that opened a separate screen — same behavior as Settings → Account, so every login entry point is a single screen.
+
 ## [6.4.39_DE-1.33.128-nightly] - 2026-08-28
 
 ### Changed

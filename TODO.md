@@ -65,6 +65,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 - [x] Completed ALL missing desktop translations across every language: 3,582 strings added (batches `desktop_extra_translations_24..31`); all 333 used keys exist in the English table (no more raw keys in the UI); every one of the 47 language tables now contains all 437 keys with no English fallback. Also fixed the generator to deep-merge extra batches per key (was replacing the whole language map when a key appeared in two files) and added `scripts/check_localization.py` as a permanent verification tool (DE 1.33.127).
 - [x] Removed the intermediate "Log in" screen for the account flow: Settings → Account now embeds the sign-in options (Google / manual) directly when not signed in, extracted into a reusable `LoginContent` composable (DE 1.33.128).
 - [~] Embedded login WebView blank-white: after the packaged smoke test proved the engine renders, forced JavaFX software rendering (`prism.order=sw`) before toolkit start to avoid the GPU-pipeline conflict with the Compose window (DE 1.33.128). Needs a user test of `.128`; if still white, the `[login-webview]` console log will distinguish paint vs load.
+- [x] Library sidebar entry (when not signed in) now embeds the sign-in options (Google / manual) directly instead of a "Log in" button opening a separate screen — same single-screen behavior as Settings → Account, so every login entry point is consistent (DE 1.33.129).
 - [x] Full desktop settings layer (same keys as the Android app).
 
 ## Phase 6 — Full desktop UI
