@@ -76,7 +76,6 @@ fun LoginScreen(language: String, onBack: () -> Unit, onLoggedIn: () -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
     ) {
         BackButton(language, onBack)
-        Text(Localization.get(language, "login"), style = MaterialTheme.typography.headlineMedium)
 
         // ------------------------------------------------ signed-in state
         if (isLoggedIn) {

@@ -61,6 +61,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 - [x] JavaFX startup stability: initialize the embedded WebView toolkit once via `Platform.startup` instead of the single-use `Application.launch`, preventing false unavailability/repeated fallback after the first attempt (DE 1.33.123).
 - [x] Embedded WebView packaging fixed for real: package the platform `javafx-media` jar (WebView's missing runtime dependency) and include `jdk.jsobject` in the jlink image; verified with a packaged-app smoke test that creates a WebView successfully (DE 1.33.124).
 - [~] Embedded login WebView still reported blank-white after opening in the packaged app: added explicit WebView dimensions, a forced re-layout/paint nudge on page RUNNING and SUCCEEDED, and `[login-webview]` console logging of load state/size/title so the remaining cause is diagnosable (DE 1.33.125). Packaged smoke test (exact layout + AWT pre-init) renders Google's sign-in page fine, so the failure is specific to the running app context — needs a user test of `.125` and the console log to pinpoint.
+- [x] Removed the redundant "Accesso" heading from the login screen so the two sign-in options (Accedi con Google / manual cookie) appear directly (DE 1.33.126).
 - [x] Full desktop settings layer (same keys as the Android app).
 
 ## Phase 6 — Full desktop UI

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.126-nightly] - 2026-08-28
+
+### Changed
+- [DE] Removed the redundant "Accesso" heading from the login screen: when not signed in, the screen now shows the two sign-in options (Accedi con Google / manual cookie) directly.
+
 ## [6.4.39_DE-1.33.125-nightly] - 2026-08-27
 
 ### Fixed
