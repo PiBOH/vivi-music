@@ -95,6 +95,9 @@ dependencies there, or you break the desktop build.
   same: content-only changes there do **not** need `v` (it has its own
   `pages-deploy.yml` trigger on `.websitede/**`); only use `v` when the commit
   also touches program code or build/release workflows.
+- **Pre-commit checklist (mandatory)**: every code commit must pass the
+  `version.txt` + `CHANGELOG.md` + `TODO.md` checklist defined at the end of
+  §5 **before** it is created — no exceptions.
 - Do not commit unrelated files (stray artifacts, debug dumps) unless relevant.
 - **Keep `TODO.md` up to date**: every time you change the program (feature,
   fix, ported screen, workflow change), reflect it in `TODO.md` — mark done
@@ -237,6 +240,47 @@ to the top of `CHANGELOG.md`. Omit sections that have no entries.
 `- [DE] New desktop feature.`), so desktop and Android changes stay
 distinguishable in the changelog. Desktop releases use the combined
 `<mobile>_DE-<de>` version (`## [6.0.5_DE-1.0.0] - …`).
+
+### Mandatory pre-commit checklist — `version.txt` + `CHANGELOG.md` + `TODO.md`
+
+Before creating **any** commit that touches program code, build files,
+workflows, installer/assets or anything release-affecting, run through this
+checklist. Every item is verified with a real command (`git diff` / `cat`),
+never from memory:
+
+1. **`version.txt` bumped — and in the SAME commit as the code?**
+   - DE-only change → line 4 (DE version, SemVer) **and** line 5 (DE version
+     code +1); mobile lines 1–3 untouched.
+   - Mobile-only change → line 1 (mobile version) **and** line 2 (mobile
+     version code); DE lines 4–6 untouched, and `app/build.gradle.kts`
+     `versionName`/`versionCode` kept in sync.
+   - Both editions → both pairs.
+   - Verify: `git diff version.txt` actually shows the new values. Forgetting
+     this has already produced releases with stale versions — the fix must
+     never be left to the user.
+2. **`CHANGELOG.md` updated?**
+   - New dated section `## [<mobile>_DE-<de>-<channel>] - YYYY-MM-DD`
+     directly under `## [Unreleased]`, entries in strict descending version
+     order, correct `Added`/`Changed`/`Fixed`/… heading, changes marked
+     `[DE]` and/or `[APK]`.
+   - Verify: `git diff CHANGELOG.md` shows the new versioned section.
+3. **`TODO.md` updated?**
+   - Completed items marked `[x]`, started-but-unfinished `[~]`, new pending
+     work added. Never leave it stale after a change.
+   - Verify: `git diff TODO.md`.
+4. **Compile the affected module** (`./gradlew :desktop:compileKotlin`,
+   `:app:compileUniversalGmsDebugKotlin`, …) and get BUILD SUCCESSFUL.
+5. **Commit title**: code/release-affecting commits use
+   `v<full version from version.txt>: <short description>`; docs-only commits
+   may use `docs:`. Short title, details in the body, **no agent co-author
+   footer** (see §3).
+6. **Final check before push**: `git status --short` shows only the intended
+   files staged, and `git log -1 --stat` shows `version.txt`, `CHANGELOG.md`
+   and `TODO.md` together with the code changes.
+
+The checklist is not optional: skipping items has already caused releases
+published with an un-bumped `version.txt` and changelog entries that never
+appeared.
 
 ## 6. Localization (multilingual support)
 
