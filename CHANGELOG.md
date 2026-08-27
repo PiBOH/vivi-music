@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.116-nightly] - 2026-08-27
+
+### Changed
+- [DE] The official logo is now circular everywhere it appears: Windows/macOS/Linux app icons (`.ico`/`.icns`/`.png`), intro splash, tray icon, native notifications, installer wizard art, README and website.
+- [DE] `scripts/generate_desktop_icons.py` applies an anti-aliased circular mask automatically, so future logo regenerations keep the round shape.
+
 ## [6.4.39_DE-1.33.115-nightly] - 2026-08-27
 
 ### Added

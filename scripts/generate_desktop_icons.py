@@ -13,9 +13,9 @@ import io
 import os
 import struct
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageOps
 
-SRC = os.path.join(os.path.dirname(__file__), "..", "desktop", "icons", "logo_vmde.png")  # generated from logo_vmde_official.jpg
+SRC = os.path.join(os.path.dirname(__file__), "..", "desktop", "icons", "logo_vmde.png")  # circular crop of logo_vmde_official.jpg
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "desktop", "icons")
 
 
@@ -26,6 +26,30 @@ def square(img: Image.Image) -> Image.Image:
     canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     canvas.paste(img, ((side - w) // 2, (side - h) // 2), img)
     return canvas
+
+
+def circularize(img: Image.Image) -> Image.Image:
+    """Clip the square artwork to a circle (the official DE icon shape).
+
+    Applied to any square source that is not already round, so a plain
+    square logo still produces the round official icon.
+    """
+    side = min(img.size)
+    img = ImageOps.fit(img, (side, side), Image.Resampling.LANCZOS)
+    if img.mode != "RGBA":
+        img = img.convert("RGBA")
+    alpha = img.getchannel("A")
+    # Already round (corners transparent)? Then keep the existing mask.
+    corners = [alpha.getpixel(p) for p in [(0, 0), (side - 1, 0), (0, side - 1), (side - 1, side - 1)]]
+    if all(v < 8 for v in corners):
+        return img
+    # Anti-aliased mask drawn at 4x then downscaled
+    mask = Image.new("L", (side * 4, side * 4), 0)
+    d = ImageDraw.Draw(mask)
+    d.ellipse((0, 0, side * 4 - 1, side * 4 - 1), fill=255)
+    mask = mask.resize((side, side), Image.Resampling.LANCZOS)
+    img.putalpha(mask)
+    return img
 
 
 def build_ico(img: Image.Image, path: str) -> None:
@@ -70,7 +94,7 @@ def build_icns(img: Image.Image, path: str) -> None:
 
 def main() -> None:
     os.makedirs(OUT_DIR, exist_ok=True)
-    img = square(Image.open(SRC).convert("RGBA"))
+    img = circularize(square(Image.open(SRC).convert("RGBA")))
 
     build_ico(img, os.path.join(OUT_DIR, "logo_vmde.ico"))
     build_icns(img, os.path.join(OUT_DIR, "logo_vmde.icns"))

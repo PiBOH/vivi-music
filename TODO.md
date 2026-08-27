@@ -120,6 +120,7 @@ The desktop should look exactly like the Android app, except:
 - [x] Animated intro splash: plays once at startup (click to skip), toggled in Settings → System → Intro (default on) (DE 1.33.92, GIF→JPEG in 1.33.94). DE 1.33.98: fixed wrong colours (full-range YUV420 conversion) and low fps (Skia decode + 960×540 frames). Changelog button removed from the About screen (still under Settings → Updates). DE 1.33.100: rebuilt natively in Compose (no frame sequence) with selectable **Intro content** (logo / logo+name / logo+name+version) and **Background** (gradient / glow / dark); original MP4/GIF kept as source assets.
 
 - [x] Official DE branding: replaced the desktop logo everywhere it is displayed or packaged (intro, native notifications/toasts, app resources, Windows Inno Setup/jpackage, Linux AppImage/DEB, macOS bundle, website and README) using `desktop/icons/logo_vmde_official.jpg`; platform-specific `.png`, `.ico`, `.icns` and installer bitmap variants were regenerated.
+- [x] Round logo shape: the official logo is clipped to a circle (anti-aliased) in every asset — app icons `.png`/`.ico`/`.icns`, intro splash, tray icon, native notifications, installer bitmaps, README and website; `generate_desktop_icons.py` re-applies the mask automatically (DE 1.33.116).
 
 ## Phase 10 — Remaining gaps to reach 100% UI parity (mobile → desktop)
 Only allowed difference: the bottom navigation bar becomes the collapsible/expandable sidebar. Everything below is still missing or divergent.
