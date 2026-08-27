@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.123-nightly] - 2026-08-27
+
+### Fixed
+- [DE] Fixed embedded JavaFX login startup after the `.122` build: the toolkit is now initialized once with `Platform.startup` instead of the single-use `Application.launch`, avoiding false WebView-unavailable states after the first attempt.
+
 ## [6.4.39_DE-1.33.122-nightly] - 2026-08-27
 
 ### Fixed

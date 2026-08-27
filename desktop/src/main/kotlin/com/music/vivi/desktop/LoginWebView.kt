@@ -1,6 +1,5 @@
 package com.music.vivi.desktop
 
-import javafx.application.Application
 import javafx.application.Platform as FxPlatform
 import javafx.scene.Scene
 import javafx.scene.control.Label
@@ -21,62 +20,78 @@ import java.awt.Desktop
 import java.net.CookieHandler
 import java.net.CookieManager
 import java.net.URI
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Embedded YouTube sign-in window using JavaFX directly.
  *
- * This deliberately uses `Stage`, not `JFXPanel`: JFXPanel requires the JDK
- * `jdk.swing.interop` module, which is not present in the Temurin JDK runtime
- * image used by the GitHub Actions runners. A JavaFX Stage needs no Swing
- * bridge, so it works in the packaged runtime on Windows, Linux and macOS.
+ * JavaFX is initialized with `Platform.startup` exactly once. This is important
+ * in a Compose Desktop process: `Application.launch` is single-use and can race
+ * with the already-running AWT/Compose event loop, causing the WebView startup
+ * failure to be reported repeatedly. No JFXPanel/Swing interop is used.
  */
 object LoginWebView {
     @Volatile private var windowOpen = false
     @Volatile private var unavailable = false
     @Volatile private var delivered = false
+    @Volatile private var fxStarted = false
+    private val fxStartupLock = Any()
 
     fun isWindowOpen(): Boolean = windowOpen
 
-    /** Starts the JavaFX application and opens the embedded login window. */
+    /** Starts JavaFX once, then creates the embedded login Stage. */
     fun openEmbedded(language: String, onCaptured: (String?) -> Unit): Boolean {
-        if (unavailable) return false
-        if (windowOpen) return true
+        if (unavailable || windowOpen) return !unavailable
         return try {
             if (CookieHandler.getDefault() !is CookieManager) {
                 CookieHandler.setDefault(CookieManager())
             }
             windowOpen = true
             delivered = false
-            LoginApplication.configure(language, onCaptured)
-            Thread {
-                try {
-                    Application.launch(LoginApplication::class.java)
-                } catch (_: IllegalStateException) {
-                    // JavaFX can only be launched once per JVM. If the toolkit
-                    // was already started, the configured Stage is created by
-                    // the existing toolkit instead.
-                    unavailable = true
-                    windowOpen = false
-                    deliver(null, onCaptured)
-                } catch (_: Throwable) {
-                    unavailable = true
-                    windowOpen = false
-                    deliver(null, onCaptured)
-                }
-            }.apply { name = "vivimusic-login-webview"; isDaemon = true }.start()
+            ensureFxStarted()
+            FxPlatform.runLater { createWindow(language, onCaptured) }
             true
         } catch (_: Throwable) {
-            unavailable = true
             windowOpen = false
+            unavailable = true
+            deliver(null, onCaptured)
             false
         }
     }
 
+    /** Opens the direct Google sign-in page in the system browser as fallback. */
     fun openBrowser(): Boolean = runCatching {
         if (!Desktop.isDesktopSupported()) return@runCatching false
         Desktop.getDesktop().browse(URI("https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Fmusic.youtube.com%2F"))
         true
     }.getOrDefault(false)
+
+    private fun ensureFxStarted() {
+        if (fxStarted) return
+        synchronized(fxStartupLock) {
+            if (fxStarted) return
+            val failure = arrayOfNulls<Throwable>(1)
+            val ready = CountDownLatch(1)
+            Thread {
+                try {
+                    FxPlatform.startup { ready.countDown() }
+                } catch (t: IllegalStateException) {
+                    // Toolkit was started by another component between the
+                    // check and startup; it is safe to use runLater now.
+                    ready.countDown()
+                } catch (t: Throwable) {
+                    failure[0] = t
+                    ready.countDown()
+                }
+            }.apply { name = "vivimusic-javafx-startup"; isDaemon = true }.start()
+            if (!ready.await(15, TimeUnit.SECONDS)) {
+                throw IllegalStateException("JavaFX toolkit startup timed out")
+            }
+            failure[0]?.let { throw it }
+            fxStarted = true
+        }
+    }
 
     private fun deliver(cookie: String?, callback: (String?) -> Unit) {
         if (delivered) return
@@ -84,23 +99,9 @@ object LoginWebView {
         runCatching { callback(cookie) }
     }
 
-    private fun capturedCookieHeader(): String? {
-        val store = (CookieHandler.getDefault() as? CookieManager)?.cookieStore ?: return null
-        val cookies = store.cookies.filter { c ->
-            val domain = c.domain.removePrefix(".")
-            domain.endsWith("youtube.com") || domain.endsWith("google.com")
-        }
-        val hasSession = cookies.any {
-            it.name == "SAPISID" || it.name == "__Secure-1PAPISID" || it.name == "__Secure-3PAPISID"
-        }
-        return if (hasSession) cookies.joinToString("; ") { "${it.name}=${it.value}" } else null
-    }
-
-    /** JavaFX Application instance used by [Application.launch]. */
-    class LoginApplication : Application() {
-        override fun start(stage: Stage) {
-            val language = configuredLanguage
-            val callback = configuredCallback
+    private fun createWindow(language: String, callback: (String?) -> Unit) {
+        try {
+            val stage = Stage()
             val status = Label(Localization.get(language, "login_waiting"))
             val spinner = ProgressIndicator().apply {
                 prefWidth = 18.0
@@ -129,7 +130,7 @@ object LoginWebView {
             val root = VBox(header, steps, browser).apply {
                 VBox.setVgrow(browser, Priority.ALWAYS)
             }
-            stage.title = "VIVI Music DE — ${Localization.get(language, "login") }"
+            stage.title = "VIVI Music DE — ${Localization.get(language, "login")}"
             stage.scene = Scene(root, 1000.0, 720.0)
             stage.setOnCloseRequest {
                 windowOpen = false
@@ -153,15 +154,22 @@ object LoginWebView {
                     Thread.sleep(1000)
                 }
             }.apply { name = "vivimusic-login-cookie-poll"; isDaemon = true }.start()
+        } catch (t: Throwable) {
+            windowOpen = false
+            unavailable = true
+            deliver(null, callback)
         }
+    }
 
-        companion object {
-            @Volatile var configuredLanguage: String = "en"
-            @Volatile var configuredCallback: (String?) -> Unit = {}
-            fun configure(language: String, callback: (String?) -> Unit) {
-                configuredLanguage = language
-                configuredCallback = callback
-            }
+    private fun capturedCookieHeader(): String? {
+        val store = (CookieHandler.getDefault() as? CookieManager)?.cookieStore ?: return null
+        val cookies = store.cookies.filter { c ->
+            val domain = c.domain.removePrefix(".")
+            domain.endsWith("youtube.com") || domain.endsWith("google.com")
         }
+        val hasSession = cookies.any {
+            it.name == "SAPISID" || it.name == "__Secure-1PAPISID" || it.name == "__Secure-3PAPISID"
+        }
+        return if (hasSession) cookies.joinToString("; ") { "${it.name}=${it.value}" } else null
     }
 }
