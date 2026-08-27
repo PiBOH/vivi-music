@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -24,8 +25,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Desktop login: paste the `Cookie` request header from a logged-in
- * music.youtube.com browser session. [onLoggedIn] is invoked on success.
+ * Desktop login. The preferred flow opens YouTube Music in the optional embedded
+ * WebView; if that runtime is unavailable, it opens the system browser and keeps
+ * the existing cookie fallback available. [onLoggedIn] is invoked on success.
  */
 @Composable
 fun LoginScreen(language: String, onBack: () -> Unit, onLoggedIn: () -> Unit) {
@@ -35,6 +37,7 @@ fun LoginScreen(language: String, onBack: () -> Unit, onLoggedIn: () -> Unit) {
     var status by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var loginMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Column(
@@ -42,6 +45,37 @@ fun LoginScreen(language: String, onBack: () -> Unit, onLoggedIn: () -> Unit) {
     ) {
         BackButton(language, onBack)
         Text(Localization.get(language, "login"), style = MaterialTheme.typography.headlineMedium)
+        Card(modifier = Modifier.fillMaxWidth().padding(top = 16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text(Localization.get(language, "login_webview_title"), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    Localization.get(language, "login_webview_desc"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+                Button(
+                    onClick = {
+                        loginMessage = if (LoginWebView.openEmbedded()) {
+                            Localization.get(language, "login_webview_opened")
+                        } else if (LoginWebView.openBrowser()) {
+                            Localization.get(language, "login_browser_opened")
+                        } else {
+                            Localization.get(language, "login_browser_failed")
+                        }
+                    },
+                    modifier = Modifier.padding(top = 12.dp),
+                ) { Text(Localization.get(language, "login_with_webview")) }
+                loginMessage?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                }
+            }
+        }
+        Text(
+            Localization.get(language, "login_manual_fallback"),
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(top = 20.dp),
+        )
         Text(
             Localization.get(language, "login_instructions"),
             style = MaterialTheme.typography.bodyMedium,

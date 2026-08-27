@@ -56,7 +56,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 5 — Desktop persistence + authentication
 - [x] Persistence: the desktop uses a JSON file store (`DesktopSettings` under `~/.vivimusic/device-sync.json`); Room is Android-only and stays there.
-- [~] YouTube login: cookie-based login with `DATASYNC_ID`/`VISITOR_DATA` fallback is done; browser OAuth + proxy are still pending.
+- [~] YouTube login: cookie-based login with `DATASYNC_ID`/`VISITOR_DATA` fallback remains available. The DE now exposes a cross-platform embedded-login entry point with a system-browser fallback; automatic WebView cookie extraction still requires an optional WebView runtime in the packaged distributions.
 - [x] Full desktop settings layer (same keys as the Android app).
 
 ## Phase 6 — Full desktop UI

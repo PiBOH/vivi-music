@@ -11,6 +11,10 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+### Added
+- [DE] Added a user-friendly YouTube Music login entry point with an optional embedded WebView attempt, persistent profile location and a system-browser/manual-cookie fallback on Windows, Linux and macOS.
+
+
 ### Changed
 - [DE] Replaced the desktop branding in the intro, notifications, installers, app resources, website and README with the official `logo_vmde_official.jpg` artwork; regenerated the Windows, macOS, Linux and installer icon variants.
 - [DE] Automatically remove completed update installers older than seven days while preserving current downloads and newer cached installers.
