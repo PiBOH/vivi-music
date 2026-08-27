@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.127-nightly] - 2026-08-28
+
+### Fixed
+- [DE] Completed every missing desktop translation: 3,582 missing per-language strings were added across all 47 languages (new batches `desktop_extra_translations_24..31`). Every key used in the desktop sources now exists in the English table (13 raw keys such as `wrapped_show_on_home` or `screen_transitions` no longer show up in the UI), and every language table now contains all 437 keys (no more silent English fallback for the 41 keys that were mapped to inline English literals in the generator).
+- [DE] Fixed the desktop localization generator dropping translations: extra translation batches are now merged per key instead of being replaced by the last file's language subset, so a key defined in two batches keeps all its languages.
+- [DE] Added `scripts/check_localization.py` to verify used-key coverage and per-language completeness.
+
 ## [6.4.39_DE-1.33.126-nightly] - 2026-08-28
 
 ### Changed

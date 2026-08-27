@@ -187,6 +187,8 @@ MAPPING = {
     "wrapped_tracks": "tracks",
     "wrapped_listening_time": "listening",
     "wrapped_top_song": "top song",
+    "wrapped_show_on_home": "Show on Home",
+    "wrapped_show_on_home_desc": "Show the VIVI Wrapped card on the Home screen.",
     "pause_listen_history_desc": "Hides the History screen from the sidebar.",
     "pause_search_history_desc": "Keeps new searches out of the recent-searches list.",
     "quick_settings": "Quick settings",
@@ -1198,9 +1200,22 @@ from desktop_extra_translations_20 import EXTRA_TRANSLATIONS as _EXTRA_20
 from desktop_extra_translations_21 import EXTRA_TRANSLATIONS as _EXTRA_21
 from desktop_extra_translations_22 import EXTRA_TRANSLATIONS as _EXTRA_22
 from desktop_extra_translations_23 import EXTRA_TRANSLATIONS as _EXTRA_23
+from desktop_extra_translations_24 import EXTRA_TRANSLATIONS as _EXTRA_24
+from desktop_extra_translations_25 import EXTRA_TRANSLATIONS as _EXTRA_25
+from desktop_extra_translations_26 import EXTRA_TRANSLATIONS as _EXTRA_26
+from desktop_extra_translations_27 import EXTRA_TRANSLATIONS as _EXTRA_27
+from desktop_extra_translations_28 import EXTRA_TRANSLATIONS as _EXTRA_28
+from desktop_extra_translations_29 import EXTRA_TRANSLATIONS as _EXTRA_29
+from desktop_extra_translations_30 import EXTRA_TRANSLATIONS as _EXTRA_30
+from desktop_extra_translations_31 import EXTRA_TRANSLATIONS as _EXTRA_31
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23):
-    TRANSLATIONS.update(_extra)
+# Merge per key (deep): the same key can appear in several extra files with
+# different language subsets (e.g. batch 30 defines "comments" for all
+# languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
+# whole language map with the last file's subset, dropping translations.
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31):
+    for _key, _langmap in _extra.items():
+        TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
 
 def android_unescape(s):
@@ -1312,10 +1327,21 @@ def main():
 
     # Ensure the default also contributes any translated fallback values, so
     # the "en" table uses the Android English wording for the mapped keys.
+    # Some desktop-only keys are mapped to an inline English literal (no
+    # Android resource with that name exists, e.g. "screen_transitions" ->
+    # "Screen transitions"); those literals must also land in the English
+    # table, otherwise the key shows up raw in the UI.
     for key, android_name in MAPPING.items():
+        if key in ENGLISH:
+            continue
         val = default.get(android_name)
-        if val and key not in ENGLISH:
+        if val:
             ENGLISH[key] = val
+        else:
+            # No Android resource with this name exists: the mapping value is
+            # the inline English literal itself (e.g. "screen_transitions" ->
+            # "Screen transitions"). Without this, the key shows up raw in UI.
+            ENGLISH[key] = android_name
 
     def emit_map(entries, indent):
         pad = " " * indent
