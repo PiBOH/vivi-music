@@ -123,7 +123,7 @@ object NativeNotifier {
         }
     }
 
-    /** Loads the bundled VIVI Music DE logo (scaled to tray size) for the notification icon. */
+    /** Loads the bundled official VIVI Music DE logo (scaled to tray size) for the notification icon. */
     private fun trayImage(): BufferedImage {
         val stream = NativeNotifier::class.java.getResourceAsStream("/images/logo_vmde.png")
         if (stream != null) {

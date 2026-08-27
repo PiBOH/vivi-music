@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate OS-specific app icons for the VIVI Music desktop edition.
 
-Reads the source logo (a square-ish PNG) and produces:
+Reads the official source logo (converted to PNG for platform packaging) and produces:
   - logo_vmde.ico  (Windows)
   - logo_vmde.icns (macOS)
   - logo_vmde.png  (Linux — used as-is, kept here as the source too)
@@ -15,7 +15,7 @@ import struct
 
 from PIL import Image
 
-SRC = os.path.join(os.path.dirname(__file__), "..", "desktop", "icons", "logo_vmde.png")
+SRC = os.path.join(os.path.dirname(__file__), "..", "desktop", "icons", "logo_vmde.png")  # generated from logo_vmde_official.jpg
 OUT_DIR = os.path.join(os.path.dirname(__file__), "..", "desktop", "icons")
 
 

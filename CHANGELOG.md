@@ -11,6 +11,10 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+### Changed
+- [DE] Replaced the desktop branding in the intro, notifications, installers, app resources, website and README with the official `logo_vmde_official.jpg` artwork; regenerated the Windows, macOS, Linux and installer icon variants.
+
+
 ## [6.4.39_DE-1.33.112] - 2026-08-19
 
 ### Fixed

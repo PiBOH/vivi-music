@@ -161,7 +161,7 @@ private fun introBackgroundBrush(background: String, accent: Color): Brush = whe
     )
 }
 
-/** Loads the bundled VIVI Music DE logo (`/images/logo_vmde.png`). */
+/** Loads the bundled official VIVI Music DE logo (`/images/logo_vmde.png`). */
 private fun loadLogo(): ImageBitmap? = runCatching {
     val stream = AppInfo::class.java.getResourceAsStream("/images/logo_vmde.png") ?: return null
     stream.use { s -> javax.imageio.ImageIO.read(s)?.toComposeImageBitmap() }

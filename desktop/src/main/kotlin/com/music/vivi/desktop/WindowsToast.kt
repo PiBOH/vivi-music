@@ -75,7 +75,7 @@ object WindowsToast {
         }
     }
 
-    /** Extracts the bundled logo to a real file so the toast can reference it via `file://`. */
+    /** Extracts the bundled official logo to a real file so the toast can reference it via `file://`. */
     private fun extractLogo(): File? {
         val target = File(System.getProperty("user.home"), ".vivimusic/logo_vmde.png")
         if (target.exists()) return target
