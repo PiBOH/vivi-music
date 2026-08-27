@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.119-nightly] - 2026-08-27
+
+### Fixed
+- [DE] Fixed Windows toast details continuing to display the old logo from the persistent `~/.vivimusic/logo_vmde.png` cache. Toasts now refresh the circular bundled logo through a new cache path on every notification.
+
 ## [6.4.39_DE-1.33.118-nightly] - 2026-08-27
 
 ### Added

@@ -77,8 +77,10 @@ object WindowsToast {
 
     /** Extracts the bundled official logo to a real file so the toast can reference it via `file://`. */
     private fun extractLogo(): File? {
-        val target = File(System.getProperty("user.home"), ".vivimusic/logo_vmde.png")
-        if (target.exists()) return target
+        // Do not reuse the legacy cache path: older installations may still
+        // contain the previous square logo there, and Windows then shows it in
+        // the detailed part of the toast even though the title is current.
+        val target = File(System.getProperty("user.home"), ".vivimusic/logo_vmde_official.png")
         val stream = WindowsToast::class.java.getResourceAsStream("/images/logo_vmde.png") ?: return null
         return runCatching {
             target.parentFile?.mkdirs()
