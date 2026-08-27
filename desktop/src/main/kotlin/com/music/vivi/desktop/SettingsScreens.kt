@@ -492,8 +492,11 @@ fun SettingsAccountScreen(
     accountName: String,
     onOpenLogin: () -> Unit,
     onLogout: () -> Unit,
+    onLoggedIn: () -> Unit,
 ) {
-    SettingsSubScreen(language, onBack) { AccountSection(language, isLoggedIn, accountName, onOpenLogin, onLogout) }
+    SettingsSubScreen(language, onBack) {
+        AccountSection(language, isLoggedIn, accountName, onOpenLogin, onLogout, onLoggedIn)
+    }
 }
 
 @Composable

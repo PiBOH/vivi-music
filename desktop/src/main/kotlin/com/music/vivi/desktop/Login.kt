@@ -51,6 +51,22 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun LoginScreen(language: String, onBack: () -> Unit, onLoggedIn: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+    ) {
+        BackButton(language, onBack)
+        LoginContent(language, onLoggedIn)
+    }
+}
+
+/**
+ * The actual sign-in content (Google window path + manual cookies), usable both
+ * as a standalone screen and embedded directly in the Account settings so the
+ * user never has to go through an intermediate "Log in" screen. Keeps no scroll
+ * modifier of its own: the parent container owns scrolling.
+ */
+@Composable
+fun LoginContent(language: String, onLoggedIn: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     // Signed-in state (restored from settings on entry).
@@ -72,11 +88,7 @@ fun LoginScreen(language: String, onBack: () -> Unit, onLoggedIn: () -> Unit) {
         accountName = DesktopSettings.load().accountName
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-    ) {
-        BackButton(language, onBack)
-
+    Column {
         // ------------------------------------------------ signed-in state
         if (isLoggedIn) {
             Card(

@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.128-nightly] - 2026-08-28
+
+### Changed
+- [DE] Removed the intermediate "Log in" step in Settings → Account: when not signed in, the screen now shows the two sign-in options (Accedi con Google / manual cookie) directly, with no extra navigation.
+
+### Fixed
+- [DE] Embedded login WebView could stay blank white in the packaged app even though the page loaded: JavaFX now forces the software renderer (`prism.order=sw`) before starting, avoiding the GPU pipeline conflict with the Compose window that prevented painting on weaker hardware.
+
 ## [6.4.39_DE-1.33.127-nightly] - 2026-08-28
 
 ### Fixed

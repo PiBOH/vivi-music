@@ -1285,6 +1285,10 @@ fun App(
                             isLoggedIn = false
                             accountName = ""
                         },
+                        onLoggedIn = {
+                            isLoggedIn = true
+                            accountName = DesktopSettings.load().accountName
+                        },
                     )
                     is Screen.SettingsDevices -> SettingsDevicesScreen(
                         language = language,
@@ -2372,6 +2376,7 @@ fun AccountSection(
     accountName: String,
     onOpenLogin: () -> Unit,
     onLogout: () -> Unit,
+    onLoggedIn: () -> Unit,
 ) {
     Text(Localization.get(language, "account"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
     if (isLoggedIn) {
@@ -2384,15 +2389,12 @@ fun AccountSection(
             Text(Localization.get(language, "logout"))
         }
     } else {
-        Text(
-            Localization.get(language, "not_logged_in"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Button(onClick = onOpenLogin, modifier = Modifier.padding(top = 8.dp)) {
-            Text(Localization.get(language, "login"))
-        }
+        // Show the sign-in options directly here instead of a "Log in" button
+        // that opens a second screen: the user picks Google or manual cookies
+        // without an extra navigation step.
+        LoginContent(language = language, onLoggedIn = {
+            onLoggedIn()
+        })
     }
 }
 

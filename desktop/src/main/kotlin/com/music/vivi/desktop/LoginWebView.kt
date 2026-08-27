@@ -71,6 +71,19 @@ object LoginWebView {
         if (fxStarted) return
         synchronized(fxStartupLock) {
             if (fxStarted) return
+            // The packaged app runs a Compose/Skia window on the same display;
+            // on machines with weak or conflicting GPU drivers the JavaFX WebView
+            // then stays blank white even though the page loaded (paint never
+            // happens). The WebView is the only JavaFX surface we have, so force
+            // the software renderer: slower but guaranteed to paint.
+            runCatching {
+                if (System.getProperty("prism.order") == null) {
+                    System.setProperty("prism.order", "sw")
+                }
+                if (System.getProperty("prism.dirtyopts") == null) {
+                    System.setProperty("prism.dirtyopts", "false")
+                }
+            }
             val failure = arrayOfNulls<Throwable>(1)
             val ready = CountDownLatch(1)
             Thread {
