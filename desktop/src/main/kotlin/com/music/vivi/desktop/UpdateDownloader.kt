@@ -23,8 +23,22 @@ data class DownloadProgress(
  * to delete them.
  */
 object UpdateDownloader {
+    private const val INSTALLER_MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L
+
     val updatesDir: File =
         File(System.getProperty("user.home"), ".vivimusic/updates").apply { mkdirs() }
+
+    init {
+        cleanupExpiredInstallers()
+    }
+
+    /** Removes completed installer files older than seven days. */
+    fun cleanupExpiredInstallers(now: Long = System.currentTimeMillis()) {
+        val cutoff = now - INSTALLER_MAX_AGE_MS
+        updatesDir.listFiles()
+            ?.filter { it.isFile && it.lastModified() < cutoff }
+            ?.forEach { it.delete() }
+    }
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -32,9 +46,11 @@ object UpdateDownloader {
         .build()
 
     /** Files previously downloaded by this updater (installers only). */
-    fun downloadedInstallers(): List<File> =
+    fun downloadedInstallers(): List<File> = run {
+        cleanupExpiredInstallers()
         updatesDir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.lastModified() }
             ?: emptyList()
+    }
 
     /** The already-downloaded installer for [fileName], if present. */
     fun downloadedInstaller(fileName: String): File? =
@@ -57,6 +73,7 @@ object UpdateDownloader {
         fileName: String,
         onProgress: (DownloadProgress) -> Unit,
     ): File = withContext(Dispatchers.IO) {
+        cleanupExpiredInstallers()
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", "VIVIMusic-Desktop-Updater")
