@@ -431,6 +431,7 @@ ENGLISH = {
     "checking": "Checking…",
     "up_to_date": "You're up to date",
     "update_available": "Update available",
+    "whats_new": "What's new",
     "notifications": "Notifications",
     "notification_mode_desc": "Choose how app notifications (updates, device sync, and more) are shown.",
     "notification_main_window": "Main window",
@@ -1181,8 +1182,9 @@ from desktop_extra_translations_18 import EXTRA_TRANSLATIONS as _EXTRA_18
 from desktop_extra_translations_19 import EXTRA_TRANSLATIONS as _EXTRA_19
 from desktop_extra_translations_20 import EXTRA_TRANSLATIONS as _EXTRA_20
 from desktop_extra_translations_21 import EXTRA_TRANSLATIONS as _EXTRA_21
+from desktop_extra_translations_22 import EXTRA_TRANSLATIONS as _EXTRA_22
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22):
     TRANSLATIONS.update(_extra)
 
 

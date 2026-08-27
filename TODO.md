@@ -121,6 +121,7 @@ The desktop should look exactly like the Android app, except:
 
 - [x] Official DE branding: replaced the desktop logo everywhere it is displayed or packaged (intro, native notifications/toasts, app resources, Windows Inno Setup/jpackage, Linux AppImage/DEB, macOS bundle, website and README) using `desktop/icons/logo_vmde_official.jpg`; platform-specific `.png`, `.ico`, `.icns` and installer bitmap variants were regenerated.
 - [x] Round logo shape: the official logo is clipped to a circle (anti-aliased) in every asset — app icons `.png`/`.ico`/`.icns`, intro splash, tray icon, native notifications, installer bitmaps, README and website; `generate_desktop_icons.py` re-applies the mask automatically (DE 1.33.116).
+- [x] Update-found changelog: when the Updates screen finds a new version it shows a "What's new" card with the pending release's changelog (live from the repo CHANGELOG.md, parsed with `ChangelogLoader`), Material 3 card, translated in all 47 languages (DE 1.33.117).
 
 ## Phase 10 — Remaining gaps to reach 100% UI parity (mobile → desktop)
 Only allowed difference: the bottom navigation bar becomes the collapsible/expandable sidebar. Everything below is still missing or divergent.

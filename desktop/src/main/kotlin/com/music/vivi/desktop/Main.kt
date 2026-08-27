@@ -2779,6 +2779,9 @@ fun UpdateSection(
                     Text("${Localization.get(language, "download")} (${formatBytes(asset.sizeBytes)})")
                 }
             }
+
+            // Changelog of the pending release ("What's new"), like the mobile app.
+            WhatsNewCard(language, status.version)
         }
         is UpdateStatus.Failed -> Text(
             "${Localization.get(language, "update_failed")}: ${status.message}",
@@ -2805,6 +2808,81 @@ fun UpdateSection(
             modifier = Modifier.padding(top = 4.dp),
         ) {
             Text(Localization.get(language, "delete_installers"))
+        }
+    }
+}
+
+/**
+ * "What's new" card shown under the update-available entry of the Updates
+ * screen: it fetches the live `CHANGELOG.md` from the repository (same source
+ * as About → Changelog), picks the section of the pending release and renders
+ * its Added/Fixed/Changed bullets in a Material 3 card. Renders nothing while
+ * loading, offline or when the section is missing.
+ */
+@Composable
+private fun WhatsNewCard(language: String, version: String) {
+    var markdown by remember(version) { mutableStateOf<String?>(null) }
+    LaunchedEffect(version) {
+        markdown = withContext(Dispatchers.IO) { UpdateChecker.fetchChangelogFromRepo() }
+    }
+
+    val release = markdown?.let { md ->
+        ChangelogLoader.parse(md).firstOrNull { UpdateChecker.deVersionFromTag(it.version) == version }
+    }
+
+    if (release == null) {
+        // Fetched but no section for this version: say so instead of an empty gap.
+        if (markdown != null) {
+            Text(
+                Localization.get(language, "changelog_unavailable"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
+        return
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                "${Localization.get(language, "whats_new")} · ${release.version}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            release.sections.forEach { section ->
+                if (section.items.isEmpty()) return@forEach
+                Text(
+                    section.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                section.items.forEach { item ->
+                    Row(
+                        Modifier.padding(top = 6.dp),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Box(
+                            Modifier
+                                .padding(top = 7.dp)
+                                .size(6.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape),
+                        )
+                        Text(
+                            item.replace("`", "").replace("**", ""),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
         }
     }
 }

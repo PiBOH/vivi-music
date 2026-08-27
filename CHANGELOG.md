@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.117-nightly] - 2026-08-27
+
+### Added
+- [DE] When the Updates screen finds a new version, it now shows a "What's new" card with the pending release's changelog (fetched live from the repository, same source as About → Changelog), translated in all supported languages.
+
 ## [6.4.39_DE-1.33.116-nightly] - 2026-08-27
 
 ### Changed
