@@ -57,7 +57,7 @@ Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 ## Phase 5 — Desktop persistence + authentication
 - [x] Persistence: the desktop uses a JSON file store (`DesktopSettings` under `~/.vivimusic/device-sync.json`); Room is Android-only and stays there.
 - [x] YouTube login: cookie-based login with `DATASYNC_ID`/`VISITOR_DATA` fallback remains available. The DE now exposes a cross-platform JavaFX embedded Google sign-in window with direct sign-in instructions, automatic cookie capture, persistent session storage, and a system-browser fallback when JavaFX/WebView cannot start.
-- [x] JavaFX packaged runtime: include `jdk.swing.interop` so `JFXPanel` can start in packaged Windows/Linux/macOS runtimes; failed initialization is latched and cannot repeatedly reopen the error dialog (DE 1.33.120).
+- [x] JavaFX packaged runtime: `JFXPanel` failures are handled safely and fall back to the browser; JavaFX remains optional in the jlink image because external JavaFX modules are not available on Compose's CI module path. The jlink package task is verified on the CI-equivalent JDK (DE 1.33.121).
 - [x] Full desktop settings layer (same keys as the Android app).
 
 ## Phase 6 — Full desktop UI

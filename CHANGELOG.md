@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.121-nightly] - 2026-08-27
+
+### Fixed
+- [DE] Fixed all desktop packaging jobs failing at `createRuntimeImage`: external JavaFX modules are no longer incorrectly passed to jlink without a module path. The embedded WebView remains optional and uses the browser fallback when its JavaFX runtime is unavailable.
+
 ## [6.4.39_DE-1.33.120-nightly] - 2026-08-27
 
 ### Fixed
