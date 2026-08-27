@@ -120,6 +120,10 @@ object LoginWebView {
                 )
             }
             val browser = WebView().apply {
+                prefWidth = 1000.0
+                prefHeight = 640.0
+                minWidth = 400.0
+                minHeight = 300.0
                 engine.userAgent = when (Platform.os) {
                     DesktopOs.WINDOWS -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131 Safari/537.36"
                     DesktopOs.MACOS -> "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131 Safari/537.36"
@@ -137,6 +141,23 @@ object LoginWebView {
                 deliver(capturedCookieHeader(), callback)
             }
             stage.show()
+
+            // Kick the WebView so it paints its first frame. In a process where
+            // Compose/AWT already owns the display, the WebView can stay blank
+            // (known JavaFX painting bug) until it is nudged: force a re-layout
+            // once the page starts loading, and again on load success.
+            browser.engine.loadWorker.stateProperty().addListener { _, _, newState ->
+                val loaded = newState == javafx.concurrent.Worker.State.SUCCEEDED
+                val running = newState == javafx.concurrent.Worker.State.RUNNING
+                if (loaded || running) {
+                    FxPlatform.runLater {
+                        browser.resize(browser.width + 1.0, browser.height)
+                        browser.resize(browser.width - 1.0, browser.height)
+                        browser.requestLayout()
+                        println("[login-webview] state=$newState size=${browser.width}x${browser.height} title=${browser.engine.title}")
+                    }
+                }
+            }
 
             Thread {
                 while (windowOpen && !delivered) {

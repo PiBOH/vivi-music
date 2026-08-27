@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.125-nightly] - 2026-08-27
+
+### Fixed
+- [DE] Embedded login WebView could stay blank white after opening in the packaged app: the WebView now gets explicit dimensions, a forced re-layout/paint nudge when the page starts loading and again on load success, and logs its load state/size/title (prefixed `[login-webview]`) so any remaining blank-page issue is diagnosable from the console.
+
 ## [6.4.39_DE-1.33.124-nightly] - 2026-08-27
 
 ### Fixed
