@@ -130,11 +130,9 @@ compose.desktop {
             // tools (CPU/RAM/thread stats) use `java.lang.management` and the
             // richer `com.sun.management` bean; without these modules the
             // packaged launcher crashes on startup with "Failed to launch JVM".
-            // JavaFX remains optional at runtime: when its native WebView
-            // modules are unavailable, LoginWebView falls back to the system
-            // browser. Do not add JavaFX modules to this jlink list: they are
-            // external modules and are not present on jlink's module-path in
-            // the Compose packaging task, which makes every OS package fail.
+            // jlink includes only JDK modules. JavaFX is shipped as regular runtime
+            // dependencies in the application image and is launched via Stage,
+            // so the packaged embedded WebView does not need Swing interop.
             modules("java.management", "jdk.management")
             packageName = "VIVIMusic"
             packageVersion = numericPackageVersion

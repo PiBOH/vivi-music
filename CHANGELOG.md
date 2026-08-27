@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.122-nightly] - 2026-08-27
+
+### Fixed
+- [DE] Fixed embedded WebView packaging by replacing the Swing-dependent `JFXPanel` with a direct JavaFX `Stage`. JavaFX jars and native runtime components are now present in the distributable application image, while browser fallback remains available if JavaFX cannot start.
+
 ## [6.4.39_DE-1.33.121-nightly] - 2026-08-27
 
 ### Fixed
