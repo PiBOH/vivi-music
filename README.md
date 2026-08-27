@@ -14,7 +14,7 @@
       <img src="https://img.shields.io/github/downloads/PiBOH/vivi-music/total?style=for-the-badge&color=blue" alt="Downloads">
     </a>
     <a href="LICENSE">
-      <img src="https://img.shields.io/github/license/PiBOH/vivi-music?style=for-the-badge" alt="License">
+      <img src="https://img.shields.io/badge/license-modifed_gpl_v3-brightgreen?style=for-the-badge&link=https%3A%2F%2Fgithub.com%2FPiBOH%2Fvivi-music%2Fblob%2Fvivi-music-de%2FLICENSE" alt="License">
     </a>
     <a href="https://piboh.github.io/vivi-music/">
       <img src="https://img.shields.io/badge/Website-VIVI%20Music%20DE-ED5564?style=for-the-badge" alt="Website">
