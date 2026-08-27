@@ -79,6 +79,23 @@ dependencies {
     // Android system volume can be mirrored on the desktop and vice versa.
     implementation("net.java.dev.jna:jna:5.14.0")
 
+    // JavaFX WebView for the embedded YouTube sign-in window. The platform
+    // classifier is picked from the BUILDING machine: each OS CI job builds its
+    // own package, so the packaged app always ships the matching natives.
+    val buildOs = System.getProperty("os.name").lowercase()
+    val buildArm = System.getProperty("os.arch").lowercase().let { it.contains("aarch64") || it.contains("arm") }
+    val javafxClassifier = when {
+        buildOs.contains("win") -> "win"
+        buildOs.contains("mac") || buildOs.contains("darwin") -> if (buildArm) "mac-aarch64" else "mac"
+        else -> if (buildArm) "linux-aarch64" else "linux"
+    }
+    val javafxVersion = "21.0.4"
+    implementation("org.openjfx:javafx-base:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-graphics:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-controls:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-swing:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-web:$javafxVersion:$javafxClassifier")
+
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.ktor.client.content.negotiation)

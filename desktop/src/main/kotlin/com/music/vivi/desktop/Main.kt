@@ -2401,6 +2401,12 @@ fun LanguageSection(language: String, onLanguageChange: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Text(Localization.get(language, "language"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
+    Text(
+        Localization.get(language, "translation_ai_disclaimer"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 6.dp),
+    )
 
     Box(Modifier.padding(top = 8.dp)) {
         OutlinedButton(onClick = { expanded = true }) {

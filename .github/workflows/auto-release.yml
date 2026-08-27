@@ -118,7 +118,9 @@ jobs:
             for v in "$VERSION" "$DE_VERSION"; do
               [[ -z "$v" ]] && continue
               SECTION="$(awk -v v="$v" '
-                index($0, "## [" v "]") == 1 { found = 1; print; next }
+                # Match the exact version, with an optional channel suffix
+                # (e.g. -nightly), before the closing bracket.
+                index($0, "## [" v "]") == 1 || index($0, "## [" v "-") == 1 { found = 1; print; next }
                 found && /^## / { exit }
                 found { print }
               ' CHANGELOG.md)"

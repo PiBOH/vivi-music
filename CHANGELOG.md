@@ -11,6 +11,19 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.33.118-nightly] - 2026-08-27
+
+### Added
+- [DE] Reworked YouTube login with a real embedded JavaFX sign-in window that opens directly on Google's login page, explains the three required steps, captures the session automatically after returning to YouTube Music, and closes itself after saving the persistent session.
+- [DE] Added a clear browser fallback and a collapsible manual Cookie / DATASYNC_ID / VISITOR_DATA login path for systems where the embedded WebView cannot start.
+- [DE] Added a language-screen notice explaining that translations were created with AI tools and may not be 100% reliable.
+
+### Fixed
+- [DE] Fixed GitHub Auto Release changelog extraction when versioned entries include a release-channel suffix such as `-nightly`; release notes are no longer empty.
+
+### Changed
+- [DE] Documented in the README that Windows receives the most compatibility testing because it is the only platform currently available to the lead developer for local testing.
+
 ## [6.4.39_DE-1.33.117-nightly] - 2026-08-27
 
 ### Added

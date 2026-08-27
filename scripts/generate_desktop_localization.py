@@ -424,6 +424,7 @@ ENGLISH = {
     "about": "About",
     "language": "Language",
     "choose_language": "Choose your language",
+    "translation_ai_disclaimer": "Translations were created with AI tools and may not be 100% accurate. If you find an error, please report it.",
     "mobile": "Mobile",
     "de": "DE",
     "updates": "Updates",
@@ -499,6 +500,19 @@ ENGLISH = {
     "logging_in": "Logging in…",
     "cookie_label": "Cookie header (from music.youtube.com)",
     "login_instructions": "Log in to music.youtube.com in your browser, then open DevTools → Network, reload, click any music.youtube.com request and copy the full value of its 'Cookie' request header. Paste it below. Your cookie is stored only on this device.",
+    "login_google": "Sign in with Google",
+    "login_step1": "A window opens directly on the Google sign-in page",
+    "login_step2": "Sign in with your Google account (email and password)",
+    "login_step3": "When the page returns to YouTube Music, the sign-in is detected automatically: the window closes by itself and the session is saved",
+    "login_waiting": "Waiting for sign-in…",
+    "login_saving": "Sign-in detected — saving session…",
+    "login_window_closed": "Sign-in window closed before the login completed. You can try again or use the manual method.",
+    "login_webview_unavailable": "The embedded sign-in window is not available on this system. Open the browser and use the manual cookie method.",
+    "login_open_browser": "Open music.youtube.com in the browser",
+    "login_manual_title": "Manual sign-in with cookies",
+    "login_show": "Show",
+    "login_hide": "Hide",
+    "login_signed_in_hint": "Your YouTube Music session is active: History, Library and playlists use your account.",
     "library_login_prompt": "Log in to see your library",
     "library_empty": "Nothing here yet",
     "drag_to_reorder": "Drag the ⠿ handle to reorder",
@@ -1183,8 +1197,9 @@ from desktop_extra_translations_19 import EXTRA_TRANSLATIONS as _EXTRA_19
 from desktop_extra_translations_20 import EXTRA_TRANSLATIONS as _EXTRA_20
 from desktop_extra_translations_21 import EXTRA_TRANSLATIONS as _EXTRA_21
 from desktop_extra_translations_22 import EXTRA_TRANSLATIONS as _EXTRA_22
+from desktop_extra_translations_23 import EXTRA_TRANSLATIONS as _EXTRA_23
 
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23):
     TRANSLATIONS.update(_extra)
 
 
