@@ -12,6 +12,98 @@
   var CHANNEL_SUFFIX = /-(nightly|alpha|beta|rc|stable)$/i;
   var releases = [];
   var currentChannel = "stable";
+  var selectedRel = null;
+
+  /* -------- tiny Markdown renderer (self-contained, no external deps) -------- */
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function inlineMd(s) {
+    s = escapeHtml(s);
+    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+      '<a href="$2" rel="noopener" target="_blank">$1</a>');
+    return s;
+  }
+
+  function mdToHtml(md) {
+    var lines = String(md || "").replace(/\r\n/g, "\n").split("\n");
+    var out = [];
+    var inList = false;
+    var i = 0;
+    function closeList() {
+      if (inList) { out.push("</ul>"); inList = false; }
+    }
+    while (i < lines.length) {
+      var t = lines[i].trim();
+      if (!t) { closeList(); i++; continue; }
+      if (/^```/.test(t)) {
+        closeList();
+        var code = [];
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i].trim())) { code.push(lines[i]); i++; }
+        i++; // skip closing fence
+        out.push("<pre><code>" + escapeHtml(code.join("\n")) + "</code></pre>");
+        continue;
+      }
+      var h = t.match(/^(#{1,4})\s+(.*)$/);
+      if (h) {
+        closeList();
+        var lvl = Math.min(h[1].length + 2, 4); // ## -> h3, ### -> h4
+        out.push("<h" + lvl + ">" + inlineMd(h[2]) + "</h" + lvl + ">");
+        i++;
+        continue;
+      }
+      if (/^-{3,}$/.test(t)) { closeList(); out.push("<hr />"); i++; continue; }
+      if (/^[-*]\s+/.test(t)) {
+        if (!inList) { out.push("<ul>"); inList = true; }
+        out.push("<li>" + inlineMd(t.replace(/^[-*]\s+/, "")) + "</li>");
+        i++;
+        continue;
+      }
+      closeList();
+      out.push("<p>" + inlineMd(t) + "</p>");
+      i++;
+    }
+    closeList();
+    return out.join("\n");
+  }
+
+  function renderChangelog(rel) {
+    var body = document.getElementById("changelog-body");
+    if (!body) return;
+    if (!rel || !rel.body) {
+      body.innerHTML = "<p>No release notes available for this version.</p>";
+    } else {
+      body.innerHTML = mdToHtml(rel.body);
+    }
+    var tagEl = document.getElementById("changelog-version");
+    if (tagEl) tagEl.textContent = rel ? (rel.tag_name || "") : "";
+  }
+
+  function fillVersionSelect() {
+    var sel = document.getElementById("changelog-select");
+    if (!sel) return;
+    sel.innerHTML = "";
+    releases.forEach(function (r) {
+      var o = document.createElement("option");
+      o.value = r.tag_name || "";
+      o.textContent = r.tag_name || r.name || "Release";
+      sel.appendChild(o);
+    });
+    if (selectedRel && selectedRel.tag_name) sel.value = selectedRel.tag_name;
+    sel.addEventListener("change", function () {
+      var rel = releases.find(function (r) { return r.tag_name === sel.value; });
+      selectedRel = rel || null;
+      renderChangelog(rel);
+    });
+  }
 
   function isStable(r) {
     return !r.prerelease && !CHANNEL_SUFFIX.test(r.tag_name || "");
@@ -61,10 +153,10 @@
       }
     });
 
-    var body = document.getElementById("changelog-body");
-    if (body && rel && rel.body) body.textContent = rel.body.trim();
-    var tagEl = document.getElementById("changelog-version");
-    if (tagEl && tag) tagEl.textContent = tag;
+    selectedRel = rel || null;
+    renderChangelog(rel);
+    var sel = document.getElementById("changelog-select");
+    if (sel && rel && rel.tag_name) sel.value = rel.tag_name;
   }
 
   function selectChannel(ch, button) {
@@ -107,6 +199,7 @@
           });
         }
         applyChannel();
+        fillVersionSelect();
       })
       .catch(function () {
         document.querySelectorAll("[data-download]").forEach(function (a) {
@@ -116,6 +209,8 @@
         document.querySelectorAll("[data-version]").forEach(function (el) {
           el.textContent = "GitHub Releases";
         });
+        var body = document.getElementById("changelog-body");
+        if (body) body.innerHTML = "<p>Unable to load release notes from GitHub. See the <a href=\"" + RELEASES_PAGE + "\">releases page</a> instead.</p>";
       });
   }
 
