@@ -131,9 +131,12 @@ fun TransitionsScreen(
     screenTransition: String,
     onScreenTransitionChange: (String) -> Unit,
 ) {
+    // NOTE: hosted inside the scrollable SettingsSubScreen, so only
+    // fillMaxWidth — fillMaxSize here would be measured with an infinite
+    // maximum height and blow up the layout (giant UI + freeze).
     Column(
         Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(horizontal = 16.dp),
     ) {
         Text(
@@ -739,9 +742,12 @@ fun DensityScreen(
     gridItemSize: Int,
     onGridItemSizeChange: (Int) -> Unit,
 ) {
+    // NOTE: hosted inside the scrollable SettingsSubScreen, so only
+    // fillMaxWidth — fillMaxSize here would be measured with an infinite
+    // maximum height and blow up the layout (giant UI + freeze).
     Column(
         Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(horizontal = 16.dp),
     ) {
         Text(
@@ -837,9 +843,12 @@ fun PlayerDesignScreen(
     pureBlackMiniPlayer: Boolean = false,
     onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
 ) {
+    // NOTE: hosted inside the scrollable SettingsSubScreen, so only
+    // fillMaxWidth — fillMaxSize here would be measured with an infinite
+    // maximum height and blow up the layout (giant UI + freeze).
     Column(
         Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(horizontal = 16.dp),
     ) {
         Text(

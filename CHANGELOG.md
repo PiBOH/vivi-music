@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.34.4-nightly] - 2026-08-28
+
+### Fixed
+- [DE] Selecting a player design in Settings → Riproduzione e audio → design del player (and the density screen) could make the whole UI explode and freeze the app, forcing Task Manager. Root cause: `PlayerDesignScreen`/`DensityScreen` used `fillMaxSize()` inside the scrollable `SettingsSubScreen`; with an infinite maximum height the layout sized to Infinity (everything looks enlarged and the app becomes unresponsive). Both screens now use `fillMaxWidth()` only.
+
 ## [6.4.39_DE-1.34.3-nightly] - 2026-08-28
 
 ### Fixed
