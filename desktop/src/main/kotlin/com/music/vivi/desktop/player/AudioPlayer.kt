@@ -80,8 +80,10 @@ class AudioPlayer {
         /** Bytes that must be on disk before the MP4 demuxer is created: the
          *  `moov` box (decoder setup) lives at the head of the file, before the
          *  first audio fragment. Audio-only moovs are only a few KB, so this is
-         *  normally satisfied after the first network round-trip. */
-        const val MIN_START_BYTES = 64 * 1024L
+         *  normally satisfied after the first network round-trip; the sample
+         *  walker skips incomplete trailing atoms, so starting with just the
+         *  first fragment (instead of waiting for a second one) is safe. */
+        const val MIN_START_BYTES = 32 * 1024L
 
         /** Poll interval while waiting for the download to catch up (ms). */
         const val DOWNLOAD_POLL_MS = 30L

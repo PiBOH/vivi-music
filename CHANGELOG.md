@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.7-nightly] - 2026-08-28
+
+### Changed
+- [DE] **Faster track start (time-to-audio roughly halved on first play)**: the stream resolver now returns the NewPipe URL immediately when the extractor succeeds, instead of also running the whole ~12-client chain + a HEAD validation round-trip as "insurance" on every first play (~0.7–1.4 s saved). The client chain only runs when NewPipe is bot-blocked, and it now collects just 2 playable candidates without a HEAD request per candidate — the download itself is the validation, and the player falls through to the next candidate on failure. The audio player's start threshold dropped from 64 KB to 32 KB (the `moov` is a few KB and the sample walker skips incomplete trailing atoms), so the decoder starts on the first fragment instead of waiting for a second one (~0.2–0.4 s saved on slower links). Track skips were already instant (prefetch + caches) and are unchanged.
+
 ## [6.4.41_DE-1.35.6-nightly] - 2026-08-28
 
 ### Fixed

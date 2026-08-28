@@ -10,9 +10,6 @@ import com.music.innertube.models.response.PlayerResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.util.concurrent.TimeUnit
 
 /**
  * Resolves a playable AAC (`audio/mp4`, itag 140) stream URL for a YouTube
@@ -73,11 +70,6 @@ object StreamResolver {
         YouTubeClient.ANDROID_NO_SDK,
     )
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
-
     /**
      * Short-lived in-memory cache of resolved stream URLs, so starting the
      * same track again (or retrying it) does not re-run the whole resolution
@@ -128,10 +120,10 @@ object StreamResolver {
         }
         GuestSession.ensure()
         var resolution = resolveOnce(videoId, quality)
-        // Bot detection: when no candidate URL passed validation, YouTube likely
+        // Bot detection: when no candidate URL was found at all, YouTube likely
         // flagged the guest identity — rotate it and retry once (mirrors the
         // Android BotDetectionMitigator).
-        if (!resolution.anyValidated) {
+        if (!resolution.anyFound) {
             GuestSession.rotate()
             resolution = resolveOnce(videoId, quality)
         }
@@ -155,14 +147,16 @@ object StreamResolver {
         return resolution.streams
     }
 
-    private data class Resolution(val streams: List<ResolvedStream>, val anyValidated: Boolean)
+    private data class Resolution(val streams: List<ResolvedStream>, val anyFound: Boolean)
 
     private suspend fun resolveOnce(videoId: String, quality: AudioQuality): Resolution {
-        val candidates = mutableListOf<ResolvedStream>()
-
         // 1) NewPipe — handles the signature cipher and returns already-playable
         //    stream URLs when its extractor is not bot-blocked. These URLs are
         //    served to NewPipe's Firefox UA, so keep that UA for the download.
+        //    When NewPipe succeeds, return immediately: the URL is playable as-is
+        //    and the player falls through to the next candidate (or the retry
+        //    path in resolveAacStream) if the download later fails — no need to
+        //    wait for the whole client chain + HEAD validation on every play.
         val newPipeUrl = withContext(Dispatchers.IO) {
             runCatching {
                 val urls = YouTube.getNewPipeStreamUrls(videoId)
@@ -170,14 +164,14 @@ object StreamResolver {
             }.getOrNull()
         }
         if (!newPipeUrl.isNullOrBlank()) {
-            candidates += ResolvedStream(newPipeUrl, YouTubeClient.USER_AGENT_WEB)
+            return Resolution(listOf(ResolvedStream(newPipeUrl, YouTubeClient.USER_AGENT_WEB)), anyFound = true)
         }
 
-        // 2) Client chain: collect every resolved AAC URL, preferring the ones
-        //    that pass HEAD validation. googlevideo sometimes rejects HEAD, so
-        //    unvalidated URLs are still kept as a last resort.
-        val validated = mutableListOf<ResolvedStream>()
-        val unvalidated = mutableListOf<ResolvedStream>()
+        // 2) Client chain — only reached when NewPipe was bot-blocked/failed.
+        //    Collect a couple of playable AAC URLs; the download itself is the
+        //    validation (the player tries candidates in order and falls through
+        //    on failure), so no HEAD round-trip is spent per candidate.
+        val collected = mutableListOf<ResolvedStream>()
         var signatureTimestamp: Int? = null
         var signatureFetched = false
 
@@ -197,22 +191,14 @@ object StreamResolver {
             val url = resolveFromResponse(response, quality.preferredItags, ytClient) ?: continue
             val durationMs = response.videoDetails?.lengthSeconds?.toDoubleOrNull()?.times(1000)?.toLong()
             val stream = ResolvedStream(url, ytClient.userAgent, durationMs)
-            val seen = (candidates + validated + unvalidated).any { it.url == url }
-            if (seen) continue
-            if (validateUrl(url, ytClient.userAgent)) {
-                validated += stream
-                // The first HEAD-validated URL is almost certainly playable:
-                // stop the client chain here. The URLs already collected
-                // (NewPipe + any unvalidated ones) still give the player
-                // alternatives if the download later fails, without paying
-                // ~12 sequential player() calls on every single track.
-                break
-            } else {
-                unvalidated += stream
-            }
+            if (collected.any { it.url == url }) continue
+            collected += stream
+            // Two independent candidates are enough for the download fall-through;
+            // stop here instead of running the whole fallback chain sequentially.
+            if (collected.size >= 2) break
         }
 
-        return Resolution(candidates + validated + unvalidated, validated.isNotEmpty())
+        return Resolution(collected, anyFound = collected.isNotEmpty())
     }
 
     /** Picks the best AAC format from a successful player response and resolves its URL. */
@@ -245,13 +231,5 @@ object StreamResolver {
         }
     }
 
-    /** Best-effort HEAD validation of a resolved stream URL. */
-    private fun validateUrl(url: String, userAgent: String): Boolean = runCatching {
-        val request = Request.Builder()
-            .head()
-            .url(url)
-            .header("User-Agent", userAgent)
-            .build()
-        client.newCall(request).execute().use { it.isSuccessful }
-    }.getOrDefault(false)
+
 }
