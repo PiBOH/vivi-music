@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.5-nightly] - 2026-08-28
+
+### Changed
+- [DE] **Playback starts while the track is still downloading (progressive streaming)**: the stream is downloaded to a unique `.part` file in the background and the decoder starts as soon as the first audio fragment is on disk, instead of waiting for the whole file. The sample table grows incrementally as new `moof` fragments arrive. A prefetch and a user play of the same track now share ONE download (no more concurrent-write races), completed downloads are promoted to the cache best-effort (copy fallback on Windows where an open file can't be renamed), and stale `.part` leftovers are swept on startup.
+- [DE] **Stream resolution is much faster**: the client chain used to run all ~12 fallback clients sequentially even when the first URL validated, costing many round-trips per track. It now stops at the first HEAD-validated URL (NewPipe + any already-collected candidates remain as download fallbacks).
+- [DE] **The "downloading" indicator is accurate**: the loading phase is no longer cleared the instant resolution ends — it now stays visible until audio is actually ready (the first decoded frame).
+
 ## [6.4.41_DE-1.35.4-nightly] - 2026-08-28
 
 ### Fixed

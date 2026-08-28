@@ -199,7 +199,17 @@ object StreamResolver {
             val stream = ResolvedStream(url, ytClient.userAgent, durationMs)
             val seen = (candidates + validated + unvalidated).any { it.url == url }
             if (seen) continue
-            if (validateUrl(url, ytClient.userAgent)) validated += stream else unvalidated += stream
+            if (validateUrl(url, ytClient.userAgent)) {
+                validated += stream
+                // The first HEAD-validated URL is almost certainly playable:
+                // stop the client chain here. The URLs already collected
+                // (NewPipe + any unvalidated ones) still give the player
+                // alternatives if the download later fails, without paying
+                // ~12 sequential player() calls on every single track.
+                break
+            } else {
+                unvalidated += stream
+            }
         }
 
         return Resolution(candidates + validated + unvalidated, validated.isNotEmpty())

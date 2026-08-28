@@ -5,9 +5,9 @@ import net.sourceforge.jaad.aac.SampleBuffer
 import org.jcodec.common.io.NIOUtils
 import org.jcodec.common.io.SeekableByteChannel
 import org.jcodec.containers.mp4.MP4Util
+import org.jcodec.containers.mp4.boxes.Header
 import org.jcodec.containers.mp4.boxes.MovieFragmentBox
 import org.jcodec.containers.mp4.boxes.NodeBox
-import org.jcodec.containers.mp4.boxes.TrackFragmentBox
 import org.jcodec.containers.mp4.boxes.TrackFragmentHeaderBox
 import org.jcodec.containers.mp4.boxes.TrunBox
 import org.jcodec.containers.mp4.demuxer.AbstractMP4DemuxerTrack
@@ -18,6 +18,7 @@ import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
@@ -29,6 +30,13 @@ import javax.sound.sampled.SourceDataLine
  * AAC frames to PCM with the bundled `jaad` decoder, and plays them through
  * Java Sound. No native libraries or external binaries are required.
  *
+ * Playback is **progressive**: the stream is downloaded to a unique `.part`
+ * file in the background while the decoder starts as soon as the first audio
+ * fragment is on disk, so a track begins in seconds instead of after the whole
+ * file has downloaded. The sample table is grown incrementally as new `moof`
+ * fragments arrive, and the download is shared between a look-ahead prefetch
+ * and a user-initiated play of the same track.
+ *
  * YouTube serves its `audio/mp4` streams as *fragmented* MP4 (fMP4, `ftyp`
  * brand "dash"): the `moov` sample table is empty and the real samples live in
  * `moof`/`trun` boxes, which `jaad`'s own `MP4Container` demuxer does not
@@ -38,6 +46,7 @@ import javax.sound.sampled.SourceDataLine
  * instead of failing silently, so playback problems are visible in the UI.
  */
 class AudioPlayer {
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -45,6 +54,14 @@ class AudioPlayer {
 
     private val cacheDir =
         File(System.getProperty("user.home"), ".vivimusic/cache/audio").apply { mkdirs() }
+
+    /** In-flight downloads keyed by cacheKey: a prefetch and a user play of the
+     *  same track join the SAME download instead of racing on one `.part` path
+     *  and corrupting each other's file. */
+    private val activeDownloads = ConcurrentHashMap<String, DownloadHandle>()
+
+    /** Unique partial-download suffix (see [beginDownload]). */
+    private val nextPartId = java.util.concurrent.atomic.AtomicLong(0)
 
     private var thread: Thread? = null
 
@@ -56,12 +73,18 @@ class AudioPlayer {
     @Volatile private var volume = 1f
     private val lock = Object()
 
-    /** Unique partial-download suffix (see [ensureDownloaded]). */
-    private val nextPartId = java.util.concurrent.atomic.AtomicLong(0)
-
     private companion object {
         /** Min interval between decoded-position reports to the UI (ms). */
         const val POSITION_REPORT_INTERVAL_MS = 100L
+
+        /** Bytes that must be on disk before the MP4 demuxer is created: the
+         *  `moov` box (decoder setup) lives at the head of the file, before the
+         *  first audio fragment. Audio-only moovs are only a few KB, so this is
+         *  normally satisfied after the first network round-trip. */
+        const val MIN_START_BYTES = 64 * 1024L
+
+        /** Poll interval while waiting for the download to catch up (ms). */
+        const val DOWNLOAD_POLL_MS = 30L
     }
 
     @Volatile private var line: SourceDataLine? = null
@@ -83,11 +106,18 @@ class AudioPlayer {
     private var currentStreams: List<StreamResolver.ResolvedStream>? = null
     private var currentCacheKey: String? = null
 
+    init {
+        // Sweep stale partial downloads left behind by a crash: a `.part` is
+        // never a valid cache file (the final `$key.m4a` is only written after
+        // a complete download), so leftover parts are pure garbage.
+        cacheDir.listFiles { f -> f.name.endsWith(".part") }?.forEach { it.delete() }
+    }
+
     /**
-     * Starts playing [url] on a background thread. [cacheKey] names the local
-     * cache file (use a stable id such as the videoId so repeats/seeks don't
-     * re-download). [onPosition] reports decoded position, [onDuration] the
-     * total track length, [onError] a human-readable failure reason, and
+     * Starts playing [streams] on a background thread. [cacheKey] names the
+     * local cache file (use a stable id such as the videoId so repeats/seeks
+     * don't re-download). [onPosition] reports decoded position, [onDuration]
+     * the total track length, [onError] a human-readable failure reason, and
      * [onComplete] fires when the stream ends or is stopped.
      */
     fun play(
@@ -153,17 +183,27 @@ class AudioPlayer {
         currentStreams = streams
         currentCacheKey = cacheKey
 
-        // Report the authoritative duration (from the player response) right
-        // away so the seek slider has a correct range even before the first
-        // frame is decoded. The AAC-derived duration is only a fallback.
+        // Authoritative duration from the player response, used by
+        // [decodeAndPlay] for the seek range and the truncation guard. It is
+        // deliberately NOT reported through [onDuration] here: the UI state
+        // already carries the track duration, and firing it immediately would
+        // clear the "downloading" phase before any audio is actually ready.
         val knownDurationMs = streams.firstNotNullOfOrNull { it.durationMs }?.takeIf { it > 0 } ?: 0L
-        if (knownDurationMs > 0) onDuration?.invoke(knownDurationMs)
 
         thread = Thread {
             var failed = false
             try {
-                val file = ensureDownloaded(streams, cacheKey)
-                decodeAndPlay(file, gen, startAtMs, knownDurationMs)
+                val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                val cached = File(cacheDir, "$safe.m4a")
+                // A complete, valid cache file plays directly; otherwise the
+                // stream is downloaded progressively and playback starts as
+                // soon as the first fragment arrives.
+                val handle = if (cached.exists() && cached.length() > 0 && isValidMp4(cached)) {
+                    DownloadHandle(cached, cached.length(), complete = true)
+                } else {
+                    beginDownload(streams, cacheKey)
+                }
+                decodeAndPlay(handle, gen, startAtMs, knownDurationMs)
             } catch (e: Exception) {
                 failed = true
                 if (gen == generation) {
@@ -202,48 +242,88 @@ class AudioPlayer {
             ?.forEach { it.delete() }
     }
 
-    /** Downloads [streams] to the local cache without playing (look-ahead prefetch). */
+    /** Downloads [streams] for [cacheKey] without playing (look-ahead prefetch).
+     *  Joins an in-flight download if one already exists, so a play that starts
+     *  while the prefetch is running never races it. */
     fun prefetch(streams: List<StreamResolver.ResolvedStream>, cacheKey: String) {
         if (isCached(cacheKey)) return
-        Thread {
-            runCatching { ensureDownloaded(streams, cacheKey) }
-        }.apply { isDaemon = true; name = "vivimusic-prefetch"; start() }
+        beginDownload(streams, cacheKey)
     }
 
-    private fun ensureDownloaded(streams: List<StreamResolver.ResolvedStream>, cacheKey: String): File {
+    /** Shared state of an in-flight (or already complete) audio download. */
+    private class DownloadHandle(
+        /** The file the decoder reads from (a unique `.part` while downloading). */
+        val file: File,
+        /** Bytes of [file] written so far; grows until [complete]. */
+        @Volatile var downloadedBytes: Long,
+        /** True once the download finished (successfully or not). */
+        @Volatile var complete: Boolean,
+        /** True when every candidate URL failed. */
+        @Volatile var failed: Boolean = false,
+        /** Human-readable reason when [failed] (the last candidate's error). */
+        @Volatile var failure: String? = null,
+    )
+
+    /**
+     * Starts (or joins) a background download of [streams] to a unique `.part`
+     * file and returns immediately: the decoder consumes the file progressively
+     * while it downloads, so playback begins as soon as the first fragment
+     * arrives instead of after the whole track is on disk.
+     */
+    private fun beginDownload(streams: List<StreamResolver.ResolvedStream>, cacheKey: String): DownloadHandle {
+        activeDownloads[cacheKey]?.let { return it }
         val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val file = File(cacheDir, "$safe.m4a")
-        if (file.exists() && file.length() > 0 && isValidMp4(file)) return file
-        // A truncated/stale cache file (from an interrupted download or an older
-        // buggy build) would decode into silence or an error, so discard it and
-        // re-download a clean copy.
+        // A stale/truncated final file (interrupted download or a leftover from
+        // an older buggy build) would play a fragment and "end" early — delete
+        // it so the fresh download writes a clean copy.
         if (file.exists()) file.delete()
-        // A unique partial filename per download: prefetch and a user-initiated
-        // play can download the SAME track concurrently, and sharing one .part
-        // path made them overwrite each other mid-write, leaving a corrupt file
-        // that played a fragment and "ended" early.
         val part = File(cacheDir, "$safe.m4a.${nextPartId.incrementAndGet()}.part")
-
-        // Try each candidate stream URL in order until one downloads cleanly.
-        var lastError: IOException? = null
-        for (stream in streams) {
+        val handle = DownloadHandle(part, 0L, complete = false)
+        val existing = activeDownloads.putIfAbsent(cacheKey, handle)
+        if (existing != null) return existing
+        Thread {
             try {
-                if (part.exists()) part.delete()
-                download(stream, part)
-                if (part.length() <= 0) throw IOException("Downloaded audio file is empty")
-                if (!part.renameTo(file)) {
-                    part.copyTo(file, overwrite = true)
-                    part.delete()
+                var lastError: IOException? = null
+                for (stream in streams) {
+                    try {
+                        if (part.exists()) part.delete()
+                        download(stream, part, handle)
+                        val total = part.length()
+                        if (total <= 0) throw IOException("Downloaded audio file is empty")
+                        handle.downloadedBytes = total
+                        // Promote to the final cache name (best-effort: while
+                        // the decoder holds the `.part` open — Windows — a
+                        // rename fails, so fall back to a copy; the decoder
+                        // keeps reading the `.part` either way).
+                        if (!part.renameTo(file)) {
+                            runCatching { part.copyTo(file, overwrite = true) }
+                        }
+                        handle.complete = true
+                        return@Thread
+                    } catch (e: IOException) {
+                        lastError = e
+                    }
                 }
-                return file
-            } catch (e: IOException) {
-                lastError = e
+                handle.failure = lastError?.message ?: "No stream URL available"
+                handle.failed = true
+                handle.complete = true
+            } catch (e: Exception) {
+                handle.failure = e.message
+                handle.failed = true
+                handle.complete = true
+            } finally {
+                activeDownloads.remove(cacheKey)
             }
+        }.apply {
+            isDaemon = true
+            name = "vivimusic-download"
+            start()
         }
-        throw lastError ?: IOException("No stream URL available")
+        return handle
     }
 
-    private fun download(stream: StreamResolver.ResolvedStream, part: File) {
+    private fun download(stream: StreamResolver.ResolvedStream, part: File, handle: DownloadHandle) {
         // googlevideo ties a stream URL to the client that requested it, so the
         // download MUST use the same User-Agent (otherwise it answers 403). Some
         // endpoints want a Range header (ExoPlayer-style) while others reject it,
@@ -263,7 +343,19 @@ class AudioPlayer {
         response.use { r ->
             if (!r.isSuccessful) throw IOException("HTTP ${r.code} downloading audio (${stream.url})")
             val body = r.body ?: throw IOException("Empty audio response body")
-            part.outputStream().use { out -> body.byteStream().copyTo(out) }
+            var written = 0L
+            part.outputStream().use { out ->
+                body.byteStream().use { input ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        written += n
+                        handle.downloadedBytes = written
+                    }
+                }
+            }
         }
     }
 
@@ -285,22 +377,69 @@ class AudioPlayer {
     }.getOrDefault(false)
 
     /**
-     * Walks the `moof`/`trun` boxes of a fragmented MP4 and returns the
-     * absolute file offset + size of every raw AAC sample of [trackId], in
-     * decode order. YouTube fMP4 sets `trun.data_offset` relative to the start
-     * of the enclosing `moof`, and stores the samples contiguously, so the
-     * sample offset is `moofOffset + dataOffset + sum(previous sizes)`.
+     * Walks the root atoms of a possibly still-growing fragmented MP4, from
+     * [from] until [until], appending the AAC sample table of every complete
+     * `moof` box to [samples]. Returns the offset just past the last atom
+     * walked, so scanning can resume as the download grows. Trailing atoms that
+     * are not fully downloaded yet are skipped.
      */
-    private fun collectAacSamples(channel: SeekableByteChannel, trackId: Int): List<Pair<Long, Int>> {
-        val samples = mutableListOf<Pair<Long, Int>>()
-        for (atom in MP4Util.getRootAtoms(channel)) {
-            if (atom.header.fourcc != "moof") continue
-            val moof = atom.parseBox(channel) as MovieFragmentBox
+    private fun walkAtoms(
+        channel: SeekableByteChannel,
+        trackId: Int,
+        from: Long,
+        until: Long,
+        samples: MutableList<Pair<Long, Int>>,
+    ): Long {
+        var pos = from
+        val header = ByteBuffer.allocate(16)
+        while (pos + 8 <= until) {
+            channel.setPosition(pos)
+            header.clear()
+            if (!readFully(channel, header, 8)) break
+            header.rewind()
+            val size32 = header.int.toLong() and 0xFFFFFFFFL
+            val fourcc = String(header.array(), 4, 4, Charsets.ISO_8859_1)
+            var size = size32
+            if (size == 1L) {
+                // 64-bit extended size: 8 more bytes after the type.
+                header.clear()
+                if (!readFully(channel, header, 8)) break
+                header.rewind()
+                size = header.long
+            } else if (size == 0L) {
+                size = until - pos // runs to the end of the file
+            }
+            if (size <= 0 || size > until - pos) break // incomplete trailing atom
+            if (fourcc == "moof") {
+                collectMoofSamples(channel, trackId, pos, size, samples)
+            }
+            pos += size
+        }
+        return pos
+    }
+
+    /**
+     * Appends the AAC samples of one complete `moof` box (at [moofOffset],
+     * [moofSize] bytes long) to [samples], in decode order. YouTube fMP4 sets
+     * `trun.data_offset` relative to the start of the enclosing `moof`, and
+     * stores the samples contiguously, so each sample's offset is
+     * `moofOffset + dataOffset + sum(previous sizes)`.
+     */
+    private fun collectMoofSamples(
+        channel: SeekableByteChannel,
+        trackId: Int,
+        moofOffset: Long,
+        moofSize: Long,
+        samples: MutableList<Pair<Long, Int>>,
+    ) {
+        runCatching {
+            val moof = MP4Util.Atom(Header.createHeader("moof", moofSize), moofOffset).parseBox(channel)
+                as? MovieFragmentBox ?: return
             for (traf in moof.tracks) {
                 val tfhd = NodeBox.findFirst(traf, TrackFragmentHeaderBox::class.java, "tfhd") ?: continue
                 if (tfhd.trackId != trackId) continue
                 val trun = NodeBox.findFirst(traf, TrunBox::class.java, "trun") ?: continue
-                val base = atom.offset + (if (trun.isDataOffsetAvailable) trun.dataOffset.toLong() else 0L)
+                val base = moofOffset + (if (trun.isDataOffsetAvailable) trun.dataOffset.toLong() else 0L)
                 var offset = base
                 for (size in trun.sampleSizes) {
                     samples.add(offset to size)
@@ -308,23 +447,76 @@ class AudioPlayer {
                 }
             }
         }
-        return samples
     }
 
-    private fun decodeAndPlay(file: File, gen: Int, startAtMs: Long, knownDurationMs: Long = 0L) {
-        NIOUtils.readableChannel(file).use { channel ->
+    /** Reads exactly [len] bytes into [bb]; returns false at end of file. */
+    private fun readFully(channel: SeekableByteChannel, bb: ByteBuffer, len: Int): Boolean {
+        var total = 0
+        while (total < len) {
+            val n = channel.read(bb)
+            if (n < 0) return false
+            total += n
+        }
+        return true
+    }
+
+    private fun decodeAndPlay(handle: DownloadHandle, gen: Int, startAtMs: Long, knownDurationMs: Long = 0L) {
+        NIOUtils.readableChannel(handle.file).use { channel ->
+            // The download may still be in flight: wait until the head of the
+            // file (`ftyp` + `moov`) is on disk before parsing the container.
+            while (handle.downloadedBytes < MIN_START_BYTES && !handle.complete && !handle.failed) {
+                Thread.sleep(DOWNLOAD_POLL_MS)
+            }
+            if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
+            if (stopped || gen != generation) return@use
+
             val demuxer = MP4Demuxer.createMP4Demuxer(channel)
             val track = demuxer.audioTracks.firstOrNull() as? AbstractMP4DemuxerTrack
                 ?: throw IOException("No audio track found in stream")
-
-        val dsi = MP4DemuxerTrackMeta.getCodecPrivate(track)
+            val dsi = MP4DemuxerTrackMeta.getCodecPrivate(track)
                 ?: throw IOException("No AAC decoder info found in stream")
             val decoder = Decoder(NIOUtils.toArray(dsi))
             val buffer = SampleBuffer()
 
             val trackId = track.box.trackHeader.trackId
-            val samples = collectAacSamples(channel, trackId)
-            if (samples.isEmpty()) throw IOException("No audio frames to decode")
+            // Sample table, grown incrementally: while the download is still
+            // running, new `moof` fragments (and their samples) keep arriving.
+            val samples = mutableListOf<Pair<Long, Int>>()
+            var scannedTo = 0L
+
+            /** Scans [scannedTo..downloadedBytes) for complete `moof` boxes and
+             *  appends their AAC samples; advances [scannedTo] past them. */
+            fun scanMore() {
+                val until = handle.downloadedBytes
+                if (scannedTo < until) {
+                    scannedTo = walkAtoms(channel, trackId, scannedTo, until, samples)
+                }
+            }
+
+            // Wait until the first audio fragment is fully downloaded.
+            scanMore()
+            while (samples.isEmpty() && !handle.complete && !handle.failed) {
+                Thread.sleep(DOWNLOAD_POLL_MS)
+                scanMore()
+            }
+            if (samples.isEmpty()) {
+                throw if (handle.failed) IOException(handle.failure ?: "Audio download failed")
+                else IOException("No audio frames to decode")
+            }
+
+            /** Blocks until the sample at [index] is fully on disk (or the
+             *  download finished/failed). */
+            fun awaitSample(index: Int) {
+                val (offset, size) = samples[index]
+                while (offset + size > handle.downloadedBytes && !handle.complete && !handle.failed) {
+                    Thread.sleep(DOWNLOAD_POLL_MS)
+                    scanMore()
+                }
+                if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
+                if (offset + size > handle.downloadedBytes) {
+                    throw IOException("Audio stream ended before the track finished downloading")
+                }
+            }
 
             fun decodeAt(index: Int) {
                 val (offset, size) = samples[index]
@@ -337,36 +529,39 @@ class AudioPlayer {
                 decoder.decodeFrame(raw, buffer)
             }
 
-        // Decode the first frame to learn the PCM format and open the line.
-        decodeAt(0)
+            awaitSample(0)
+            decodeAt(0)
 
-        // Total duration: YouTube's fragmented MP4 has an empty mdhd (jcodec
-        // reports totalDuration == 0), so derive it from the sample count x
-        // per-frame duration (AAC-LC frames are constant-size). Without this the
-        // seek slider gets a 0..1 range and can only land on the start or the end.
-        val firstFrameSeconds = buffer.length.coerceAtLeast(0.0)
-        val metaDurationMs = runCatching { track.meta.totalDuration }
-            .getOrNull()?.takeIf { it > 0 }?.let { (it * 1000).toLong() } ?: 0L
-        val derivedDurationMs = (firstFrameSeconds * samples.size * 1000).toLong()
-        // Prefer the player-response duration (accurate); the AAC derivation is
-        // only a fallback for streams that didn't carry a lengthSeconds value.
-        val durationMs = if (knownDurationMs > 0) knownDurationMs
-            else maxOf(derivedDurationMs, metaDurationMs)
-        if (gen == generation) onDuration?.invoke(durationMs)
+            // Total duration: YouTube's fragmented MP4 has an empty mdhd (jcodec
+            // reports totalDuration == 0), so derive it from the sample count x
+            // per-frame duration (AAC-LC frames are constant-size). Without this
+            // the seek slider gets a 0..1 range and can only land on the start
+            // or the end.
+            val firstFrameSeconds = buffer.length.coerceAtLeast(0.0)
+            val metaDurationMs = runCatching { track.meta.totalDuration }
+                .getOrNull()?.takeIf { it > 0 }?.let { (it * 1000).toLong() } ?: 0L
+            val derivedDurationMs = (firstFrameSeconds * samples.size * 1000).toLong()
+            // Prefer the player-response duration (accurate); the AAC derivation
+            // is only a fallback for streams that didn't carry a lengthSeconds.
+            val durationMs = if (knownDurationMs > 0) knownDurationMs
+                else maxOf(derivedDurationMs, metaDurationMs)
+            if (gen == generation) onDuration?.invoke(durationMs)
 
-        // A truncated cache file (interrupted download, or a concurrent
-        // prefetch/play write race) passes the ftyp+moof integrity check but
-        // holds only a fraction of the track. It would play a few seconds and
-        // "end", auto-skipping to the next track — the "tracks stop after a
-        // while / change by themselves" bug. Fail so [evictCache] + the retry
-        // re-download a clean copy instead of playing the fragment.
-        if (knownDurationMs > 0 && derivedDurationMs < knownDurationMs * 0.6) {
-            throw IOException(
-                "Cached audio is truncated (only ${derivedDurationMs / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
-            )
-        }
+            // Truncated-cache guard for files already fully on disk when playback
+            // started (a stale/interrupted cache holds only a fraction of the
+            // track: it would play a few seconds then "end", auto-skipping to the
+            // next track). Skipped while the download is still growing — a
+            // partial scan at this point is expected, and the end-of-track check
+            // below covers that case.
+            if (handle.complete && scannedTo >= handle.downloadedBytes && knownDurationMs > 0 &&
+                derivedDurationMs < knownDurationMs * 0.6
+            ) {
+                throw IOException(
+                    "Cached audio is truncated (only ${derivedDurationMs / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
+                )
+            }
 
-        val format = AudioFormat(
+            val format = AudioFormat(
                 buffer.sampleRate.toFloat(),
                 buffer.bitsPerSample,
                 buffer.channels,
@@ -379,62 +574,87 @@ class AudioPlayer {
             out.open(format, 8192)
             out.start()
 
-        val bigEndian = buffer.isBigEndian
-        val bitsPerSample = buffer.bitsPerSample
-        val targetSeconds = startAtMs / 1000.0
-        var elapsedSeconds = 0.0
-        // Position reports are throttled so the UI (seek slider, lyrics) does
-        // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
-        // the slider smooth and draggable while staying accurate to ~100 ms.
-        var lastReportMs = -POSITION_REPORT_INTERVAL_MS
+            val bigEndian = buffer.isBigEndian
+            val bitsPerSample = buffer.bitsPerSample
+            val targetSeconds = startAtMs / 1000.0
+            var elapsedSeconds = 0.0
+            // Position reports are throttled so the UI (seek slider, lyrics) does
+            // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
+            // the slider smooth and draggable while staying accurate to ~100 ms.
+            var lastReportMs = -POSITION_REPORT_INTERVAL_MS
 
-        fun reportPosition() {
-            if (gen != generation) return
-            var posMs = ((elapsedSeconds + buffer.length) * 1000).toLong()
-            // Never report past the end of the track, so the seek slider can't
-            // get stuck at the end while playing (or push a past-end position
-            // to the synced device).
-            if (durationMs > 0) posMs = posMs.coerceAtMost(durationMs)
-            if (posMs - lastReportMs >= POSITION_REPORT_INTERVAL_MS) {
-                lastReportMs = posMs
-                onPosition?.invoke(posMs)
+            fun reportPosition() {
+                if (gen != generation) return
+                var posMs = ((elapsedSeconds + buffer.length) * 1000).toLong()
+                // Never report past the end of the track, so the seek slider can't
+                // get stuck at the end while playing (or push a past-end position
+                // to the synced device).
+                if (durationMs > 0) posMs = posMs.coerceAtMost(durationMs)
+                if (posMs - lastReportMs >= POSITION_REPORT_INTERVAL_MS) {
+                    lastReportMs = posMs
+                    onPosition?.invoke(posMs)
+                }
             }
-        }
 
-        fun emit() {
-            // Decode-and-discard frames until the seek target is reached.
-            if (elapsedSeconds + buffer.length >= targetSeconds) {
-                if (!paused) {
-                    val data = if (volume < 0.999f && bitsPerSample == 16) {
-                        scale16(buffer.data, volume, bigEndian)
-                    } else {
-                        buffer.data
-                    }
-                    var written = 0
-                    while (written < data.size) {
-                        val n = out.write(data, written, data.size - written)
-                        if (n <= 0) break
-                        written += n
-                    }
-                    if (bitsPerSample == 16) {
-                        onLevel?.invoke(rms16(data, bigEndian))
+            fun emit() {
+                // Decode-and-discard frames until the seek target is reached.
+                if (elapsedSeconds + buffer.length >= targetSeconds) {
+                    if (!paused) {
+                        val data = if (volume < 0.999f && bitsPerSample == 16) {
+                            scale16(buffer.data, volume, bigEndian)
+                        } else {
+                            buffer.data
+                        }
+                        var written = 0
+                        while (written < data.size) {
+                            val n = out.write(data, written, data.size - written)
+                            if (n <= 0) break
+                            written += n
+                        }
+                        if (bitsPerSample == 16) {
+                            onLevel?.invoke(rms16(data, bigEndian))
+                        }
                     }
                 }
                 reportPosition()
+                elapsedSeconds += buffer.length
             }
-            elapsedSeconds += buffer.length
-        }
-        emit()
+            emit()
 
             var index = 0
-            while (index < samples.size - 1) {
+            while (true) {
                 synchronized(lock) {
                     while (paused && !stopped) lock.wait()
                 }
                 if (stopped || gen != generation) break
+
+                // Grow the sample table as new fragments arrive.
+                scanMore()
+                if (index + 1 >= samples.size) {
+                    if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
+                    if (!handle.complete) {
+                        Thread.sleep(DOWNLOAD_POLL_MS)
+                        continue
+                    }
+                    break // download complete and samples exhausted → end of track
+                }
+                awaitSample(index + 1)
                 index++
                 decodeAt(index)
                 emit()
+            }
+
+            // End-of-track truncation guard: a download that "completed" but only
+            // delivered a fraction of the known duration (e.g. a URL cut short)
+            // must be treated as truncated so the caller evicts and retries with
+            // a clean download instead of silently ending early.
+            if (gen == generation && !stopped && handle.complete && knownDurationMs > 0) {
+                val totalDerived = (firstFrameSeconds * samples.size * 1000).toLong()
+                if (totalDerived < knownDurationMs * 0.6) {
+                    throw IOException(
+                        "Cached audio is truncated (only ${totalDerived / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
+                    )
+                }
             }
 
             out.drain()
