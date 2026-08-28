@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -98,6 +99,16 @@ object LoginManager {
         val detail = lastError?.message?.takeIf { it.isNotBlank() }
             ?: lastError?.javaClass?.simpleName
             ?: "unknown error"
+        // Append the failure to the same debug file used by the WebView capture,
+        // so the next user report tells us exactly what went wrong.
+        runCatching {
+            val f = File(System.getProperty("user.home"), ".vivimusic/login-debug.log")
+            f.parentFile?.mkdirs()
+            f.appendText(
+                "[${java.time.LocalDateTime.now()}] login validation failed: $detail " +
+                    "(${lastError?.javaClass?.name})\n"
+            )
+        }
         throw IllegalStateException("Login validation failed: $detail")
     }
 

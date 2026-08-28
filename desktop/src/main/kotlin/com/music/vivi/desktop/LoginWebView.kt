@@ -17,6 +17,7 @@ import javafx.scene.text.Font
 import javafx.stage.Stage
 
 import java.awt.Desktop
+import java.io.File
 import java.net.CookieHandler
 import java.net.CookieManager
 import java.net.URI
@@ -37,6 +38,23 @@ object LoginWebView {
     @Volatile private var delivered = false
     @Volatile private var fxStarted = false
     private val fxStartupLock = Any()
+
+    private val debugLog = File(System.getProperty("user.home"), ".vivimusic/login-debug.log")
+
+    private fun logDebug(msg: String) {
+        runCatching {
+            debugLog.parentFile?.mkdirs()
+            debugLog.appendText("[${java.time.LocalDateTime.now()}] $msg\n")
+        }
+    }
+
+    private data class SessionCapture(
+        val header: String?,
+        val names: List<String>,
+        val missing: List<String>,
+        val hasSession: Boolean,
+        val hasFullSession: Boolean,
+    )
 
     fun isWindowOpen(): Boolean = windowOpen
 
@@ -151,7 +169,7 @@ object LoginWebView {
             stage.scene = Scene(root, 1000.0, 720.0)
             stage.setOnCloseRequest {
                 windowOpen = false
-                deliver(capturedCookieHeader(), callback)
+                deliver(capture().header, callback)
             }
             stage.show()
 
@@ -173,24 +191,41 @@ object LoginWebView {
             }
 
             Thread {
+                val deadline = System.currentTimeMillis() + 120_000
                 while (windowOpen && !delivered) {
-                    val cookie = capturedCookieHeader()
-                    if (cookie != null) {
+                    val cap = capture()
+                    if (cap.hasFullSession) {
                         FxPlatform.runLater {
                             spinner.isVisible = false
                             status.text = Localization.get(language, "login_saving")
                         }
-                        // The session is not complete when SAPISID first appears:
-                        // the last redirect cookies (SID, HSID, SSID, APISID,
-                        // __Secure-3PSID, ...) can still be arriving. Wait for the
-                        // set to settle, then re-capture so the validation gets
-                        // the FULL cookie header (an incomplete set makes the
-                        // innertube account_menu respond as guest -> NPE ->
-                        // "unknown error").
-                        Thread.sleep(3000)
-                        val finalCookie = capturedCookieHeader() ?: cookie
-                        deliver(finalCookie, callback)
+                        // Reload music.youtube.com WITH the session cookie so
+                        // every youtube.com session cookie is set, then settle
+                        // and re-capture the full header before closing.
+                        FxPlatform.runLater { browser.engine.load("https://music.youtube.com/") }
+                        Thread.sleep(4500)
+                        val finalCap = capture()
+                        logDebug("delivering full session: ${finalCap.names.size} cookies, missing=${finalCap.missing}")
+                        deliver(finalCap.header ?: cap.header, callback)
                         FxPlatform.runLater { stage.close() }
+                        break
+                    }
+                    if (cap.hasSession && System.currentTimeMillis() > deadline - 60_000) {
+                        // A session cookie appeared but the critical set never
+                        // completed: hand over what we have (validation will
+                        // fail; the captured header is kept in the manual field
+                        // for a one-click retry) and log the missing names.
+                        logDebug("delivering PARTIAL session, missing critical: ${cap.missing}")
+                        FxPlatform.runLater {
+                            spinner.isVisible = false
+                            status.text = Localization.get(language, "login_saving")
+                        }
+                        deliver(cap.header, callback)
+                        FxPlatform.runLater { stage.close() }
+                        break
+                    }
+                    if (System.currentTimeMillis() > deadline) {
+                        logDebug("capture timeout — no session cookies")
                         break
                     }
                     Thread.sleep(1000)
@@ -203,19 +238,39 @@ object LoginWebView {
         }
     }
 
-    private fun capturedCookieHeader(): String? {
-        val store = (CookieHandler.getDefault() as? CookieManager)?.cookieStore ?: return null
-        val cookies = store.cookies.filter { c ->
+    /**
+     * Reads the cookies stored for youtube/google domains. The full set is
+     * required: SAPISID alone authenticates nothing — the innertube
+     * account_menu validation answers as guest (NPE) when the critical
+     * HttpOnly session cookies (SID, HSID, SSID, APISID, __Secure-3PSID, …)
+     * are missing, which is exactly the "Login validation failed" the user
+     * saw after the window closed.
+     */
+    private fun capture(): SessionCapture {
+        val store = (CookieHandler.getDefault() as? CookieManager)?.cookieStore
+        val cookies = store?.cookies.orEmpty().filter { c ->
             val domain = c.domain.removePrefix(".")
             domain.endsWith("youtube.com") || domain.endsWith("google.com")
         }
-        val hasSession = cookies.any {
-            it.name == "SAPISID" || it.name == "__Secure-1PAPISID" || it.name == "__Secure-3PAPISID"
-        }
+        val byName = cookies.associateBy { it.name }
+        val names = cookies.map { it.name }.distinct().sorted()
+        val critical = listOf("SID", "HSID", "SSID", "APISID", "__Secure-3PSID", "LOGIN_INFO")
+        val missing = critical.filter { it !in byName }
+        val hasSession = byName.containsKey("SAPISID") ||
+            byName.containsKey("__Secure-1PAPISID") ||
+            byName.containsKey("__Secure-3PAPISID")
+        // A complete session has at least the SAPISID pair AND the HttpOnly
+        // session id (SID / __Secure-3PSID).
+        val hasFullSession = hasSession && byName.containsKey("SID") && byName.containsKey("__Secure-3PSID")
         if (hasSession) {
-            val names = cookies.map { it.name }.distinct().sorted()
-            println("[login-webview] captured ${cookies.size} cookies: $names")
+            logDebug("captured ${cookies.size} cookies: $names | missing critical: $missing")
         }
-        return if (hasSession) cookies.joinToString("; ") { "${it.name}=${it.value}" } else null
+        return SessionCapture(
+            header = if (hasSession) cookies.joinToString("; ") { "${it.name}=${it.value}" } else null,
+            names = names,
+            missing = missing,
+            hasSession = hasSession,
+            hasFullSession = hasFullSession,
+        )
     }
 }

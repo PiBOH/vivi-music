@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.34.7-nightly] - 2026-08-28
+
+### Fixed
+- [DE+APK] Google sign-in validation reported a bare "NullPointerException"/"unknown error" when the innertube `account_menu` answered as guest: `accountInfo` now reports "Not signed in: account_menu returned no active account" instead of crashing on the missing header.
+- [DE] The embedded sign-in now captures the FULL session cookie set: it waits until the critical HttpOnly cookies (SID + `__Secure-3PSID`) are present (not just SAPISID), reloads `music.youtube.com` with the session to force every youtube.com cookie, re-captures before closing, and logs the captured cookie names + missing ones to `~/.vivimusic/login-debug.log` for diagnosis (validation failures are appended to the same file).
+
 ## [6.4.40_DE-1.34.6-nightly] - 2026-08-28
 
 ### Changed
