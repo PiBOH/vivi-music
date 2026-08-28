@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.4-nightly] - 2026-08-28
+
+### Fixed
+- [DE] **"Module with the Main dispatcher is missing" crash**: desktop code hops back to `Dispatchers.Main` after off-thread image blur, but the module that provides the Swing-backed Main dispatcher was never declared — only `kotlinx-coroutines-core` was. Running that path (artwork blur) threw the missing-dispatcher error once out of the dev classpath/into a packaged run. Added `kotlinx-coroutines-swing` at the same version as `core`, which backs `Dispatchers.Main` on Compose Desktop.
+
 ## [6.4.41_DE-1.35.3-nightly] - 2026-08-28
 
 ### Fixed
