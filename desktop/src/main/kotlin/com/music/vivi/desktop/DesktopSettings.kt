@@ -79,6 +79,12 @@ data class DesktopSyncState(
     val showRightSidebar: Boolean = true,
     /** Fullscreen mode toggle. */
     val isFullscreen: Boolean = false,
+    /** Window placement persistence: OS-maximized flag + floating bounds in px. */
+    val windowMaximized: Boolean = true,
+    val windowX: Int = -1,
+    val windowY: Int = -1,
+    val windowWidth: Int = -1,
+    val windowHeight: Int = -1,
     val cookie: String = "",
     val dataSyncId: String = "",
     val visitorData: String = "",

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.34.3-nightly] - 2026-08-28
+
+### Fixed
+- [DE] Windows window management overhaul: the app forced Compose's `WindowPlacement.Maximized`/Fullscreen on every start and when opening the player; on an undecorated window with a display scale other than 100% this can size the window LARGER than the screen (everything looks enlarged, the title bar ends up off-screen and the app must be killed from Task Manager, and the window can cover the auto-hiding taskbar). Now the app starts floating, restores the last placement with the OS APIs (`Frame.MAXIMIZED_BOTH` respects the taskbar and DPI scaling), persists position/size/maximized state across restarts, clamps restored bounds to the usable screen area, never resizes the window when opening the player, and uses true fullscreen only via the explicit toggle.
+
 ## [6.4.39_DE-1.34.2-nightly] - 2026-08-28
 
 ### Fixed

@@ -272,18 +272,68 @@ fun main(args: Array<String>) {
     }
 
     var isFullscreen by remember { mutableStateOf(DesktopSettings.load().isFullscreen) }
-    val windowState = rememberWindowState(placement = if (isFullscreen) WindowPlacement.Fullscreen else WindowPlacement.Maximized)
-    LaunchedEffect(isFullscreen) {
-        windowState.placement = if (isFullscreen) WindowPlacement.Fullscreen else WindowPlacement.Maximized
-    }
+    // Tracks the OS-maximized state (updated by the AWT listener below) so the
+    // custom title-bar buttons reflect the real window placement.
+    var windowMaximized by remember { mutableStateOf(DesktopSettings.load().windowMaximized) }
+    // Start floating: the saved placement (maximized / bounds) is restored with
+    // the OS APIs inside the Window block. Compose's WindowPlacement.Maximized
+    // on an undecorated window can produce a window LARGER than the screen when
+    // the Windows display scale is not 100%, leaving the title bar off-screen
+    // (users then have to kill the app from Task Manager).
+    val windowState = rememberWindowState(placement = WindowPlacement.Floating)
+    // Captured from the Window content so onCloseRequest can persist geometry.
+    val awtWindowRef = arrayOfNulls<java.awt.Frame>(1)
 
     Window(
-        onCloseRequest = ::exitApplication,
+        onCloseRequest = {
+            runCatching {
+                awtWindowRef[0]?.let { w ->
+                    val maximized = (w.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0
+                    val b = w.bounds
+                    DesktopSettings.update {
+                        it.copy(
+                            windowMaximized = maximized,
+                            windowX = b.x,
+                            windowY = b.y,
+                            windowWidth = b.width,
+                            windowHeight = b.height,
+                        )
+                    }
+                }
+            }
+            exitApplication()
+        },
         title = windowTitle,
         state = windowState,
         undecorated = true,
     ) {
         val frameWindow = window
+        awtWindowRef[0] = frameWindow
+
+        // Restore the last placement with the OS APIs: OS maximize respects the
+        // taskbar and the Windows DPI scaling, unlike Compose's placement which
+        // can oversize an undecorated window. Floating bounds are clamped to the
+        // usable screen area so a stale/multi-DPI save can never leave the
+        // window unreachable.
+        LaunchedEffect(Unit) {
+            val saved = DesktopSettings.load()
+            if (saved.isFullscreen) {
+                windowState.placement = WindowPlacement.Fullscreen
+            } else {
+                runCatching {
+                    if (saved.windowMaximized) {
+                        frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH
+                    } else if (saved.windowWidth > 0 && saved.windowHeight > 0) {
+                        val usable = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+                        val w = saved.windowWidth.coerceIn(400, usable.width)
+                        val h = saved.windowHeight.coerceIn(300, usable.height)
+                        val x = saved.windowX.coerceIn(usable.x, usable.x + usable.width - w)
+                        val y = saved.windowY.coerceIn(usable.y, usable.y + usable.height - h)
+                        frameWindow.setBounds(x, y, w, h)
+                    }
+                }
+            }
+        }
 
         DisposableEffect(frameWindow) {
             val listener = java.awt.event.WindowStateListener { e ->
@@ -291,10 +341,27 @@ fun main(args: Array<String>) {
                 if (!isIconified && windowState.isMinimized) {
                     windowState.isMinimized = false
                 }
+                // Track the OS maximize state so the title-bar buttons and the
+                // persisted placement follow snapping / Win+Up as well.
+                windowMaximized = (e.newState and java.awt.Frame.MAXIMIZED_BOTH) != 0
             }
             frameWindow.addWindowStateListener(listener)
             onDispose {
                 frameWindow.removeWindowStateListener(listener)
+            }
+        }
+
+        // Follow the fullscreen toggle: OS-maximize when leaving fullscreen so
+        // the taskbar and DPI scaling are respected.
+        LaunchedEffect(isFullscreen) {
+            if (isFullscreen) {
+                windowState.placement = WindowPlacement.Fullscreen
+            } else {
+                windowState.placement = WindowPlacement.Floating
+                runCatching {
+                    frameWindow.extendedState =
+                        if (windowMaximized) java.awt.Frame.MAXIMIZED_BOTH else java.awt.Frame.NORMAL
+                }
             }
         }
 
@@ -345,7 +412,7 @@ fun main(args: Array<String>) {
                         },
                         initialSection = openSection,
                         isFullscreen = isFullscreen,
-                        isMaximized = (windowState.placement == WindowPlacement.Maximized || isFullscreen),
+                        isMaximized = (windowMaximized || isFullscreen),
                         onToggleFullscreen = {
                             isFullscreen = !isFullscreen
                             DesktopSettings.update { it.copy(isFullscreen = isFullscreen) }
@@ -365,13 +432,30 @@ fun main(args: Array<String>) {
                             if (windowState.isMinimized) {
                                 windowState.isMinimized = false
                             }
-                            if (windowState.placement == WindowPlacement.Maximized || isFullscreen) {
+                            if (isFullscreen) {
+                                // Leave fullscreen and return to OS-maximized.
                                 isFullscreen = false
                                 windowState.placement = WindowPlacement.Floating
+                                runCatching { frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH }
+                            } else if ((frameWindow.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0) {
+                                // OS restore: respects the work area (taskbar)
+                                // and the Windows DPI scaling.
                                 runCatching { frameWindow.extendedState = java.awt.Frame.NORMAL }
                             } else {
-                                windowState.placement = WindowPlacement.Maximized
                                 runCatching { frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH }
+                            }
+                            runCatching {
+                                val maximized = (frameWindow.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0
+                                val b = frameWindow.bounds
+                                DesktopSettings.update {
+                                    it.copy(
+                                        windowMaximized = maximized,
+                                        windowX = b.x,
+                                        windowY = b.y,
+                                        windowWidth = b.width,
+                                        windowHeight = b.height,
+                                    )
+                                }
                             }
                         },
                         onClose = ::exitApplication,
@@ -1977,11 +2061,9 @@ fun WindowScope.App(
             if (current == Screen.Player) {
                 goBack()
             } else {
-                sidebarCollapsed = true
-                DesktopSettings.update { it.copy(sidebarCollapsed = true) }
-                if (!isMaximized) {
-                    onMaximize()
-                }
+                // Windows-friendly: opening the player must not resize or
+                // maximize the window; the sidebar is hidden on the player
+                // screen anyway.
                 navigate(Screen.Player)
             }
         },
