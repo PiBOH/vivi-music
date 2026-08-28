@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.1-nightly] - 2026-08-28
+
+### Changed
+- [DE] Apple/Cider-style visual polish across the UI:
+  - **Now-playing indicator in lists**: the current row in every song list (album, playlist, search, library…) is highlighted with the accent color and shows three animated equalizer bars that move with the real decoded audio level (falling back to a gentle idle pulse when paused); the row background is softly tinted.
+  - **Artwork ambience**: the player artwork now sits on a colored glow derived from the blurred artwork and casts a soft specular reflection below it (Apple Music style).
+  - **Glass transport controls**: Previous/Play/Next/Shuffle/Repeat are now semi-transparent glass circles (subtle sheen + border) instead of flat Material buttons, so they sit on the artwork; the play button keeps the accent color.
+  - **Crossfade on track change**: background, artwork and controls fade between songs (≈300 ms) instead of cutting hard.
+  - **Expressive player side panel** now uses the Material 3 theme surface + border instead of a hardcoded dark color, so it follows the accent/theme.
+
 ## [6.4.41_DE-1.35.0-nightly] - 2026-08-28
 
 ### Added

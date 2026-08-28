@@ -1,5 +1,12 @@
 package com.music.vivi.desktop
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,15 +37,20 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.StateFlow
+import kotlin.math.sin
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
@@ -140,6 +152,20 @@ fun CachedBlurBackdrop(
     }
 }
 
+/**
+ * Playback context for list rows: which track is currently loaded, whether it
+ * is playing, and the live audio level (0..1) for the now-playing indicator.
+ * Provided by the app root; rows read it via [LocalPlayback].
+ */
+data class PlaybackContext(
+    val videoId: String? = null,
+    val isPlaying: Boolean = false,
+    val audioLevel: StateFlow<Float>? = null,
+)
+
+/** Composition local exposing the current playback to list rows (SongRow etc.). */
+val LocalPlayback = compositionLocalOf { PlaybackContext() }
+
 /** Square-ish artwork with a neutral placeholder behind it while loading. */
 @Composable
 fun Thumbnail(url: String?, modifier: Modifier = Modifier) {
@@ -216,14 +242,37 @@ fun SongRow(
     onAddToQueue: (() -> Unit)? = null,
     onAddToPlaylist: (() -> Unit)? = null,
 ) {
+    val playback = LocalPlayback.current
+    val isCurrent = song.id == playback.videoId
+    val accent = MaterialTheme.colorScheme.primary
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp)
+            .let { if (isCurrent) it.background(accent.copy(alpha = 0.07f), RoundedCornerShape(8.dp)) else it }
+            .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Thumbnail(song.thumbnail, Modifier.size(48.dp))
+        if (isCurrent) {
+            Spacer(Modifier.width(8.dp))
+            NowPlayingBars(
+                audioLevel = playback.audioLevel,
+                isPlaying = playback.isPlaying,
+                color = accent,
+            )
+        }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                song.title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isCurrent) accent else Color.Unspecified,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text(
                 song.artists.joinToString(", ") { it.name },
                 style = MaterialTheme.typography.bodySmall,
@@ -254,6 +303,49 @@ fun SongRow(
         }
         song.duration?.let {
             Text(it.let(::formatDuration), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * Small animated equalizer bars marking the currently playing row. When
+ * [audioLevel] is available and the track is playing, the bars move with the
+ * real decoded audio; otherwise they fall back to a gentle idle pulse. Only
+ * composed for the single current row, so the ~43 Hz level updates stay cheap.
+ */
+@Composable
+private fun NowPlayingBars(
+    audioLevel: StateFlow<Float>?,
+    isPlaying: Boolean,
+    color: Color,
+) {
+    val level by (audioLevel ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0.5f) }).collectAsState()
+    val target = if (isPlaying) level.coerceIn(0.15f, 1f) else 0.08f
+    val smooth by animateFloatAsState(
+        targetValue = target,
+        animationSpec = tween(durationMillis = 140, easing = LinearEasing),
+        label = "npBarsLevel",
+    )
+    val transition = rememberInfiniteTransition(label = "npBars")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart),
+        label = "npBarsPhase",
+    )
+    Canvas(Modifier.size(width = 16.dp, height = 14.dp)) {
+        val barWidth = size.width / 5f
+        val gap = barWidth * 0.8f
+        val maxH = size.height
+        for (i in 0 until 3) {
+            val wobble = 0.5f + 0.5f * sin((phase * 2 * Math.PI + i * 1.4).toFloat())
+            val h = (smooth * maxH * (0.45f + 0.55f * wobble)).coerceAtLeast(3f)
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(i * (barWidth + gap), (maxH - h) / 2f),
+                size = Size(barWidth, h),
+                cornerRadius = CornerRadius(barWidth / 2f),
+            )
         }
     }
 }

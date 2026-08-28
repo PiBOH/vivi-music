@@ -1276,6 +1276,13 @@ fun WindowScope.App(
     CompositionLocalProvider(
         LocalDensity provides Density(baseDensity.density * densityScale, baseDensity.fontScale)
     ) {
+    CompositionLocalProvider(
+        LocalPlayback provides PlaybackContext(
+            videoId = nowPlaying?.videoId,
+            isPlaying = isPlaying,
+            audioLevel = player.audioLevel,
+        )
+    ) {
     Row(
         Modifier
             .fillMaxSize()
@@ -2180,6 +2187,7 @@ fun WindowScope.App(
     }
 }
 }
+    }
     } // density scale CompositionLocalProvider
 
     // Developer tools in a dedicated window (closing it falls back to overlay).

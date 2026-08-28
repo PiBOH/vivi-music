@@ -1,10 +1,14 @@
 package com.music.vivi.desktop
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -84,18 +88,22 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
@@ -123,6 +131,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.music.lrclib.LrcLib
@@ -188,85 +197,94 @@ fun PlayerScreen(
 
     val bgUrl = CanvasResolver.displayUrl(canvasArt, np?.thumbnail)
 
-    Box(Modifier.fillMaxSize()) {
-        PlayerBackground(
-            style = background,
-            bgUrl = bgUrl,
-            accent = accent,
-            modifier = Modifier.fillMaxSize(),
-            audioLevel = audioLevel,
-            isPlaying = isPlaying,
-        )
-        if (np == null) {
-            Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                Text(Localization.get(language, "nothing_playing"), style = MaterialTheme.typography.titleLarge)
+    // Crossfade the whole player (background + artwork + controls) when the
+    // track changes, like Apple Music — no more hard "flash" cut between songs.
+    AnimatedContent(
+        targetState = np?.videoId,
+        transitionSpec = { fadeIn(tween(320)) togetherWith fadeOut(tween(220)) },
+        label = "playerTrack",
+    ) { id ->
+        val track = queue.firstOrNull { it.videoId == id }
+        Box(Modifier.fillMaxSize()) {
+            PlayerBackground(
+                style = background,
+                bgUrl = if (track?.videoId == np?.videoId) bgUrl else CanvasResolver.displayUrl(canvasArt, track?.thumbnail),
+                accent = accent,
+                modifier = Modifier.fillMaxSize(),
+                audioLevel = audioLevel,
+                isPlaying = isPlaying,
+            )
+            if (track == null) {
+                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(Localization.get(language, "nothing_playing"), style = MaterialTheme.typography.titleLarge)
+                }
+            } else if (design == PlayerDesign.EXPRESSIVE) {
+                M3EPlayerContent(
+                    np = track,
+                    queue = queue,
+                    index = index,
+                    isPlaying = isPlaying,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    volume = volume,
+                    isShuffle = isShuffle,
+                    repeatMode = repeatMode,
+                    errorKey = errorKey,
+                    errorDetail = errorDetail,
+                    loadPhase = loadPhase,
+                    onTogglePlay = onTogglePlay,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                    onSeek = onSeek,
+                    onVolume = onVolume,
+                    onToggleShuffle = onToggleShuffle,
+                    onCycleRepeat = onCycleRepeat,
+                    language = language,
+                    onOpenLyrics = onOpenLyrics,
+                    onOpenQueue = onOpenQueue,
+                    onAddToPlaylist = { onAddToPlaylist(track) },
+                    onSkipTo = onSkipTo,
+                    onRemoveAt = onRemoveAt,
+                    onClearQueue = onClearQueue,
+                    onReorderQueue = onReorderQueue,
+                    sliderStyle = sliderStyle,
+                    rotatingThumbnail = rotatingThumbnail,
+                    accent = accent,
+                    onBack = onBack,
+                )
+            } else {
+                PlayerContent(
+                    np = track,
+                    queueSize = queue.size,
+                    onBack = onBack,
+                    isPlaying = isPlaying,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    volume = volume,
+                    isShuffle = isShuffle,
+                    repeatMode = repeatMode,
+                    errorKey = errorKey,
+                    errorDetail = errorDetail,
+                    loadPhase = loadPhase,
+                    onTogglePlay = onTogglePlay,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                    onSeek = onSeek,
+                    onVolume = onVolume,
+                    onToggleShuffle = onToggleShuffle,
+                    onCycleRepeat = onCycleRepeat,
+                    language = language,
+                    onOpenLyrics = onOpenLyrics,
+                    onOpenLyricsFocus = onOpenLyricsFocus,
+                    onOpenQueue = onOpenQueue,
+                    onAddToPlaylist = { onAddToPlaylist(track) },
+                    sliderStyle = sliderStyle,
+                    design = design,
+                    background = background,
+                    rotatingThumbnail = rotatingThumbnail,
+                    accent = accent,
+                )
             }
-        } else if (design == PlayerDesign.EXPRESSIVE) {
-            M3EPlayerContent(
-                np = np,
-                queue = queue,
-                index = index,
-                isPlaying = isPlaying,
-                positionMs = positionMs,
-                durationMs = durationMs,
-                volume = volume,
-                isShuffle = isShuffle,
-                repeatMode = repeatMode,
-                errorKey = errorKey,
-                errorDetail = errorDetail,
-                loadPhase = loadPhase,
-                onTogglePlay = onTogglePlay,
-                onNext = onNext,
-                onPrevious = onPrevious,
-                onSeek = onSeek,
-                onVolume = onVolume,
-                onToggleShuffle = onToggleShuffle,
-                onCycleRepeat = onCycleRepeat,
-                language = language,
-                onOpenLyrics = onOpenLyrics,
-                onOpenQueue = onOpenQueue,
-                onAddToPlaylist = { onAddToPlaylist(np) },
-                onSkipTo = onSkipTo,
-                onRemoveAt = onRemoveAt,
-                onClearQueue = onClearQueue,
-                onReorderQueue = onReorderQueue,
-                sliderStyle = sliderStyle,
-                rotatingThumbnail = rotatingThumbnail,
-                accent = accent,
-                onBack = onBack,
-            )
-        } else {
-            PlayerContent(
-                np = np,
-                queueSize = queue.size,
-                onBack = onBack,
-                isPlaying = isPlaying,
-                positionMs = positionMs,
-                durationMs = durationMs,
-                volume = volume,
-                isShuffle = isShuffle,
-                repeatMode = repeatMode,
-                errorKey = errorKey,
-                errorDetail = errorDetail,
-                loadPhase = loadPhase,
-                onTogglePlay = onTogglePlay,
-                onNext = onNext,
-                onPrevious = onPrevious,
-                onSeek = onSeek,
-                onVolume = onVolume,
-                onToggleShuffle = onToggleShuffle,
-                onCycleRepeat = onCycleRepeat,
-                language = language,
-                onOpenLyrics = onOpenLyrics,
-                onOpenLyricsFocus = onOpenLyricsFocus,
-                onOpenQueue = onOpenQueue,
-                onAddToPlaylist = { onAddToPlaylist(np) },
-                sliderStyle = sliderStyle,
-                design = design,
-                background = background,
-                rotatingThumbnail = rotatingThumbnail,
-                accent = accent,
-            )
         }
     }
 }
@@ -548,8 +566,11 @@ private fun M3EPlayerContent(
                         .weight(1f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF141416).copy(alpha = 0.45f))
-                        .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(20.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
+                        .border(
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                            RoundedCornerShape(20.dp),
+                        )
                         .padding(16.dp)
                 ) {
                     if (activeTab == M3ETab.LYRICS) {
@@ -877,82 +898,133 @@ private fun PlayerArtworkBlock(
     onAddToPlaylist: (() -> Unit)?,
     onOpenQueue: () -> Unit,
 ) {
-    Box(Modifier.shadow(16.dp, RoundedCornerShape(metrics.artCorner))) {
-        Box {
-            PlayerThumbnail(np.thumbnail, metrics.artSize, metrics.artCorner, rotatingThumbnail)
-            if (metrics.overlayTitle) {
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .clip(RoundedCornerShape(metrics.artCorner))
-                        .background(
-                            Brush.verticalGradient(
-                                0.5f to Color.Transparent,
-                                1f to Color.Black.copy(alpha = 0.72f),
-                            )
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Artwork with Apple-style ambience: a colored glow (blurred artwork)
+        // behind it and a soft specular reflection below.
+        Box(contentAlignment = Alignment.Center) {
+            if (!np.thumbnail.isNullOrBlank()) {
+                CachedBlurBackdrop(
+                    artworkUrl = np.thumbnail,
+                    modifier = Modifier
+                        .size(metrics.artSize * 1.18f)
+                        .alpha(0.55f)
+                        .graphicsLayer { scaleX = 1.25f; scaleY = 1.25f },
+                    scrimColor = Color.Transparent,
+                    fallbackColor = Color.Transparent,
+                ) {}
+            }
+            Box(Modifier.shadow(24.dp, RoundedCornerShape(metrics.artCorner))) {
+                Box {
+                    PlayerThumbnail(np.thumbnail, metrics.artSize, metrics.artCorner, rotatingThumbnail)
+                    if (metrics.overlayTitle) {
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .clip(RoundedCornerShape(metrics.artCorner))
+                                .background(
+                                    Brush.verticalGradient(
+                                        0.5f to Color.Transparent,
+                                        1f to Color.Black.copy(alpha = 0.72f),
+                                    )
+                                )
                         )
-                )
-                Column(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        np.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        np.artist,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                        Column(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                np.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                color = Color.White,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                np.artist,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.85f),
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-    if (!metrics.overlayTitle) {
-        Spacer(Modifier.height(16.dp))
-        Text(
-            np.title,
-            style = MaterialTheme.typography.titleLarge,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            np.artist,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
 
-    // Under the song text: add-to-playlist + queue, side by side.
-    Spacer(Modifier.height(14.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (onAddToPlaylist != null) {
-            OutlinedButton(onClick = onAddToPlaylist) {
-                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(Localization.get(language, "add_to_playlist"))
+        // Soft specular reflection fading out under the artwork (Apple Music style).
+        if (!np.thumbnail.isNullOrBlank()) {
+            Box(
+                Modifier
+                    .padding(top = 8.dp)
+                    .height(metrics.artSize * 0.14f)
+                    .width(metrics.artSize * 0.92f)
+                    .graphicsLayer { alpha = 0.30f }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            Brush.verticalGradient(
+                                0f to Color.Transparent,
+                                0.4f to Color.Transparent,
+                                1f to Color.White,
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+            ) {
+                AsyncImage(
+                    model = np.thumbnail,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { scaleY = -1f }
+                        .blur(12.dp)
+                        .clip(RoundedCornerShape(metrics.artCorner)),
+                )
             }
         }
-        OutlinedButton(onClick = onOpenQueue) {
-            Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("${Localization.get(language, "queue")} ($queueSize)")
+
+        if (!metrics.overlayTitle) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                np.title,
+                style = MaterialTheme.typography.titleLarge,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                np.artist,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        // Under the song text: add-to-playlist + queue, side by side.
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (onAddToPlaylist != null) {
+                OutlinedButton(onClick = onAddToPlaylist) {
+                    Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(Localization.get(language, "add_to_playlist"))
+                }
+            }
+            OutlinedButton(onClick = onOpenQueue) {
+                Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("${Localization.get(language, "queue")} ($queueSize)")
+            }
         }
     }
 }
@@ -1042,25 +1114,30 @@ private fun PlayerControlPanel(
     Spacer(Modifier.height(16.dp))
 
     // Transport controls: shuffle / previous / play / next / repeat.
+    // Apple-style "glass" circles (semi-transparent, subtle sheen + border)
+    // instead of flat Material buttons, so the controls sit on the artwork.
+    val onSurface = MaterialTheme.colorScheme.onSurface
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onToggleShuffle) {
-            Icon(
-                Icons.Filled.Shuffle,
-                contentDescription = Localization.get(language, "shuffle"),
-                tint = if (isShuffle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onPrevious, modifier = Modifier.size(52.dp)) {
-            Icon(
-                Icons.Filled.SkipPrevious,
-                contentDescription = Localization.get(language, "previous"),
-                modifier = Modifier.size(36.dp),
-            )
-        }
+        GlassCircleButton(
+            onClick = onToggleShuffle,
+            icon = Icons.Filled.Shuffle,
+            contentDescription = Localization.get(language, "shuffle"),
+            size = 42.dp,
+            iconSize = 22.dp,
+            tint = if (isShuffle) MaterialTheme.colorScheme.primary else onSurface.copy(alpha = 0.85f),
+        )
+        GlassCircleButton(
+            onClick = onPrevious,
+            icon = Icons.Filled.SkipPrevious,
+            contentDescription = Localization.get(language, "previous"),
+            size = 52.dp,
+            iconSize = 34.dp,
+            tint = onSurface,
+        )
         if (pillPlay) {
             Button(
                 onClick = onTogglePlay,
@@ -1075,28 +1152,33 @@ private fun PlayerControlPanel(
                 Text(Localization.get(language, if (isPlaying) "pause" else "play"))
             }
         } else {
-            FilledIconButton(onClick = onTogglePlay, modifier = Modifier.size(72.dp)) {
-                Icon(
-                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
-                    modifier = Modifier.size(40.dp),
-                )
-            }
-        }
-        IconButton(onClick = onNext, modifier = Modifier.size(52.dp)) {
-            Icon(
-                Icons.Filled.SkipNext,
-                contentDescription = Localization.get(language, "next"),
-                modifier = Modifier.size(36.dp),
+            GlassCircleButton(
+                onClick = onTogglePlay,
+                icon = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
+                size = 72.dp,
+                iconSize = 40.dp,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                background = MaterialTheme.colorScheme.primary.copy(alpha = 0.9f),
+                borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
             )
         }
-        IconButton(onClick = onCycleRepeat) {
-            Icon(
-                repeatIcon(repeatMode),
-                contentDescription = Localization.get(language, "repeat"),
-                tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        GlassCircleButton(
+            onClick = onNext,
+            icon = Icons.Filled.SkipNext,
+            contentDescription = Localization.get(language, "next"),
+            size = 52.dp,
+            iconSize = 34.dp,
+            tint = onSurface,
+        )
+        GlassCircleButton(
+            onClick = onCycleRepeat,
+            icon = repeatIcon(repeatMode),
+            contentDescription = Localization.get(language, "repeat"),
+            size = 42.dp,
+            iconSize = 22.dp,
+            tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else onSurface.copy(alpha = 0.85f),
+        )
     }
 
     Spacer(Modifier.height(16.dp))
@@ -1144,6 +1226,53 @@ private fun volumeIcon(volume: Float) = when {
     volume <= 0f -> Icons.AutoMirrored.Filled.VolumeOff
     volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
     else -> Icons.AutoMirrored.Filled.VolumeUp
+}
+
+/**
+ * Apple-style "glass" circular control: semi-transparent background with a
+ * subtle top sheen and a soft border, so transport buttons sit on the artwork
+ * instead of looking like flat Material buttons.
+ */
+@Composable
+private fun GlassCircleButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String?,
+    size: Dp = 44.dp,
+    iconSize: Dp = 22.dp,
+    tint: Color = MaterialTheme.colorScheme.onSurface,
+    background: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.Transparent,
+        modifier = Modifier.size(size),
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.14f),
+                            background,
+                            background.copy(alpha = 0.8f),
+                        )
+                    )
+                )
+                .border(1.dp, borderColor, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(iconSize),
+            )
+        }
+    }
 }
 
 private fun repeatIcon(mode: RepeatMode) = when (mode) {
