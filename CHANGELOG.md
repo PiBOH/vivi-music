@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.37.1-nightly] - 2026-08-28
+
+### Fixed
+- [DE] **"Must press play twice when paired"**: a local play/navigation command now opens a 3-second grace window during which a peer's "paused" echo (the phone keeps pushing its pre-action state until it processes our play) is ignored, so the track no longer pauses itself right after the stream finishes resolving.
+- [DE] **"Next" at the end of the queue now wraps to the first track** instead of being a dead button (manual next always wraps; repeat mode only affects auto-advance).
+
 ## [6.4.41_DE-1.37.0-nightly] - 2026-08-28
 
 ### Added

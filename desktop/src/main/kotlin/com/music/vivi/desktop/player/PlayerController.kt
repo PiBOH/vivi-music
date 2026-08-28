@@ -106,13 +106,28 @@ class PlayerController {
     @Volatile
     private var loadedVideoId: String? = null
 
+    /**
+     * Wall-clock time of the latest LOCAL user play/navigation command (toggle,
+     * next, previous, skip, play). The sync layer uses it so a freshly pressed
+     * play wins over a peer snapshot that reflects the pre-action state — the
+     * peer keeps pushing its own "paused" echo until it processes our play, and
+     * applying that echo pauses the track the user just started (the "must press
+     * play twice when paired" bug). Remote-applied snapshots never touch this.
+     */
+    @Volatile
+    var lastLocalPlayIntentAt: Long = 0L
+
     /** Back-navigation history used by "previous" in shuffle mode. */
     private val previousStack = ArrayDeque<Int>()
 
-    fun play(track: NowPlaying) = playAt(listOf(track), 0)
+    fun play(track: NowPlaying) {
+        lastLocalPlayIntentAt = System.currentTimeMillis()
+        playAt(listOf(track), 0)
+    }
 
     fun playAll(tracks: List<NowPlaying>, startIndex: Int = 0) {
         if (tracks.isEmpty()) return
+        lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(tracks, startIndex.coerceIn(0, tracks.lastIndex))
     }
 
@@ -139,13 +154,15 @@ class PlayerController {
     fun next() {
         val s = _state.value
         if (s.queue.isEmpty()) return
+        // At the end of the queue "next" wraps back to the first track, so the
+        // user never hits a dead button (repeat mode only affects auto-advance).
         val nextIndex = when {
             s.queue.size == 1 -> 0
             s.isShuffle -> randomIndexExcluding(s.queue.size, s.index)
             s.index < s.queue.lastIndex -> s.index + 1
-            s.repeatMode == RepeatMode.ALL -> 0
-            else -> return
+            else -> 0
         }
+        lastLocalPlayIntentAt = System.currentTimeMillis()
         previousStack.addLast(s.index)
         playAt(s.queue, nextIndex)
     }
@@ -156,15 +173,16 @@ class PlayerController {
         val prevIndex = when {
             s.isShuffle -> previousStack.removeLastOrNull() ?: randomIndexExcluding(s.queue.size, s.index)
             s.index > 0 -> s.index - 1
-            s.repeatMode == RepeatMode.ALL -> s.queue.lastIndex
-            else -> return
+            else -> s.queue.lastIndex
         }
+        lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(s.queue, prevIndex)
     }
 
     fun skipTo(index: Int) {
         val s = _state.value
         if (index in s.queue.indices) {
+            lastLocalPlayIntentAt = System.currentTimeMillis()
             previousStack.addLast(s.index)
             playAt(s.queue, index)
         }
@@ -210,6 +228,7 @@ class PlayerController {
     fun toggle() {
         val s = _state.value
         if (s.current == null) return
+        lastLocalPlayIntentAt = System.currentTimeMillis()
         if (s.isPlaying) {
             player.pause()
             _state.update { it.copy(isPlaying = false) }
@@ -541,6 +560,9 @@ class PlayerController {
                     else -> -1
                 }
                 if (nextIndex >= 0) {
+                    // Auto-advance is also a local play intent: the peer's
+                    // pre-advance "paused" echo must not pause the new track.
+                    lastLocalPlayIntentAt = System.currentTimeMillis()
                     previousStack.addLast(s.index)
                     playAt(s.queue, nextIndex)
                 } else {

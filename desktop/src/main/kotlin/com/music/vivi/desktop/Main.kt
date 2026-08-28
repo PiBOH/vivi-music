@@ -1236,6 +1236,16 @@ fun WindowScope.App(
                     val stalePaused = !pb.isPlaying &&
                         !pb.userSeek &&
                         staleAgeMs != null && staleAgeMs > 4_000L
+                    // Grace window after a local play/navigation command: the
+                    // peer keeps echoing its pre-action "paused" state until it
+                    // processes our play, and if that echo lands just after we
+                    // finished resolving it pauses the track the user just
+                    // started ("must press play twice when paired"). Within the
+                    // window, a fresh peer "paused" snapshot is ignored.
+                    val localPlayAgo = System.currentTimeMillis() - player.lastLocalPlayIntentAt
+                    val gracePaused = !pb.isPlaying &&
+                        !pb.userSeek &&
+                        localPlayAgo >= 0L && localPlayAgo < 3_000L
                     when {
                         pb.isResolving -> {
                             // Peer is mid-song buffering (position frozen): keep
@@ -1244,6 +1254,10 @@ fun WindowScope.App(
                         }
                         stalePaused -> {
                             // Ignored: stale peer "paused" snapshot (see above).
+                        }
+                        gracePaused -> {
+                            // Ignored: peer pre-action "paused" echo (see above).
+                            // The next fresh tick applies the peer's real state.
                         }
                         pb.userSeek -> player.seekRemote(target, pb.isPlaying, toleranceMs = 0L)
                         else -> player.seekRemoteCatchUp(target, pb.isPlaying, SyncServer.RESYNC_TOLERANCE_MS)
@@ -1254,7 +1268,9 @@ fun WindowScope.App(
                 // the remote edit is newer (or unknown, from an older peer).
                 // Volume/position sync above still runs regardless.
                 val newerQueue = pb.queueUpdatedAt <= 0L || pb.queueUpdatedAt >= syncManager.queueUpdatedAt()
-                if (newerQueue) {
+                val localPlayAgo = System.currentTimeMillis() - player.lastLocalPlayIntentAt
+                val inGraceWindow = localPlayAgo >= 0L && localPlayAgo < 3_000L
+                if (newerQueue && !(inGraceWindow && !pb.isPlaying && !pb.isResolving)) {
                     val tracks = pb.queue.map { ref ->
                         NowPlaying(videoId = ref.id, title = ref.title, artist = ref.artist.orEmpty(), thumbnail = ref.thumbnail, durationMs = ref.durationMs)
                     }
