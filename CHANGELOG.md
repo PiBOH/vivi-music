@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.34.5-nightly] - 2026-08-28
+
+### Fixed
+- [DE] Google sign-in via the embedded WebView ended with "unknown error" after the window closed: the session was captured as soon as SAPISID appeared, but the remaining redirect cookies (SID, HSID, SSID, APISID, `__Secure-3PSID`, …) were still arriving, so the innertube `account_menu` validation answered as guest (NPE -> generic error). The WebView now waits 3 s for the cookie set to settle, re-captures the full header before closing, validation retries once after a 2 s pause, and the failure message includes the real exception class instead of "unknown error". Captured cookie names are also logged (`[login-webview] captured N cookies: …`) for diagnosis.
+
 ## [6.4.39_DE-1.34.4-nightly] - 2026-08-28
 
 ### Fixed

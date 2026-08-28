@@ -180,8 +180,16 @@ object LoginWebView {
                             spinner.isVisible = false
                             status.text = Localization.get(language, "login_saving")
                         }
-                        Thread.sleep(1200)
-                        deliver(cookie, callback)
+                        // The session is not complete when SAPISID first appears:
+                        // the last redirect cookies (SID, HSID, SSID, APISID,
+                        // __Secure-3PSID, ...) can still be arriving. Wait for the
+                        // set to settle, then re-capture so the validation gets
+                        // the FULL cookie header (an incomplete set makes the
+                        // innertube account_menu respond as guest -> NPE ->
+                        // "unknown error").
+                        Thread.sleep(3000)
+                        val finalCookie = capturedCookieHeader() ?: cookie
+                        deliver(finalCookie, callback)
                         FxPlatform.runLater { stage.close() }
                         break
                     }
@@ -203,6 +211,10 @@ object LoginWebView {
         }
         val hasSession = cookies.any {
             it.name == "SAPISID" || it.name == "__Secure-1PAPISID" || it.name == "__Secure-3PAPISID"
+        }
+        if (hasSession) {
+            val names = cookies.map { it.name }.distinct().sorted()
+            println("[login-webview] captured ${cookies.size} cookies: $names")
         }
         return if (hasSession) cookies.joinToString("; ") { "${it.name}=${it.value}" } else null
     }

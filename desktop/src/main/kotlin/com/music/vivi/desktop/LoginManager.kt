@@ -57,31 +57,48 @@ object LoginManager {
             throw IllegalArgumentException("Cookie is missing SAPISID — paste the full Cookie header")
         }
 
-        YouTube.cookie = trimmed
+        // Right after the embedded sign-in the session can still be settling
+        // (the WebView now waits, but a retry costs little): try the whole
+        // validation twice, refreshing the parsed ids on the retry.
+        var lastError: Throwable? = null
+        repeat(2) { attempt ->
+            try {
+                YouTube.cookie = trimmed
+                val (extractedDataSyncId, extractedVisitorData) = extractAccountIds(trimmed)
+                val dataSyncId = dataSyncIdOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedDataSyncId
+                val visitorData = visitorDataOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedVisitorData
+                YouTube.dataSyncId = dataSyncId
+                YouTube.visitorData = visitorData
+                YouTube.useLoginForBrowse = true
 
-        val (extractedDataSyncId, extractedVisitorData) = extractAccountIds(trimmed)
-        val dataSyncId = dataSyncIdOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedDataSyncId
-        val visitorData = visitorDataOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedVisitorData
-        YouTube.dataSyncId = dataSyncId
-        YouTube.visitorData = visitorData
-        YouTube.useLoginForBrowse = true
-
-        val account = YouTube.accountInfo().getOrElse { e ->
-            YouTube.cookie = null
-            throw IllegalStateException("Login validation failed: ${e.message ?: "unknown error"}")
+                val account = YouTube.accountInfo().getOrThrow()
+                DesktopSettings.update {
+                    it.copy(
+                        cookie = trimmed,
+                        dataSyncId = dataSyncId.orEmpty(),
+                        visitorData = visitorData.orEmpty(),
+                        accountName = account.name,
+                        accountEmail = account.email.orEmpty(),
+                        accountChannelHandle = account.channelHandle.orEmpty(),
+                    )
+                }
+                return@withContext account
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt == 0) {
+                    try {
+                        Thread.sleep(2000)
+                    } catch (_: InterruptedException) {
+                    }
+                }
+            }
         }
 
-        DesktopSettings.update {
-            it.copy(
-                cookie = trimmed,
-                dataSyncId = dataSyncId.orEmpty(),
-                visitorData = visitorData.orEmpty(),
-                accountName = account.name,
-                accountEmail = account.email.orEmpty(),
-                accountChannelHandle = account.channelHandle.orEmpty(),
-            )
-        }
-        account
+        YouTube.cookie = null
+        val detail = lastError?.message?.takeIf { it.isNotBlank() }
+            ?: lastError?.javaClass?.simpleName
+            ?: "unknown error"
+        throw IllegalStateException("Login validation failed: $detail")
     }
 
     fun logout() {
