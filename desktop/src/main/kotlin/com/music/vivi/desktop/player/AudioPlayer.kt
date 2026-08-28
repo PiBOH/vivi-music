@@ -56,6 +56,9 @@ class AudioPlayer {
     @Volatile private var volume = 1f
     private val lock = Object()
 
+    /** Unique partial-download suffix (see [ensureDownloaded]). */
+    private val nextPartId = java.util.concurrent.atomic.AtomicLong(0)
+
     private companion object {
         /** Min interval between decoded-position reports to the UI (ms). */
         const val POSITION_REPORT_INTERVAL_MS = 100L
@@ -187,6 +190,18 @@ class AudioPlayer {
         return file.exists() && file.length() > 0 && isValidMp4(file)
     }
 
+    /**
+     * Deletes every cache file for [cacheKey] (the final file plus any partial
+     * downloads), so the next play re-downloads a clean copy. Used when a
+     * truncated or corrupt download is detected (see [decodeAndPlay]).
+     */
+    fun evictCache(cacheKey: String) {
+        val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        File(cacheDir, "$safe.m4a").delete()
+        cacheDir.listFiles { f -> f.name.startsWith("$safe.m4a") && f.name.endsWith(".part") }
+            ?.forEach { it.delete() }
+    }
+
     /** Downloads [streams] to the local cache without playing (look-ahead prefetch). */
     fun prefetch(streams: List<StreamResolver.ResolvedStream>, cacheKey: String) {
         if (isCached(cacheKey)) return
@@ -203,7 +218,11 @@ class AudioPlayer {
         // buggy build) would decode into silence or an error, so discard it and
         // re-download a clean copy.
         if (file.exists()) file.delete()
-        val part = File(cacheDir, "$safe.m4a.part")
+        // A unique partial filename per download: prefetch and a user-initiated
+        // play can download the SAME track concurrently, and sharing one .part
+        // path made them overwrite each other mid-write, leaving a corrupt file
+        // that played a fragment and "ended" early.
+        val part = File(cacheDir, "$safe.m4a.${nextPartId.incrementAndGet()}.part")
 
         // Try each candidate stream URL in order until one downloads cleanly.
         var lastError: IOException? = null
@@ -334,6 +353,18 @@ class AudioPlayer {
         val durationMs = if (knownDurationMs > 0) knownDurationMs
             else maxOf(derivedDurationMs, metaDurationMs)
         if (gen == generation) onDuration?.invoke(durationMs)
+
+        // A truncated cache file (interrupted download, or a concurrent
+        // prefetch/play write race) passes the ftyp+moof integrity check but
+        // holds only a fraction of the track. It would play a few seconds and
+        // "end", auto-skipping to the next track — the "tracks stop after a
+        // while / change by themselves" bug. Fail so [evictCache] + the retry
+        // re-download a clean copy instead of playing the fragment.
+        if (knownDurationMs > 0 && derivedDurationMs < knownDurationMs * 0.6) {
+            throw IOException(
+                "Cached audio is truncated (only ${derivedDurationMs / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
+            )
+        }
 
         val format = AudioFormat(
                 buffer.sampleRate.toFloat(),

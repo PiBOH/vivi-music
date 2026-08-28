@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.3-nightly] - 2026-08-28
+
+### Fixed
+- [DE] **Expressive player volume slider actually works**: it was left with an empty `onValueChange` placeholder (``/* Volume update */``) from the UI port, so dragging it did nothing — now wired to the real volume handler (this is why "can't change VIVI's volume" also happened while not paired).
+- [DE] **Pressing play after a track finished now restarts it**: a finished track keeps its end position, and restarting from the end instantly "completed" again and stopped — the play button looked broken. Play now restarts from 0:00.
+- [DE] **Truncated audio cache files are re-downloaded**: a cache file that passes the header check but holds only a fraction of the track (interrupted download, or a prefetch/play race writing the same partial file) played a few seconds and "ended", which caused tracks to stop after ~10 s or skip by themselves. Partial downloads now use unique filenames (no more concurrent-write corruption), a sample-count check against the known duration detects truncation, and a failed play evicts the bad file so the retry re-downloads a clean copy.
+
 ## [6.4.41_DE-1.35.2-nightly] - 2026-08-28
 
 ### Fixed

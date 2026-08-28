@@ -542,7 +542,7 @@ private fun M3EPlayerContent(
                         )
                         ViviSlider(
                             value = volume,
-                            onValueChange = { /* Volume update */ },
+                            onValueChange = onVolume,
                             valueRange = 0f..1f,
                             style = ViviSliderStyle.EXPRESSIVE,
                             modifier = Modifier.weight(1f)

@@ -225,7 +225,12 @@ class PlayerController {
      */
     private fun startCurrent(s: PlayerState) {
         if (loadedVideoId != s.current?.videoId) {
-            playAt(s.queue, s.index, startAtMs = s.positionMs, startPaused = false)
+            // A track that already finished keeps its end position: pressing
+            // play again must restart it from the beginning, not from the end
+            // (restarting at the end instantly "completes" and stops again,
+            // which looked like the play button not working).
+            val startAt = if (s.durationMs > 0 && s.positionMs >= s.durationMs) 0L else s.positionMs
+            playAt(s.queue, s.index, startAtMs = startAt, startPaused = false)
         } else {
             player.resume()
             _state.update { it.copy(isPlaying = true) }
@@ -461,6 +466,11 @@ class PlayerController {
                     // Evict the cached resolution: a stale, single-use
                     // googlevideo URL must not be returned again by the retry.
                     StreamResolver.invalidate(track.videoId)
+                    // Also evict the audio cache file: a truncated/interrupted
+                    // download plays a fragment and "ends" early, which showed
+                    // up as tracks stopping after a few seconds and skipping by
+                    // themselves. The retry below re-downloads a clean copy.
+                    player.evictCache(track.videoId)
                     if (attempt + 1 < MAX_PLAY_ATTEMPTS) {
                         // Download/decode failure (e.g. stale googlevideo 403):
                         // rotate the guest identity and re-resolve, then retry.
