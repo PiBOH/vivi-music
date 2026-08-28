@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.6-nightly] - 2026-08-28
+
+### Fixed
+- [DE] **Window controls (minimize / maximize / close) are now always visible**: the window is undecorated (no OS title bar), but the buttons only lived in the Spotify top header — which disappears on the full player screen and in the non-Spotify layout, leaving no way to minimize or close the window. The three buttons were extracted into a shared `WindowControls` composable; the Spotify header still hosts them, and a floating top-right overlay shows them on the player screen and in the non-Spotify layout (the transparent overlay passes clicks through to the content below).
+
 ## [6.4.41_DE-1.35.5-nightly] - 2026-08-28
 
 ### Changed

@@ -2227,6 +2227,27 @@ fun WindowScope.App(
     }
 }
 }
+    // The window is undecorated (no OS title bar), so the window controls must
+    // always be visible: the Spotify header hosts them when it is shown, and
+    // this overlay covers the full player screen and the non-Spotify layout.
+    // The transparent Box only hosts the buttons (top-right); its empty area
+    // passes clicks through to the content below.
+    if (!spotifyLayout || current == Screen.Player) {
+        Box(Modifier.fillMaxSize()) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp),
+            ) {
+                WindowControls(
+                    isMaximized = isMaximized,
+                    onMinimize = onMinimize,
+                    onMaximize = onMaximize,
+                    onClose = onClose,
+                )
+            }
+        }
+    }
     }
     } // density scale CompositionLocalProvider
 
@@ -3130,40 +3151,65 @@ fun WindowScope.SpotifyTopHeader(
                     )
                 }
                 Spacer(Modifier.width(4.dp))
-                IconButton(
-                    onClick = onMinimize,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Remove,
-                        contentDescription = "Minimize",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-                IconButton(
-                    onClick = onMaximize,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
-                        contentDescription = if (isMaximized) "Restore" else "Maximize",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
-                    )
-                }
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
+                WindowControls(
+                    isMaximized = isMaximized,
+                    onMinimize = onMinimize,
+                    onMaximize = onMaximize,
+                    onClose = onClose,
+                )
             }
+        }
+    }
+}
+
+
+/** Minimize / maximize / close buttons. These must be visible at all times
+ * because the window is undecorated (no OS title bar): they are shown in the
+ * Spotify header when it is visible and overlaid at the top-right otherwise. */
+@Composable
+private fun WindowControls(
+    isMaximized: Boolean,
+    onMinimize: () -> Unit,
+    onMaximize: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = onMinimize,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                Icons.Filled.Remove,
+                contentDescription = "Minimize",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        IconButton(
+            onClick = onMaximize,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
+                contentDescription = if (isMaximized) "Restore" else "Maximize",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
+            )
+        }
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                Icons.Filled.Close,
+                contentDescription = "Close",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }
