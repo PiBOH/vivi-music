@@ -25,7 +25,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.36.0-nightly] - 2026-08-28
 
 ### Added
-- [DE] **Toggle between the native OS title bar and VIVI's custom one** (Settings → Aspetto): off by default (VIVI's bar). When the native system title bar is enabled, the window uses the OS chrome — its minimize/maximize/close buttons — and VIVI's own bar adapts by hiding its window buttons (the floating overlay on the player screen is hidden too). The change applies after a restart (a dialog offers to restart immediately), and all 4 new strings are translated in all 47 languages.
+- [DE] **Toggle between the native OS title bar and VIVI's custom one** (Settings → Appearance): off by default (VIVI's bar). When the native system title bar is enabled, the window uses the OS chrome — its minimize/maximize/close buttons — and VIVI's own bar adapts by hiding its window buttons (the floating overlay on the player screen is hidden too). The change applies after a restart (a dialog offers to restart immediately), and all 4 new strings are translated in all 47 languages.
 
 ## [6.4.41_DE-1.35.8-nightly] - 2026-08-28
 
@@ -120,7 +120,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.39_DE-1.34.4-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] Selecting a player design in Settings → Riproduzione e audio → design del player (and the density screen) could make the whole UI explode and freeze the app, forcing Task Manager. Root cause: `PlayerDesignScreen`/`DensityScreen` used `fillMaxSize()` inside the scrollable `SettingsSubScreen`; with an infinite maximum height the layout sized to Infinity (everything looks enlarged and the app becomes unresponsive). Both screens now use `fillMaxWidth()` only.
+- [DE] Selecting a player design in Settings → Player & audio → player design (and the density screen) could make the whole UI explode and freeze the app, forcing Task Manager. Root cause: `PlayerDesignScreen`/`DensityScreen` used `fillMaxSize()` inside the scrollable `SettingsSubScreen`; with an infinite maximum height the layout sized to Infinity (everything looks enlarged and the app becomes unresponsive). Both screens now use `fillMaxWidth()` only.
 
 ## [6.4.39_DE-1.34.3-nightly] - 2026-08-28
 
