@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.37.2-nightly] - 2026-08-28
+
+### Fixed
+- [DE] **Enabling the native title bar no longer crashes** (`IllegalComponentStateException: The frame is displayable`): the toggle changed reactive state that Compose's `SwingWindow` reads to call `setUndecorated()` on the already-displayed frame, which throws. The window chrome is now frozen at startup (`undecorated` never changes at runtime) — flipping the toggle only saves the setting and asks to restart, and the restart applies it.
+- [DE] **Window no longer reopens stretched over the Windows taskbar**: closing the app while maximized saved the maximized (full-screen) bounds, and the next start re-applied them as a normal placement — the window opened sitting over/under the taskbar (with an auto-hide bar it stayed above it). The floating bounds are now captured before maximizing and persisted instead; on restore the window is clamped to the work area of the monitor it was last on (not just the primary one).
+
 ## [6.4.41_DE-1.37.1-nightly] - 2026-08-28
 
 ### Fixed

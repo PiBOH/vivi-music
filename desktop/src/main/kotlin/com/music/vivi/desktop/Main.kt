@@ -276,7 +276,17 @@ fun main(args: Array<String>) {
     var isFullscreen by remember { mutableStateOf(DesktopSettings.load().isFullscreen) }
     // Native OS title bar vs VIVI's custom one (window chrome is fixed at
     // creation, so this applies on the next launch).
+    // LIVE value used by the toggle UI (saved on change). The actual window
+    // chrome is decided at creation (see `nativeTitleBarAtStartup` below) and
+    // cannot change on a displayed frame — Compose's `SwingWindow` calls
+    // `setUndecorated()` on the live frame when the parameter changes, which
+    // throws `IllegalComponentStateException: The frame is displayable`.
     var nativeTitleBar by remember { mutableStateOf(DesktopSettings.load().nativeTitleBar) }
+    // FROZEN at first composition: the window chrome fixed at creation. It is
+    // deliberately never updated after startup, so flipping the toggle can
+    // never trigger a runtime `setUndecorated` on the shown frame; the new
+    // value is picked up by the restart the toggle asks for.
+    val nativeTitleBarAtStartup = remember { DesktopSettings.load().nativeTitleBar }
     // Tracks the OS-maximized state (updated by the AWT listener below) so the
     // custom title-bar buttons reflect the real window placement.
     var windowMaximized by remember { mutableStateOf(DesktopSettings.load().windowMaximized) }
@@ -284,6 +294,10 @@ fun main(args: Array<String>) {
     // where the window was (floating bounds or maximized).
     var preFullscreenMaximized by remember { mutableStateOf(false) }
     var preFullscreenBounds by remember { mutableStateOf<java.awt.Rectangle?>(null) }
+    // Restore bounds captured right before an OS maximize: the persisted
+    // geometry must be the floating bounds, so the window never reopens
+    // stretched over the taskbar after a maximized session.
+    var preMaximizeBounds by remember { mutableStateOf<java.awt.Rectangle?>(null) }
     // Start floating: the saved placement (maximized / bounds) is restored with
     // the OS APIs inside the Window block. Compose's WindowPlacement.Maximized
     // on an undecorated window can produce a window LARGER than the screen when
@@ -298,7 +312,15 @@ fun main(args: Array<String>) {
             runCatching {
                 awtWindowRef[0]?.let { w ->
                     val maximized = (w.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0
-                    val b = w.bounds
+                    // Save the RESTORE bounds, not the maximized ones: while
+                    // maximized, `w.bounds` spans the whole screen including
+                    // the taskbar area. Persisting that and re-applying it as a
+                    // normal placement on the next start makes the window open
+                    // sitting over/under the taskbar (with an auto-hide bar the
+                    // window even stays above it). When maximized, fall back to
+                    // the restore bounds kept by the maximize handler; when
+                    // floating, save the actual bounds.
+                    val b = (if (maximized) preMaximizeBounds else null) ?: w.bounds
                     DesktopSettings.update {
                         it.copy(
                             windowMaximized = maximized,
@@ -315,7 +337,9 @@ fun main(args: Array<String>) {
         title = windowTitle,
         state = windowState,
         // Undecorated = VIVI's custom title bar; decorated = the native OS bar.
-        undecorated = !nativeTitleBar,
+        // Uses the startup-frozen value: never changes while the window is
+        // displayed (setting it at runtime throws on a displayable frame).
+        undecorated = !nativeTitleBarAtStartup,
     ) {
         val frameWindow = window
         awtWindowRef[0] = frameWindow
@@ -336,7 +360,20 @@ fun main(args: Array<String>) {
                     if (saved.windowMaximized) {
                         frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH
                     } else if (saved.windowWidth > 0 && saved.windowHeight > 0) {
-                        val usable = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+                        // Use the work area of the monitor the window was last
+                        // on (not just the primary one), so a window saved on a
+                        // secondary screen is restored there and never clamped
+                        // onto the primary monitor.
+                        val usable = runCatching {
+                            val ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+                            ge.screenDevices
+                                .map { it.defaultConfiguration.bounds }
+                                .firstOrNull { r ->
+                                    saved.windowX >= r.x && saved.windowX < r.x + r.width &&
+                                        saved.windowY >= r.y && saved.windowY < r.y + r.height
+                                }
+                                ?.let { r -> java.awt.Rectangle(r.x, r.y, r.width, r.height) }
+                        }.getOrNull() ?: java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
                         val w = saved.windowWidth.coerceIn(400, usable.width)
                         val h = saved.windowHeight.coerceIn(300, usable.height)
                         val x = saved.windowX.coerceIn(usable.x, usable.x + usable.width - w)
@@ -476,11 +513,20 @@ fun main(args: Array<String>) {
                                 // and the Windows DPI scaling.
                                 runCatching { frameWindow.extendedState = java.awt.Frame.NORMAL }
                             } else {
+                                // Capture the floating bounds BEFORE maximizing so
+                                // they can be restored (and persisted) later.
+                                if (preMaximizeBounds == null) {
+                                    preMaximizeBounds = frameWindow.bounds
+                                }
                                 runCatching { frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH }
                             }
                             runCatching {
                                 val maximized = (frameWindow.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0
-                                val b = frameWindow.bounds
+                                // Persist the restore bounds (the floating ones
+                                // captured before the maximize), never the
+                                // maximized full-screen bounds that include the
+                                // taskbar area.
+                                val b = if (maximized) preMaximizeBounds ?: frameWindow.bounds else frameWindow.bounds
                                 DesktopSettings.update {
                                     it.copy(
                                         windowMaximized = maximized,
