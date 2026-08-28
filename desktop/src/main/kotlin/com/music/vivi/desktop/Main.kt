@@ -24,11 +24,30 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.outlined.Radio
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -39,19 +58,24 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SpeakerGroup
+import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Devices
@@ -75,9 +99,19 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.CropSquare
+import androidx.compose.material.icons.filled.FilterNone
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Public
@@ -144,6 +178,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowScope
+import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.window.application
 import com.music.lastfm.LastFM
 import com.music.innertube.YouTube
@@ -233,8 +270,33 @@ fun main(args: Array<String>) {
         }
     }
 
-    Window(onCloseRequest = ::exitApplication, title = windowTitle) {
+    var isFullscreen by remember { mutableStateOf(DesktopSettings.load().isFullscreen) }
+    val windowState = rememberWindowState(placement = if (isFullscreen) WindowPlacement.Fullscreen else WindowPlacement.Maximized)
+    LaunchedEffect(isFullscreen) {
+        windowState.placement = if (isFullscreen) WindowPlacement.Fullscreen else WindowPlacement.Maximized
+    }
+
+    Window(
+        onCloseRequest = ::exitApplication,
+        title = windowTitle,
+        state = windowState,
+        undecorated = true,
+    ) {
         val frameWindow = window
+
+        DisposableEffect(frameWindow) {
+            val listener = java.awt.event.WindowStateListener { e ->
+                val isIconified = (e.newState and java.awt.Frame.ICONIFIED) != 0
+                if (!isIconified && windowState.isMinimized) {
+                    windowState.isMinimized = false
+                }
+            }
+            frameWindow.addWindowStateListener(listener)
+            onDispose {
+                frameWindow.removeWindowStateListener(listener)
+            }
+        }
+
         AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = selectedFont) {
             // NOTE: do NOT wrap this in a global SelectionContainer. Popup-based
             // components (DropdownMenu, AlertDialog) inherit the selection
@@ -281,6 +343,12 @@ fun main(args: Array<String>) {
                             saveTheme()
                         },
                         initialSection = openSection,
+                        isFullscreen = isFullscreen,
+                        isMaximized = (windowState.placement == WindowPlacement.Maximized || isFullscreen),
+                        onToggleFullscreen = {
+                            isFullscreen = !isFullscreen
+                            DesktopSettings.update { it.copy(isFullscreen = isFullscreen) }
+                        },
                         bringToFront = {
                             runCatching {
                                 frameWindow.state = java.awt.Frame.NORMAL
@@ -288,6 +356,24 @@ fun main(args: Array<String>) {
                                 frameWindow.requestFocus()
                             }
                         },
+                        onMinimize = {
+                            windowState.isMinimized = true
+                            runCatching { frameWindow.extendedState = frameWindow.extendedState or java.awt.Frame.ICONIFIED }
+                        },
+                        onMaximize = {
+                            if (windowState.isMinimized) {
+                                windowState.isMinimized = false
+                            }
+                            if (windowState.placement == WindowPlacement.Maximized || isFullscreen) {
+                                isFullscreen = false
+                                windowState.placement = WindowPlacement.Floating
+                                runCatching { frameWindow.extendedState = java.awt.Frame.NORMAL }
+                            } else {
+                                windowState.placement = WindowPlacement.Maximized
+                                runCatching { frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH }
+                            }
+                        },
+                        onClose = ::exitApplication,
                     )
                 }
             }
@@ -305,7 +391,7 @@ private fun screenForSection(section: String?): Screen? = when (section) {
 }
 
 @Composable
-fun App(
+fun WindowScope.App(
     language: String,
     onLanguageChange: (String) -> Unit,
     font: AppFont,
@@ -317,7 +403,13 @@ fun App(
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     initialSection: String? = null,
+    isFullscreen: Boolean = false,
+    isMaximized: Boolean = false,
+    onToggleFullscreen: () -> Unit = {},
     bringToFront: () -> Unit = {},
+    onMinimize: () -> Unit = {},
+    onMaximize: () -> Unit = {},
+    onClose: () -> Unit = {},
 ) {
     var backStack by remember { mutableStateOf(listOf<Screen>(Screen.Home)) }
     val player = remember { PlayerController() }
@@ -336,6 +428,11 @@ fun App(
     var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(DesktopSettings.load().playerBackground)) }
     var rotatingThumbnail by remember { mutableStateOf(DesktopSettings.load().rotatingThumbnail) }
     var miniPlayerStyle by remember { mutableStateOf(DesktopSettings.load().miniPlayerStyle) }
+    var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
+    var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
+    var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
+    var spotifyLayout by remember { mutableStateOf(DesktopSettings.load().spotifyLayout) }
+    var showRightSidebar by remember { mutableStateOf(DesktopSettings.load().showRightSidebar) }
     var homeUseLastListen by remember { mutableStateOf(DesktopSettings.load().homeUseLastListen) }
     var randomizeHomeOrder by remember { mutableStateOf(DesktopSettings.load().randomizeHomeOrder) }
     var showWrappedOnHome by remember { mutableStateOf(DesktopSettings.load().showWrappedOnHome) }
@@ -402,6 +499,31 @@ fun App(
 
     var isLoggedIn by remember { mutableStateOf(LoginManager.isLoggedIn()) }
     var accountName by remember { mutableStateOf(DesktopSettings.load().accountName) }
+    var accountChannelHandle by remember { mutableStateOf(DesktopSettings.load().accountChannelHandle) }
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            YouTube.accountInfo().onSuccess { account ->
+                accountName = account.name
+                accountChannelHandle = account.channelHandle.orEmpty()
+                DesktopSettings.update {
+                    it.copy(
+                        accountName = account.name,
+                        accountEmail = account.email.orEmpty(),
+                        accountChannelHandle = account.channelHandle.orEmpty(),
+                    )
+                }
+            }
+        }
+    }
+
+    val displayUserName = if (isLoggedIn && accountName.isNotBlank()) accountName else "Guest"
+    val displayUserHandle = if (isLoggedIn && accountName.isNotBlank()) {
+        accountChannelHandle.ifBlank { "@${accountName.lowercase().replace(" ", "")}" }
+    } else {
+        "Not signed in"
+    }
+
     var sidebarCollapsed by remember { mutableStateOf(DesktopSettings.load().sidebarCollapsed) }
     var contentLanguage by remember { mutableStateOf(DesktopSettings.load().contentLanguage) }
     var contentCountry by remember { mutableStateOf(DesktopSettings.load().contentCountry) }
@@ -526,6 +648,10 @@ fun App(
     val onGlobalKey: (KeyEvent) -> Boolean = { event ->
         when {
             event.type != KeyEventType.KeyDown -> false
+            event.key == Key.F11 -> {
+                onToggleFullscreen()
+                true
+            }
             event.key == Key.Backspace || (event.isAltPressed && event.key == Key.DirectionLeft) -> {
                 goBack(); true
             }
@@ -596,8 +722,8 @@ fun App(
             appNotification = null
         }
     }
-    // Pre-releases are on by default for nightly/alpha/beta/rc builds (those
-    // channels only publish pre-releases), and off by default for stable.
+    var headerSearchQuery by remember { mutableStateOf("") }
+    var headerSearchFilter by remember { mutableStateOf<YouTube.SearchFilter?>(null) }
     var includePreReleases by remember {
         mutableStateOf(
             DesktopSettings.load().includePreReleases || AppInfo.CHANNEL.lowercase() != "stable"
@@ -937,7 +1063,7 @@ fun App(
         var wasResolving = player.state.value.isResolving
         player.state.map { it.isResolving }.distinctUntilChanged().collect { resolving ->
             if (wasResolving && !resolving) {
-                val pb = latestRemotePlayback.get()
+                val pb: PlaybackSnapshot? = latestRemotePlayback.get()
                 val currentId = player.state.value.current?.videoId
                 if (pb != null && !pb.isResolving && currentId != null && pb.trackId == currentId) {
                     val target = syncManager.effectivePosition(pb)
@@ -1004,32 +1130,115 @@ fun App(
     CompositionLocalProvider(
         LocalDensity provides Density(baseDensity.density * densityScale, baseDensity.fontScale)
     ) {
-    Row(Modifier.fillMaxSize().onKeyEvent(onGlobalKey)) {
-        Sidebar(
-            hideHistory = pauseListenHistory,
-            language = language,
-            current = current,
-            collapsed = sidebarCollapsed,
-            onToggleCollapsed = {
-                sidebarCollapsed = !sidebarCollapsed
-                DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
-            },
-            onSelect = openRoot,
-        )
-        Column(Modifier.weight(1f).fillMaxHeight()) {
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                AnimatedContent(
-                    targetState = current,
-                    transitionSpec = {
-                        when (screenTransition) {
-                            "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
-                                (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
-                            "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
-                            else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
-                        }
+    Row(
+        Modifier
+            .fillMaxSize()
+            .background(if (spotifyLayout) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background)
+            .onKeyEvent(onGlobalKey)
+    ) {
+        if (spotifyLayout) {
+            AnimatedVisibility(
+                visible = !sidebarCollapsed && current != Screen.Player,
+                enter = expandHorizontally() + fadeIn(),
+                exit = shrinkHorizontally() + fadeOut(),
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxHeight().padding(start = 6.dp, top = 6.dp, end = 4.dp, bottom = 6.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Sidebar(
+                        hideHistory = pauseListenHistory,
+                        language = language,
+                        current = current,
+                        collapsed = false,
+                        showTitleHeader = false,
+                        userName = displayUserName,
+                        userHandle = displayUserHandle,
+                        isLoggedIn = isLoggedIn,
+                        onToggleCollapsed = {
+                            sidebarCollapsed = !sidebarCollapsed
+                            DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
+                        },
+                        onSelect = openRoot,
+                    )
+                }
+            }
+        } else {
+            AnimatedVisibility(
+                visible = !sidebarCollapsed && current != Screen.Player,
+                enter = expandHorizontally() + fadeIn(),
+                exit = shrinkHorizontally() + fadeOut(),
+            ) {
+                Sidebar(
+                    hideHistory = pauseListenHistory,
+                    language = language,
+                    current = current,
+                    collapsed = false,
+                    userName = displayUserName,
+                    userHandle = displayUserHandle,
+                    isLoggedIn = isLoggedIn,
+                    onToggleCollapsed = {
+                        sidebarCollapsed = !sidebarCollapsed
+                        DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
                     },
-                    label = "screenTransition",
-                ) { screen ->
+                    onSelect = openRoot,
+                )
+            }
+        }
+        Column(
+            Modifier
+                .weight(1f)
+                .fillMaxHeight()
+        ) {
+            if (spotifyLayout && current != Screen.Player) {
+                SpotifyTopHeader(
+                    sidebarCollapsed = sidebarCollapsed,
+                    onToggleSidebar = {
+                        sidebarCollapsed = !sidebarCollapsed
+                        DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
+                    },
+                    language = language,
+                    canGoBack = backStack.size > 1,
+                    onBack = goBack,
+                    onOpenSearch = { navigate(Screen.Search) },
+                    onOpenHome = { openRoot(Screen.Home) },
+                    onOpenHistory = { navigate(Screen.History) },
+                    onOpenStats = { navigate(Screen.SettingsWrapped) },
+                    onOpenListenTogether = { openRoot(Screen.ListenTogether) },
+                    onOpenSettings = { openRoot(Screen.Settings) },
+                    onOpenLyrics = { navigate(Screen.Lyrics) },
+                    onOpenQueue = { openRoot(Screen.Queue) },
+                    onMinimize = onMinimize,
+                    onMaximize = onMaximize,
+                    onClose = onClose,
+                    isMaximized = isMaximized,
+                    searchQuery = headerSearchQuery,
+                    onSearchQueryChange = { newQ -> headerSearchQuery = newQ },
+                    onSearchSubmit = { q -> recordSearch(q) },
+                    selectedFilter = headerSearchFilter,
+                    onFilterSelect = { f -> headerSearchFilter = f },
+                )
+            }
+            Row(Modifier.weight(1f).fillMaxWidth().padding(if (spotifyLayout) androidx.compose.foundation.layout.PaddingValues(horizontal = 2.dp) else androidx.compose.foundation.layout.PaddingValues(0.dp))) {
+            Surface(
+                modifier = Modifier.weight(1f).fillMaxHeight().padding(if (spotifyLayout) androidx.compose.foundation.layout.PaddingValues(start = 2.dp, top = 0.dp, end = 2.dp, bottom = 6.dp) else androidx.compose.foundation.layout.PaddingValues(0.dp)),
+                color = if (spotifyLayout) MaterialTheme.colorScheme.surfaceContainer else Color.Transparent,
+                shape = if (spotifyLayout) RoundedCornerShape(12.dp) else androidx.compose.ui.graphics.RectangleShape,
+            ) {
+                    Box(Modifier.fillMaxSize()) {
+                        AnimatedContent(
+                            targetState = current,
+                            transitionSpec = {
+                                when (screenTransition) {
+                                    "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
+                                        (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
+                                    "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
+                                    else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                }
+                            },
+                            label = "screenTransition",
+                        ) { screen ->
                 when (screen) {
                     is Screen.Home -> HomeScreen(
                         language = language,
@@ -1040,6 +1249,7 @@ fun App(
                         onAddToPlaylist = addToPlaylist,
                         onPlayAll = playAll,
                         onOpenBrowse = { browseId, params -> navigate(Screen.Browse(browseId, params)) },
+                        userName = displayUserName,
                         useLastListen = homeUseLastListen,
                         onUseLastListenChange = { v ->
                             homeUseLastListen = v
@@ -1073,6 +1283,12 @@ fun App(
                             searchHistory = emptyList()
                             DesktopSettings.update { it.copy(searchHistory = emptyList()) }
                         },
+                        externalQuery = headerSearchQuery,
+                        onQueryChange = { newQ -> headerSearchQuery = newQ },
+                        showTextField = !spotifyLayout,
+                        externalFilter = headerSearchFilter,
+                        onFilterChange = { f -> headerSearchFilter = f },
+                        showFiltersInBody = !spotifyLayout,
                     )
                     is Screen.Library -> LibraryScreen(
                         language = language,
@@ -1276,6 +1492,21 @@ fun App(
                             miniPlayerStyle = s
                             DesktopSettings.update { it.copy(miniPlayerStyle = s) }
                         },
+                        miniPlayerDesign = miniPlayerDesign,
+                        onMiniPlayerDesignChange = { d ->
+                            miniPlayerDesign = d
+                            DesktopSettings.update { it.copy(miniPlayerDesign = d.key) }
+                        },
+                        miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+                        onMiniPlayerBackgroundStyleChange = { b ->
+                            miniPlayerBackgroundStyle = b
+                            DesktopSettings.update { it.copy(miniPlayerBackgroundStyle = b.key) }
+                        },
+                        pureBlackMiniPlayer = pureBlackMiniPlayer,
+                        onPureBlackMiniPlayerChange = { p ->
+                            pureBlackMiniPlayer = p
+                            DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
+                        },
                     )
                     is Screen.SettingsAccount -> SettingsAccountScreen(
                         language = language,
@@ -1287,6 +1518,7 @@ fun App(
                             LoginManager.logout()
                             isLoggedIn = false
                             accountName = ""
+                            accountChannelHandle = ""
                         },
                         onLoggedIn = {
                             isLoggedIn = true
@@ -1582,11 +1814,16 @@ fun App(
                         onOpenLyrics = { navigate(Screen.Lyrics) },
                         onOpenQueue = { navigate(Screen.Queue) },
                         onAddToPlaylist = addNowPlayingToPlaylist,
+                        onSkipTo = { player.skipTo(it) },
+                        onRemoveAt = { player.removeAt(it) },
+                        onClearQueue = { player.clearQueue() },
+                        onReorderQueue = { player.reorder(it) },
                         sliderStyle = ViviSliderStyle.from(sliderStyle),
                         design = playerDesign,
                         background = playerBackground,
                         rotatingThumbnail = rotatingThumbnail,
                         accent = accent,
+                        onBack = goBack,
                     )
                     is Screen.Lyrics -> LyricsScreen(
                         nowPlaying = nowPlaying,
@@ -1698,21 +1935,69 @@ fun App(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
-            MiniPlayer(
+        }
+        if (showRightSidebar && spotifyLayout) {
+            SpotifyRightNowPlayingPanel(
                 nowPlaying = nowPlaying,
                 isPlaying = isPlaying,
-                isLoading = playerState.isLoading,
                 positionMs = playerState.positionMs,
-                durationMs = playerState.durationMs,
-                onTogglePlay = { player.toggle() },
-                onNext = { player.next() },
-                // Click toggles the full player: open it, or hide it (go back).
-                onOpen = { if (current == Screen.Player) goBack() else navigate(Screen.Player) },
-                onOpenQueue = { navigate(Screen.Queue) },
-                style = MiniPlayerStyle.from(miniPlayerStyle),
+                language = language,
+                onClose = {
+                    showRightSidebar = false
+                    DesktopSettings.update { it.copy(showRightSidebar = false) }
+                },
+                onOpenLyrics = { navigate(Screen.Lyrics) },
+                onAddToPlaylist = addNowPlayingToPlaylist,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
             )
         }
     }
+    if (current != Screen.Player) {
+        SpotifyPlayerBar(
+        nowPlaying = nowPlaying,
+        isPlaying = isPlaying,
+        isLoading = playerState.isLoading,
+        positionMs = playerState.positionMs,
+        durationMs = playerState.durationMs,
+        volume = playerState.volume,
+        isShuffle = playerState.isShuffle,
+        repeatMode = playerState.repeatMode,
+        onTogglePlay = { player.toggle() },
+        onNext = { player.next() },
+        onPrevious = { player.previous() },
+        onSeek = { player.seekTo(it) },
+        onVolume = { player.setVolume(it) },
+        onToggleShuffle = { player.toggleShuffle() },
+        onCycleRepeat = { player.cycleRepeatMode() },
+        onOpenPlayer = {
+            if (current == Screen.Player) {
+                goBack()
+            } else {
+                sidebarCollapsed = true
+                DesktopSettings.update { it.copy(sidebarCollapsed = true) }
+                if (!isMaximized) {
+                    onMaximize()
+                }
+                navigate(Screen.Player)
+            }
+        },
+        onOpenQueue = { navigate(Screen.Queue) },
+        onOpenLyrics = { navigate(Screen.Lyrics) },
+        showRightSidebar = showRightSidebar,
+        onToggleRightSidebar = {
+            showRightSidebar = !showRightSidebar
+            DesktopSettings.update { it.copy(showRightSidebar = showRightSidebar) }
+        },
+        isFullscreen = isFullscreen,
+        onToggleFullscreen = onToggleFullscreen,
+        language = language,
+        miniPlayerDesign = miniPlayerDesign,
+        miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+        pureBlackMiniPlayer = pureBlackMiniPlayer,
+    )
+    }
+}
+}
     } // density scale CompositionLocalProvider
 
     // Developer tools in a dedicated window (closing it falls back to overlay).
@@ -1738,9 +2023,9 @@ private data class SidebarEntry(
 )
 
 /**
- * Collapsible / expandable navigation sidebar (the desktop counterpart of the
- * mobile bottom navigation bar). Selected items use the Material 3 pill style
- * (`secondaryContainer`), matching the mobile `NavigationBarItem` look.
+ * M3 Expressive Cider-Inspired Navigation Rail (Sidebar).
+ * Solid surfaceContainer background, spring collapsible sections, active indicator pills,
+ * and pinned bottom user account capsule.
  */
 @Composable
 fun Sidebar(
@@ -1748,27 +2033,71 @@ fun Sidebar(
     current: Screen,
     collapsed: Boolean,
     hideHistory: Boolean = false,
+    showTitleHeader: Boolean = true,
+    userName: String = "Guest",
+    userHandle: String = "Not signed in",
+    isLoggedIn: Boolean = false,
     onToggleCollapsed: () -> Unit,
     onSelect: (Screen) -> Unit,
 ) {
-    val allEntries = listOf(
-        SidebarEntry(Screen.Home, "home", Icons.Outlined.Home, Icons.Filled.Home),
-        SidebarEntry(Screen.Search, "search", Icons.Outlined.Search, Icons.Filled.Search),
-        SidebarEntry(Screen.Library, "library", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
-        SidebarEntry(Screen.LocalPlaylists, "playlists", Icons.AutoMirrored.Outlined.PlaylistAdd, Icons.AutoMirrored.Filled.PlaylistAdd),
-        SidebarEntry(Screen.Queue, "queue", Icons.AutoMirrored.Outlined.QueueMusic, Icons.AutoMirrored.Filled.QueueMusic),
-        SidebarEntry(Screen.NewReleases, "new_release_albums", Icons.Outlined.NewReleases, Icons.Filled.NewReleases),
-        SidebarEntry(Screen.Charts, "charts", Icons.Outlined.Leaderboard, Icons.Filled.Leaderboard),
-        SidebarEntry(Screen.SettingsWrapped, "wrapped_title", Icons.Outlined.AutoAwesome, Icons.Filled.AutoAwesome),
-        SidebarEntry(Screen.ListenTogether, "listen_together", Icons.Outlined.Group, Icons.Filled.Group),
-        SidebarEntry(Screen.SongRecognition, "song_recognition", Icons.Outlined.MusicNote, Icons.Filled.MusicNote),
-        SidebarEntry(Screen.History, "history", Icons.Outlined.History, Icons.Filled.History),
-        SidebarEntry(Screen.Settings, "settings", Icons.Outlined.Settings, Icons.Filled.Settings),
+    var mainExpanded by remember { mutableStateOf(true) }
+    var libraryExpanded by remember { mutableStateOf(true) }
+    var playlistsExpanded by remember { mutableStateOf(true) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+
+    val localPlaylists by PlaylistStore.all.collectAsState()
+    val activeLocalPlaylists = remember(localPlaylists) {
+        localPlaylists.filter { !it.deleted }.sortedByDescending { it.updatedAt }
+    }
+
+    var onlinePlaylists by remember { mutableStateOf<List<com.music.innertube.models.PlaylistItem>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            com.music.innertube.YouTube.library("FEmusic_liked_playlists").fold(
+                onSuccess = { page ->
+                    onlinePlaylists = page.items.filterIsInstance<com.music.innertube.models.PlaylistItem>()
+                },
+                onFailure = {
+                    onlinePlaylists = emptyList()
+                }
+            )
+        } else {
+            onlinePlaylists = emptyList()
+        }
+    }
+
+    val mainChevronRotation by animateFloatAsState(
+        targetValue = if (mainExpanded) 90f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "mainChevronRotation",
+    )
+    val libraryChevronRotation by animateFloatAsState(
+        targetValue = if (libraryExpanded) 90f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "libraryChevronRotation",
+    )
+    val playlistsChevronRotation by animateFloatAsState(
+        targetValue = if (playlistsExpanded) 90f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "playlistsChevronRotation",
     )
 
-    val entries = allEntries.filter { entry -> !(hideHistory && entry.screen == Screen.History) }
+    val mainEntries = listOf(
+        SidebarEntry(Screen.Home, "home", Icons.Outlined.Home, Icons.Filled.Home),
+        SidebarEntry(Screen.NewReleases, "new", Icons.Outlined.Explore, Icons.Filled.Explore),
+        SidebarEntry(Screen.Charts, "radio", Icons.Outlined.Radio, Icons.Filled.Radio),
+    )
 
-    val width by animateDpAsState(if (collapsed) 72.dp else 224.dp, label = "sidebarWidth")
+    val librarySubEntries = listOf(
+        SidebarEntry(Screen.History, "history", Icons.Outlined.History, Icons.Filled.History),
+        SidebarEntry(Screen.Library, "songs", Icons.Outlined.MusicNote, Icons.Filled.MusicNote),
+        SidebarEntry(Screen.LocalPlaylists, "albums", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
+        SidebarEntry(Screen.Queue, "artists", Icons.Outlined.Group, Icons.Filled.Group),
+    )
+
+    val width by animateDpAsState(if (collapsed) 72.dp else 230.dp, label = "sidebarWidth")
 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(
@@ -1777,57 +2106,810 @@ fun Sidebar(
                 .fillMaxHeight()
                 .padding(horizontal = if (collapsed) 8.dp else 12.dp, vertical = 12.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onToggleCollapsed) {
+            // Collapse toggle button when collapsed (only if title header enabled)
+            if (collapsed && showTitleHeader) {
+                IconButton(
+                    onClick = onToggleCollapsed,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                ) {
                     Icon(
-                        if (collapsed) Icons.Filled.Menu else Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = null,
-                    )
-                }
-                if (!collapsed) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "VIVI Music",
-                        style = MaterialTheme.typography.titleLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        Icons.Filled.Menu,
+                        contentDescription = "Toggle Sidebar",
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
-            entries.forEach { entry ->
-                val selected = current == entry.screen
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(
-                            if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
-                        )
-                        .clickable { onSelect(entry.screen) }
-                        .padding(horizontal = if (collapsed) 0.dp else 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-                ) {
-                    Icon(
-                        if (selected) entry.selectedIcon else entry.icon,
-                        contentDescription = Localization.get(language, entry.key),
-                        tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!collapsed) {
-                        Spacer(Modifier.width(16.dp))
+
+            // Scrollable Content Region
+            val scrollState = rememberScrollState()
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+            ) {
+                // Top Main Group Header (Collapsible "VIVI Music")
+                if (!collapsed) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { mainExpanded = !mainExpanded }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
                         Text(
-                            Localization.get(language, entry.key),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                            else MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            text = "VIVI Music",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Expand VIVI Music",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .rotate(mainChevronRotation),
                         )
                     }
                 }
-                Spacer(Modifier.height(4.dp))
+
+                if (mainExpanded || collapsed) {
+                    mainEntries.forEach { entry ->
+                        val selected = current == entry.screen
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primaryContainer
+                                    else Color.Transparent
+                                )
+                                .clickable { onSelect(entry.screen) }
+                                .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                        ) {
+                            Icon(
+                                if (selected) entry.selectedIcon else entry.icon,
+                                contentDescription = Localization.get(language, entry.key),
+                                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (!collapsed) {
+                                Spacer(Modifier.width(14.dp))
+                                Text(
+                                    Localization.get(language, entry.key),
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(2.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Library Section Header (Collapsible)
+                if (!collapsed) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { libraryExpanded = !libraryExpanded }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = Localization.get(language, "library"),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Expand Library",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .rotate(libraryChevronRotation),
+                        )
+                    }
+                }
+
+                if (libraryExpanded || collapsed) {
+                    librarySubEntries.forEach { entry ->
+                        val selected = current == entry.screen
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primaryContainer
+                                    else Color.Transparent
+                                )
+                                .clickable { onSelect(entry.screen) }
+                                .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                        ) {
+                            Icon(
+                                if (selected) entry.selectedIcon else entry.icon,
+                                contentDescription = Localization.get(language, entry.key),
+                                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            if (!collapsed) {
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    Localization.get(language, entry.key),
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                    ),
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(2.dp))
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Playlists Section Header (Collapsible)
+                if (!collapsed) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { playlistsExpanded = !playlistsExpanded }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = Localization.get(language, "playlists"),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Expand Playlists",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .rotate(playlistsChevronRotation),
+                        )
+                    }
+                }
+
+                if (playlistsExpanded || collapsed) {
+                    // Create New Playlist
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showCreateDialog = true }
+                            .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Create New",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        if (!collapsed) {
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                Localization.get(language, "new_playlist").let { if (it == "new_playlist" || it.isBlank()) "Create New..." else it },
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+
+                    // Active Local Playlists
+                    activeLocalPlaylists.forEach { p ->
+                        val selected = current == Screen.LocalPlaylist(p.id)
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .clickable { onSelect(Screen.LocalPlaylist(p.id)) }
+                                .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                contentDescription = p.name,
+                                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            if (!collapsed) {
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    text = p.name,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                    ),
+                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(2.dp))
+                    }
+
+                    // Logged-in YouTube Playlists
+                    if (isLoggedIn) {
+                        onlinePlaylists.forEach { op ->
+                            val selected = current == Screen.Playlist(op.id)
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                    .clickable { onSelect(Screen.Playlist(op.id)) }
+                                    .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.MusicNote,
+                                    contentDescription = op.title,
+                                    tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                if (!collapsed) {
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = op.title,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                        ),
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(2.dp))
+                        }
+                    }
+
+                    // Fallback Favourite Songs entry if no playlists exist yet
+                    if (activeLocalPlaylists.isEmpty() && onlinePlaylists.isEmpty()) {
+                        val favSelected = current == Screen.LocalPlaylists
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (favSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .clickable { onSelect(Screen.LocalPlaylists) }
+                                .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Favorite,
+                                contentDescription = "Favourite Songs",
+                                tint = if (favSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            if (!collapsed) {
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                    "Favourite Songs",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = if (favSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showCreateDialog) {
+                PlaylistNameDialog(
+                    language = language,
+                    initialName = "",
+                    confirmLabel = Localization.get(language, "create").let { if (it == "create" || it.isBlank()) "Create" else it },
+                    onConfirm = { name ->
+                        val newPlaylist = PlaylistStore.create(name)
+                        if (isLoggedIn) {
+                            scope.launch {
+                                try {
+                                    com.music.innertube.YouTube.createPlaylist(name)
+                                    com.music.innertube.YouTube.library("FEmusic_liked_playlists").getOrNull()?.let { page ->
+                                        onlinePlaylists = page.items.filterIsInstance<com.music.innertube.models.PlaylistItem>()
+                                    }
+                                } catch (_: Exception) {}
+                            }
+                        }
+                        showCreateDialog = false
+                        onSelect(Screen.LocalPlaylist(newPlaylist.id))
+                    },
+                    onDismiss = { showCreateDialog = false },
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // User Account Row (Pinned Bottom Active-Pill)
+            val settingsSelected = current == Screen.Settings
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { onSelect(Screen.Settings) },
+                color = if (settingsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (settingsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = userName.take(1).uppercase(),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = if (settingsSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary,
+                        )
+                    }
+
+                    if (!collapsed) {
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = userName,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = if (settingsSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = userHandle,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (settingsSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WindowScope.SpotifyTopHeader(
+    language: String,
+    canGoBack: Boolean,
+    onBack: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenHome: () -> Unit,
+    onOpenHistory: () -> Unit = {},
+    onOpenStats: () -> Unit = {},
+    onOpenListenTogether: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenLyrics: () -> Unit = {},
+    onOpenQueue: () -> Unit = {},
+    onMinimize: () -> Unit,
+    onMaximize: () -> Unit,
+    onClose: () -> Unit,
+    isMaximized: Boolean = false,
+    sidebarCollapsed: Boolean = false,
+    onToggleSidebar: () -> Unit = {},
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    onSearchSubmit: (String) -> Unit = {},
+    selectedFilter: YouTube.SearchFilter? = null,
+    onFilterSelect: (YouTube.SearchFilter?) -> Unit = {},
+) {
+    WindowDraggableArea {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(start = 12.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                IconButton(
+                    onClick = { /* overflow menu */ },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.MoreHoriz,
+                        contentDescription = "Menu",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onBack,
+                    enabled = canGoBack,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = Localization.get(language, "back"),
+                        tint = if (canGoBack) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = { /* forward */ },
+                    enabled = false,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Forward",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onToggleSidebar,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.ViewColumn,
+                        contentDescription = "Toggle Sidebar",
+                        tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.weight(1f, fill = false).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                IconButton(
+                    onClick = onOpenHome,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Home,
+                        contentDescription = Localization.get(language, "home"),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+
+                Surface(
+                    onClick = onOpenSearch,
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.widthIn(min = 140.dp, max = 420.dp).weight(1f, fill = false).height(42.dp),
+                ) {
+                    Row(
+                        Modifier.padding(start = 14.dp, end = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Filled.Search,
+                            contentDescription = Localization.get(language, "search"),
+                            tint = if (searchQuery.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isEmpty()) {
+                                val hintText = Localization.get(language, "search_hint").let {
+                                    if (it.isBlank() || it == "search_hint") "What do you want to play?" else it
+                                }
+                                Text(
+                                    text = hintText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            BasicTextField(
+                                value = searchQuery,
+                                onValueChange = { newQuery ->
+                                    onSearchQueryChange(newQuery)
+                                    onOpenSearch()
+                                },
+                                modifier = Modifier.fillMaxWidth().onFocusChanged { focusState ->
+                                    if (focusState.isFocused) {
+                                        onOpenSearch()
+                                    }
+                                },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {
+                                    if (searchQuery.trim().isNotEmpty()) {
+                                        onSearchSubmit(searchQuery.trim())
+                                    }
+                                }),
+                            )
+                        }
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onSearchQueryChange("") },
+                                modifier = Modifier.size(24.dp),
+                            ) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                            Spacer(Modifier.width(4.dp))
+                        }
+
+                        // Divider between input and filter dropdown
+                        Box(
+                            Modifier
+                                .width(1.dp)
+                                .height(18.dp)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                        )
+                        Spacer(Modifier.width(4.dp))
+
+                        // Right-aligned filter dropdown button
+                        Box {
+                            var filterMenuExpanded by remember { mutableStateOf(false) }
+                            val currentFilterLabel = when (selectedFilter) {
+                                YouTube.SearchFilter.FILTER_SONG -> Localization.get(language, "filter_songs")
+                                YouTube.SearchFilter.FILTER_VIDEO -> Localization.get(language, "filter_videos")
+                                YouTube.SearchFilter.FILTER_ALBUM -> Localization.get(language, "filter_albums")
+                                YouTube.SearchFilter.FILTER_ARTIST -> Localization.get(language, "filter_artists")
+                                YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST -> Localization.get(language, "filter_playlists")
+                                else -> Localization.get(language, "filter_all")
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { filterMenuExpanded = true }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = currentFilterLabel,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontWeight = if (selectedFilter != null) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    color = if (selectedFilter != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Icon(
+                                    Icons.Filled.ArrowDropDown,
+                                    contentDescription = "Filter",
+                                    tint = if (selectedFilter != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = filterMenuExpanded,
+                                onDismissRequest = { filterMenuExpanded = false },
+                                modifier = Modifier
+                                    .width(180.dp)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
+                                    .padding(vertical = 4.dp),
+                            ) {
+                                data class FilterOption(
+                                    val filter: YouTube.SearchFilter?,
+                                    val label: String,
+                                    val icon: ImageVector
+                                )
+                                val filters = listOf(
+                                    FilterOption(null, Localization.get(language, "filter_all"), Icons.Filled.Tune),
+                                    FilterOption(YouTube.SearchFilter.FILTER_SONG, Localization.get(language, "filter_songs"), Icons.Filled.MusicNote),
+                                    FilterOption(YouTube.SearchFilter.FILTER_VIDEO, Localization.get(language, "filter_videos"), Icons.Filled.PlayCircle),
+                                    FilterOption(YouTube.SearchFilter.FILTER_ALBUM, Localization.get(language, "filter_albums"), Icons.Filled.Album),
+                                    FilterOption(YouTube.SearchFilter.FILTER_ARTIST, Localization.get(language, "filter_artists"), Icons.Filled.Person),
+                                    FilterOption(YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST, Localization.get(language, "filter_playlists"), Icons.Filled.QueueMusic),
+                                )
+                                filters.forEach { opt ->
+                                    val isSelected = selectedFilter == opt.filter
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                modifier = Modifier.fillMaxWidth(),
+                                            ) {
+                                                Icon(
+                                                    opt.icon,
+                                                    contentDescription = null,
+                                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                                Text(
+                                                    text = opt.label,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    ),
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                                if (isSelected) {
+                                                    Icon(
+                                                        Icons.Filled.Check,
+                                                        contentDescription = "Selected",
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(16.dp),
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onClick = {
+                                            onFilterSelect(opt.filter)
+                                            filterMenuExpanded = false
+                                            onOpenSearch()
+                                        },
+                                        modifier = Modifier
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                                else Color.Transparent
+                                            ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                IconButton(
+                    onClick = { /* output device */ },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.SpeakerGroup,
+                        contentDescription = "Output device",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onOpenLyrics,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Subject,
+                        contentDescription = Localization.get(language, "lyrics"),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onOpenQueue,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = Localization.get(language, "queue"),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onOpenHistory,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.History,
+                        contentDescription = Localization.get(language, "history"),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onOpenStats,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Leaderboard,
+                        contentDescription = Localization.get(language, "wrapped_title"),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onOpenListenTogether,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Group,
+                        contentDescription = Localization.get(language, "listen_together_title"),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = Localization.get(language, "settings"),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
+                IconButton(
+                    onClick = onMinimize,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Remove,
+                        contentDescription = "Minimize",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onMaximize,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
+                        contentDescription = if (isMaximized) "Restore" else "Maximize",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
         }
     }
@@ -2790,9 +3872,6 @@ fun UpdateSection(
                     Text("${Localization.get(language, "download")} (${formatBytes(asset.sizeBytes)})")
                 }
             }
-
-            // Changelog of the pending release ("What's new"), like the mobile app.
-            WhatsNewCard(language, status.version)
         }
         is UpdateStatus.Failed -> Text(
             "${Localization.get(language, "update_failed")}: ${status.message}",
@@ -2819,81 +3898,6 @@ fun UpdateSection(
             modifier = Modifier.padding(top = 4.dp),
         ) {
             Text(Localization.get(language, "delete_installers"))
-        }
-    }
-}
-
-/**
- * "What's new" card shown under the update-available entry of the Updates
- * screen: it fetches the live `CHANGELOG.md` from the repository (same source
- * as About → Changelog), picks the section of the pending release and renders
- * its Added/Fixed/Changed bullets in a Material 3 card. Renders nothing while
- * loading, offline or when the section is missing.
- */
-@Composable
-private fun WhatsNewCard(language: String, version: String) {
-    var markdown by remember(version) { mutableStateOf<String?>(null) }
-    LaunchedEffect(version) {
-        markdown = withContext(Dispatchers.IO) { UpdateChecker.fetchChangelogFromRepo() }
-    }
-
-    val release = markdown?.let { md ->
-        ChangelogLoader.parse(md).firstOrNull { UpdateChecker.deVersionFromTag(it.version) == version }
-    }
-
-    if (release == null) {
-        // Fetched but no section for this version: say so instead of an empty gap.
-        if (markdown != null) {
-            Text(
-                Localization.get(language, "changelog_unavailable"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        }
-        return
-    }
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-    ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(
-                "${Localization.get(language, "whats_new")} · ${release.version}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            release.sections.forEach { section ->
-                if (section.items.isEmpty()) return@forEach
-                Text(
-                    section.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-                section.items.forEach { item ->
-                    Row(
-                        Modifier.padding(top = 6.dp),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Box(
-                            Modifier
-                                .padding(top = 7.dp)
-                                .size(6.dp)
-                                .background(MaterialTheme.colorScheme.primary, CircleShape),
-                        )
-                        Text(
-                            item.replace("`", "").replace("**", ""),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
         }
     }
 }

@@ -466,8 +466,14 @@ fun SettingsPlayerDesignScreen(
     onBackgroundChange: (PlayerBackgroundStyle) -> Unit,
     rotatingThumbnail: Boolean,
     onRotatingThumbnailChange: (Boolean) -> Unit,
-    miniPlayerStyle: String,
-    onMiniPlayerStyleChange: (String) -> Unit,
+    miniPlayerStyle: String = "standard",
+    onMiniPlayerStyleChange: (String) -> Unit = {},
+    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
+    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
+    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
+    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
+    pureBlackMiniPlayer: Boolean = false,
+    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         PlayerDesignScreen(
@@ -480,6 +486,12 @@ fun SettingsPlayerDesignScreen(
             onRotatingThumbnailChange = onRotatingThumbnailChange,
             miniPlayerStyle = miniPlayerStyle,
             onMiniPlayerStyleChange = onMiniPlayerStyleChange,
+            miniPlayerDesign = miniPlayerDesign,
+            onMiniPlayerDesignChange = onMiniPlayerDesignChange,
+            miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+            onMiniPlayerBackgroundStyleChange = onMiniPlayerBackgroundStyleChange,
+            pureBlackMiniPlayer = pureBlackMiniPlayer,
+            onPureBlackMiniPlayerChange = onPureBlackMiniPlayerChange,
         )
     }
 }

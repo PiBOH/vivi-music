@@ -53,7 +53,42 @@ enum class PlayerBackgroundStyle(val key: String) {
     }
 }
 
-/** Mini-player style (port of the mobile mini-player variants). */
+/** Mini-player design layout variant (mirrors Android app's 3 miniplayer designs). */
+enum class MiniPlayerDesign(val key: String) {
+    CLASSIC("classic"),
+    NEW("new"),
+    APPLE("apple");
+
+    companion object {
+        fun from(key: String?): MiniPlayerDesign = when (key) {
+            "classic", "mini_player_classic" -> APPLE
+            "new", "mini_player_new" -> APPLE
+            else -> APPLE
+        }
+    }
+}
+
+/** Mini-player dynamic background style (mirrors Android app's 5 background styles). */
+enum class MiniPlayerBackgroundStyle(val key: String) {
+    FOLLOW_THEME("follow_theme"),
+    GRADIENT("gradient"),
+    BLUR("blur"),
+    GLOW_MOTION("glow_motion"),
+    LIVE_MESH("live_mesh");
+
+    companion object {
+        fun from(key: String?): MiniPlayerBackgroundStyle = when (key) {
+            "gradient" -> GRADIENT
+            "blur" -> BLUR
+            "glow", "glow_motion" -> GLOW_MOTION
+            "live_mesh", "mesh" -> LIVE_MESH
+            "follow_theme" -> FOLLOW_THEME
+            else -> BLUR
+        }
+    }
+}
+
+/** Legacy mini-player style enum maintained for compatibility. */
 enum class MiniPlayerStyle(val key: String) {
     STANDARD("standard"),
     APPLE("apple"),
@@ -69,10 +104,10 @@ enum class MiniPlayerStyle(val key: String) {
 data class PlayerDesignMetrics(val artSize: Dp, val overlayTitle: Boolean, val artCorner: Dp)
 
 fun PlayerDesign.metrics(): PlayerDesignMetrics = when (this) {
-    PlayerDesign.CLASSIC -> PlayerDesignMetrics(200.dp, false, 12.dp)
-    PlayerDesign.NEW -> PlayerDesignMetrics(240.dp, false, 16.dp)
-    PlayerDesign.V2 -> PlayerDesignMetrics(280.dp, true, 20.dp)
-    PlayerDesign.EXPRESSIVE -> PlayerDesignMetrics(320.dp, true, 24.dp)
+    PlayerDesign.CLASSIC -> PlayerDesignMetrics(360.dp, false, 11.dp)
+    PlayerDesign.NEW -> PlayerDesignMetrics(400.dp, false, 11.dp)
+    PlayerDesign.V2 -> PlayerDesignMetrics(440.dp, true, 11.dp)
+    PlayerDesign.EXPRESSIVE -> PlayerDesignMetrics(521.dp, true, 11.dp)
 }
 
 /**

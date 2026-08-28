@@ -273,18 +273,22 @@ fun ThemeSection(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 row.forEach { entry ->
-                    // Re-detect the OS accent when the "Dynamic" (system)
-                    // swatch is picked, so Material You picks up changes.
-                    val resolved = if (entry.color == Color.Transparent) {
-                        AccentPalette.refreshSystemAccent()
-                        AccentPalette.systemAccent() ?: AccentPalette.default
+                    val isSelected = if (entry.color == Color.Transparent) {
+                        accent == Color.Transparent
                     } else {
-                        entry.color
+                        accent == entry.color
                     }
                     AccentSwatch(
                         color = entry.color,
-                        selected = resolved == AccentPalette.effective(accent),
-                        onClick = { onAccentChange(resolved) },
+                        selected = isSelected,
+                        onClick = {
+                            if (entry.color == Color.Transparent) {
+                                AccentPalette.refreshSystemAccent()
+                                onAccentChange(Color.Transparent)
+                            } else {
+                                onAccentChange(entry.color)
+                            }
+                        },
                     )
                 }
             }
@@ -385,19 +389,19 @@ private fun AccentSwatch(color: Color, selected: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (color == Color.Transparent) {
+        if (selected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = if (color == Color.Transparent) MaterialTheme.colorScheme.onSurface else Color.White,
+                modifier = Modifier.size(16.dp),
+            )
+        } else if (color == Color.Transparent) {
             Icon(
                 Icons.Filled.Palette,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
-            )
-        } else if (selected) {
-            Icon(
-                Icons.Filled.Check,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(16.dp),
             )
         }
     }
@@ -824,8 +828,14 @@ fun PlayerDesignScreen(
     onBackgroundChange: (PlayerBackgroundStyle) -> Unit,
     rotatingThumbnail: Boolean,
     onRotatingThumbnailChange: (Boolean) -> Unit,
-    miniPlayerStyle: String,
-    onMiniPlayerStyleChange: (String) -> Unit,
+    miniPlayerStyle: String = "standard",
+    onMiniPlayerStyleChange: (String) -> Unit = {},
+    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
+    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
+    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
+    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
+    pureBlackMiniPlayer: Boolean = false,
+    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
 ) {
     Column(
         Modifier
@@ -892,29 +902,61 @@ fun PlayerDesignScreen(
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            Localization.get(language, "mini_player"),
+            "Mini-player design",
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 4.dp),
         )
         Text(
-            Localization.get(language, "mini_player_desc"),
+            "Choose between Classic, New, or Apple-style bottom player layout",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
         )
         listOf(
-            MiniPlayerStyle.STANDARD to "mini_player_standard",
-            MiniPlayerStyle.APPLE to "mini_player_apple",
-            MiniPlayerStyle.OUTLINE to "mini_player_outline",
-            MiniPlayerStyle.PURE_BLACK to "mini_player_pure_black",
-        ).forEach { (value, key) ->
+            MiniPlayerDesign.CLASSIC to "Classic mini player",
+            MiniPlayerDesign.NEW to "New mini player design",
+            MiniPlayerDesign.APPLE to "Apple-style mini player",
+        ).forEach { (value, label) ->
             RadioRow(
-                title = Localization.get(language, key),
+                title = label,
                 desc = "",
-                selected = MiniPlayerStyle.from(miniPlayerStyle) == value,
-                onClick = { onMiniPlayerStyleChange(value.key) },
+                selected = miniPlayerDesign == value,
+                onClick = { onMiniPlayerDesignChange(value) },
             )
         }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Mini-player background style",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+        Text(
+            "Dynamic background effect behind the mini player",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        listOf(
+            MiniPlayerBackgroundStyle.FOLLOW_THEME to "Follow theme",
+            MiniPlayerBackgroundStyle.GRADIENT to "Gradient",
+            MiniPlayerBackgroundStyle.BLUR to "Blur",
+            MiniPlayerBackgroundStyle.GLOW_MOTION to "Glow motion",
+            MiniPlayerBackgroundStyle.LIVE_MESH to "Live mesh",
+        ).forEach { (value, label) ->
+            RadioRow(
+                title = label,
+                desc = "",
+                selected = miniPlayerBackgroundStyle == value,
+                onClick = { onMiniPlayerBackgroundStyleChange(value) },
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        SwitchRow(
+            title = "Pure black mini-player",
+            desc = "Use true AMOLED black background for dark mode mini player",
+            checked = pureBlackMiniPlayer,
+            onCheckedChange = onPureBlackMiniPlayerChange,
+        )
     }
 }
 

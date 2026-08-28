@@ -475,7 +475,7 @@ fun AddToPlaylistDialog(
 }
 
 @Composable
-private fun PlaylistNameDialog(
+fun PlaylistNameDialog(
     language: String,
     initialName: String,
     confirmLabel: String,

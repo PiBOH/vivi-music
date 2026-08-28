@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,21 +29,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.music.innertube.models.AlbumItem
@@ -50,6 +59,86 @@ import com.music.innertube.models.ArtistItem
 import com.music.innertube.models.PlaylistItem
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.YTItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/**
+ * Renders a heavily blurred, opaque backdrop derived from an artwork URL,
+ * cached per artwork URL to ensure zero performance hit on recomposition/window resizing.
+ */
+@Composable
+fun CachedBlurBackdrop(
+    artworkUrl: String?,
+    modifier: Modifier = Modifier,
+    blurRadiusPx: Float = 80f,
+    scrimColor: Color = Color.Black.copy(alpha = 0.55f),
+    fallbackColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    content: @Composable BoxScope.() -> Unit
+) {
+    var cachedBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    var loadedUrl by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(artworkUrl) {
+        if (artworkUrl.isNullOrBlank()) {
+            cachedBitmap = null
+            loadedUrl = null
+            return@LaunchedEffect
+        }
+        if (loadedUrl == artworkUrl && cachedBitmap != null) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            try {
+                val url = java.net.URI(artworkUrl).toURL()
+                val bytes = url.readBytes()
+                val skiaImage = org.jetbrains.skia.Image.makeFromEncoded(bytes)
+                val targetW = (skiaImage.width / 4).coerceAtLeast(64)
+                val targetH = (skiaImage.height / 4).coerceAtLeast(64)
+                val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(targetW, targetH)
+                val canvas = surface.canvas
+                val blurFilter = org.jetbrains.skia.ImageFilter.makeBlur(
+                    blurRadiusPx / 4f,
+                    blurRadiusPx / 4f,
+                    org.jetbrains.skia.FilterTileMode.CLAMP
+                )
+                val paint = org.jetbrains.skia.Paint().apply { imageFilter = blurFilter }
+                canvas.drawImageRect(
+                    skiaImage,
+                    org.jetbrains.skia.Rect.makeWH(skiaImage.width.toFloat(), skiaImage.height.toFloat()),
+                    org.jetbrains.skia.Rect.makeWH(targetW.toFloat(), targetH.toFloat()),
+                    paint
+                )
+                val snapshot = surface.makeImageSnapshot()
+                val composeBitmap = snapshot.toComposeImageBitmap()
+                withContext(Dispatchers.Main) {
+                    cachedBitmap = composeBitmap
+                    loadedUrl = artworkUrl
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    cachedBitmap = null
+                    loadedUrl = artworkUrl
+                }
+            }
+        }
+    }
+
+    Box(modifier = modifier) {
+        val bitmap = cachedBitmap
+        if (bitmap != null) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawImage(
+                    image = bitmap,
+                    dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                )
+                drawRect(color = scrimColor)
+            }
+        } else {
+            Box(Modifier.fillMaxSize().background(fallbackColor)) {
+                Box(Modifier.fillMaxSize().background(scrimColor))
+            }
+        }
+        content()
+    }
+}
 
 /** Square-ish artwork with a neutral placeholder behind it while loading. */
 @Composable
@@ -269,17 +358,17 @@ fun SectionHeader(
     }
 }
 
-/** A single Mood & genres chip, styled like the Android app's button. */
+/** A single Mood & genres chip, styled like the Android app's button with M3 Expressive geometry. */
 @Composable
 fun MoodAndGenresButton(title: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         contentAlignment = Alignment.CenterStart,
         modifier = modifier
             .height(48.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 8.dp, bottomEnd = 18.dp, bottomStart = 8.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 14.dp),
     ) {
         Text(
             title,
@@ -297,6 +386,7 @@ fun MoodAndGenresButton(title: String, onClick: () -> Unit, modifier: Modifier =
 /** Slider visual style (matches the mobile slider-style setting). */
 enum class ViviSliderStyle(val key: String) {
     SLIM("slim"),
+    EXPRESSIVE("expressive"),
     SQUIGGLY("squiggly"),
     WAVY("wavy");
 
@@ -306,12 +396,11 @@ enum class ViviSliderStyle(val key: String) {
 }
 
 /**
- * Custom slider with three track styles:
+ * Custom slider with track styles:
  * - SLIM: thin straight track (default Material look)
+ * - EXPRESSIVE: thick rounded capsule track (Apple Music / M3 Expressive look)
  * - SQUIGGLY: tight zig-zag bumps along the track
  * - WAVY: smooth sine wave along the track
- *
- * Dragging/tapping anywhere on the track seeks; the thumb follows the value.
  */
 @Composable
 fun ViviSlider(
@@ -333,7 +422,6 @@ fun ViviSlider(
         modifier
             .height(28.dp)
             .fillMaxWidth()
-            .then(if (!enabled) Modifier else Modifier)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     if (enabled) {
@@ -357,22 +445,27 @@ fun ViviSlider(
             },
         contentAlignment = Alignment.CenterStart,
     ) {
-        val trackHeight = if (style == ViviSliderStyle.SLIM) 3.dp else 6.dp
+        val trackHeight = when (style) {
+            ViviSliderStyle.SLIM -> 3.dp
+            ViviSliderStyle.EXPRESSIVE -> 6.dp
+            ViviSliderStyle.SQUIGGLY -> 6.dp
+            ViviSliderStyle.WAVY -> 6.dp
+        }
         Canvas(Modifier.fillMaxWidth().height(28.dp)) {
             val cy = size.height / 2f
             val amp = when (style) {
-                ViviSliderStyle.SLIM -> 0f
+                ViviSliderStyle.SLIM, ViviSliderStyle.EXPRESSIVE -> 0f
                 ViviSliderStyle.SQUIGGLY -> 3.5f
                 ViviSliderStyle.WAVY -> 6f
             }
             val freq = when (style) {
-                ViviSliderStyle.SLIM -> 0f
+                ViviSliderStyle.SLIM, ViviSliderStyle.EXPRESSIVE -> 0f
                 ViviSliderStyle.SQUIGGLY -> 14f
                 ViviSliderStyle.WAVY -> 3f
             }
             fun waveY(x: Float): Float = cy + if (freq > 0f) {
                 kotlin.math.sin((x / size.width) * freq * 2f * kotlin.math.PI.toFloat()) * amp
-            } else cy - cy
+            } else 0f
 
             fun buildPath(toX: Float): Path {
                 val p = Path()
@@ -388,16 +481,34 @@ fun ViviSlider(
             if (style == ViviSliderStyle.SLIM) {
                 drawRoundRect(
                     color = trackColor,
-                    topLeft = androidx.compose.ui.geometry.Offset(0f, cy - 1.5f),
+                    topLeft = Offset(0f, cy - 1.5f),
                     size = androidx.compose.ui.geometry.Size(size.width, 3f),
                     cornerRadius = CornerRadius(1.5f, 1.5f),
                 )
                 drawRoundRect(
                     color = primary,
-                    topLeft = androidx.compose.ui.geometry.Offset(0f, cy - 1.5f),
+                    topLeft = Offset(0f, cy - 1.5f),
                     size = androidx.compose.ui.geometry.Size(size.width * fraction, 3f),
                     cornerRadius = CornerRadius(1.5f, 1.5f),
                 )
+            } else if (style == ViviSliderStyle.EXPRESSIVE) {
+                val h = 6.dp.toPx()
+                // Inactive track (thick capsule)
+                drawRoundRect(
+                    color = trackColor.copy(alpha = 0.6f),
+                    topLeft = Offset(0f, cy - h / 2f),
+                    size = androidx.compose.ui.geometry.Size(size.width, h),
+                    cornerRadius = CornerRadius(h / 2f, h / 2f),
+                )
+                // Active track (thick capsule fill)
+                if (fraction > 0f) {
+                    drawRoundRect(
+                        color = primary,
+                        topLeft = Offset(0f, cy - h / 2f),
+                        size = androidx.compose.ui.geometry.Size(size.width * fraction, h),
+                        cornerRadius = CornerRadius(h / 2f, h / 2f),
+                    )
+                }
             } else {
                 val stroke = Stroke(width = trackHeight.toPx(), cap = StrokeCap.Round)
                 drawPath(buildPath(size.width), color = trackColor, style = stroke)
@@ -405,17 +516,23 @@ fun ViviSlider(
                     drawPath(buildPath(size.width * fraction), color = primary, style = stroke)
                 }
             }
+
             // Thumb
             val thumbX = size.width * fraction
+            val thumbRadius = when (style) {
+                ViviSliderStyle.SLIM -> 6f
+                ViviSliderStyle.EXPRESSIVE -> 7f
+                else -> 7f
+            }
             drawCircle(
                 color = thumbColor,
-                radius = if (style == ViviSliderStyle.SLIM) 6f else 7f,
+                radius = thumbRadius,
                 center = Offset(thumbX, waveY(thumbX)),
             )
             // Subtle ring so the thumb is visible on any background.
             drawCircle(
                 color = Color.White.copy(alpha = 0.35f),
-                radius = if (style == ViviSliderStyle.SLIM) 6f else 7f,
+                radius = thumbRadius,
                 center = Offset(thumbX, waveY(thumbX)),
                 style = Stroke(width = 1.5f),
             )

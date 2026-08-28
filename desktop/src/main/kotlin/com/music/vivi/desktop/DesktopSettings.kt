@@ -37,7 +37,16 @@ data class DesktopSyncState(
     val playerBackground: String = "canvas",
     /** Slowly rotate the player artwork while playing. */
     val rotatingThumbnail: Boolean = false,
+    /** Custom artwork thumbnail size in dp (200..600). */
+    val playerArtSize: Int = 521,
+    /** Custom artwork top padding/offset in dp (0..120). */
+    val playerArtTopOffset: Int = 33,
+    /** Custom artwork corner radius in dp (0..36). */
+    val playerArtCornerRadius: Int = 11,
     val miniPlayerStyle: String = "standard",
+    val miniPlayerDesign: String = "classic",
+    val miniPlayerBackgroundStyle: String = "follow_theme",
+    val pureBlackMiniPlayer: Boolean = false,
     val homeUseLastListen: Boolean = false,
     val randomizeHomeOrder: Boolean = false,
     /** Show the "VIVI Wrapped" card on the Home screen. */
@@ -64,6 +73,12 @@ data class DesktopSyncState(
     val canvasSource: String = "AUTO",
     val autoPlayNext: Boolean = true,
     val sidebarCollapsed: Boolean = false,
+    /** Spotify-inspired 3-panel card layout & top navigation header. */
+    val spotifyLayout: Boolean = true,
+    /** Spotify right Now-Playing panel card. */
+    val showRightSidebar: Boolean = true,
+    /** Fullscreen mode toggle. */
+    val isFullscreen: Boolean = false,
     val cookie: String = "",
     val dataSyncId: String = "",
     val visitorData: String = "",
