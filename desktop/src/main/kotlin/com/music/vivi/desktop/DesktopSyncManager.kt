@@ -291,6 +291,16 @@ class DesktopSyncManager {
         return (base + elapsed).coerceAtLeast(0L)
     }
 
+    /**
+     * Age of a received snapshot in ms (relay-time frame), or null when the
+     * snapshot carries no position timestamp (older peer). Used to detect
+     * stale snapshots: over a slow phone-hotspot link a peer's periodic tick
+     * can arrive seconds late, and a stale "paused" snapshot must not pause a
+     * track the user just started locally.
+     */
+    fun snapshotAgeMs(snapshot: PlaybackSnapshot): Long? =
+        if (snapshot.positionAtMs > 0L) (serverNowMs() - snapshot.positionAtMs).coerceAtLeast(0L) else null
+
     // ---------------------------------------------------------------------
     // Internals
     // ---------------------------------------------------------------------

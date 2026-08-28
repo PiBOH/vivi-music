@@ -979,6 +979,15 @@ fun WindowScope.App(
     val systemVolumeGuard = remember { VolumeGuard() }
     val volumeGuard = remember { VolumeGuard() }
 
+    // Local change wins over the peer: a drag on the VIVI volume slider
+    // stamps this timestamp, and incoming remote volumes are ignored for a
+    // short window so a stale/echoed value can't snap the slider back.
+    var localVolumeChangedAt by remember { mutableStateOf(0L) }
+    val setLocalVolume: (Float) -> Unit = { v ->
+        localVolumeChangedAt = System.currentTimeMillis()
+        player.setVolume(v)
+    }
+
     // Notify when a phone pairs or un-pairs (respects the notification mode).
     var wasPaired by remember { mutableStateOf(false) }
     LaunchedEffect(syncManager) {
@@ -1135,19 +1144,30 @@ fun WindowScope.App(
     // as our audio actually starts flowing instead of being dropped until the
     // next 5s periodic re-sync (which was especially noticeable on a slow
     // phone-hotspot connection where resolution takes a while).
-    val latestRemotePlayback = remember { java.util.concurrent.atomic.AtomicReference<PlaybackSnapshot?>(null) }
+    // Latest peer playback snapshot, stamped with the local receipt time so
+    // the re-apply-after-resolving effect can tell whether it arrived while
+    // we were buffering (and must be honored) or before we started (and is
+    // stale — a pre-play snapshot must not pause a track the user just
+    // started).
+    val latestRemotePlayback =
+        remember { java.util.concurrent.atomic.AtomicReference<Pair<Long, PlaybackSnapshot>?>(null) }
 
     // Apply incoming playback snapshots from the peer.
     LaunchedEffect(syncManager) {
         syncManager.incomingPlayback.collect { pb ->
-            latestRemotePlayback.set(pb)
+            latestRemotePlayback.set(System.currentTimeMillis() to pb)
             // App (player) volume sync: mirror the peer's in-app volume slider.
+            // A very recent local drag wins: the peer's value may be an echo of
+            // our own push or a stale pre-drag snapshot, and re-applying it
+            // snaps the slider back the moment the user lets go.
             if (DesktopSettings.load().syncViviVolume) {
                 pb.volume?.let { v ->
-                    volumeGuard.echoUntil = System.currentTimeMillis() + 1500L
-                    volumeGuard.echoValue = v
-                    volumeGuard.lastPushed = v
-                    if (abs(v - player.state.value.volume) > 0.001f) player.setVolume(v)
+                    if (System.currentTimeMillis() - localVolumeChangedAt > 2_000L) {
+                        volumeGuard.echoUntil = System.currentTimeMillis() + 1500L
+                        volumeGuard.echoValue = v
+                        volumeGuard.lastPushed = v
+                        if (abs(v - player.state.value.volume) > 0.001f) player.setVolume(v)
+                    }
                 }
             }
             // Native OS system volume sync: mirror the peer's system volume.
@@ -1172,11 +1192,22 @@ fun WindowScope.App(
                 // by the re-apply effect below once we actually start playing.
                 if (!player.state.value.isResolving) {
                     val target = syncManager.effectivePosition(pb)
+                    // Over a slow phone-hotspot link a peer's periodic tick can
+                    // arrive seconds late: a stale "paused" snapshot (older than
+                    // a full sync tick) must not pause a track the user just
+                    // started locally. The next fresh tick corrects anyway.
+                    val staleAgeMs = syncManager.snapshotAgeMs(pb)
+                    val stalePaused = !pb.isPlaying &&
+                        !pb.userSeek &&
+                        staleAgeMs != null && staleAgeMs > 4_000L
                     when {
                         pb.isResolving -> {
                             // Peer is mid-song buffering (position frozen): keep
                             // playing and skip the seek instead of pausing, so a
                             // brief rebuffer on the phone doesn't stop the desktop.
+                        }
+                        stalePaused -> {
+                            // Ignored: stale peer "paused" snapshot (see above).
                         }
                         pb.userSeek -> player.seekRemote(target, pb.isPlaying, toleranceMs = 0L)
                         else -> player.seekRemoteCatchUp(target, pb.isPlaying, SyncServer.RESYNC_TOLERANCE_MS)
@@ -1207,11 +1238,20 @@ fun WindowScope.App(
     // re-applied; a changed queue is handled by the collector above.
     LaunchedEffect(syncManager) {
         var wasResolving = player.state.value.isResolving
+        var resolvingSince = if (wasResolving) System.currentTimeMillis() else 0L
         player.state.map { it.isResolving }.distinctUntilChanged().collect { resolving ->
-            if (wasResolving && !resolving) {
-                val pb: PlaybackSnapshot? = latestRemotePlayback.get()
+            if (resolving) {
+                resolvingSince = System.currentTimeMillis()
+            } else if (wasResolving) {
+                // Only honor a snapshot that arrived WHILE we were buffering: a
+                // pre-play snapshot (received before we started resolving) is
+                // stale and must not pause a track the user just started — that
+                // left the button stuck and forced a second play press.
+                val (receivedAt, pb) = latestRemotePlayback.get() ?: (0L to null)
                 val currentId = player.state.value.current?.videoId
-                if (pb != null && !pb.isResolving && currentId != null && pb.trackId == currentId) {
+                if (receivedAt >= resolvingSince && pb != null && !pb.isResolving &&
+                    currentId != null && pb.trackId == currentId
+                ) {
                     val target = syncManager.effectivePosition(pb)
                     if (pb.userSeek) {
                         player.seekRemote(target, pb.isPlaying, toleranceMs = 0L)
@@ -1983,7 +2023,7 @@ fun WindowScope.App(
                         onNext = { player.next() },
                         onPrevious = { player.previous() },
                         onSeek = { player.seekTo(it) },
-                        onVolume = { player.setVolume(it) },
+                        onVolume = setLocalVolume,
                         onToggleShuffle = { player.toggleShuffle() },
                         onCycleRepeat = { player.cycleRepeatMode() },
                         language = language,
@@ -2157,7 +2197,7 @@ fun WindowScope.App(
         onNext = { player.next() },
         onPrevious = { player.previous() },
         onSeek = { player.seekTo(it) },
-        onVolume = { player.setVolume(it) },
+        onVolume = setLocalVolume,
         onToggleShuffle = { player.toggleShuffle() },
         onCycleRepeat = { player.cycleRepeatMode() },
         onOpenPlayer = {

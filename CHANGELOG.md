@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.2-nightly] - 2026-08-28
+
+### Fixed
+- [DE] Device sync no longer lets a stale remote snapshot override a fresh local action:
+  - **VIVI volume slider can now be changed while paired**: a local drag wins for 2 s, so an echoed or stale value from the phone can't snap the slider back the moment you let go (previously the peer's value kept re-applying and the slider appeared stuck).
+  - **No more double-play after resolving**: when the stream finishes resolving, only a remote seek/play-pause that actually arrived *while* we were buffering is re-applied — a pre-play snapshot (common over a slow phone hotspot) no longer pauses the track the user just started, so pressing play once is enough again.
+  - **Stale "paused" ticks ignored**: a periodic peer snapshot older than a full sync tick (5 s) with `isPlaying=false` is no longer applied, so the DE can't auto-pause a few seconds after you hit play because the phone's snapshot hasn't caught up yet.
+
 ## [6.4.41_DE-1.35.1-nightly] - 2026-08-28
 
 ### Changed
