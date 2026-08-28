@@ -228,6 +228,7 @@ fun PlayerScreen(
             PlayerContent(
                 np = np,
                 queueSize = queue.size,
+                onBack = onBack,
                 isPlaying = isPlaying,
                 positionMs = positionMs,
                 durationMs = durationMs,
@@ -667,6 +668,7 @@ private fun M3EPlayerContent(
 private fun PlayerContent(
     np: NowPlaying,
     queueSize: Int,
+    onBack: (() -> Unit)? = null,
     isPlaying: Boolean,
     positionMs: Long,
     durationMs: Long,
@@ -705,11 +707,30 @@ private fun PlayerContent(
             .padding(horizontal = 32.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Header: label.
+        // Header: back button (the sidebar and the top header are hidden on
+        // the full player, so this is the only visual way back) + label.
         Row(
             Modifier.widthIn(max = contentWidth).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (onBack != null) {
+                Surface(
+                    onClick = onBack,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = Localization.get(language, "back"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
+            }
             Text(
                 Localization.get(language, "now_playing"),
                 style = MaterialTheme.typography.labelLarge,

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.34.8-nightly] - 2026-08-28
+
+### Fixed
+- [DE] The full player (Classic/New/V2 designs) had no visible way back: the sidebar and the top header are hidden on the player screen and the window is undecorated, so the player felt like it filled the whole screen with no way to shrink it. A back button (chevron) now appears at the top-left of every player design (it was only present in the Expressive one), and the Escape key goes back like Backspace/Alt+Left.
+
 ## [6.4.41_DE-1.34.7-nightly] - 2026-08-28
 
 ### Reverted

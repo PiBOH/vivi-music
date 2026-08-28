@@ -737,7 +737,7 @@ fun WindowScope.App(
                 onToggleFullscreen()
                 true
             }
-            event.key == Key.Backspace || (event.isAltPressed && event.key == Key.DirectionLeft) -> {
+            event.key == Key.Backspace || event.key == Key.Escape || (event.isAltPressed && event.key == Key.DirectionLeft) -> {
                 goBack(); true
             }
             event.isCtrlPressed && event.key == Key.Z -> { undo(); true }
