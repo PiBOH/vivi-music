@@ -189,6 +189,8 @@ MAPPING = {
     "wrapped_top_song": "top song",
     "wrapped_show_on_home": "Show on Home",
     "wrapped_show_on_home_desc": "Show the VIVI Wrapped card on the Home screen.",
+    "download_mobile_apk": "Download VIVI for Android (APK)",
+    "opening_download": "Opening download…",
     "native_title_bar": "Native system title bar",
     "native_title_bar_desc": "Use the operating system's title bar instead of VIVI's custom one; VIVI's bar then hides its own window buttons. Applies after a restart.",
     "restart_required_title": "Restart required",
@@ -1219,12 +1221,13 @@ from desktop_extra_translations_31 import EXTRA_TRANSLATIONS as _EXTRA_31
 from desktop_extra_translations_32 import EXTRA_TRANSLATIONS as _EXTRA_32
 from desktop_extra_translations_33 import EXTRA_TRANSLATIONS as _EXTRA_33
 from desktop_extra_translations_34 import EXTRA_TRANSLATIONS as _EXTRA_34
+from desktop_extra_translations_35 import EXTRA_TRANSLATIONS as _EXTRA_35
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

@@ -206,6 +206,33 @@ object UpdateChecker {
     }
 
     /**
+     * Finds the newest Android APK asset published in the repo releases (the
+     * mobile version of VIVI Music, e.g. `VIVIMusic-6.4.41-debug.apk` on the
+     * PiBOH fork). Used by the Devices screen to offer the mobile app for
+     * download before pairing. Returns null when no APK is available or the
+     * query fails.
+     */
+    fun latestApkAsset(): GitHubAsset? = try {
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/${UpdateSource.repo()}/releases?per_page=100")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "VIVIMusic-Desktop-Updater")
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val releases = json.decodeFromString<List<GitHubRelease>>(response.body.string())
+            // Releases are newest-first; pick the first one that ships an APK.
+            releases.asSequence()
+                .mapNotNull { r ->
+                    r.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
+                }
+                .firstOrNull()
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
      * Queries GitHub and decides whether a newer desktop release exists.
      * Pre-releases (nightly/beta/rc/alpha) are considered only when
      * [includePreReleases] is true.

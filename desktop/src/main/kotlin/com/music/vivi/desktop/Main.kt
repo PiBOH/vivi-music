@@ -80,6 +80,7 @@ import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.filled.Leaderboard
@@ -3620,6 +3621,49 @@ fun DeviceSyncSection(
     Text(Localization.get(language, "device_sync"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
     DeviceSyncHowTo(language)
+
+    // Download link for the mobile version of VIVI (the Android APK), so the
+    // phone runs the matching build before pairing. The APK URL is fetched
+    // from the latest GitHub release (follows the selected update source); if
+    // no APK is found, the releases page opens instead.
+    var openingDownload by remember { mutableStateOf(false) }
+    var downloadFailed by remember { mutableStateOf(false) }
+    val syncScope = rememberCoroutineScope()
+    OutlinedButton(
+        onClick = {
+            syncScope.launch {
+                openingDownload = true
+                downloadFailed = false
+                val asset = withContext(Dispatchers.IO) { UpdateChecker.latestApkAsset() }
+                val opened = if (asset != null && asset.browserDownloadUrl.isNotBlank()) {
+                    openUrl(asset.browserDownloadUrl)
+                } else {
+                    openUrl("https://github.com/${UpdateSource.repo()}/releases")
+                }
+                openingDownload = false
+                if (!opened) downloadFailed = true
+            }
+        },
+        enabled = !openingDownload,
+        modifier = Modifier.padding(top = 8.dp),
+    ) {
+        Icon(
+            Icons.Filled.Download,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(Localization.get(language, if (openingDownload) "opening_download" else "download_mobile_apk"))
+    }
+    if (downloadFailed) {
+        Text(
+            Localization.get(language, "open_failed"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 
     SettingSwitch(
         language = language,

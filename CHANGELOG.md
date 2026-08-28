@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.37.0-nightly] - 2026-08-28
+
+### Added
+- [DE] **"Download VIVI for Android (APK)" button on the Devices/sync screen**: fetches the newest Android APK from the selected update source's GitHub releases (default PiBOH/vivi-music — e.g. `VIVIMusic-6.4.41-debug.apk`) and opens it in the browser; if no APK is published it falls back to the releases page. 2 new strings translated in all 47 languages (batch 35).
+
 ## [6.4.41_DE-1.36.0-nightly] - 2026-08-28
 
 ### Added
