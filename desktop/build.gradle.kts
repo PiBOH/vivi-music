@@ -66,6 +66,11 @@ dependencies {
     implementation(project(":vivimusiccanvas"))
 
     implementation(libs.kotlinx.coroutines.core)
+    // Provides the Swing-based Main dispatcher backed by the AWT/Swing event
+    // dispatch thread, required by Dispatchers.Main on desktop. Without it
+    // running code that hops back to the Main dispatcher throws
+    // "Module with the Main dispatcher is missing". Same version as core.
+    implementation(libs.kotlinx.coroutines.swing)
 
     // Thumbnail / artwork loading (Coil 3, desktop JVM support)
     implementation(libs.coil)
