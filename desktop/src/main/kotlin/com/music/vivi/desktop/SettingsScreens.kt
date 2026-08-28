@@ -296,11 +296,15 @@ fun SettingsAppearanceScreen(
     onOpenTransitions: () -> Unit,
     onOpenIntro: () -> Unit,
     onOpenPlayerDesign: () -> Unit = {},
+    nativeTitleBar: Boolean = false,
+    onNativeTitleBarChange: (Boolean) -> Unit = {},
+    onRestart: () -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         AppearanceSection(
             language, selectedFont, densityScale, screenTransition,
             onOpenTheme, onOpenFont, onOpenCanvas, onOpenDensity, onOpenTransitions, onOpenIntro, onOpenPlayerDesign,
+            nativeTitleBar, onNativeTitleBarChange, onRestart,
         )
     }
 }

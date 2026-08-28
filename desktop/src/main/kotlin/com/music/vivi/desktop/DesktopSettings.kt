@@ -79,6 +79,8 @@ data class DesktopSyncState(
     val showRightSidebar: Boolean = true,
     /** Fullscreen mode toggle. */
     val isFullscreen: Boolean = false,
+    /** Use the native OS title bar instead of VIVI's custom one (applies after a restart). */
+    val nativeTitleBar: Boolean = false,
     /** Window placement persistence: OS-maximized flag + floating bounds in px. */
     val windowMaximized: Boolean = true,
     val windowX: Int = -1,

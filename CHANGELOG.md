@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.36.0-nightly] - 2026-08-28
+
+### Added
+- [DE] **Toggle between the native OS title bar and VIVI's custom one** (Settings → Aspetto): off by default (VIVI's bar). When the native system title bar is enabled, the window uses the OS chrome — its minimize/maximize/close buttons — and VIVI's own bar adapts by hiding its window buttons (the floating overlay on the player screen is hidden too). The change applies after a restart (a dialog offers to restart immediately), and all 4 new strings are translated in all 47 languages.
+
 ## [6.4.41_DE-1.35.8-nightly] - 2026-08-28
 
 ### Fixed

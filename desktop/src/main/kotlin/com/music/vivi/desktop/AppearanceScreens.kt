@@ -25,15 +25,22 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.MotionPhotosOn
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +67,12 @@ fun AppearanceSection(
     onOpenTransitions: () -> Unit,
     onOpenIntro: () -> Unit,
     onOpenPlayerDesign: () -> Unit = {},
+    nativeTitleBar: Boolean = false,
+    onNativeTitleBarChange: (Boolean) -> Unit = {},
+    onRestart: () -> Unit = {},
 ) {
+    var showRestartDialog by remember { mutableStateOf(false) }
+
     Text(Localization.get(language, "appearance"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
     AppearanceEntryRow(
@@ -119,6 +131,51 @@ fun AppearanceSection(
         subtitle = Localization.get(language, "show_intro_on_startup"),
         onClick = onOpenIntro,
     )
+
+    // Native system title bar vs VIVI's custom one. The window chrome is fixed
+    // at creation, so the change is applied on the next launch.
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Switch(
+            checked = nativeTitleBar,
+            onCheckedChange = { v ->
+                onNativeTitleBarChange(v)
+                showRestartDialog = true
+            },
+        )
+        Column(Modifier.clickable {
+            onNativeTitleBarChange(!nativeTitleBar)
+            showRestartDialog = true
+        }) {
+            Text(Localization.get(language, "native_title_bar"))
+            Text(
+                Localization.get(language, "native_title_bar_desc"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    if (showRestartDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestartDialog = false },
+            title = { Text(Localization.get(language, "restart_required_title")) },
+            text = { Text(Localization.get(language, "restart_required")) },
+            confirmButton = {
+                Button(onClick = { onRestart() }) {
+                    Text(Localization.get(language, "restart_now"))
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showRestartDialog = false }) {
+                    Text(Localization.get(language, "later"))
+                }
+            },
+        )
+    }
 }
 
 /**

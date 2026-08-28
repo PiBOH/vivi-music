@@ -273,6 +273,9 @@ fun main(args: Array<String>) {
     }
 
     var isFullscreen by remember { mutableStateOf(DesktopSettings.load().isFullscreen) }
+    // Native OS title bar vs VIVI's custom one (window chrome is fixed at
+    // creation, so this applies on the next launch).
+    var nativeTitleBar by remember { mutableStateOf(DesktopSettings.load().nativeTitleBar) }
     // Tracks the OS-maximized state (updated by the AWT listener below) so the
     // custom title-bar buttons reflect the real window placement.
     var windowMaximized by remember { mutableStateOf(DesktopSettings.load().windowMaximized) }
@@ -310,7 +313,8 @@ fun main(args: Array<String>) {
         },
         title = windowTitle,
         state = windowState,
-        undecorated = true,
+        // Undecorated = VIVI's custom title bar; decorated = the native OS bar.
+        undecorated = !nativeTitleBar,
     ) {
         val frameWindow = window
         awtWindowRef[0] = frameWindow
@@ -435,6 +439,12 @@ fun main(args: Array<String>) {
                         initialSection = openSection,
                         isFullscreen = isFullscreen,
                         isMaximized = (windowMaximized || isFullscreen),
+                        nativeTitleBar = nativeTitleBar,
+                        onNativeTitleBarChange = { v ->
+                            nativeTitleBar = v
+                            DesktopSettings.update { it.copy(nativeTitleBar = v) }
+                        },
+                        onRestart = ::restartApplication,
                         onToggleFullscreen = {
                             isFullscreen = !isFullscreen
                             DesktopSettings.update { it.copy(isFullscreen = isFullscreen) }
@@ -513,6 +523,9 @@ fun WindowScope.App(
     initialSection: String? = null,
     isFullscreen: Boolean = false,
     isMaximized: Boolean = false,
+    nativeTitleBar: Boolean = false,
+    onNativeTitleBarChange: (Boolean) -> Unit = {},
+    onRestart: () -> Unit = {},
     onToggleFullscreen: () -> Unit = {},
     bringToFront: () -> Unit = {},
     onMinimize: () -> Unit = {},
@@ -1431,6 +1444,9 @@ fun WindowScope.App(
                     onMaximize = onMaximize,
                     onClose = onClose,
                     isMaximized = isMaximized,
+                    // With the native title bar the OS provides the window
+                    // controls, so VIVI's bar hides its own buttons.
+                    showWindowControls = !nativeTitleBar,
                     searchQuery = headerSearchQuery,
                     onSearchQueryChange = { newQ -> headerSearchQuery = newQ },
                     onSearchSubmit = { q -> recordSearch(q) },
@@ -1593,6 +1609,9 @@ fun WindowScope.App(
                         onOpenTransitions = { navigate(Screen.SettingsTransitions) },
                         onOpenIntro = { navigate(Screen.SettingsIntro) },
                         onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
+                        nativeTitleBar = nativeTitleBar,
+                        onNativeTitleBarChange = onNativeTitleBarChange,
+                        onRestart = onRestart,
                     )
                     is Screen.SettingsTransitions -> SettingsTransitionsScreen(
                         language = language,
@@ -2249,12 +2268,14 @@ fun WindowScope.App(
     }
 }
 }
-    // The window is undecorated (no OS title bar), so the window controls must
-    // always be visible: the Spotify header hosts them when it is shown, and
-    // this overlay covers the full player screen and the non-Spotify layout.
-    // The transparent Box only hosts the buttons (top-right); its empty area
-    // passes clicks through to the content below.
-    if (!spotifyLayout || current == Screen.Player) {
+    // The window is undecorated (no OS title bar) unless the native title bar
+    // setting is on, so the window controls must always be visible: the Spotify
+    // header hosts them when it is shown, and this overlay covers the full
+    // player screen and the non-Spotify layout. With the native title bar the
+    // OS provides the controls, so the overlay (and the header's own buttons)
+    // are hidden. The transparent Box only hosts the buttons (top-right); its
+    // empty area passes clicks through to the content below.
+    if (!nativeTitleBar && (!spotifyLayout || current == Screen.Player)) {
         Box(Modifier.fillMaxSize()) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -2817,6 +2838,7 @@ fun WindowScope.SpotifyTopHeader(
     onMaximize: () -> Unit,
     onClose: () -> Unit,
     isMaximized: Boolean = false,
+    showWindowControls: Boolean = true,
     sidebarCollapsed: Boolean = false,
     onToggleSidebar: () -> Unit = {},
     searchQuery: String = "",
@@ -3173,12 +3195,14 @@ fun WindowScope.SpotifyTopHeader(
                     )
                 }
                 Spacer(Modifier.width(4.dp))
-                WindowControls(
-                    isMaximized = isMaximized,
-                    onMinimize = onMinimize,
-                    onMaximize = onMaximize,
-                    onClose = onClose,
-                )
+                if (showWindowControls) {
+                    WindowControls(
+                        isMaximized = isMaximized,
+                        onMinimize = onMinimize,
+                        onMaximize = onMaximize,
+                        onClose = onClose,
+                    )
+                }
             }
         }
     }
