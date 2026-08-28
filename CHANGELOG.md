@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.34.1-nightly] - 2026-08-28
+
+### Added
+- [DE] Completed the translations of the 4 new UI strings (`close`, `listen_together_title`, `search_hint`, `up_next`) into all 47 non-English languages (batch `desktop_extra_translations_32`); every language table now contains all 441 keys with no fallback.
+
 ## [6.4.39_DE-1.34.0-nightly] - 2026-08-28
 
 ### Added
