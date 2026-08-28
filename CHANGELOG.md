@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.40_DE-1.34.6-nightly] - 2026-08-28
+
+### Changed
+- [DE+APK] Updated every reference to the old Telegram channel (`t.me/vivimusicapp` and the old invite link) to the new channel `https://t.me/vivimusicde` — DE About screen, Android About screen, Android Welcome screen, the issue template and the whole website (`.websitede/**`).
+
 ## [6.4.39_DE-1.34.5-nightly] - 2026-08-28
 
 ### Fixed

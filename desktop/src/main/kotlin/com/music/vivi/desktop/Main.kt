@@ -4154,7 +4154,7 @@ fun AboutSection(language: String) {
     AboutInfoRow(
         icon = Icons.Filled.Send,
         title = Localization.get(language, "telegram_channel"),
-        onClick = { openUrl("https://t.me/vivimusicapp") },
+        onClick = { openUrl("https://t.me/vivimusicde") },
     )
 
     AboutSectionHeader(Localization.get(language, "app_info_section"))
