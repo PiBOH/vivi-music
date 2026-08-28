@@ -69,6 +69,14 @@ class PlayerController {
     private val _seekEvents = MutableSharedFlow<Long>(extraBufferCapacity = 16)
     val seekEvents: SharedFlow<Long> = _seekEvents.asSharedFlow()
 
+    /**
+     * Instantaneous audio level (0..1) of the decoded PCM stream, driven by
+     * [AudioPlayer.onLevel]. Used by the "Visualizer" player background.
+     * Updated ~43x/s; callers smooth it when drawing.
+     */
+    private val _audioLevel = MutableStateFlow(0f)
+    val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
+
     init {
         // Restore the saved shuffle/repeat state when "remember" is enabled.
         val s = DesktopSettings.load()
@@ -78,6 +86,13 @@ class PlayerController {
                 repeatMode = repeatModeFromKey(s.repeatModeKey),
             )
         }
+        // Feed the audio-reactive visualizer from the decoded PCM stream.
+        player.onLevel = { level -> _audioLevel.value = level }
+    }
+
+    /** Resets the visualizer level to silence (e.g. on pause/stop). */
+    fun resetAudioLevel() {
+        _audioLevel.value = 0f
     }
 
     /** Monotonic token identifying the active play session. */

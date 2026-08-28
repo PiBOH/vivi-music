@@ -193,6 +193,14 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Search/listen history + pause-history privacy toggles (DE 1.33.73): local recent searches on the Search screen, Privacy sub-screen with pause toggles + clear.
 - [x] Settings popup (quick settings shortcut) via the sidebar Tune button (DE 1.33.74) — **removed again in DE 1.33.79** at the user's request ("procura solo fastidio").
 
+## Desktop-exclusive features (Cider-inspired, DE 1.35.0)
+- [x] Audio visualizer: `Visualizer` player background reacts to the real decoded PCM level (`AudioPlayer.onLevel` → `PlayerController.audioLevel`), smooth attack + per-bar phase wobble, dark scrim (DE 1.35.0).
+- [x] Floating "Now Playing" widget: always-on-top draggable window (artwork + title/artist + Previous/Play-Pause/Next + close), position persisted (debounced), toggle in Settings → Desktop features (DE 1.35.0).
+- [x] Global media keys (Windows): Play/Pause/Next/Prev/Stop intercepted even without focus via a JNA `WH_KEYBOARD_LL` hook + native message pump on a daemon thread; Windows-only, toggle in Settings → Desktop features (DE 1.35.0).
+- [x] Tray menu: right-click the tray icon → Play/Pause, Next, Previous, Open VIVI Music, Quit (localized labels; tooltip shows the current track); toggle in Settings → Desktop features (DE 1.35.0).
+- [x] Fullscreen lyrics (Cider-style focus mode): blurred artwork backdrop + centered synced lyrics + bottom transport bar; button in the player (Classic/New/V2), Esc/back exits (DE 1.35.0).
+- [ ] Windows media flyout (SMTC: track in the Win+volume popup + flyout buttons): needs WinRT COM interop (`ISystemMediaTransportControlsInterop::GetForWindow` + hwnd) that cannot be validated without a Windows machine — deferred, do NOT ship blind.
+
 ## Infra / release
 - [x] GitHub Pages website for VIVI Music DE: the static site lives in `.websitede/` (index + Downloads/Changelog/Sync/About subpages, dark minimal style matching the original site, logo bundled) and is deployed by `.github/workflows/pages-deploy.yml` via `actions/deploy-pages` on push to `.websitede/**` (or manual dispatch). Download links and the changelog resolve the latest GitHub release client-side through the API, so the site stays current without rebuilding on every release. URL: `https://piboh.github.io/vivi-music/` (requires Pages → Source: GitHub Actions enabled in repo settings). The site is fully responsive (hamburger nav on mobile, stacking download rows), uses a compact sticky footer, links the Android companion back to the upstream VIVI Music site, and credits VIVIDH P ASHOKAN as the original mobile author.
 - [x] Inno Setup "Start VIVI Music DE" after install: removed the redundant `launchafterinstall` task that gated the `[Run]` entry, so the final-page checkbox now actually launches `{app}\VIVIMusic.exe`.

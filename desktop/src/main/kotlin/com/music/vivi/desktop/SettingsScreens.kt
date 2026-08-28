@@ -1995,3 +1995,94 @@ fun SettingsIntegrationsScreen(
         Spacer(Modifier.height(16.dp))
     }
 }
+
+/**
+ * Cider-style desktop features: floating Now Playing widget, global media keys
+ * (Windows) and the tray icon menu. Everything is a simple toggle.
+ */
+@Composable
+fun SettingsDesktopScreen(
+    language: String,
+    onBack: () -> Unit,
+    isWindows: Boolean,
+    showWidget: Boolean,
+    onShowWidgetChange: (Boolean) -> Unit,
+    mediaKeysEnabled: Boolean,
+    onMediaKeysChange: (Boolean) -> Unit,
+    trayMenuEnabled: Boolean,
+    onTrayMenuChange: (Boolean) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "desktop_features"),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+        Text(
+            Localization.get(language, "desktop_features_desc"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(Localization.get(language, "now_playing_widget"), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    Localization.get(language, "now_playing_widget_desc"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = showWidget, onCheckedChange = onShowWidgetChange)
+        }
+
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(Localization.get(language, "media_keys"), style = MaterialTheme.typography.bodyLarge)
+                    if (!isWindows) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            Localization.get(language, "windows_only"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Text(
+                    Localization.get(language, "media_keys_desc"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = mediaKeysEnabled && isWindows,
+                onCheckedChange = { onMediaKeysChange(it && isWindows) },
+                enabled = isWindows,
+            )
+        }
+
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(Localization.get(language, "tray_menu"), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    Localization.get(language, "tray_menu_desc"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = trayMenuEnabled, onCheckedChange = onTrayMenuChange)
+        }
+        Spacer(Modifier.height(16.dp))
+    }
+}

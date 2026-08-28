@@ -65,6 +65,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.AccessTime
@@ -78,6 +79,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -153,6 +155,7 @@ fun PlayerScreen(
     onCycleRepeat: () -> Unit,
     language: String,
     onOpenLyrics: () -> Unit,
+    onOpenLyricsFocus: (() -> Unit)? = null,
     onOpenQueue: () -> Unit,
     onAddToPlaylist: (NowPlaying) -> Unit,
     onSkipTo: (Int) -> Unit = {},
@@ -164,6 +167,7 @@ fun PlayerScreen(
     background: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
+    audioLevel: Float = 0f,
     onBack: (() -> Unit)? = null,
 ) {
     val np = queue.getOrNull(index)
@@ -185,7 +189,14 @@ fun PlayerScreen(
     val bgUrl = CanvasResolver.displayUrl(canvasArt, np?.thumbnail)
 
     Box(Modifier.fillMaxSize()) {
-        PlayerBackground(background, bgUrl, accent, Modifier.fillMaxSize())
+        PlayerBackground(
+            style = background,
+            bgUrl = bgUrl,
+            accent = accent,
+            modifier = Modifier.fillMaxSize(),
+            audioLevel = audioLevel,
+            isPlaying = isPlaying,
+        )
         if (np == null) {
             Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                 Text(Localization.get(language, "nothing_playing"), style = MaterialTheme.typography.titleLarge)
@@ -247,6 +258,7 @@ fun PlayerScreen(
                 onCycleRepeat = onCycleRepeat,
                 language = language,
                 onOpenLyrics = onOpenLyrics,
+                onOpenLyricsFocus = onOpenLyricsFocus,
                 onOpenQueue = onOpenQueue,
                 onAddToPlaylist = { onAddToPlaylist(np) },
                 sliderStyle = sliderStyle,
@@ -687,6 +699,7 @@ private fun PlayerContent(
     onCycleRepeat: () -> Unit,
     language: String,
     onOpenLyrics: () -> Unit,
+    onOpenLyricsFocus: (() -> Unit)? = null,
     onOpenQueue: () -> Unit,
     onAddToPlaylist: (() -> Unit)? = null,
     sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
@@ -775,6 +788,7 @@ private fun PlayerContent(
                     onCycleRepeat = onCycleRepeat,
                     language = language,
                     onOpenLyrics = onOpenLyrics,
+                    onOpenLyricsFocus = onOpenLyricsFocus,
                     sliderStyle = sliderStyle,
                     pillPlay = pillPlay,
                 )
@@ -820,6 +834,7 @@ private fun PlayerContent(
                         onCycleRepeat = onCycleRepeat,
                         language = language,
                         onOpenLyrics = onOpenLyrics,
+                        onOpenLyricsFocus = onOpenLyricsFocus,
                         sliderStyle = sliderStyle,
                         pillPlay = pillPlay,
                     )
@@ -961,6 +976,7 @@ private fun PlayerControlPanel(
     onCycleRepeat: () -> Unit,
     language: String,
     onOpenLyrics: () -> Unit,
+    onOpenLyricsFocus: (() -> Unit)? = null,
     sliderStyle: ViviSliderStyle,
     pillPlay: Boolean,
 ) {
@@ -1113,6 +1129,13 @@ private fun PlayerControlPanel(
             Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(Localization.get(language, "lyrics"))
+        }
+        if (onOpenLyricsFocus != null) {
+            OutlinedButton(onClick = onOpenLyricsFocus) {
+                Icon(Icons.Filled.Lyrics, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(Localization.get(language, "lyrics_focus"))
+            }
         }
     }
 }
@@ -2907,5 +2930,123 @@ fun SpotifyPlayerBar(
     )
 }
 
+/**
+ * Cider-style fullscreen lyrics focus mode: the artwork fills the screen as a
+ * blurred backdrop, the synced lyrics sit centered on top, and a compact
+ * transport bar (previous / play-pause / next / back) stays at the bottom.
+ * The standard [LyricsScreen] provides the actual lyric list + loading states.
+ */
+@Composable
+fun LyricsFocusScreen(
+    nowPlaying: NowPlaying?,
+    positionMs: Long,
+    isPlaying: Boolean,
+    language: String,
+    synced: Boolean,
+    textSizeSp: Float,
+    lineSpacing: Float,
+    bgUrl: String? = null,
+    accent: Color = MaterialTheme.colorScheme.primary,
+    onTogglePlay: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onPrevious: () -> Unit = {},
+    onBack: () -> Unit,
+) {
+    // Resolve the animated/canvas artwork backdrop, mirroring PlayerScreen.
+    var canvasArt by remember { mutableStateOf<CanvasArtwork?>(null) }
+    LaunchedEffect(nowPlaying?.videoId) {
+        canvasArt = null
+        val track = nowPlaying ?: return@LaunchedEffect
+        val settings = DesktopSettings.load()
+        canvasArt = if (settings.canvasEnabled) {
+            withContext(Dispatchers.IO) {
+                CanvasResolver.resolve(track.title, track.artist, null, CanvasSource.from(settings.canvasSource))
+            }
+        } else {
+            null
+        }
+    }
+    val resolvedBg = CanvasResolver.displayUrl(canvasArt, nowPlaying?.thumbnail) ?: bgUrl
 
+    Box(Modifier.fillMaxSize()) {
+        // Backdrop: blurred artwork (or accent wash when unavailable).
+        if (resolvedBg != null) {
+            AsyncImage(
+                model = resolvedBg,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(46.dp)
+                    .graphicsLayer { scaleX = 1.2f; scaleY = 1.2f },
+            )
+        } else {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to accent.copy(alpha = 0.5f),
+                            1f to Color.Black.copy(alpha = 0.85f),
+                        )
+                    )
+            )
+        }
+        // Scrim so the white lyrics text always reads.
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
 
+        LyricsScreen(
+            nowPlaying = nowPlaying,
+            positionMs = positionMs,
+            isPlaying = isPlaying,
+            language = language,
+            synced = synced,
+            textSizeSp = textSizeSp,
+            lineSpacing = lineSpacing,
+            onTogglePlay = onTogglePlay,
+            onBack = onBack,
+        )
+
+        // Bottom transport bar.
+        Row(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(Color.Black.copy(alpha = 0.45f))
+                .padding(horizontal = 24.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onPrevious) {
+                Icon(
+                    Icons.Filled.SkipPrevious,
+                    contentDescription = Localization.get(language, "previous"),
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
+            Spacer(Modifier.width(20.dp))
+            FilledIconButton(
+                onClick = onTogglePlay,
+                modifier = Modifier.size(56.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
+                    modifier = Modifier.size(30.dp),
+                )
+            }
+            Spacer(Modifier.width(20.dp))
+            IconButton(onClick = onNext) {
+                Icon(
+                    Icons.Filled.SkipNext,
+                    contentDescription = Localization.get(language, "next"),
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp),
+                )
+            }
+        }
+    }
+}

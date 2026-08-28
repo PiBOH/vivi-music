@@ -115,6 +115,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.History
@@ -501,6 +502,66 @@ fun WindowScope.App(
     val playerState by player.state.collectAsState()
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
+    val audioLevel by player.audioLevel.collectAsState()
+
+    // Cider-style desktop features state (floating widget, media keys, tray menu).
+    var showWidget by remember { mutableStateOf(DesktopSettings.load().showNowPlayingWidget) }
+    var mediaKeysEnabled by remember { mutableStateOf(DesktopSettings.load().mediaKeysEnabled) }
+    var trayMenuEnabled by remember { mutableStateOf(DesktopSettings.load().trayMenuEnabled) }
+
+    // Cider-style desktop integrations: global media keys (Windows hook),
+    // tray right-click menu and tray tooltip with the current track.
+    val isWindows = System.getProperty("os.name", "").lowercase().contains("win")
+    LaunchedEffect(mediaKeysEnabled) {
+        if (mediaKeysEnabled && isWindows) {
+            MediaKeys.start(
+                onPlayPause = { player.toggle() },
+                onNext = { player.next() },
+                onPrevious = { player.previous() },
+            )
+        }
+    }
+    LaunchedEffect(language, trayMenuEnabled) {
+        if (trayMenuEnabled) {
+            NativeNotifier.configureTray(
+                NativeNotifier.TrayActions(
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                    onOpen = { bringToFront() },
+                    onQuit = onClose,
+                    labelPlayPause = Localization.get(language, if (isPlaying) "pause" else "play"),
+                    labelNext = Localization.get(language, "next"),
+                    labelPrevious = Localization.get(language, "previous"),
+                    labelOpen = Localization.get(language, "open_vivi"),
+                    labelQuit = Localization.get(language, "quit"),
+                )
+            )
+        } else {
+            NativeNotifier.clearTrayMenu()
+        }
+    }
+    LaunchedEffect(nowPlaying?.videoId) {
+        NativeNotifier.setTrayTooltip(
+            if (nowPlaying != null) "VIVI Music — ${nowPlaying.title} — ${nowPlaying.artist}" else "VIVI Music"
+        )
+    }
+
+    // Cider-style floating "Now Playing" widget (always-on-top, draggable).
+    if (showWidget) {
+        NowPlayingWidgetWindow(
+            player = player,
+            language = language,
+            themeMode = themeMode,
+            accent = accent,
+            pureBlack = pureBlack,
+            font = font,
+            onClose = {
+                showWidget = false
+                DesktopSettings.update { it.copy(showNowPlayingWidget = false) }
+            },
+        )
+    }
 
     var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
@@ -1623,6 +1684,26 @@ fun WindowScope.App(
                             DesktopSettings.update { it.copy(syncViviVolume = checked) }
                         },
                     )
+                    is Screen.SettingsDesktop -> SettingsDesktopScreen(
+                        language = language,
+                        onBack = goBack,
+                        isWindows = isWindows,
+                        showWidget = showWidget,
+                        onShowWidgetChange = { v ->
+                            showWidget = v
+                            DesktopSettings.update { it.copy(showNowPlayingWidget = v) }
+                        },
+                        mediaKeysEnabled = mediaKeysEnabled,
+                        onMediaKeysChange = { v ->
+                            mediaKeysEnabled = v
+                            DesktopSettings.update { it.copy(mediaKeysEnabled = v) }
+                        },
+                        trayMenuEnabled = trayMenuEnabled,
+                        onTrayMenuChange = { v ->
+                            trayMenuEnabled = v
+                            DesktopSettings.update { it.copy(trayMenuEnabled = v) }
+                        },
+                    )
                     is Screen.SettingsIntegrations -> SettingsIntegrationsScreen(
                         language = language,
                         onBack = goBack,
@@ -1900,6 +1981,7 @@ fun WindowScope.App(
                         onCycleRepeat = { player.cycleRepeatMode() },
                         language = language,
                         onOpenLyrics = { navigate(Screen.Lyrics) },
+                        onOpenLyricsFocus = { navigate(Screen.LyricsFocus) },
                         onOpenQueue = { navigate(Screen.Queue) },
                         onAddToPlaylist = addNowPlayingToPlaylist,
                         onSkipTo = { player.skipTo(it) },
@@ -1911,6 +1993,20 @@ fun WindowScope.App(
                         background = playerBackground,
                         rotatingThumbnail = rotatingThumbnail,
                         accent = accent,
+                        audioLevel = audioLevel,
+                        onBack = goBack,
+                    )
+                    is Screen.LyricsFocus -> LyricsFocusScreen(
+                        nowPlaying = nowPlaying,
+                        positionMs = playerState.positionMs,
+                        isPlaying = isPlaying,
+                        language = language,
+                        synced = syncedLyrics,
+                        textSizeSp = lyricsTextSize,
+                        lineSpacing = lyricsLineSpacing,
+                        onTogglePlay = { player.toggle() },
+                        onNext = { player.next() },
+                        onPrevious = { player.previous() },
                         onBack = goBack,
                     )
                     is Screen.Lyrics -> LyricsScreen(
@@ -3211,6 +3307,7 @@ fun SettingsScreen(
         SettingsRowSpec(Localization.get(language, "wrapped_title"), "${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}", Icons.Filled.AutoAwesome) { onOpen(Screen.SettingsWrapped) },
         SettingsRowSpec(Localization.get(language, "integrations"), if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"), Icons.Filled.Tune) { onOpen(Screen.SettingsIntegrations) },
         SettingsRowSpec(Localization.get(language, "backup_restore"), null, Icons.Filled.SettingsBackupRestore) { onOpen(Screen.SettingsBackup) },
+        SettingsRowSpec(Localization.get(language, "desktop_features"), null, Icons.Filled.DesktopWindows) { onOpen(Screen.SettingsDesktop) },
         SettingsRowSpec(Localization.get(language, "system"), if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"), Icons.Filled.Build) { onOpen(Screen.SettingsSystem) },
         SettingsRowSpec(Localization.get(language, "about"), null, Icons.Filled.Info) { onOpen(Screen.SettingsAbout) },
     )

@@ -6,6 +6,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -19,7 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -46,7 +50,9 @@ enum class PlayerBackgroundStyle(val key: String) {
     BLUR("blur"),
     GLOW("glow"),
     APPLE_MUSIC("apple_music"),
-    LIVE_MESH("live_mesh");
+    LIVE_MESH("live_mesh"),
+    /** Audio-reactive equalizer bars that follow the real decoded PCM level. */
+    VISUALIZER("visualizer");
 
     companion object {
         fun from(key: String?): PlayerBackgroundStyle = entries.firstOrNull { it.key == key } ?: CANVAS
@@ -121,6 +127,14 @@ fun PlayerBackground(
     bgUrl: String?,
     accent: Color,
     modifier: Modifier = Modifier,
+    /**
+     * Current audio level (0..1) driving the VISUALIZER style; ignored by the
+     * other styles. Supplied by the caller so it stays decoupled from the
+     * audio pipeline.
+     */
+    audioLevel: Float = 0f,
+    /** True while audio is actually playing (drives the visualizer decay). */
+    isPlaying: Boolean = true,
 ) {
     Box(modifier.fillMaxSize().clipToBounds()) {
         when (style) {
@@ -196,7 +210,54 @@ fun PlayerBackground(
                 )
             }
             PlayerBackgroundStyle.LIVE_MESH -> LiveMeshBackground(accent)
+            PlayerBackgroundStyle.VISUALIZER -> VisualizerBackground(
+                level = if (isPlaying) audioLevel else 0f,
+                accent = accent,
+            )
         }
+    }
+}
+
+/**
+ * Audio-reactive equalizer bars. The bars pulse with the real decoded audio
+ * level (smoothly attacked) while each bar keeps its own gentle phase offset,
+ * so the wall of bars reads as "music" even at low volume. The level decays
+ * to silence when paused.
+ */
+@Composable
+private fun VisualizerBackground(level: Float, accent: Color) {
+    val smooth by animateFloatAsState(
+        targetValue = level,
+        animationSpec = tween(durationMillis = 120, easing = LinearEasing),
+        label = "vizLevel",
+    )
+    val transition = rememberInfiniteTransition(label = "vizWobble")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
+        label = "vizPhase",
+    )
+    val barCount = 56
+    Canvas(Modifier.fillMaxSize()) {
+        val barWidth = size.width / barCount
+        val gap = barWidth * 0.28f
+        val centerY = size.height * 0.5f
+        val maxHalf = size.height * 0.42f
+        val base = 0.08f + smooth * 0.8f
+        for (i in 0 until barCount) {
+            val wobble = 0.5f + 0.5f * kotlin.math.sin((phase * 2 * Math.PI + i * 0.55).toFloat())
+            val height = (base * (0.35f + 0.65f * wobble) * maxHalf).coerceAtLeast(2f)
+            val x = i * barWidth + gap / 2
+            drawRoundRect(
+                color = accent.copy(alpha = 0.28f + 0.55f * base * (0.4f + 0.6f * wobble)),
+                topLeft = Offset(x, centerY - height),
+                size = Size(barWidth - gap, height * 2f),
+                cornerRadius = CornerRadius(barWidth * 0.3f, barWidth * 0.3f),
+            )
+        }
+        // Dark scrim so the artwork/title above stays readable.
+        drawRect(color = Color.Black.copy(alpha = 0.35f))
     }
 }
 

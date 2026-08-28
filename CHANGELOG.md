@@ -11,6 +11,20 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.0-nightly] - 2026-08-28
+
+### Added
+- [DE] Cider-inspired desktop features (Settings → Desktop features):
+  - **Audio visualizer**: new player background style (`Visualizer`) whose bars react to the real decoded PCM level of the playing stream, with a dark scrim so the artwork/title stay readable.
+  - **Now Playing widget**: small always-on-top, draggable window showing the current track (artwork, title, artist) with Previous/Play-Pause/Next controls; position persists across restarts; toggle in Settings → Desktop features.
+  - **Global media keys (Windows)**: Play/Pause, Next, Previous and Stop keys work even when the window has no focus, via a JNA `WH_KEYBOARD_LL` hook on its own message-pump thread; Windows-only, toggled in Settings → Desktop features.
+  - **Tray menu**: right-click the system tray icon for Play/Pause, Next, Previous, Open VIVI Music and Quit (labels localized, tooltip shows the current track); toggled in Settings → Desktop features.
+  - **Fullscreen lyrics**: new "Fullscreen lyrics" button in the player (Classic/New/V2 designs) opens a Cider-style focus mode — blurred artwork backdrop, centered synced lyrics, bottom transport bar; Esc/back exits.
+- [DE] New translations for all of the above across all 47 languages (13 new keys, `player_background_visualizer` … `quit`).
+
+### Notes
+- The Windows media flyout (SMTC: showing the track in the Win+volume popup) is **not** included yet: it requires WinRT COM interop that cannot be validated without a Windows machine; tracked in TODO.md.
+
 ## [6.4.41_DE-1.34.8-nightly] - 2026-08-28
 
 ### Fixed

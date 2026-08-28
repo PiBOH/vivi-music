@@ -894,6 +894,7 @@ fun PlayerDesignScreen(
             PlayerBackgroundStyle.GLOW to "player_background_glow",
             PlayerBackgroundStyle.APPLE_MUSIC to "player_background_apple",
             PlayerBackgroundStyle.LIVE_MESH to "player_background_mesh",
+            PlayerBackgroundStyle.VISUALIZER to "player_background_visualizer",
         ).forEach { (value, key) ->
             RadioRow(
                 title = Localization.get(language, key),

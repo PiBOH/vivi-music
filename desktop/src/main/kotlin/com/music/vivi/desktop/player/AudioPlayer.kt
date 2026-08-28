@@ -68,6 +68,15 @@ class AudioPlayer {
     private var onError: ((String) -> Unit)? = null
     private var onComplete: (() -> Unit)? = null
 
+    /**
+     * Called with the instantaneous PCM level (0..1, RMS-normalized) once per
+     * decoded frame (~43/s) while audio is being written to the output line.
+     * Powers the audio-reactive "Visualizer" player background. When paused
+     * or stopped, no callback fires (the UI decays the level to 0 itself).
+     */
+    @Volatile
+    var onLevel: ((Float) -> Unit)? = null
+
     private var currentStreams: List<StreamResolver.ResolvedStream>? = null
     private var currentCacheKey: String? = null
 
@@ -376,6 +385,9 @@ class AudioPlayer {
                         if (n <= 0) break
                         written += n
                     }
+                    if (bitsPerSample == 16) {
+                        onLevel?.invoke(rms16(data, bigEndian))
+                    }
                 }
                 reportPosition()
             }
@@ -399,6 +411,36 @@ class AudioPlayer {
             out.close()
             if (line === out) line = null
         }
+    }
+
+    /**
+     * Normalized RMS level (0..1) of 16-bit PCM samples. Computed on a
+     * decimated subset (every 4th sample) so the ~43 Hz frame rate stays cheap.
+     */
+    private fun rms16(data: ByteArray, bigEndian: Boolean): Float {
+        if (data.size < 2) return 0f
+        var sum = 0.0
+        var count = 0
+        var i = 0
+        while (i + 1 < data.size) {
+            val hi: Int
+            val lo: Int
+            if (bigEndian) {
+                hi = data[i].toInt() and 0xFF
+                lo = data[i + 1].toInt() and 0xFF
+            } else {
+                lo = data[i].toInt() and 0xFF
+                hi = data[i + 1].toInt() and 0xFF
+            }
+            var s = (hi shl 8) or lo
+            if (s >= 0x8000) s -= 0x10000 // sign-extend to signed 16-bit
+            val f = s / 32768f
+            sum += (f * f).toDouble()
+            count++
+            i += 8 // every 4th sample (2 bytes each)
+        }
+        if (count == 0) return 0f
+        return kotlin.math.sqrt((sum / count).toFloat()).coerceIn(0f, 1f)
     }
 
     /** Scales 16-bit PCM samples by [gain] (0..1), honoring [bigEndian] order. */

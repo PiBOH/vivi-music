@@ -86,6 +86,23 @@ object NativeNotifier {
     @Volatile
     private var trayIcon: TrayIcon? = null
 
+    /** Actions wired into the tray icon's right-click menu (Cider-style tray controls). */
+    data class TrayActions(
+        val onPlayPause: () -> Unit,
+        val onNext: () -> Unit,
+        val onPrevious: () -> Unit,
+        val onOpen: () -> Unit,
+        val onQuit: () -> Unit,
+        val labelPlayPause: String = "Play/Pause",
+        val labelNext: String = "Next",
+        val labelPrevious: String = "Previous",
+        val labelOpen: String = "Open VIVI Music",
+        val labelQuit: String = "Quit",
+    )
+
+    @Volatile
+    var trayActions: TrayActions? = null
+
     /** Shows a native system notification with [title] and [message]. */
     fun notify(title: String, message: String, section: String? = null) {
         runCatching {
@@ -106,6 +123,48 @@ object NativeNotifier {
     }
 
     /**
+     * Creates the tray icon eagerly (no notification needed) and (re)builds its
+     * right-click menu from [actions]. Called when the app starts so the tray
+     * controls are always available; call again when labels change (language).
+     */
+    fun configureTray(actions: TrayActions) {
+        trayActions = actions
+        runCatching {
+            if (!SystemTray.isSupported()) return
+            val icon = ensureIcon(SystemTray.getSystemTray())
+            buildMenu(icon, actions)
+            if (icon.image == null) icon.isImageAutoSize = true
+        }
+    }
+
+    /** Sets the tray tooltip (e.g. the currently playing track). */
+    fun setTrayTooltip(text: String) {
+        runCatching { trayIcon?.toolTip = text }
+    }
+
+    /** Removes the right-click menu from the tray icon (toggle off). */
+    fun clearTrayMenu() {
+        trayActions = null
+        runCatching { trayIcon?.popupMenu = null }
+    }
+
+    private fun buildMenu(icon: TrayIcon, a: TrayActions) {
+        val menu = java.awt.PopupMenu()
+        fun add(label: String, action: () -> Unit) {
+            val item = java.awt.MenuItem(label)
+            item.addActionListener { runCatching { action() } }
+            menu.add(item)
+        }
+        add(a.labelPlayPause, a.onPlayPause)
+        add(a.labelNext, a.onNext)
+        add(a.labelPrevious, a.onPrevious)
+        menu.addSeparator()
+        add(a.labelOpen, a.onOpen)
+        add(a.labelQuit, a.onQuit)
+        icon.popupMenu = menu
+    }
+
+    /**
      * Creates the tray icon once and keeps it for the app's lifetime. A
      * persistent icon (instead of add/remove on every notification) is more
      * reliable and keeps the VIVI logo consistent for every balloon.
@@ -118,6 +177,7 @@ object NativeNotifier {
                 icon.isImageAutoSize = true
                 tray.add(icon)
                 trayIcon = icon
+                trayActions?.let { buildMenu(icon, it) }
                 icon
             }
         }

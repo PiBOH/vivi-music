@@ -133,6 +133,15 @@ data class DesktopSyncState(
     val listenTogetherUsername: String = "",
     /** Song recognition (Shazam) history, newest first. */
     val recognitionHistory: List<RecognitionHistoryItem> = emptyList(),
+    /** Cider-style floating always-on-top "Now Playing" widget. */
+    val showNowPlayingWidget: Boolean = false,
+    /** Last widget position (px, -1 = unset/center). */
+    val widgetX: Int = -1,
+    val widgetY: Int = -1,
+    /** Global media keys (Play/Pause/Next/Prev) even without focus (Windows). */
+    val mediaKeysEnabled: Boolean = true,
+    /** Tray icon right-click menu (Play/Pause/Next/Prev/Open/Quit). */
+    val trayMenuEnabled: Boolean = true,
 )
 
 object DesktopSettings {

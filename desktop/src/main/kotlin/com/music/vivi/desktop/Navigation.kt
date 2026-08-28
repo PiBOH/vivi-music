@@ -21,6 +21,7 @@ sealed interface Screen {
     data object History : Screen
     data object Player : Screen
     data object Lyrics : Screen
+    data object LyricsFocus : Screen
     data object Queue : Screen
     data object Changelog : Screen
     data object Login : Screen
@@ -59,6 +60,7 @@ sealed interface Screen {
     data object SettingsNotifications : Screen
     data object SettingsNotificationsHistory : Screen
     data object SettingsIntegrations : Screen
+    data object SettingsDesktop : Screen
 }
 
 /**
