@@ -276,6 +276,10 @@ fun main(args: Array<String>) {
     // Tracks the OS-maximized state (updated by the AWT listener below) so the
     // custom title-bar buttons reflect the real window placement.
     var windowMaximized by remember { mutableStateOf(DesktopSettings.load().windowMaximized) }
+    // Placement before entering fullscreen, so leaving it restores exactly
+    // where the window was (floating bounds or maximized).
+    var preFullscreenMaximized by remember { mutableStateOf(false) }
+    var preFullscreenBounds by remember { mutableStateOf<java.awt.Rectangle?>(null) }
     // Start floating: the saved placement (maximized / bounds) is restored with
     // the OS APIs inside the Window block. Compose's WindowPlacement.Maximized
     // on an undecorated window can produce a window LARGER than the screen when
@@ -318,9 +322,11 @@ fun main(args: Array<String>) {
         // window unreachable.
         LaunchedEffect(Unit) {
             val saved = DesktopSettings.load()
-            if (saved.isFullscreen) {
-                windowState.placement = WindowPlacement.Fullscreen
-            } else {
+            // A saved fullscreen state is applied by LaunchedEffect(isFullscreen)
+            // below (it also fires on first composition), via the OS API so the
+            // auto-hide taskbar stays reachable on hover instead of being
+            // covered by an oversized Compose placement.
+            if (!saved.isFullscreen) {
                 runCatching {
                     if (saved.windowMaximized) {
                         frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH
@@ -352,16 +358,31 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Follow the fullscreen toggle: OS-maximize when leaving fullscreen so
-        // the taskbar and DPI scaling are respected.
+        // Follow the fullscreen toggle with the OS API. Compose's
+        // WindowPlacement.Fullscreen can oversize an undecorated window on
+        // scaled displays (the same bug class as its Maximized placement),
+        // pushing the window past the screen edge and trapping the auto-hide
+        // taskbar behind it. OS-maximize never oversizes: on an auto-hide
+        // taskbar it fills the whole screen and the taskbar still reveals on
+        // hover at the bottom edge; with a visible taskbar it respects the
+        // work area.
         LaunchedEffect(isFullscreen) {
-            if (isFullscreen) {
-                windowState.placement = WindowPlacement.Fullscreen
-            } else {
-                windowState.placement = WindowPlacement.Floating
-                runCatching {
-                    frameWindow.extendedState =
-                        if (windowMaximized) java.awt.Frame.MAXIMIZED_BOTH else java.awt.Frame.NORMAL
+            windowState.placement = WindowPlacement.Floating
+            runCatching {
+                if (isFullscreen) {
+                    // Save where we were before the maximize kicks in (on a
+                    // fresh start this is the initial floating placement).
+                    preFullscreenMaximized =
+                        (frameWindow.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0
+                    preFullscreenBounds = frameWindow.bounds
+                    frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH
+                } else {
+                    if (preFullscreenMaximized) {
+                        frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH
+                    } else {
+                        frameWindow.extendedState = java.awt.Frame.NORMAL
+                        preFullscreenBounds?.let { frameWindow.setBounds(it) }
+                    }
                 }
             }
         }
@@ -434,10 +455,11 @@ fun main(args: Array<String>) {
                                 windowState.isMinimized = false
                             }
                             if (isFullscreen) {
-                                // Leave fullscreen and return to OS-maximized.
+                                // The maximize button while fullscreen leaves
+                                // fullscreen; LaunchedEffect(isFullscreen)
+                                // restores the pre-fullscreen placement.
                                 isFullscreen = false
-                                windowState.placement = WindowPlacement.Floating
-                                runCatching { frameWindow.extendedState = java.awt.Frame.MAXIMIZED_BOTH }
+                                DesktopSettings.update { it.copy(isFullscreen = false) }
                             } else if ((frameWindow.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0) {
                                 // OS restore: respects the work area (taskbar)
                                 // and the Windows DPI scaling.

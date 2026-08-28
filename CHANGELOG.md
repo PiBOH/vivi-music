@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.35.8-nightly] - 2026-08-28
+
+### Fixed
+- [DE] **Fullscreen no longer traps the auto-hide Windows taskbar**: the fullscreen toggle used Compose's `WindowPlacement.Fullscreen`, which can oversize an undecorated window on non-100% DPI displays (the same bug class as its Maximized placement) — the window pushed past the screen edge and the auto-hide taskbar could never be revealed, forcing a window restore to reach it. Fullscreen is now applied with the OS API (`MAXIMIZED_BOTH`), which never oversizes: with an auto-hide taskbar the window fills the whole screen and the taskbar still slides up on hover at the bottom edge; with a visible taskbar the window respects the work area. Leaving fullscreen (toggle or maximize button) restores exactly the previous placement (floating bounds or maximized).
+
 ## [6.4.41_DE-1.35.7-nightly] - 2026-08-28
 
 ### Changed
