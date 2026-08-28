@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.39_DE-1.34.2-nightly] - 2026-08-28
+
+### Fixed
+- [DE] The embedded login WebView stayed permanently white in the packaged app. Root cause found with a limited-modules reproduction of the jlink runtime: the packaged image was missing the `java.net.http` module (JavaFX ships as classpath jars, so jlink cannot see its requirements — the page load then hangs at RUNNING forever) and `jdk.unsupported` (`sun.misc.Unsafe`, required by the Marlin 2D rendering engine). Both modules are now included; the reproduction shows `state=SUCCEEDED` with the Google page actually rendered.
+
+### Changed
+- [DE] The sidebar now compresses to a compact icon rail (72dp, centered icons) when collapsed instead of disappearing entirely, in both the Spotify and classic layouts. A menu button inside the collapsed rail expands it; the classic layout header gains a collapse button, and the Spotify top bar keeps its toggle. State stays persisted across restarts.
+
 ## [6.4.39_DE-1.34.1-nightly] - 2026-08-28
 
 ### Added

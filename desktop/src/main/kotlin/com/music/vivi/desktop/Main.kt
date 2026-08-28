@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -1138,7 +1139,10 @@ fun WindowScope.App(
     ) {
         if (spotifyLayout) {
             AnimatedVisibility(
-                visible = !sidebarCollapsed && current != Screen.Player,
+                // Collapsed state compresses the sidebar to a compact icon rail
+                // (72dp) instead of hiding it; it is fully hidden only on the
+                // full-screen player.
+                visible = current != Screen.Player,
                 enter = expandHorizontally() + fadeIn(),
                 exit = shrinkHorizontally() + fadeOut(),
             ) {
@@ -1151,7 +1155,7 @@ fun WindowScope.App(
                         hideHistory = pauseListenHistory,
                         language = language,
                         current = current,
-                        collapsed = false,
+                        collapsed = sidebarCollapsed,
                         showTitleHeader = false,
                         userName = displayUserName,
                         userHandle = displayUserHandle,
@@ -1166,7 +1170,7 @@ fun WindowScope.App(
             }
         } else {
             AnimatedVisibility(
-                visible = !sidebarCollapsed && current != Screen.Player,
+                visible = current != Screen.Player,
                 enter = expandHorizontally() + fadeIn(),
                 exit = shrinkHorizontally() + fadeOut(),
             ) {
@@ -1174,7 +1178,7 @@ fun WindowScope.App(
                     hideHistory = pauseListenHistory,
                     language = language,
                     current = current,
-                    collapsed = false,
+                    collapsed = sidebarCollapsed,
                     userName = displayUserName,
                     userHandle = displayUserHandle,
                     isLoggedIn = isLoggedIn,
@@ -2106,8 +2110,9 @@ fun Sidebar(
                 .fillMaxHeight()
                 .padding(horizontal = if (collapsed) 8.dp else 12.dp, vertical = 12.dp),
         ) {
-            // Collapse toggle button when collapsed (only if title header enabled)
-            if (collapsed && showTitleHeader) {
+            // Collapsed: menu button to expand the rail (works in both the
+            // Spotify layout and the classic layout).
+            if (collapsed) {
                 IconButton(
                     onClick = onToggleCollapsed,
                     modifier = Modifier.padding(bottom = 8.dp),
@@ -2117,6 +2122,28 @@ fun Sidebar(
                         contentDescription = "Toggle Sidebar",
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
+                }
+            } else if (showTitleHeader) {
+                // Expanded classic layout: app title with a collapse button so
+                // the sidebar can be compressed to the icon rail.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "VIVI Music",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onToggleCollapsed) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.MenuOpen,
+                            contentDescription = "Toggle Sidebar",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
 

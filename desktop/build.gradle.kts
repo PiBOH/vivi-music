@@ -136,7 +136,19 @@ compose.desktop {
             // jdk.jsobject provides netscape.javascript.JSObject, which the
             // JavaFX WebView requires at runtime — without it WebView creation
             // throws NoClassDefFoundError in packaged builds.
-            modules("java.management", "jdk.management", "jdk.jsobject")
+            //
+            // JavaFX is shipped as CLASSPATH jars, so jlink cannot see its
+            // module requirements. Missing modules silently break the WebView:
+            //  - java.net.http  → javafx.web requires it; without it the page
+            //    load hangs at RUNNING forever (white window, no error dialog);
+            //  - jdk.unsupported → sun.misc.Unsafe needed by the Marlin 2D
+            //    rendering engine; without it QuantumRenderer aborts painting
+            //    (white window).
+            // Both verified with a limited-modules reproduction (DE 1.34.2).
+            modules(
+                "java.management", "jdk.management", "jdk.jsobject",
+                "java.net.http", "jdk.unsupported",
+            )
             packageName = "VIVIMusic"
             packageVersion = numericPackageVersion
             description = "VIVI Music — desktop client"
