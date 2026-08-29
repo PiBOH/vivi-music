@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.38.0-nightly] - 2026-08-29
+
+### Added
+- [DE] **Spotify-style UI redesign — Phase 0 (theme foundations)**: when the Spotify layout is active (the default 3-panel shell), the app now uses a flat Spotify palette instead of the tonal Material 3 scheme — dark `#121212` background with `#181818` panels and `#282828` hover surfaces, fixed green accent `#1DB954`, secondary text `#B3B3B3`; light mode `#FFFFFF` / `#F6F6F6` panels / text `#191414`. All surfaces drop the Material 3 tonal variation, corners become a uniform 8dp (`Shapes`), and titles/labels render bolder (Spotify-like). Pure black in dark mode forces a true black background (like Spotify's sidebar). The main window root now paints the flat background behind the `surfaceContainer` panels so the 3-panel shell has real depth. The tonal Material 3 theme is untouched and returns whenever the Spotify layout is off; theme/accent sync with the mobile app is unaffected (the accent stays green while Spotify style is on, and returns to the user's color when off).
+
 ## [6.4.41_DE-1.37.3-nightly] - 2026-08-29
 
 ### Fixed

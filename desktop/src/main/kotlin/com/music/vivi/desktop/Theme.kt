@@ -4,9 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -15,6 +20,8 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 
 /** Light / dark / follow-system theme mode, persisted in [DesktopSettings]. */
 enum class ThemeMode(val key: String) {
@@ -174,8 +181,100 @@ fun argbIntToColor(argb: Int): Color = Color(
 )
 
 /**
+ * Flat Spotify-style palette: fixed surfaces, no tonal Material 3 variation.
+ * Dark: bg `#121212`, cards/panels `#181818`, hover `#282828`, secondary text
+ * `#B3B3B3`, accent green `#1DB954`. Light: bg `#FFFFFF`, panels `#F6F6F6`,
+ * text `#191414`. [pureBlack] forces a true-black background in dark mode
+ * (like Spotify's sidebar).
+ */
+private fun spotifyScheme(isDark: Boolean, pureBlack: Boolean): ColorScheme =
+    if (isDark) {
+        val bg = if (pureBlack) Color(0xFF000000) else Color(0xFF121212)
+        darkColorScheme(
+            primary = Color(0xFF1DB954),
+            onPrimary = Color(0xFF000000),
+            primaryContainer = Color(0xFF1ED760),
+            onPrimaryContainer = Color(0xFF000000),
+            secondary = Color(0xFFB3B3B3),
+            onSecondary = Color(0xFF121212),
+            secondaryContainer = Color(0xFF282828),
+            onSecondaryContainer = Color(0xFFFFFFFF),
+            background = bg,
+            onBackground = Color(0xFFFFFFFF),
+            surface = bg,
+            onSurface = Color(0xFFFFFFFF),
+            surfaceVariant = Color(0xFF282828),
+            onSurfaceVariant = Color(0xFFB3B3B3),
+            surfaceContainerLowest = Color(0xFF0A0A0A),
+            surfaceContainerLow = Color(0xFF181818),
+            surfaceContainer = Color(0xFF181818),
+            surfaceContainerHigh = Color(0xFF242424),
+            surfaceContainerHighest = Color(0xFF282828),
+            surfaceBright = Color(0xFF282828),
+            surfaceDim = Color(0xFF121212),
+            outline = Color(0xFF7A7A7A),
+            outlineVariant = Color(0xFF282828),
+            error = Color(0xFFF15E6C),
+            onError = Color(0xFF000000),
+            errorContainer = Color(0xFF4C0A12),
+            onErrorContainer = Color(0xFFFFB4AB),
+            scrim = Color(0xFF000000),
+            inverseSurface = Color(0xFFFFFFFF),
+            inverseOnSurface = Color(0xFF121212),
+            inversePrimary = Color(0xFF1DB954),
+            surfaceTint = Color(0xFF1DB954),
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(0xFF1DB954),
+            onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFF1ED760),
+            onPrimaryContainer = Color(0xFF003A15),
+            secondary = Color(0xFF616161),
+            onSecondary = Color(0xFFFFFFFF),
+            secondaryContainer = Color(0xFFECECEC),
+            onSecondaryContainer = Color(0xFF191414),
+            background = Color(0xFFFFFFFF),
+            onBackground = Color(0xFF191414),
+            surface = Color(0xFFFFFFFF),
+            onSurface = Color(0xFF191414),
+            surfaceVariant = Color(0xFFECECEC),
+            onSurfaceVariant = Color(0xFF616161),
+            surfaceContainerLowest = Color(0xFFFFFFFF),
+            surfaceContainerLow = Color(0xFFF6F6F6),
+            surfaceContainer = Color(0xFFF6F6F6),
+            surfaceContainerHigh = Color(0xFFECECEC),
+            surfaceContainerHighest = Color(0xFFE4E4E4),
+            surfaceBright = Color(0xFFFFFFFF),
+            surfaceDim = Color(0xFFE8E8E8),
+            outline = Color(0xFFA6A6A6),
+            outlineVariant = Color(0xFFE4E4E4),
+            error = Color(0xFFE2211A),
+            onError = Color(0xFFFFFFFF),
+            errorContainer = Color(0xFFFFDAD6),
+            onErrorContainer = Color(0xFF410002),
+            scrim = Color(0xFF000000),
+            inverseSurface = Color(0xFF191414),
+            inverseOnSurface = Color(0xFFFFFFFF),
+            inversePrimary = Color(0xFF1ED760),
+            surfaceTint = Color(0xFF1DB954),
+        )
+    }
+
+/** Flat 8dp corners everywhere (Spotify uses small, consistent radii). */
+private val spotifyShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(8.dp),
+    large = RoundedCornerShape(8.dp),
+    extraLarge = RoundedCornerShape(8.dp),
+)
+
+/**
  * Applies the selected light/dark mode (resolving "system" against the OS)
- * and accent color to the whole app via [MaterialTheme].
+ * and accent color to the whole app via [MaterialTheme]. When [spotify] is
+ * true the app uses the flat Spotify palette (fixed green accent, 8dp shapes,
+ * bolder typography) instead of the tonal Material 3 scheme.
  */
 @Composable
 fun AppTheme(
@@ -183,6 +282,7 @@ fun AppTheme(
     accent: Color,
     pureBlack: Boolean = false,
     font: AppFont = AppFont.SYSTEM,
+    spotify: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val useDark = when (mode) {
@@ -190,25 +290,32 @@ fun AppTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    // Same seed-based tonal palette as the Android app (TonalSpot + SPEC_2025),
-    // so the desktop colors match the mobile app pixel-perfectly.
-    val colorScheme = rememberDynamicColorScheme(
-        seedColor = AccentPalette.effective(accent),
-        isDark = useDark,
-        specVersion = ColorSpec.SpecVersion.SPEC_2025,
-        style = PaletteStyle.TonalSpot,
-    )
+    val colorScheme = if (spotify) {
+        // Flat Spotify palette — the accent/tonal engine is not used, so the
+        // accent stays fixed green regardless of the synced accent color.
+        spotifyScheme(useDark, pureBlack && useDark)
+    } else {
+        // Same seed-based tonal palette as the Android app (TonalSpot +
+        // SPEC_2025), so the desktop colors match the mobile app pixel-perfectly.
+        rememberDynamicColorScheme(
+            seedColor = AccentPalette.effective(accent),
+            isDark = useDark,
+            specVersion = ColorSpec.SpecVersion.SPEC_2025,
+            style = PaletteStyle.TonalSpot,
+        )
+    }
     // "Pure black" replaces the tonal dark surfaces with a true black background.
-    val effective = if (pureBlack && useDark) {
+    val effective = if (!spotify && pureBlack && useDark) {
         colorScheme.copy(background = Color.Black, surface = Color.Black)
     } else {
         colorScheme
     }
-    // Apply the selected app font to every text style (headlines down to labels).
-    val typography = remember(font) {
+    // Apply the selected app font to every text style (headlines down to labels);
+    // in Spotify mode the titles/labels are bolder, like the Spotify UI.
+    val typography = remember(font, spotify) {
         val family = AppFonts.familyFor(font)
         val base = Typography()
-        Typography(
+        val applied = Typography(
             displayLarge = base.displayLarge.copy(fontFamily = family),
             displayMedium = base.displayMedium.copy(fontFamily = family),
             displaySmall = base.displaySmall.copy(fontFamily = family),
@@ -225,8 +332,30 @@ fun AppTheme(
             labelMedium = base.labelMedium.copy(fontFamily = family),
             labelSmall = base.labelSmall.copy(fontFamily = family),
         )
+        if (!spotify) {
+            applied
+        } else {
+            applied.copy(
+                displayLarge = applied.displayLarge.copy(fontWeight = FontWeight.Bold),
+                displayMedium = applied.displayMedium.copy(fontWeight = FontWeight.Bold),
+                displaySmall = applied.displaySmall.copy(fontWeight = FontWeight.Bold),
+                headlineLarge = applied.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                headlineMedium = applied.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                headlineSmall = applied.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                titleLarge = applied.titleLarge.copy(fontWeight = FontWeight.Bold),
+                titleMedium = applied.titleMedium.copy(fontWeight = FontWeight.Bold),
+                titleSmall = applied.titleSmall.copy(fontWeight = FontWeight.Bold),
+                labelLarge = applied.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                labelMedium = applied.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                labelSmall = applied.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            )
+        }
     }
-    MaterialTheme(colorScheme = effective, typography = typography) {
+    MaterialTheme(
+        colorScheme = effective,
+        typography = typography,
+        shapes = if (spotify) spotifyShapes else Shapes(),
+    ) {
         // Material3's MaterialTheme does NOT set LocalContentColor, so any Text
         // without an explicit color would fall back to the default (black) and
         // never adapt to the theme. Provide it explicitly so text follows the

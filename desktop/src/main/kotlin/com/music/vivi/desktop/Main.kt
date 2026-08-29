@@ -249,6 +249,9 @@ fun main(args: Array<String>) {
     var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
     var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
     var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
+    // Spotify-style layout (3 panels) + flat theme, applied together. Default
+    // on; when false the app falls back to the Material 3 tonal look.
+    var spotifyLayout by remember { mutableStateOf(DesktopSettings.load().spotifyLayout) }
 
     fun saveTheme() {
         DesktopSettings.update {
@@ -429,7 +432,7 @@ fun main(args: Array<String>) {
             }
         }
 
-        AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = selectedFont) {
+        AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = selectedFont, spotify = spotifyLayout) {
             // NOTE: do NOT wrap this in a global SelectionContainer. Popup-based
             // components (DropdownMenu, AlertDialog) inherit the selection
             // registrar and crash with "layouts are not part of the same
@@ -474,6 +477,7 @@ fun main(args: Array<String>) {
                             pureBlack = it
                             saveTheme()
                         },
+                        spotifyLayout = spotifyLayout,
                         initialSection = openSection,
                         isFullscreen = isFullscreen,
                         isMaximized = (windowMaximized || isFullscreen),
@@ -567,6 +571,7 @@ fun WindowScope.App(
     onAccentChange: (Color) -> Unit,
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
+    spotifyLayout: Boolean = false,
     initialSection: String? = null,
     isFullscreen: Boolean = false,
     isMaximized: Boolean = false,
@@ -659,7 +664,6 @@ fun WindowScope.App(
     var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
     var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
     var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
-    var spotifyLayout by remember { mutableStateOf(DesktopSettings.load().spotifyLayout) }
     var showRightSidebar by remember { mutableStateOf(DesktopSettings.load().showRightSidebar) }
     var homeUseLastListen by remember { mutableStateOf(DesktopSettings.load().homeUseLastListen) }
     var randomizeHomeOrder by remember { mutableStateOf(DesktopSettings.load().randomizeHomeOrder) }
@@ -1424,7 +1428,10 @@ fun WindowScope.App(
     Row(
         Modifier
             .fillMaxSize()
-            .background(if (spotifyLayout) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.background)
+            // Spotify mode: the flat background (#121212) sits behind the
+            // `surfaceContainer` panels (#181818) so the 3-panel shell gets
+            // depth; the M3 path keeps the tonal background as before.
+            .background(MaterialTheme.colorScheme.background)
             .onKeyEvent(onGlobalKey)
     ) {
         if (spotifyLayout) {
@@ -2363,7 +2370,7 @@ fun WindowScope.App(
             onCloseRequest = { DeveloperOptions.setMode(DevToolsMode.OVERLAY) },
             title = "VIVI Music DE — Developer tools",
         ) {
-            AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = font) {
+            AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = font, spotify = spotifyLayout) {
                 SelectionContainer {
                     DevToolsPanel(syncManager = syncManager, language = language)
                 }
