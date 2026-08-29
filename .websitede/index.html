@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>VIVI Music DE</title>
   <meta name="description" content="VIVI Music DE: an elegant, open-source music player for Windows, Linux and macOS with phone sync." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
@@ -23,11 +24,12 @@
         <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
       </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
   <header class="hero">
-    <div class="wrap">
+    <div class="wrap reveal">
       <h1>More Than Just Music</h1>
       <p class="tagline">
         An elegant, open-source music player for Windows, Linux and macOS.
@@ -69,8 +71,9 @@
     </div>
   </header>
 
-  <section class="section">
+  <section class="section reveal">
     <div class="wrap">
+      <h2 style="text-align:center">Why VIVI Music DE</h2>
       <div class="cards">
         <div class="card">
           <div class="emoji">📱💻</div>
@@ -91,6 +94,19 @@
     </div>
   </section>
 
+  <section class="section reveal" data-gallery>
+    <div class="wrap">
+      <h2 style="text-align:center">Screenshots</h2>
+      <div class="gallery">
+        <div class="gallery-track"></div>
+        <div class="gallery-dots"></div>
+        <p class="gallery-empty" style="display:none">Screenshots coming soon — drop PNG files into
+          <code>.websitede/images/screenshots/</code> named <code>player.png</code>, <code>library.png</code>,
+          <code>lyrics.png</code> and <code>sync.png</code> and they will appear here automatically.</p>
+      </div>
+    </div>
+  </section>
+
   <footer class="footer">
     <div class="wrap footer-inner">
       <span>VIVI Music DE</span>
@@ -103,6 +119,16 @@
     </div>
   </footer>
 
+  <script>
+    /* Screenshot gallery: add PNGs to .websitede/images/screenshots/ and list
+       them here (or keep the names below) — broken/missing files are skipped. */
+    window.VMDE_SCREENSHOTS = [
+      "images/screenshots/player.png",
+      "images/screenshots/library.png",
+      "images/screenshots/lyrics.png",
+      "images/screenshots/sync.png"
+    ];
+  </script>
   <script src="assets/app.js"></script>
 </body>
 </html>

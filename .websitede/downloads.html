@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>Downloads — VIVI Music DE</title>
   <meta name="description" content="Download VIVI Music DE for Windows, Linux and macOS." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
@@ -24,6 +25,7 @@
         <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
       </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
@@ -34,13 +36,18 @@
       format isn't shipped in that release yet.
     </p>
 
+    <div class="os-note" data-os-note role="button" tabindex="0"
+      aria-label="Jump to the installer for your system">
+      You're on <span class="badge" data-os-name>…</span> — tap here to jump to your installer ↓
+    </div>
+
     <div class="tabs" style="justify-content: flex-start">
       <button class="tab active" data-channel="stable" type="button">Stable</button>
       <button class="tab" data-channel="nightly" type="button">Nightly builds</button>
     </div>
     <p class="lede">Latest <span data-version>…</span></p>
 
-    <h2>Windows 10+</h2>
+    <h2 data-os-section="windows">Windows 10+</h2>
     <div class="dl-row">
       <div>
         <div class="name">Installer</div>
@@ -56,7 +63,7 @@
       <a class="btn" data-download="winMsi" href="https://github.com/PiBOH/vivi-music/releases/latest">Download .msi</a>
     </div>
 
-    <h2>Linux</h2>
+    <h2 data-os-section="linux">Linux</h2>
     <div class="dl-row">
       <div>
         <div class="name">Debian / Ubuntu</div>
@@ -72,7 +79,7 @@
       <a class="btn" data-download="appimage" href="https://github.com/PiBOH/vivi-music/releases/latest">Download AppImage</a>
     </div>
 
-    <h2>macOS 10.15+</h2>
+    <h2 data-os-section="macos">macOS 10.15+</h2>
     <div class="dl-row">
       <div>
         <div class="name">Disk image</div>

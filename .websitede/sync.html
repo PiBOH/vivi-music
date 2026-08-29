@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>Sync — VIVI Music DE</title>
   <meta name="description" content="Pair your phone with VIVI Music DE over LAN or the cloud relay and keep everything in sync." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
@@ -24,6 +25,7 @@
         <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
       </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
@@ -34,6 +36,30 @@
       time: queue, playback position, volume, playlists, theme, accent color
       and settings.
     </p>
+
+    <div class="sync-diagram reveal" aria-label="Sync diagram: phone and desktop connected">
+      <div class="sync-node" tabindex="0"
+        data-tip="Your Android phone runs VIVI Music. Every change you make here is mirrored on the desktop: queue, play/pause, volume, playlists and settings.">
+        <div class="emoji">📱</div>
+        <div class="name">Phone</div>
+        <div class="sub">VIVI Music (Android)</div>
+      </div>
+      <div class="sync-link" aria-hidden="true">
+        <span class="arrow">◄ ►</span>
+        <span>WebSocket</span>
+      </div>
+      <div class="sync-node" tabindex="0"
+        data-tip="Your computer runs VIVI Music DE — the remote station of the pair. Search a song on the phone and it plays here instantly, or control the desktop from the phone.">
+        <div class="emoji">💻</div>
+        <div class="name">Desktop</div>
+        <div class="sub">VIVI Music DE</div>
+      </div>
+      <div class="sync-relay" tabindex="0"
+        data-tip="Same Wi-Fi: the connection is direct (LAN relay hosted by the desktop). Different networks: the pair routes through the cloud relay (WebSocket). Both speak the same protocol.">
+        <span>🛰️</span> LAN relay · or cloud relay <code>wss://vivimusic-device-sync.onrender.com</code>
+      </div>
+    </div>
+    <div class="sync-tip" id="sync-tip"><strong>Hover or tap a device</strong> to see what it does.</div>
 
     <h2>Pairing over LAN (same Wi-Fi)</h2>
     <ol class="steps">
@@ -70,6 +96,33 @@
     </div>
   </footer>
 
+  <script>
+    /* Sync diagram: hover/focus/click on a node explains it in the tip panel. */
+    (function () {
+      "use strict";
+      var tip = document.getElementById("sync-tip");
+      var placeholder = "<strong>Hover or tap a device</strong> to see what it does.";
+      var current = null;
+      function show(node) {
+        tip.innerHTML = node.getAttribute("data-tip");
+        node.style.borderColor = "var(--accent)";
+      }
+      function hide(node) {
+        tip.innerHTML = placeholder;
+        if (node) node.style.borderColor = "";
+      }
+      document.querySelectorAll("[data-tip]").forEach(function (n) {
+        n.addEventListener("mouseenter", function () { current = n; show(n); });
+        n.addEventListener("mouseleave", function () { hide(n); current = null; });
+        n.addEventListener("focus", function () { current = n; show(n); });
+        n.addEventListener("blur", function () { hide(n); current = null; });
+        n.addEventListener("click", function () {
+          if (current === n) { hide(n); current = null; }
+          else { current = n; show(n); }
+        });
+      });
+    })();
+  </script>
   <script src="assets/app.js"></script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>Install Guide — VIVI Music DE</title>
   <meta name="description" content="How to install VIVI Music DE on Windows, Linux and macOS." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
@@ -24,6 +25,7 @@
         <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
       </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
@@ -280,6 +282,11 @@ makepkg -si</code></pre>
           select(t.getAttribute("data-os"), t);
         });
       });
+      // Auto-select the visitor's OS (detected by app.js); Windows stays default.
+      var detected = window.VMDE_OS;
+      if (detected === "linux" || detected === "macos") {
+        select(detected, document.querySelector("[data-os=\"" + detected + "\"]"));
+      }
 
       document.querySelectorAll(".guide-block pre code").forEach(function (code) {
         var btn = document.createElement("button");
