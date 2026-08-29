@@ -233,3 +233,4 @@ Opt-in style: extends the existing `spotifyLayout` toggle. When ON → Spotify p
 - [x] DE 1.41.3: tooltips on accent color swatches (Theme & colors) with localized color names (batch 38, 22 `accent_*` keys in 47 languages); `AccentColor` gained a `key` slug field for the lookup.
 - [x] DE 1.41.4: right Now Playing panel toggle in Settings → Appearance (switch, persisted per machine); `right_panel` + `right_panel_desc` in 47 languages (batch 39).
 - [x] DE 1.41.5: distinct icons per action — right panel uses `VerticalSplit`, playlists (sidebar + search filter) use `PlaylistPlay`, `QueueMusic` reserved for the queue only (matches mobile).
+- [x] DE 1.41.6: tooltips render above the button (ComponentRect TopCenter + 8dp) instead of on the cursor, so they never block clicks.

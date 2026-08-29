@@ -4,6 +4,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -45,7 +47,12 @@ fun Tooltip(text: String?, content: @Composable () -> Unit) {
                 )
             }
         },
-        tooltipPlacement = TooltipPlacement.CursorPoint(),
+        // Place the tooltip above the component with a small gap instead of
+        // directly on the cursor, so it never covers the click target.
+        tooltipPlacement = TooltipPlacement.ComponentRect(
+            alignment = Alignment.TopCenter,
+            offset = DpOffset(0.dp, 8.dp),
+        ),
         content = content,
     )
 }

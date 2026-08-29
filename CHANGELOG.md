@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.6-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Tooltips no longer cover the click target**: they now appear above the button with an 8dp gap (`TooltipPlacement.ComponentRect(TopCenter)`) instead of directly on the cursor, so they never block the click.
+
 ## [6.4.41_DE-1.41.5-nightly] - 2026-08-29
 
 ### Fixed
