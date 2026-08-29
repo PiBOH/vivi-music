@@ -84,14 +84,22 @@ object AppCommand {
 
 /**
  * Relaunches the app and exits the current process (used by "Restart now"
- * after restoring a backup). The single-instance lock is released first so the
- * new process isn't rejected as a duplicate of the still-running one.
+ * after restoring a backup, and by the automatic Skiko software-rendering
+ * fallback after an OpenGL crash). The single-instance lock is released first
+ * so the new process isn't rejected as a duplicate of the still-running one.
+ *
+ * @param extraEnv environment variables to set on the new process (e.g.
+ * `SKIKO_RENDER_API=SOFTWARE` for the GL crash fallback).
  */
-fun restartApplication() {
+fun restartApplication(extraEnv: Map<String, String> = emptyMap()) {
     val command = relaunchCommand()
     SingleInstance.release()
     if (command.isNotEmpty()) {
-        runCatching { ProcessBuilder(command).start() }
+        runCatching {
+            ProcessBuilder(command).apply {
+                environment().putAll(extraEnv)
+            }.start()
+        }
     }
     kotlin.system.exitProcess(0)
 }

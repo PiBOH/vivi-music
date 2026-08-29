@@ -206,6 +206,14 @@ jobs:
             echo "Could not download the APK artifact; releasing without it."
           fi
 
+      - name: Generate AUR packaging assets
+        shell: bash
+        run: |
+          # PKGBUILD + SRCINFO for Arch users (AUR). Pinned to this exact
+          # commit so the source checksum is stable and matches the release.
+          python3 scripts/generate_aur_pkgbuild.py --out artifacts --sha "${{ github.sha }}"
+          ls -la artifacts
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:

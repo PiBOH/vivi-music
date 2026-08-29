@@ -230,16 +230,36 @@ import kotlinx.serialization.json.Json
  * `UnsatisfiedLinkError: OpenGLApi.glFlush()`. Detecting that here and falling
  * back to `SKIKO_RENDER_API=SOFTWARE` keeps the app usable everywhere. The
  * check is cheap (a library load), so systems with a real GPU are unaffected.
+ *
+ * The libGL probe can't catch every broken GL stack (a loadable libGL is not
+ * a working GLX/EGL context), so the error dialog also watches for the actual
+ * Skiko crash: it writes `~/.vivimusic/.gl-software` and relaunches once with
+ * `SKIKO_RENDER_API=SOFTWARE` (see ErrorDialog.kt). The marker below makes the
+ * next launch start straight in software rendering instead of crashing again.
  */
 private fun configureRenderApi() {
-    if (System.getProperty("skiko.renderApi") != null) return // explicit override wins
+    // Explicit JVM property wins over everything.
+    if (System.getProperty("skiko.renderApi") != null) return
+    // The env var form is honored on every OS (also used by the crash fallback).
+    val envApi = System.getenv("SKIKO_RENDER_API")
+    if (!envApi.isNullOrBlank()) {
+        System.setProperty("skiko.renderApi", envApi)
+        return
+    }
     val os = System.getProperty("os.name", "").lowercase(Locale.ROOT)
     if (!os.contains("linux")) return // Windows/macOS defaults are fine
+    // A previous run crashed in Skiko's OpenGL renderer → stay on SOFTWARE.
+    if (glSoftwareMarkerFile().exists()) {
+        System.setProperty("skiko.renderApi", "SOFTWARE")
+        return
+    }
     if (canLoadOpenGL()) return
-    // Also honor the env var form; set the JVM property so Skiko picks it up.
-    val envApi = System.getenv("SKIKO_RENDER_API")
-    System.setProperty("skiko.renderApi", envApi ?: "SOFTWARE")
+    System.setProperty("skiko.renderApi", "SOFTWARE")
 }
+
+/** Marker written by the crash fallback (ErrorDialog.kt) after a Skiko GL crash. */
+private fun glSoftwareMarkerFile(): java.io.File =
+    java.io.File(System.getProperty("user.home"), ".vivimusic/.gl-software")
 
 private fun canLoadOpenGL(): Boolean = runCatching {
     // libGL on common Linux layouts (glvnd, distro paths); any one suffices.

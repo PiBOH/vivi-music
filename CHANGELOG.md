@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.14-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Linux crash with `UnsatisfiedLinkError: OpenGLApi.glFlush()` now heals itself**: the previous startup probe only checked that a `libGL` was loadable, but a loadable library is not a working GLX/EGL context, so the first frame could still die on Arch/AppImage systems. The global error handler now recognizes the Skiko OpenGL crash, writes `~/.vivimusic/.gl-software`, and relaunches the app once with the software renderer (`SKIKO_RENDER_API=SOFTWARE`); every later launch reads the marker and starts directly in software rendering instead of crashing again. Delete the marker file to let the app try OpenGL again (e.g. after fixing drivers).
+
+### Added
+- [DE] **AUR packaging assets are now attached to every release**: the auto-release workflow generates `PKGBUILD` + `SRCINFO` (scripts/generate_aur_pkgbuild.py) pinned to the exact release commit with a real sha256 checksum, so Arch users can grab them and run `makepkg -si` for a proper system package instead of relying on the AppImage.
+
 ## [6.4.41_DE-1.41.13-nightly] - 2026-08-29
 
 ### Fixed
