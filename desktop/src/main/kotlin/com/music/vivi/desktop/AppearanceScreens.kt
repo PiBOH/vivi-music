@@ -73,6 +73,8 @@ fun AppearanceSection(
     onOpenPlayerDesign: () -> Unit = {},
     nativeTitleBar: Boolean = false,
     onNativeTitleBarChange: (Boolean) -> Unit = {},
+    showRightSidebar: Boolean = true,
+    onShowRightSidebarChange: (Boolean) -> Unit = {},
     onRestart: () -> Unit = {},
 ) {
     var showRestartDialog by remember { mutableStateOf(false) }
@@ -158,6 +160,26 @@ fun AppearanceSection(
             Text(Localization.get(language, "native_title_bar"))
             Text(
                 Localization.get(language, "native_title_bar_desc"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    // Right Now Playing panel (the Spotify-style right sidebar in the player).
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Switch(
+            checked = showRightSidebar,
+            onCheckedChange = onShowRightSidebarChange,
+        )
+        Column(Modifier.clickable { onShowRightSidebarChange(!showRightSidebar) }) {
+            Text(Localization.get(language, "right_panel"))
+            Text(
+                Localization.get(language, "right_panel_desc"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

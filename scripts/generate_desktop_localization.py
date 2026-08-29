@@ -396,6 +396,8 @@ MAPPING = {
     "accent_brown": "Brown",
     "accent_grey": "Grey",
     "accent_blue_grey": "Blue Grey",
+    "right_panel": "Right panel",
+    "right_panel_desc": "Show the Now Playing panel on the right side of the window.",
 }
 
 # Full desktop English table (source language).
@@ -1250,12 +1252,13 @@ from desktop_extra_translations_35 import EXTRA_TRANSLATIONS as _EXTRA_35
 from desktop_extra_translations_36 import EXTRA_TRANSLATIONS as _EXTRA_36
 from desktop_extra_translations_37 import EXTRA_TRANSLATIONS as _EXTRA_37
 from desktop_extra_translations_38 import EXTRA_TRANSLATIONS as _EXTRA_38
+from desktop_extra_translations_39 import EXTRA_TRANSLATIONS as _EXTRA_39
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

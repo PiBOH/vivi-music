@@ -1742,6 +1742,11 @@ fun WindowScope.App(
                         onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
                         nativeTitleBar = nativeTitleBar,
                         onNativeTitleBarChange = onNativeTitleBarChange,
+                        showRightSidebar = showRightSidebar,
+                        onShowRightSidebarChange = { v ->
+                            showRightSidebar = v
+                            DesktopSettings.update { it.copy(showRightSidebar = v) }
+                        },
                         onRestart = onRestart,
                     )
                     is Screen.SettingsTransitions -> SettingsTransitionsScreen(

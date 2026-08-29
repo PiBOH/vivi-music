@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.4-nightly] - 2026-08-29
+
+### Added
+- [DE] **Right Now Playing panel toggle** (Settings → Appearance): a switch shows/hides the Spotify-style right sidebar in the player, persisted per machine. 2 new strings (`right_panel`, `right_panel_desc`) in all 47 languages (batch 39).
+
 ## [6.4.41_DE-1.41.3-nightly] - 2026-08-29
 
 ### Added
