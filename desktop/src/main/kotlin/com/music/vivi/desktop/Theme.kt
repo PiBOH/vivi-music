@@ -332,6 +332,7 @@ fun AppTheme(
     font: AppFont = AppFont.SYSTEM,
     spotify: Boolean = false,
     accentIntensity: Float = 1f,
+    customFontPath: String? = null,
     content: @Composable () -> Unit,
 ) {
     val useDark = when (mode) {
@@ -364,8 +365,8 @@ fun AppTheme(
     }
     // Apply the selected app font to every text style (headlines down to labels);
     // in Spotify mode the titles/labels are bolder, like the Spotify UI.
-    val typography = remember(font, spotify) {
-        val family = AppFonts.familyFor(font)
+    val typography = remember(font, spotify, customFontPath) {
+        val family = AppFonts.familyFor(font, customFontPath)
         val base = Typography()
         val applied = Typography(
             displayLarge = base.displayLarge.copy(fontFamily = family),

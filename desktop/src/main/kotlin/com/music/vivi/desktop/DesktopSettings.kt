@@ -25,6 +25,8 @@ data class DesktopSyncState(
     /** Accent saturation/vividness (0..1 scale, 1 = full). */
     val accentIntensity: Float = 1f,
     val selectedFont: String = "system",
+    /** Path to a user-imported custom font file (empty = none). */
+    val customFontPath: String = "",
     /** UI density scale (1f = 100%; supports 55%..200% via the density presets). */
     val densityScale: Float = 1f,
     /** Adaptive grid cell width in dp for album/artist/playlist grids. */

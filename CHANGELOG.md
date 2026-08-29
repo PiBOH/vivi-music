@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.0-nightly] - 2026-08-29
+
+### Added
+- [DE] **Import your own font** (Settings → Appearance → Font): a new "Import your own font" button opens a native file dialog (`.ttf`/`.otf`); the chosen font is copied into the app data dir (`~/.vivimusic/fonts/`) and becomes selectable as a "Custom font" option in the list, applying instantly to the whole UI and persisting across restarts (even if the original font file is later moved). 2 new strings translated in all 47 languages.
+
+### Changed
+- [DE] The font preview text in Italian now reads "Dove la parola fallisce la musica stupisce." (was "Il viaggio stesso è stato più bello della destinazione.").
+
 ## [6.4.41_DE-1.40.0-nightly] - 2026-08-29
 
 ### Added

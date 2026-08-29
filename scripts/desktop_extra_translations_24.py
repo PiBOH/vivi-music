@@ -91,7 +91,7 @@ EXTRA_TRANSLATIONS = {
         "hr": "Samo putovanje bilo je ljepše od odredišta.",
         "hu": "Maga az utazás szebb volt, mint az úti cél.",
         "id": "Perjalanannya sendiri lebih indah daripada tujuannya.",
-        "it": "Il viaggio stesso è stato più bello della destinazione.",
+        "it": "Dove la parola fallisce la musica stupisce.",
         "ja": "旅そのものが目的地よりも美しかった。",
         "km": "ការធ្វើដំណើរខ្លួនឯងស្អាតជាងគោលដៅ។",
         "ko": "여정 자체가 목적지보다 더 아름다웠다.",

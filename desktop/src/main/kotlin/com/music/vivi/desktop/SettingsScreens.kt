@@ -410,9 +410,17 @@ fun SettingsFontScreen(
     onBack: () -> Unit,
     selectedFont: AppFont,
     onFontChange: (AppFont) -> Unit,
+    customFontPath: String = "",
+    onImportFont: () -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
-        FontSection(language, selectedFont, onFontChange)
+        FontSection(
+            language = language,
+            selectedFont = selectedFont,
+            onFontChange = onFontChange,
+            customFontPath = customFontPath,
+            onImportFont = onImportFont,
+        )
     }
 }
 

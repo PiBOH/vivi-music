@@ -139,6 +139,8 @@ MAPPING = {
     "font_plus_jakarta_sans_desc": "font_plus_jakarta_sans_desc",
     "typography_preview": "typography_preview",
     "preview_text_quote": "preview_text_quote",
+    "import_font": "Import your own font",
+    "custom_font": "Custom font",
     "density_and_grid": "Density & grid",
     "density_desc": "Scale the whole interface smaller (or keep 100%).",
     "density_100": "100%",
@@ -1224,12 +1226,13 @@ from desktop_extra_translations_33 import EXTRA_TRANSLATIONS as _EXTRA_33
 from desktop_extra_translations_34 import EXTRA_TRANSLATIONS as _EXTRA_34
 from desktop_extra_translations_35 import EXTRA_TRANSLATIONS as _EXTRA_35
 from desktop_extra_translations_36 import EXTRA_TRANSLATIONS as _EXTRA_36
+from desktop_extra_translations_37 import EXTRA_TRANSLATIONS as _EXTRA_37
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

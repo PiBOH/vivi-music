@@ -95,6 +95,7 @@ fun AppearanceSection(
             AppFont.SANS_FLEX -> "font_sans_flex"
             AppFont.OUTFIT -> "font_outfit"
             AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
+            AppFont.CUSTOM -> "custom_font"
         }),
         onClick = onOpenFont,
     )
@@ -592,8 +593,10 @@ fun FontSection(
     language: String,
     selectedFont: AppFont,
     onFontChange: (AppFont) -> Unit,
+    customFontPath: String = "",
+    onImportFont: () -> Unit = {},
 ) {
-    val activeFamily = AppFonts.familyFor(selectedFont)
+    val activeFamily = AppFonts.familyFor(selectedFont, customFontPath)
 
     Column(Modifier.fillMaxWidth()) {
         Text(Localization.get(language, "app_font"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -673,6 +676,24 @@ fun FontSection(
             selected = selectedFont == AppFont.PLUS_JAKARTA_SANS,
             onClick = { onFontChange(AppFont.PLUS_JAKARTA_SANS) },
         )
+
+        if (customFontPath.isNotBlank()) {
+            FontOption(
+                language = language,
+                title = Localization.get(language, "custom_font"),
+                desc = customFontPath.substringAfterLast("\\").substringAfterLast("/"),
+                family = AppFonts.familyFor(AppFont.CUSTOM, customFontPath),
+                selected = selectedFont == AppFont.CUSTOM,
+                onClick = { onFontChange(AppFont.CUSTOM) },
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = onImportFont) {
+            Icon(Icons.Filled.FontDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(Localization.get(language, "import_font"))
+        }
 
         Spacer(Modifier.height(36.dp))
     }

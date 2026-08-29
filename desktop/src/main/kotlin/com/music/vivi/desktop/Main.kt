@@ -254,6 +254,9 @@ fun main(args: Array<String>) {
     var accentIntensity by remember { mutableStateOf(DesktopSettings.load().accentIntensity) }
     var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
     var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
+    var customFontPath by remember { mutableStateOf(DesktopSettings.load().customFontPath) }
+    // Make the runtime-imported font resolvable before the first theme pass.
+    if (customFontPath.isNotBlank()) AppFonts.customFontPath = customFontPath
     // Spotify-style layout (3 panels) + flat theme, applied together. Default
     // on; when false the app falls back to the Material 3 tonal look.
     var spotifyLayout by remember { mutableStateOf(DesktopSettings.load().spotifyLayout) }
@@ -266,6 +269,35 @@ fun main(args: Array<String>) {
                 accentIntensity = accentIntensity,
                 pureBlack = pureBlack,
             )
+        }
+    }
+
+    // Import a user font (.ttf/.otf): native file dialog, copied into the app
+    // data dir so the setting survives moving/deleting the original file.
+    val importFont: () -> Unit = {
+        val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Import font", java.awt.FileDialog.LOAD)
+        dialog.setFilenameFilter { _, name ->
+            val n = name.lowercase()
+            n.endsWith(".ttf") || n.endsWith(".otf")
+        }
+        dialog.isVisible = true
+        val dir = dialog.directory
+        val file = dialog.file
+        dialog.dispose()
+        if (file != null && dir != null) {
+            runCatching {
+                val src = java.io.File(dir, file)
+                val fontsDir = java.io.File(System.getProperty("user.home"), ".vivimusic/fonts").apply { mkdirs() }
+                val ext = src.extension.ifBlank { "ttf" }
+                val dest = java.io.File(fontsDir, "custom_font.$ext")
+                src.copyTo(dest, overwrite = true)
+                AppFonts.customFontPath = dest.absolutePath
+                customFontPath = dest.absolutePath
+                selectedFont = AppFont.CUSTOM
+                DesktopSettings.update {
+                    it.copy(customFontPath = dest.absolutePath, selectedFont = AppFont.CUSTOM.value)
+                }
+            }
         }
     }
 
@@ -445,6 +477,7 @@ fun main(args: Array<String>) {
             font = selectedFont,
             spotify = spotifyLayout,
             accentIntensity = accentIntensity,
+            customFontPath = customFontPath,
         ) {
             // NOTE: do NOT wrap this in a global SelectionContainer. Popup-based
             // components (DropdownMenu, AlertDialog) inherit the selection
@@ -490,6 +523,8 @@ fun main(args: Array<String>) {
                             accentIntensity = it
                             saveTheme()
                         },
+                        customFontPath = customFontPath,
+                        onImportFont = importFont,
                         pureBlack = pureBlack,
                         onPureBlackChange = {
                             pureBlack = it
@@ -583,6 +618,8 @@ fun WindowScope.App(
     onLanguageChange: (String) -> Unit,
     font: AppFont,
     onFontChange: (AppFont) -> Unit,
+    customFontPath: String = "",
+    onImportFont: () -> Unit = {},
     themeMode: ThemeMode,
     accent: Color,
     onThemeModeChange: (ThemeMode) -> Unit,
@@ -1747,6 +1784,8 @@ fun WindowScope.App(
                         onBack = goBack,
                         selectedFont = font,
                         onFontChange = onFontChange,
+                        customFontPath = customFontPath,
+                        onImportFont = onImportFont,
                     )
                     is Screen.SettingsCanvas -> SettingsCanvasScreen(
                         language = language,
@@ -2415,6 +2454,7 @@ fun WindowScope.App(
                 font = font,
                 spotify = spotifyLayout,
                 accentIntensity = accentIntensity,
+                customFontPath = customFontPath,
             ) {
                 SelectionContainer {
                     DevToolsPanel(syncManager = syncManager, language = language)
