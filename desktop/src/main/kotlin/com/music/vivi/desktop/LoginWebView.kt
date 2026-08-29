@@ -252,7 +252,15 @@ object LoginWebView {
             val domain = c.domain.removePrefix(".")
             domain.endsWith("youtube.com") || domain.endsWith("google.com")
         }
-        val byName = cookies.associateBy { it.name }
+        // A cookie name can exist on several domains (e.g. SAPISID on .google.com
+        // and .youtube.com). Keep the most specific domain (longest) per name so
+        // the Authorization hash is computed with the session cookie that
+        // actually authenticates the music.youtube.com API.
+        val byName = cookies
+            .groupBy { it.name }
+            .mapValues { (_, list) -> list.maxByOrNull { it.domain.length } }
+            .mapNotNull { (_, c) -> c }
+            .associateBy { it.name }
         val names = cookies.map { it.name }.distinct().sorted()
         val critical = listOf("SID", "HSID", "SSID", "APISID", "__Secure-3PSID", "LOGIN_INFO")
         val missing = critical.filter { it !in byName }
@@ -266,7 +274,7 @@ object LoginWebView {
             logDebug("captured ${cookies.size} cookies: $names | missing critical: $missing")
         }
         return SessionCapture(
-            header = if (hasSession) cookies.joinToString("; ") { "${it.name}=${it.value}" } else null,
+            header = if (hasSession) byName.values.joinToString("; ") { "${it.name}=${it.value}" } else null,
             names = names,
             missing = missing,
             hasSession = hasSession,

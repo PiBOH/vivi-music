@@ -164,9 +164,17 @@ class InnerTube {
             if (setLogin && client.loginSupported) {
                 cookie?.let { cookie ->
                     append("cookie", cookie)
-                    if ("SAPISID" !in cookieMap) return@let
+                    // The Authorization hash uses the APISID token. Modern Google
+                    // logins (e.g. the embedded WebView) may only expose the
+                    // Secure variants (__Secure-3PAPISID / __Secure-1PAPISID)
+                    // instead of the legacy SAPISID; without the hash the API
+                    // answers 401 "Request is missing required authentication
+                    // credential". Try all three in order of preference.
+                    val apisid = listOf("SAPISID", "__Secure-3PAPISID", "__Secure-1PAPISID")
+                        .firstOrNull { it in cookieMap }
+                        ?: return@let
                     val currentTime = System.currentTimeMillis() / 1000
-                    val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
+                    val sapisidHash = sha1("$currentTime ${cookieMap[apisid]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
                 }
             }

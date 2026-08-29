@@ -26,9 +26,11 @@ object LoginManager {
         .readTimeout(15, TimeUnit.SECONDS)
         .build()
 
+    private val authCookieNames = listOf("SAPISID", "__Secure-3PAPISID", "__Secure-1PAPISID")
+
     fun isLoggedIn(): Boolean {
         val cookie = YouTube.cookie.orEmpty()
-        return cookie.isNotBlank() && "SAPISID" in cookie
+        return cookie.isNotBlank() && authCookieNames.any { it in cookie }
     }
 
     /** Restores persisted credentials into the [YouTube] singleton at startup. */
@@ -54,7 +56,7 @@ object LoginManager {
     ): AccountInfo = withContext(Dispatchers.IO) {
         val trimmed = cookie.trim()
         if (trimmed.isBlank()) throw IllegalArgumentException("Cookie is empty")
-        if ("SAPISID" !in trimmed) {
+        if (authCookieNames.none { it in trimmed }) {
             throw IllegalArgumentException("Cookie is missing SAPISID — paste the full Cookie header")
         }
 

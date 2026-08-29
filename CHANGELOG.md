@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.13-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Login with the embedded WebView failed with `401 UNAUTHENTICATED` on `account_menu` after showing "saving session"**: Google's modern logins emit `__Secure-3PAPISID`/`__Secure-1PAPISID` instead of the legacy `SAPISID`, so the API request carried the cookie but no `Authorization: SAPISIDHASH` header and YouTube rejected it. The hash is now computed from any of `SAPISID` / `__Secure-3PAPISID` / `__Secure-1PAPISID`, login validation accepts all three, and cookie capture keeps the most specific domain per name (e.g. `SAPISID` on `.youtube.com` instead of `.google.com`) so the header authenticates correctly.
+
 ## [6.4.41_DE-1.41.12-nightly] - 2026-08-29
 
 ### Fixed
