@@ -7,6 +7,9 @@
   <title>Sync — VIVI Music DE</title>
   <meta name="description" content="Pair your phone with VIVI Music DE over LAN or the cloud relay and keep everything in sync." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -14,7 +17,7 @@
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
         <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
-        VIVI Music DE
+        VIVI Music <em>DE</em>
       </a>
       <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
@@ -38,8 +41,7 @@
     </p>
 
     <div class="sync-diagram reveal" aria-label="Sync diagram: phone and desktop connected">
-      <div class="sync-node" tabindex="0"
-        data-tip="Your Android phone runs VIVI Music. Every change you make here is mirrored on the desktop: queue, play/pause, volume, playlists and settings.">
+      <div class="sync-node" tabindex="0" data-tip="Your Android phone runs VIVI Music. Every change you make here is mirrored on the desktop: queue, play/pause, volume, playlists and settings.">
         <div class="emoji">📱</div>
         <div class="name">Phone</div>
         <div class="sub">VIVI Music (Android)</div>
@@ -48,14 +50,12 @@
         <span class="arrow">◄ ►</span>
         <span>WebSocket</span>
       </div>
-      <div class="sync-node" tabindex="0"
-        data-tip="Your computer runs VIVI Music DE — the remote station of the pair. Search a song on the phone and it plays here instantly, or control the desktop from the phone.">
+      <div class="sync-node" tabindex="0" data-tip="Your computer runs VIVI Music DE — the remote station of the pair. Search a song on the phone and it plays here instantly, or control the desktop from the phone.">
         <div class="emoji">💻</div>
         <div class="name">Desktop</div>
         <div class="sub">VIVI Music DE</div>
       </div>
-      <div class="sync-relay" tabindex="0"
-        data-tip="Same Wi-Fi: the connection is direct (LAN relay hosted by the desktop). Different networks: the pair routes through the cloud relay (WebSocket). Both speak the same protocol.">
+      <div class="sync-relay" tabindex="0" data-tip="Same Wi-Fi: the connection is direct (LAN relay hosted by the desktop). Different networks: the pair routes through the cloud relay (WebSocket). Both speak the same protocol.">
         <span>🛰️</span> LAN relay · or cloud relay <code>wss://vivimusic-device-sync.onrender.com</code>
       </div>
     </div>
@@ -70,7 +70,7 @@
     </ol>
 
     <h2>Pairing over the cloud relay</h2>
-    <p>
+    <p class="lede">
       If the phone and desktop are on different networks, set the relay URL to
       the cloud server (default <code>wss://vivimusic-device-sync.onrender.com</code>)
       and pair with the same 6-digit code. The same protocol runs over WebSocket.
@@ -125,4 +125,4 @@
   </script>
   <script src="assets/app.js"></script>
 </body>
-</html>
+</html>

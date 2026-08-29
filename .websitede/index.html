@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
-  <title>VIVI Music DE</title>
-  <meta name="description" content="VIVI Music DE: an elegant, open-source music player for Windows, Linux and macOS with phone sync." />
+  <title>VIVI Music DE — the player that follows you</title>
+  <meta name="description" content="VIVI Music DE: a free, open-source music player for Windows, Linux and macOS that stays in sync with your phone." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -14,10 +17,11 @@
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
         <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
-        VIVI Music DE
+        VIVI Music <em>DE</em>
       </a>
       <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
+        <a href="index.html">Home</a>
         <a href="downloads.html">Downloads</a>
         <a href="install-guide.html">Guide</a>
         <a href="changelog.html">Changelog</a>
@@ -30,13 +34,26 @@
 
   <header class="hero">
     <div class="wrap reveal">
-      <h1>More Than Just Music</h1>
+      <span class="hero-eyebrow"><span class="dot"></span> Free &amp; open source · Desktop edition</span>
+      <h1>The player<br />that <span class="gr">follows you.</span></h1>
       <p class="tagline">
-        An elegant, open-source music player for Windows, Linux and macOS.
-        Seamless background playback, real-time synced lyrics, and
-        high-fidelity streaming from YouTube Music — with a live connection
-        to your phone.
+        VIVI Music DE streams high-fidelity audio from YouTube Music and stays
+        in lockstep with your phone — queue, playback, volume and playlists,
+        synced in real time. One player, two devices.
       </p>
+
+      <div class="nowplaying" aria-hidden="true">
+        <div class="disc"></div>
+        <div class="np-body">
+          <div class="np-meta">Now playing · demo</div>
+          <div class="np-title">Midnight Drive</div>
+          <div class="np-artist">The Night Session — courtesy of VIVI Music DE</div>
+          <div class="np-track"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <span class="np-clock mono">02:41</span>
+      </div>
+
+      <p class="readout-list"><span class="rk">●</span>&nbsp; LIVE · <span data-version>…</span> · <a href="https://github.com/PiBOH/vivi-music/releases">all releases</a></p>
 
       <div class="tabs">
         <button class="tab active" data-channel="stable" type="button">Stable</button>
@@ -62,28 +79,24 @@
         </a>
       </div>
 
-      <p class="hint">Latest <span data-version>…</span> · <a href="https://github.com/PiBOH/vivi-music/releases">all releases</a></p>
-
-      <div class="stats">
-        <img src="https://img.shields.io/github/stars/PiBOH/vivi-music?style=for-the-badge&label=stars" alt="GitHub stars" />
-        <img src="https://img.shields.io/github/downloads/PiBOH/vivi-music/total?style=for-the-badge&label=downloads" alt="Total downloads" />
-      </div>
+      <p class="hint">New here? Read the <a href="install-guide.html">install guide</a>.</p>
     </div>
   </header>
 
   <section class="section reveal">
     <div class="wrap">
-      <h2 style="text-align:center">Why VIVI Music DE</h2>
+      <h2>Why VIVI Music DE</h2>
+      <p class="sub">Everything you like from the Android app, rebuilt for your desktop.</p>
       <div class="cards">
         <div class="card">
           <div class="emoji">📱💻</div>
           <h3>Phone sync</h3>
-          <p>Pair your phone and desktop over LAN or the cloud relay. Queue, playlists, volume and settings stay in sync in real time.</p>
+          <p>Pair on LAN or the cloud relay. Queue, playlists, volume and settings stay in sync in real time.</p>
         </div>
         <div class="card">
           <div class="emoji">🎵</div>
           <h3>Full player</h3>
-          <p>Material 3 player with synced lyrics, mini-player and an animated canvas background.</p>
+          <p>Material 3 player with synced lyrics, a mini-player and an animated canvas background.</p>
         </div>
         <div class="card">
           <div class="emoji">🔓</div>
@@ -94,9 +107,27 @@
     </div>
   </section>
 
+  <section class="section tinted reveal">
+    <div class="wrap syncband">
+      <div class="phones" aria-hidden="true">
+        <span>📱</span><span class="pulse">⇄</span><span>💻</span>
+      </div>
+      <div>
+        <h2>Two devices, one playback.</h2>
+        <p class="sub" style="margin-bottom:12px">
+          Search a song on your phone and it plays on the desktop. Skip on the
+          computer and the phone follows. Volume, playlists and settings stay
+          in step — over Wi-Fi or anywhere with the cloud relay.
+        </p>
+        <a class="btn" href="sync.html">See how pairing works</a>
+      </div>
+    </div>
+  </section>
+
   <section class="section reveal" data-gallery>
     <div class="wrap">
-      <h2 style="text-align:center">Screenshots</h2>
+      <h2>Screenshots</h2>
+      <p class="sub">Take a look at the player before you install.</p>
       <div class="gallery">
         <div class="gallery-track"></div>
         <div class="gallery-dots"></div>
@@ -120,8 +151,6 @@
   </footer>
 
   <script>
-    /* Screenshot gallery: add PNGs to .websitede/images/screenshots/ and list
-       them here (or keep the names below) — broken/missing files are skipped. */
     window.VMDE_SCREENSHOTS = [
       "images/screenshots/player.png",
       "images/screenshots/library.png",
@@ -131,4 +160,4 @@
   </script>
   <script src="assets/app.js"></script>
 </body>
-</html>
+</html>

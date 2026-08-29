@@ -7,6 +7,9 @@
   <title>Changelog — VIVI Music DE</title>
   <meta name="description" content="Latest changes and release notes for VIVI Music DE." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -14,7 +17,7 @@
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
         <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
-        VIVI Music DE
+        VIVI Music <em>DE</em>
       </a>
       <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
@@ -32,18 +35,18 @@
   <main class="page">
     <h1>Changelog</h1>
     <p class="lede">
-      Latest release: <strong id="changelog-version" data-version>…</strong> —
-      the notes below are loaded live from GitHub. For the full history see the
+      Latest release: <strong data-version>…</strong> — the notes below are
+      loaded live from GitHub. For the full history see the
       <a href="https://github.com/PiBOH/vivi-music/releases">releases page</a>.
     </p>
 
-    <div class="changelog-controls">
+    <div class="changelog-controls reveal">
       <input type="search" id="changelog-search" placeholder="Search release notes…" aria-label="Search release notes" />
       <label for="changelog-select">Version:</label>
       <select id="changelog-select" aria-label="Choose a version to view its release notes"></select>
     </div>
 
-    <div class="changelog">
+    <div class="changelog reveal">
       <div id="changelog-body" class="changelog-body"><p>Loading latest release notes…</p></div>
     </div>
   </main>
@@ -62,4 +65,4 @@
 
   <script src="assets/app.js"></script>
 </body>
-</html>
+</html>

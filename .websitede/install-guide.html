@@ -7,6 +7,9 @@
   <title>Install Guide — VIVI Music DE</title>
   <meta name="description" content="How to install VIVI Music DE on Windows, Linux and macOS." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
@@ -14,7 +17,7 @@
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
         <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
-        VIVI Music DE
+        VIVI Music <em>DE</em>
       </a>
       <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
@@ -32,10 +35,9 @@
   <main class="page">
     <h1>Install Guide</h1>
     <p class="lede">
-      VIVI Music DE runs on <strong>Windows 10+</strong>, <strong>Linux
-      (x86_64)</strong> and <strong>macOS 10.15+</strong>. Pick your system
-      below — every command has a copy button. All installers are attached to
-      the
+      Runs on <strong>Windows 10+</strong>, <strong>Linux (x86_64)</strong> and
+      <strong>macOS 10.15+</strong>. Pick your system — every command has a
+      copy button. All installers are attached to the
       <a href="https://github.com/PiBOH/vivi-music/releases">GitHub Releases</a>
       page.
     </p>
@@ -49,7 +51,7 @@
     <div class="guide-panels guide-block">
 
       <section class="os-panel active" data-os-panel="windows">
-        <h2>Windows</h2>
+        <h2 id="windows">Windows</h2>
         <p>Two installers are published; the <strong>.exe is recommended</strong>
           (lighter and more user-friendly). The <code>.msi</code> is provided
           for silent / enterprise deployments.</p>
@@ -81,17 +83,17 @@
       </section>
 
       <section class="os-panel" data-os-panel="linux">
-        <h2>Linux</h2>
+        <h2 id="linux">Linux</h2>
         <p>Three ways to install, depending on your distribution.</p>
 
-        <h3>Option A — Debian / Ubuntu (.deb)</h3>
+        <h3 id="option-a">Option A — Debian / Ubuntu (.deb)</h3>
         <p>Works on Debian, Ubuntu and their derivatives.</p>
         <pre><code>sudo apt install ./VIVIMusic-….deb</code></pre>
         <p>or:</p>
         <pre><code>sudo dpkg -i VIVIMusic-….deb &amp;&amp; sudo apt-get install -f</code></pre>
         <p>Launch <strong>VIVI Music DE</strong> from your application menu.</p>
 
-        <h3>Option B — AppImage (any distro, portable)</h3>
+        <h3 id="option-b">Option B — AppImage (any distro, portable)</h3>
         <p>Works on most distributions, including Arch and Fedora.</p>
         <pre><code>chmod +x VIVIMusic-….AppImage
 ./VIVIMusic-….AppImage</code></pre>
@@ -99,7 +101,7 @@
         <pre><code>./VIVIMusic-….AppImage --appimage-extract
 ./squashfs-root/AppRun</code></pre>
 
-        <h3>Option C — Arch Linux (AUR-style PKGBUILD)</h3>
+        <h3 id="option-c">Option C — Arch Linux (AUR-style PKGBUILD)</h3>
         <p>Every release also ships a <code>PKGBUILD</code> (plus
           <code>SRCINFO</code>) as a release asset. To build and install a
           proper system package:</p>
@@ -119,7 +121,7 @@ makepkg -si</code></pre>
       </section>
 
       <section class="os-panel" data-os-panel="macos">
-        <h2>macOS</h2>
+        <h2 id="macos">macOS</h2>
         <p>Two formats are published (Intel and Apple Silicon builds
           separately).</p>
 
@@ -156,10 +158,11 @@ makepkg -si</code></pre>
       <span class="k">Java</span><span>Bundled with the app — nothing to install</span>
       <span class="k">Graphics</span><span>Any GPU or driver; falls back to software rendering automatically</span>
     </div>
-    <p>Platform testing note: the lead developer can currently test the app only
-      on Windows, so Windows receives the most compatibility attention. The
-      Linux and macOS builds are produced by CI and rely on community testing —
-      bug reports for those platforms are especially appreciated.</p>
+    <p class="lede">Platform testing note: the lead developer can currently test
+      the app only on Windows, so Windows receives the most compatibility
+      attention. The Linux and macOS builds are produced by CI and rely on
+      community testing — bug reports for those platforms are especially
+      appreciated.</p>
 
     <h2>First launch: signing in</h2>
     <ol>
@@ -198,8 +201,8 @@ makepkg -si</code></pre>
       <tr><td>Backups</td><td><code>~/.vivimusic/backups/</code></td></tr>
       <tr><td>Downloaded updates</td><td><code>~/.vivimusic/updates/</code></td></tr>
     </table>
-    <p>On Windows <code>~</code> is <code>C:\Users\&lt;you&gt;</code>, on
-      Linux/macOS it's <code>/home/&lt;you&gt;</code> /
+    <p class="lede">On Windows <code>~</code> is <code>C:\Users\&lt;you&gt;</code>,
+      on Linux/macOS it's <code>/home/&lt;you&gt;</code> /
       <code>/Users/&lt;you&gt;</code>.</p>
 
     <h2>Troubleshooting</h2>
@@ -242,7 +245,7 @@ makepkg -si</code></pre>
       </tr>
     </table>
 
-    <p class="lede" style="margin-top: 28px">
+    <p class="lede" style="margin-top:30px">
       <em>VIVI Music DE — free software under the
       <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0</a> license.
       The original mobile app is created by
@@ -265,8 +268,7 @@ makepkg -si</code></pre>
   <script src="assets/app.js"></script>
   <script>
     /* Install-guide interactivity: OS tabs + copy buttons on commands.
-       Uses data-os (not data-channel) so it never touches the channel tabs
-       handled by app.js. */
+       Auto-selects the visitor's OS (detected by app.js). */
     (function () {
       "use strict";
       var tabs = document.querySelectorAll("[data-os]");
@@ -282,7 +284,6 @@ makepkg -si</code></pre>
           select(t.getAttribute("data-os"), t);
         });
       });
-      // Auto-select the visitor's OS (detected by app.js); Windows stays default.
       var detected = window.VMDE_OS;
       if (detected === "linux" || detected === "macos") {
         select(detected, document.querySelector("[data-os=\"" + detected + "\"]"));
