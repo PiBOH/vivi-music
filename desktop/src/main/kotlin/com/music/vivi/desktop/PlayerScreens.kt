@@ -1652,11 +1652,13 @@ fun QueueScreen(
                         val threshold = with(density) { 64.dp.toPx() }
                         Box(Modifier.fillMaxWidth()) {
                             // Play hint revealed behind the row while swiping right.
+                            // Neutral color on purpose: the accent-tinted primary
+                            // container looked like an accent-colored track row.
                             val progress = (kotlin.math.abs(dragX) / threshold).coerceIn(0f, 1f)
                             Box(
                                 Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f))
                                     .graphicsLayer { alpha = progress }
                                     .matchParentSize(),
                                 contentAlignment = Alignment.CenterStart,
@@ -1664,7 +1666,7 @@ fun QueueScreen(
                                 Text(
                                     "▶ " + Localization.get(language, "play"),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(start = 48.dp),
                                 )
                             }
@@ -1702,7 +1704,10 @@ fun QueueScreen(
                                 Text(
                                     if (isCurrent) "▶" else "${i + 1}",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    // The current track stays distinguishable with
+                                    // a full-contrast glyph + bold title, without
+                                    // painting the row in the accent color.
+                                    color = if (isCurrent) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(end = 8.dp),
                                 )
                                 Thumbnail(item.thumbnail, Modifier.size(44.dp))
@@ -1710,8 +1715,10 @@ fun QueueScreen(
                                 Column(Modifier.weight(1f)) {
                                     Text(
                                         item.title,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
@@ -1727,7 +1734,7 @@ fun QueueScreen(
                                     Icon(
                                         Icons.AutoMirrored.Filled.PlaylistAdd,
                                         contentDescription = Localization.get(language, "add_to_playlist"),
-                                        tint = MaterialTheme.colorScheme.primary,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                                 Text(

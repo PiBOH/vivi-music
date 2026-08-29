@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.38.2-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **No more accent color in the queue screen**: the standalone Queue (opened from the sidebar's Artists entry) painted the current track's title, its "▶" marker and the add-to-playlist icon in the accent color, and the swipe-reveal "Play" hint used the accent-tinted container — so the queue kept showing accent-colored elements. All queue rows are now neutral: the current track is distinguished by a bold title + full-contrast "▶" (no accent paint), the swipe hint uses a neutral surface, and the add-to-playlist icon uses the secondary text color.
+
 ## [6.4.41_DE-1.38.1-nightly] - 2026-08-29
 
 ### Fixed
