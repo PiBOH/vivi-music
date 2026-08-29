@@ -74,8 +74,9 @@ private class SmartTooltipPlacement : TooltipPlacement {
         val density = LocalDensity.current
         val gapPx = with(density) { 8.dp.roundToPx() }
         val sidePx = with(density) { 12.dp.roundToPx() }
-        val cursorX = cursorPosition.x.toInt()
-        val cursorY = cursorPosition.y.toInt()
+        // cursorPosition is relative to the anchored component; the popup
+        // position must be in window coordinates, so the component's own
+        // offset (anchorBounds.left/top) is added when positioning.
         return object : PopupPositionProvider {
             override fun calculatePosition(
                 anchorBounds: IntRect,
@@ -84,6 +85,9 @@ private class SmartTooltipPlacement : TooltipPlacement {
                 popupContentSize: IntSize,
             ): IntOffset {
                 val popup = popupContentSize
+                val cursorX = anchorBounds.left + cursorPosition.x.toInt()
+                val cursorY = anchorBounds.top + cursorPosition.y.toInt()
+
                 // Preferred: below the cursor, pushed slightly right so it does
                 // not sit exactly where the click happens.
                 var x = (cursorX + sidePx).coerceAtLeast(0)

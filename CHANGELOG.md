@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.9-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Tooltips appear next to the pointer again**: the smart placement was using the cursor position in component-local coordinates while the popup expects window coordinates, so every tooltip showed at the window's top-left. The component's own offset is now added, so tooltips render below-right of the pointer with the flip-above/clamp behavior intact.
+
 ## [6.4.41_DE-1.41.8-nightly] - 2026-08-29
 
 ### Changed

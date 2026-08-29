@@ -236,3 +236,4 @@ Opt-in style: extends the existing `spotifyLayout` toggle. When ON → Spotify p
 - [x] DE 1.41.6: tooltips render above the button (ComponentRect TopCenter + 8dp) instead of on the cursor, so they never block clicks.
 - [x] DE 1.41.7: right Now Playing panel auto-hides while the full player is open (any design) and restores on exit without touching the saved pref; shuffle/repeat added to the Expressive player and New/Apple mini players.
 - [x] DE 1.41.8: smart tooltip placement — below-right of the pointer, flips above when no room below, clamps to window edges, never covers the click target.
+- [x] DE 1.41.9: tooltip position fixed — cursor position is component-local, so the component offset (anchorBounds.left/top) is now added to place the tooltip in window coordinates (was: every tooltip at top-left).
