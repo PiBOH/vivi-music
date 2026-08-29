@@ -67,9 +67,11 @@ enum class MiniPlayerDesign(val key: String) {
 
     companion object {
         fun from(key: String?): MiniPlayerDesign = when (key) {
-            "classic", "mini_player_classic" -> APPLE
-            "new", "mini_player_new" -> APPLE
-            else -> APPLE
+            "classic", "mini_player_classic" -> CLASSIC
+            "new", "mini_player_new" -> NEW
+            "apple", "mini_player_apple" -> APPLE
+            // Unknown/missing key: fall back to the enum's declared default.
+            else -> CLASSIC
         }
     }
 }
@@ -89,7 +91,8 @@ enum class MiniPlayerBackgroundStyle(val key: String) {
             "glow", "glow_motion" -> GLOW_MOTION
             "live_mesh", "mesh" -> LIVE_MESH
             "follow_theme" -> FOLLOW_THEME
-            else -> BLUR
+            // Unknown/missing key: fall back to the enum's declared default.
+            else -> FOLLOW_THEME
         }
     }
 }

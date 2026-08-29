@@ -186,6 +186,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Screen transitions (fade/slide, matching `NavigationBuilder`). (DE 1.33.65)
 - [~] Animated thumbnails: rotating done (DE 1.33.67); swipe / canvas thumbnail still missing.
 - [x] Mini-player: swipe-to-expand, outline, pure-black mini (DE 1.33.68). Floating nav-bar interaction: the DE uses the sidebar instead, mini player already sits above it.
+- [x] Mini-player / player design persistence fixed (DE 1.37.3): `MiniPlayerDesign.from()` always returned APPLE and reset the saved design at every launch; it now honors the saved key (legacy aliases included) and falls back to CLASSIC only for unknown keys. `MiniPlayerBackgroundStyle.from()` falls back to FOLLOW_THEME (was BLUR) for unknown keys. The full player design was already persisted correctly.
 - [x] Song swipe gestures (swipe to play / remove) in the Queue screen (DE 1.33.69).
 - [~] Advanced lyrics: line spacing + thumbnail play/pause done (DE 1.33.75); swipe lyrics / romanization / AI translation are touch/API-dependent and not portable to desktop — noted as out of scope.
 - [x] UI density (density scale 55%..200%, incl. 110/120/125/130/140/150/180/200 above 100%) + custom adaptive grid size (DE 1.33.82, Settings → Appearance → Density & grid).

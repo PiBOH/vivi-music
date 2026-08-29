@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.37.3-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Mini-player design no longer resets to Apple on every start**: `MiniPlayerDesign.from()` ignored the saved key and always returned `APPLE`, so any chosen design (Classic / New) was lost at the next launch and the mini player snapped to the Apple layout — looking like it had synced back to the mobile default. The mapping now honors the saved value (with legacy key aliases) and falls back to the declared default (`CLASSIC`) only for unknown/missing keys.
+- [DE] **Mini-player background style falls back to "Follow theme" for unknown keys** (was `BLUR`), matching the field's declared default.
+
 ## [6.4.41_DE-1.37.2-nightly] - 2026-08-28
 
 ### Fixed
