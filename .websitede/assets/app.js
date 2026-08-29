@@ -112,6 +112,29 @@
     return r.prerelease || /-(nightly|alpha|beta|rc)$/i.test(r.tag_name || "");
   }
 
+  /* ---------- Order releases by the version in the tag, not by GitHub order ----------
+   * GitHub returns releases newest-first by publish date, which can disagree with the
+   * actual version numbers (backdated releases, re-published tags, force pushes).
+   * The site must always resolve "latest" from the tag's version, so we sort
+   * descending by its numeric parts (tag format like 6.4.41_DE-1.41.15-nightly). */
+  function versionParts(tag) {
+    var m = String(tag || "").match(/\d+(?:\.\d+)*/g);
+    if (!m) return [];
+    return m.join(".").split(".").map(function (n) { return parseInt(n, 10) || 0; });
+  }
+  function compareParts(a, b) {
+    var len = Math.max(a.length, b.length);
+    for (var i = 0; i < len; i++) {
+      var av = a[i] || 0;
+      var bv = b[i] || 0;
+      if (av !== bv) return av - bv;
+    }
+    return 0;
+  }
+  function byVersionDesc(a, b) {
+    return compareParts(versionParts(b.tag_name), versionParts(a.tag_name));
+  }
+
   function firstByExt(assets, ext) {
     var hit = null;
     (assets || []).forEach(function (a) {
@@ -190,7 +213,7 @@
         return res.json();
       })
       .then(function (list) {
-        releases = Array.isArray(list) ? list : [];
+        releases = (Array.isArray(list) ? list : []).slice().sort(byVersionDesc);
         // If only pre-releases exist, default to Nightly so the buttons always work.
         if (!releases.find(isStable) && releases.find(isPre)) {
           currentChannel = "nightly";
