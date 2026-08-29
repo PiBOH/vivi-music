@@ -211,6 +211,11 @@ considers obvious):
   `.github/workflows/` release pipeline, or a desktop-only behavior) bumps the
   **DE** version: `version.txt` line 4 (+ line 5 version code by 1).
 - A change that affects **both** editions bumps **both** versions.
+- A change that touches **only** the website (`.websitede/` content — pages,
+  styles, scripts, images) bumps **no** version: no DE bump, no mobile bump,
+  and the commit is **not** prefixed with `v` (it's not a release signal).
+  Only if the same change also touches app code, build/installer config or
+  release workflows does the usual DE/mobile bump apply.
 
 Never bump the DE version for a mobile-only change, and never bump the mobile
 version for a DE-only change.
