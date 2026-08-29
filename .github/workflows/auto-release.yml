@@ -212,6 +212,8 @@ jobs:
           # PKGBUILD + SRCINFO for Arch users (AUR). Pinned to this exact
           # commit so the source checksum is stable and matches the release.
           python3 scripts/generate_aur_pkgbuild.py --out artifacts --sha "${{ github.sha }}"
+          # The install guide ships with every release.
+          cp INSTALL-GUIDE.md artifacts/
           ls -la artifacts
 
       - name: Create GitHub release

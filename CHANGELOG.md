@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.15-nightly] - 2026-08-29
+
+### Added
+- [DE] **Install guide shipped with every release and on the website**: new `INSTALL-GUIDE.md` covers Windows (`.exe`/`.msi`), Linux (`.deb`/AppImage/PKGBUILD) and macOS (`.dmg`/`.pkg`), plus first-launch sign-in, updating, data locations and troubleshooting; the auto-release workflow now attaches it as a release asset. The website gains an interactive `install-guide.html` (OS tabs + copy buttons) linked from every page's navigation.
+
 ## [6.4.41_DE-1.41.14-nightly] - 2026-08-29
 
 ### Fixed

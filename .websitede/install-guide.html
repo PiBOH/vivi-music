@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install Guide — VIVI Music DE</title>
+  <meta name="description" content="How to install VIVI Music DE on Windows, Linux and macOS." />
+  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="index.html">
+        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        VIVI Music DE
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="downloads.html">Downloads</a>
+        <a href="install-guide.html">Guide</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="sync.html">Sync</a>
+        <a href="about.html">About</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <h1>Install Guide</h1>
+    <p class="lede">
+      VIVI Music DE runs on <strong>Windows 10+</strong>, <strong>Linux
+      (x86_64)</strong> and <strong>macOS 10.15+</strong>. Pick your system
+      below — every command has a copy button. All installers are attached to
+      the
+      <a href="https://github.com/PiBOH/vivi-music/releases">GitHub Releases</a>
+      page.
+    </p>
+
+    <div class="tabs" style="justify-content: flex-start">
+      <button class="tab active" data-os="windows" type="button">Windows</button>
+      <button class="tab" data-os="linux" type="button">Linux</button>
+      <button class="tab" data-os="macos" type="button">macOS</button>
+    </div>
+
+    <div class="guide-panels guide-block">
+
+      <section class="os-panel active" data-os-panel="windows">
+        <h2>Windows</h2>
+        <p>Two installers are published; the <strong>.exe is recommended</strong>
+          (lighter and more user-friendly). The <code>.msi</code> is provided
+          for silent / enterprise deployments.</p>
+
+        <h3>Option A — Installer (.exe, recommended)</h3>
+        <ol>
+          <li>Download <code>VIVIMusic-…-x64.exe</code> from the
+            <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a> page.</li>
+          <li>Double-click the file and follow the wizard.</li>
+          <li>The app installs to <code>C:\Program Files\VIVIMusic</code> and
+            starts when the wizard finishes (or launch it from the Start menu /
+            desktop shortcut).</li>
+        </ol>
+
+        <h3>Option B — MSI package (.msi)</h3>
+        <ol>
+          <li>Download the <code>.msi</code> file.</li>
+          <li>Double-click to install, or deploy silently with:</li>
+        </ol>
+        <pre><code>msiexec /i VIVIMusic-….msi /qn</code></pre>
+        <p>Launch from the Start menu.</p>
+
+        <h3>Uninstall</h3>
+        <p>Open <strong>Settings → Apps → Installed apps</strong>, find
+          <strong>VIVI Music</strong> and choose <em>Uninstall</em> — or run the
+          uninstaller from <code>C:\Program Files\VIVIMusic</code>.</p>
+        <p>Installed updates are cached under <code>~/.vivimusic/updates/</code>
+          and cleaned up automatically after 7 days.</p>
+      </section>
+
+      <section class="os-panel" data-os-panel="linux">
+        <h2>Linux</h2>
+        <p>Three ways to install, depending on your distribution.</p>
+
+        <h3>Option A — Debian / Ubuntu (.deb)</h3>
+        <p>Works on Debian, Ubuntu and their derivatives.</p>
+        <pre><code>sudo apt install ./VIVIMusic-….deb</code></pre>
+        <p>or:</p>
+        <pre><code>sudo dpkg -i VIVIMusic-….deb &amp;&amp; sudo apt-get install -f</code></pre>
+        <p>Launch <strong>VIVI Music DE</strong> from your application menu.</p>
+
+        <h3>Option B — AppImage (any distro, portable)</h3>
+        <p>Works on most distributions, including Arch and Fedora.</p>
+        <pre><code>chmod +x VIVIMusic-….AppImage
+./VIVIMusic-….AppImage</code></pre>
+        <p>If your system blocks AppImages (no FUSE), extract and run it instead:</p>
+        <pre><code>./VIVIMusic-….AppImage --appimage-extract
+./squashfs-root/AppRun</code></pre>
+
+        <h3>Option C — Arch Linux (AUR-style PKGBUILD)</h3>
+        <p>Every release also ships a <code>PKGBUILD</code> (plus
+          <code>SRCINFO</code>) as a release asset. To build and install a
+          proper system package:</p>
+        <pre><code>mkdir vivi-music-de &amp;&amp; cd vivi-music-de
+# copy the PKGBUILD file from the release assets into this folder
+makepkg -si</code></pre>
+        <p>The PKGBUILD pins the exact release commit with a real checksum,
+          builds the app from source with <code>./gradlew</code>, and installs
+          it into <code>/opt/vivi-music-de</code> with a desktop entry, icon
+          and <code>vivi-music-de</code> launcher. Requires
+          <code>jdk21-openjdk</code> and <code>unzip</code> (installed
+          automatically as build dependencies).</p>
+
+        <p><strong>Graphics note:</strong> if OpenGL isn't available on your
+          system, the app automatically switches to the software renderer — it
+          just works, no configuration needed.</p>
+      </section>
+
+      <section class="os-panel" data-os-panel="macos">
+        <h2>macOS</h2>
+        <p>Two formats are published (Intel and Apple Silicon builds
+          separately).</p>
+
+        <h3>Option A — Disk image (.dmg)</h3>
+        <ol>
+          <li>Download the <code>.dmg</code> for your architecture.</li>
+          <li>Open it and drag <strong>VIVI Music</strong> into the
+            <strong>Applications</strong> folder.</li>
+          <li>Launch from Applications. If macOS warns that the app is from an
+            unidentified developer (it's not notarized), right-click the app →
+            <strong>Open</strong> → <strong>Open</strong> again, or run:</li>
+        </ol>
+        <pre><code>xattr -dr com.apple.quarantine /Applications/VIVI\ Music.app</code></pre>
+
+        <h3>Option B — Installer package (.pkg)</h3>
+        <ol>
+          <li>Download the <code>.pkg</code> and double-click it.</li>
+          <li>Follow the installer steps; the app lands in
+            <strong>Applications</strong>.</li>
+        </ol>
+
+        <h3>Uninstall</h3>
+        <p>Drag <code>VIVI Music.app</code> from <strong>Applications</strong>
+          to the Trash.</p>
+      </section>
+
+    </div>
+
+    <h2>System requirements</h2>
+    <div class="guide-req">
+      <span class="k">OS</span><span>Windows 10+ · Linux x86_64 (glibc) · macOS 10.15+</span>
+      <span class="k">RAM</span><span>2 GB (the app itself uses ~350 MB)</span>
+      <span class="k">Disk</span><span>~500 MB free</span>
+      <span class="k">Java</span><span>Bundled with the app — nothing to install</span>
+      <span class="k">Graphics</span><span>Any GPU or driver; falls back to software rendering automatically</span>
+    </div>
+    <p>Platform testing note: the lead developer can currently test the app only
+      on Windows, so Windows receives the most compatibility attention. The
+      Linux and macOS builds are produced by CI and rely on community testing —
+      bug reports for those platforms are especially appreciated.</p>
+
+    <h2>First launch: signing in</h2>
+    <ol>
+      <li>Open the app and go to <strong>Settings → Account</strong>.</li>
+      <li>Choose <strong>Sign in with Google</strong> — an embedded sign-in
+        window opens directly on Google. Sign in with your Google account; when
+        the page returns to YouTube Music, the window closes by itself and the
+        session is saved.</li>
+      <li>Prefer the manual method instead? <strong>Sign in with cookies</strong>:
+        log in to <code>music.youtube.com</code> in your browser, open DevTools
+        → Network, click any <code>music.youtube.com</code> request and paste
+        the full <code>Cookie</code> header value into the app. The session is
+        stored only on this device.</li>
+    </ol>
+    <p>Pairing with the Android app (LAN or cloud) is covered in the
+      <a href="sync.html">Sync</a> section.</p>
+
+    <h2>Updating the app</h2>
+    <ul>
+      <li><strong>In-app updater:</strong> go to <strong>Settings →
+        Updates</strong> and check for updates. The new installer downloads
+        (with progress) and opens for you — on Windows the <code>.exe</code> is
+        preferred over the <code>.msi</code>.</li>
+      <li><strong>Manual:</strong> download the latest installer from
+        <a href="https://github.com/PiBOH/vivi-music/releases">GitHub Releases</a>
+        and install over the current version. Your settings, library and
+        playlists are kept.</li>
+    </ul>
+
+    <h2>Where your data lives</h2>
+    <table class="guide-table">
+      <tr><th>What</th><th>Location</th></tr>
+      <tr><td>Settings, login session, pairing</td><td><code>~/.vivimusic/</code></td></tr>
+      <tr><td>Playlists</td><td><code>~/.vivimusic/playlists.json</code></td></tr>
+      <tr><td>Audio &amp; lyrics cache</td><td><code>~/.vivimusic/cache/</code></td></tr>
+      <tr><td>Backups</td><td><code>~/.vivimusic/backups/</code></td></tr>
+      <tr><td>Downloaded updates</td><td><code>~/.vivimusic/updates/</code></td></tr>
+    </table>
+    <p>On Windows <code>~</code> is <code>C:\Users\&lt;you&gt;</code>, on
+      Linux/macOS it's <code>/home/&lt;you&gt;</code> /
+      <code>/Users/&lt;you&gt;</code>.</p>
+
+    <h2>Troubleshooting</h2>
+    <table class="guide-table">
+      <tr><th>Problem</th><th>Solution</th></tr>
+      <tr>
+        <td>App crashes at startup on Linux with <code>UnsatisfiedLinkError:
+          OpenGLApi.glFlush()</code></td>
+        <td>Fixed in DE 1.41.14: the app detects the broken OpenGL stack,
+          writes <code>~/.vivimusic/.gl-software</code> and restarts once with
+          the software renderer. Every later launch starts directly in software
+          rendering. If you fixed your GPU drivers and want OpenGL back, delete
+          that marker file.</td>
+      </tr>
+      <tr>
+        <td>Login fails with <code>401 UNAUTHENTICATED</code></td>
+        <td>Fixed in DE 1.41.13 (modern Google <code>__Secure-*PAPISID</code>
+          cookies now authenticate correctly). Update to the latest version and
+          try again.</td>
+      </tr>
+      <tr>
+        <td>The embedded sign-in window stays blank</td>
+        <td>Make sure you're on the latest version. As a fallback, use
+          <strong>Sign in with cookies</strong> (see above).</td>
+      </tr>
+      <tr>
+        <td>Volume doesn't reach the speakers while paired</td>
+        <td>Set the Windows mixer volume to 0 % (not muted) so the mobile app
+          can drive it.</td>
+      </tr>
+      <tr>
+        <td>Playback stops / seekbar jumps while paired</td>
+        <td>Update both apps to the latest version — older builds had sync
+          races that were fixed.</td>
+      </tr>
+      <tr>
+        <td>Still stuck?</td>
+        <td>Check <code>~/.vivimusic/</code> log files, or ask in the
+          <a href="https://t.me/vivimusicde">Telegram channel</a>.</td>
+      </tr>
+    </table>
+
+    <p class="lede" style="margin-top: 28px">
+      <em>VIVI Music DE — free software under the
+      <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0</a> license.
+      The original mobile app is created by
+      <a href="https://github.com/vivizzz007">VIVIDH P ASHOKAN</a>.</em>
+    </p>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span>VIVI Music DE</span>
+      <div class="links">
+        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
+        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
+        <a href="https://t.me/vivimusicde">Telegram</a>
+        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/app.js"></script>
+  <script>
+    /* Install-guide interactivity: OS tabs + copy buttons on commands.
+       Uses data-os (not data-channel) so it never touches the channel tabs
+       handled by app.js. */
+    (function () {
+      "use strict";
+      var tabs = document.querySelectorAll("[data-os]");
+      var panels = document.querySelectorAll(".os-panel");
+      function select(os, btn) {
+        tabs.forEach(function (t) { t.classList.toggle("active", t === btn); });
+        panels.forEach(function (p) {
+          p.classList.toggle("active", p.getAttribute("data-os-panel") === os);
+        });
+      }
+      tabs.forEach(function (t) {
+        t.addEventListener("click", function () {
+          select(t.getAttribute("data-os"), t);
+        });
+      });
+
+      document.querySelectorAll(".guide-block pre code").forEach(function (code) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "copy-btn";
+        btn.textContent = "Copy";
+        var pre = code.parentElement;
+        pre.appendChild(btn);
+        btn.addEventListener("click", function () {
+          var text = code.textContent;
+          function done() {
+            btn.textContent = "Copied!";
+            setTimeout(function () { btn.textContent = "Copy"; }, 1500);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+          } else {
+            fallbackCopy(text);
+            done();
+          }
+        });
+      });
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); } catch (e) { /* no-op */ }
+        document.body.removeChild(ta);
+      }
+    })();
+  </script>
+</body>
+</html>
