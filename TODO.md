@@ -235,3 +235,4 @@ Opt-in style: extends the existing `spotifyLayout` toggle. When ON → Spotify p
 - [x] DE 1.41.5: distinct icons per action — right panel uses `VerticalSplit`, playlists (sidebar + search filter) use `PlaylistPlay`, `QueueMusic` reserved for the queue only (matches mobile).
 - [x] DE 1.41.6: tooltips render above the button (ComponentRect TopCenter + 8dp) instead of on the cursor, so they never block clicks.
 - [x] DE 1.41.7: right Now Playing panel auto-hides while the full player is open (any design) and restores on exit without touching the saved pref; shuffle/repeat added to the Expressive player and New/Apple mini players.
+- [x] DE 1.41.8: smart tooltip placement — below-right of the pointer, flips above when no room below, clamps to window edges, never covers the click target.

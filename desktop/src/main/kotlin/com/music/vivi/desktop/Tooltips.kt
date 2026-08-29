@@ -4,14 +4,19 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupPositionProvider
 
 /**
  * Wraps a composable (usually a button) with a small hover tooltip — the
@@ -47,12 +52,58 @@ fun Tooltip(text: String?, content: @Composable () -> Unit) {
                 )
             }
         },
-        // Place the tooltip above the component with a small gap instead of
-        // directly on the cursor, so it never covers the click target.
-        tooltipPlacement = TooltipPlacement.ComponentRect(
-            alignment = Alignment.TopCenter,
-            offset = DpOffset(0.dp, 8.dp),
-        ),
+        // Smart placement: below-right of the cursor by default; if there is
+        // not enough room it flips above and clamps to the window edges. It is
+        // always offset away from the pointer, so it never covers the click
+        // target under the cursor.
+        tooltipPlacement = SmartTooltipPlacement(),
         content = content,
     )
+}
+
+/**
+ * Tooltip placement that keeps the hint away from the pointer:
+ * - default: below the cursor, slightly to the right;
+ * - if there is no room below, it appears above;
+ * - it always clamps to the window so it is never cut off.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private class SmartTooltipPlacement : TooltipPlacement {
+    @Composable
+    override fun positionProvider(cursorPosition: Offset): PopupPositionProvider {
+        val density = LocalDensity.current
+        val gapPx = with(density) { 8.dp.roundToPx() }
+        val sidePx = with(density) { 12.dp.roundToPx() }
+        val cursorX = cursorPosition.x.toInt()
+        val cursorY = cursorPosition.y.toInt()
+        return object : PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize,
+            ): IntOffset {
+                val popup = popupContentSize
+                // Preferred: below the cursor, pushed slightly right so it does
+                // not sit exactly where the click happens.
+                var x = (cursorX + sidePx).coerceAtLeast(0)
+                var y = cursorY + gapPx
+
+                // Not enough room below -> flip above.
+                if (y + popup.height > windowSize.height) {
+                    y = cursorY - popup.height - gapPx
+                }
+
+                // Clamp horizontally (keep a small margin from the window edge).
+                if (x + popup.width > windowSize.width) {
+                    x = (windowSize.width - popup.width - gapPx).coerceAtLeast(0)
+                }
+
+                // Final vertical safety clamp (tiny windows).
+                y = y.coerceIn(0, (windowSize.height - popup.height).coerceAtLeast(0))
+
+                return IntOffset(x, y)
+            }
+        }
+    }
 }

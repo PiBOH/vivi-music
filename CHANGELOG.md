@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.8-nightly] - 2026-08-29
+
+### Changed
+- [DE] **Tooltip placement is smarter**: tooltips now appear below-right of the pointer by default; if there is no room below they flip above, and they always clamp to the window edges so they are never cut off and never cover the click target.
+
 ## [6.4.41_DE-1.41.7-nightly] - 2026-08-29
 
 ### Fixed
