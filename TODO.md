@@ -196,6 +196,15 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Search/listen history + pause-history privacy toggles (DE 1.33.73): local recent searches on the Search screen, Privacy sub-screen with pause toggles + clear.
 - [x] Settings popup (quick settings shortcut) via the sidebar Tune button (DE 1.33.74) — **removed again in DE 1.33.79** at the user's request ("procura solo fastidio").
 
+## Phase 11 — Spotify-style UI redesign (planned, DE 1.38.x)
+Opt-in style: extends the existing `spotifyLayout` toggle. When ON → Spotify palette + geometry (flat dark `#121212`/`#181818`/`#282828`, green accent `#1DB954`, 8dp corners, bolder typography); when OFF → current Material 3 tonal UI stays untouched (no regression). Sync (theme/accent with mobile) is unaffected. Each phase is verified with the toggle ON (looks right + interactive) and OFF (M3 unchanged) before moving on.
+- [ ] Fase 0 — Theme foundations: Spotify palette variant in `Theme.kt` (flat surfaces, no tonal M3, corner 8dp, bold typography, fixed green accent when active); the Appearance toggle applies theme + layout together.
+- [ ] Fase 1 — Shell: sidebar (dark `#121212`, hover `#282828`, 6-8dp radius, 24dp icons, 14dp bold text), Spotify-style bottom player bar (cover + title/artist left, transport center, volume right, ~90px tall, thin top border), right Now-Playing panel (`#121212`/`#181818`).
+- [ ] Fase 2 — Cards & grids: album/playlist/artist cards (`#181818` bg, `#282828` hover + circular green play button overlay, 8dp radius, bold title + grey artist below); Home/Browse/Library grids use these cards.
+- [ ] Fase 3 — Main screens: Home/Browse/Library (chip filters, dark header gradient), Album/Playlist detail (large cover + dark green gradient header), Artist, Search, Queue, fullscreen Player adapted to the Spotify language.
+- [ ] Fase 4 — Polish: hover animations (150-200ms), dark scrollbars, uniform transitions, coherent light mode (`#FFFFFF`/`#F6F6F6`).
+- [ ] Out of scope (legal/technical): Spotify logo/trademarks/assets, Circular font (use an available equivalent), any change to sync/audio/notifications (presentation only).
+
 ## Desktop-exclusive features (Cider-inspired, DE 1.35.0)
 - [x] Audio visualizer: `Visualizer` player background reacts to the real decoded PCM level (`AudioPlayer.onLevel` → `PlayerController.audioLevel`), smooth attack + per-bar phase wobble, dark scrim (DE 1.35.0).
 - [x] Floating "Now Playing" widget: always-on-top draggable window (artwork + title/artist + Previous/Play-Pause/Next + close), position persisted (debounced), toggle in Settings → Desktop features (DE 1.35.0).
