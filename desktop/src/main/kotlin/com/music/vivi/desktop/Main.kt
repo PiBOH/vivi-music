@@ -223,7 +223,50 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+/**
+ * Ensures Skiko can render on this machine. On Linux the default render API is
+ * OpenGL; when the system has no working libGL (common with the AppImage on
+ * Arch / minimal desktops), the first frame dies with
+ * `UnsatisfiedLinkError: OpenGLApi.glFlush()`. Detecting that here and falling
+ * back to `SKIKO_RENDER_API=SOFTWARE` keeps the app usable everywhere. The
+ * check is cheap (a library load), so systems with a real GPU are unaffected.
+ */
+private fun configureRenderApi() {
+    if (System.getProperty("skiko.renderApi") != null) return // explicit override wins
+    val os = System.getProperty("os.name", "").lowercase(Locale.ROOT)
+    if (!os.contains("linux")) return // Windows/macOS defaults are fine
+    if (canLoadOpenGL()) return
+    // Also honor the env var form; set the JVM property so Skiko picks it up.
+    val envApi = System.getenv("SKIKO_RENDER_API")
+    System.setProperty("skiko.renderApi", envApi ?: "SOFTWARE")
+}
+
+private fun canLoadOpenGL(): Boolean = runCatching {
+    // libGL on common Linux layouts (glvnd, distro paths); any one suffices.
+    val candidates = listOf(
+        "libGL.so.1",
+        "libGL.so",
+        "GL",
+        "/usr/lib/x86_64-linux-gnu/libGL.so.1",
+        "/usr/lib/libGL.so.1",
+        "/usr/lib64/libGL.so.1",
+    )
+    candidates.forEach { lib ->
+        runCatching {
+            if (lib.startsWith("/")) System.load(lib) else System.loadLibrary(lib)
+        }.onSuccess { return true }
+    }
+    false
+}.getOrDefault(false)
+
 fun main(args: Array<String>) {
+    // Skiko render-API fallback: on Linux, if the system OpenGL library cannot
+    // be loaded (e.g. the AppImage running on Arch without a working libGL,
+    // which crashed with UnsatisfiedLinkError in OpenGLApi.glFlush on the first
+    // frame), fall back to the software renderer before the first Skia layer is
+    // created. Must run before application { }.
+    configureRenderApi()
+
     // A toast / command-line launch can request a section (e.g. --open=updates).
     val openSection = AppCommand.parse(args)
     // Single-instance guard: if another instance is already running (or already

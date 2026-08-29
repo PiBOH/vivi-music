@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.12-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **AppImage no longer crashes on Linux without a working libGL** (e.g. Arch): the first frame died with `UnsatisfiedLinkError` in `OpenGLApi.glFlush()` because Skiko defaults to OpenGL on Linux. The app now probes for a loadable OpenGL library at startup and automatically falls back to the software renderer (`skiko.renderApi=SOFTWARE`) before the first frame, so machines with no GPU/GL (or broken GL in the AppImage) run normally; machines with a real GPU are unaffected. `SKIKO_RENDER_API` env var is honored as an explicit override.
+
 ## [6.4.41_DE-1.41.11-nightly] - 2026-08-29
 
 ### Changed
