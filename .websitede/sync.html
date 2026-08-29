@@ -45,18 +45,23 @@
         <div class="emoji">📱</div>
         <div class="name">Phone</div>
         <div class="sub">VIVI Music (Android)</div>
+        <div class="node-eq" aria-hidden="true"><i></i><i></i><i></i></div>
       </div>
       <div class="sync-link" aria-hidden="true">
-        <span class="arrow">◄ ►</span>
-        <span>WebSocket</span>
+        <div class="sync-flow">
+          <span class="flow-line"></span>
+          <i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i>
+        </div>
+        <span>WebSocket · real-time</span>
       </div>
       <div class="sync-node" tabindex="0" data-tip="Your computer runs VIVI Music DE — the remote station of the pair. Search a song on the phone and it plays here instantly, or control the desktop from the phone.">
         <div class="emoji">💻</div>
         <div class="name">Desktop</div>
         <div class="sub">VIVI Music DE</div>
+        <div class="node-eq" aria-hidden="true"><i></i><i></i><i></i></div>
       </div>
       <div class="sync-relay" tabindex="0" data-tip="Same Wi-Fi: the connection is direct (LAN relay hosted by the desktop). Different networks: the pair routes through the cloud relay (WebSocket). Both speak the same protocol.">
-        <span>🛰️</span> LAN relay · or cloud relay <code>wss://vivimusic-device-sync.onrender.com</code>
+        <span class="ping"></span> LAN relay · or cloud relay <code>wss://vivimusic-device-sync.onrender.com</code>
       </div>
     </div>
     <div class="sync-tip" id="sync-tip"><strong>Hover or tap a device</strong> to see what it does.</div>

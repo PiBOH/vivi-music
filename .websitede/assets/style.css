@@ -802,3 +802,120 @@ code {
   html:focus-within { scroll-behavior: auto; }
   .js .reveal { opacity: 1; transform: none; }
 }
+/* ================= Animated sync diagram ================= */
+.sync-flow {
+  position: relative;
+  width: 116px;
+  height: 26px;
+}
+.sync-flow .flow-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+.sync-flow .flow-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--grad);
+  opacity: 0.25;
+  animation: shimmer 2.6s ease-in-out infinite;
+}
+.sync-flow i {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--grad);
+  opacity: 0;
+}
+.sync-flow i.a { animation: flow-ltr 2.2s linear infinite; }
+.sync-flow i.b { animation: flow-ltr 2.2s linear infinite 1.1s; }
+.sync-flow i.c { animation: flow-rtl 2.2s linear infinite 0.55s; }
+.sync-flow i.d { animation: flow-rtl 2.2s linear infinite 1.65s; }
+@keyframes flow-ltr {
+  0% { left: 0; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { left: calc(100% - 6px); opacity: 0; }
+}
+@keyframes flow-rtl {
+  0% { left: calc(100% - 6px); opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { left: 0; opacity: 0; }
+}
+@keyframes shimmer {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.55; }
+}
+
+/* Mini equalizer inside each sync device node */
+.node-eq {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 14px;
+  margin-top: 8px;
+}
+.node-eq i {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--grad);
+  animation: eq 0.9s ease-in-out infinite alternate;
+}
+.node-eq i:nth-child(1) { height: 60%; animation-delay: 0s; }
+.node-eq i:nth-child(2) { height: 100%; animation-delay: 0.2s; }
+.node-eq i:nth-child(3) { height: 75%; animation-delay: 0.4s; }
+
+/* Ping ring on the relay */
+.sync-relay .ping {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.sync-relay .ping::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  animation: ping 1.8s ease-out infinite;
+}
+@keyframes ping {
+  from { transform: scale(0.5); opacity: 1; }
+  to { transform: scale(1.7); opacity: 0; }
+}
+
+/* ================= Ambient touches ================= */
+/* Slow drift of the hero aurora */
+.hero::before { animation: drift 16s ease-in-out infinite alternate; }
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(2%, 1.5%, 0) scale(1.08); }
+}
+
+/* Gentle float for the home sync band emojis */
+.syncband .phones span {
+  display: inline-block;
+  animation: floaty 3.2s ease-in-out infinite;
+}
+.syncband .phones span:nth-child(2) { animation-delay: 0.4s; }
+.syncband .phones span:nth-child(3) { animation-delay: 0.8s; }
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
