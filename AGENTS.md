@@ -111,6 +111,16 @@ dependencies there, or you break the desktop build.
   the button's name. This applies to all new buttons and to existing buttons
   when touched; use the localized label when one exists, otherwise a short
   English name. Never show raw localization keys.
+- **Distinct icons for distinct actions (always):** do not reuse the same icon
+  for different meanings in the DE. When a concept already has an icon, keep
+  that icon everywhere it appears; when adding a new action, pick a new icon
+  (prefer the icon the Android app uses for the same concept; if none exists,
+  choose a Material icon that is not already used for something else). The one
+  exception: a concept used for a *list of the same kind* (e.g. every playlist
+  in the sidebar) keeps one shared icon. Current map: queue → `QueueMusic`,
+  playlist entries/filter → `PlaylistPlay`, add-to-playlist → `PlaylistAdd`,
+  right Now-Playing panel → `VerticalSplit`, library/albums → `LibraryMusic`,
+  menu (⋯) → `MoreVert`, settings → `Settings`.
 - Kotlin formatting: keep to the project's existing style; do not run a global
   formatter that rewrites unrelated lines.
 - Verify non-trivial changes by compiling the affected module
