@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.1-nightly] - 2026-08-29
+
+### Fixed
+- [DE] The sidebar "Artists" entry now opens the actual Artists screen (the library artists list) instead of the Queue; the queue keeps its dedicated button.
+
 ## [6.4.41_DE-1.41.0-nightly] - 2026-08-29
 
 ### Added

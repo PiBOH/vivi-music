@@ -2552,7 +2552,12 @@ fun Sidebar(
         SidebarEntry(Screen.History, "history", Icons.Outlined.History, Icons.Filled.History),
         SidebarEntry(Screen.Library, "songs", Icons.Outlined.MusicNote, Icons.Filled.MusicNote),
         SidebarEntry(Screen.LocalPlaylists, "albums", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
-        SidebarEntry(Screen.Queue, "artists", Icons.Outlined.Group, Icons.Filled.Group),
+        SidebarEntry(
+            Screen.ArtistItems("FEmusic_library_corpus_artists", null),
+            "artists",
+            Icons.Outlined.Group,
+            Icons.Filled.Group,
+        ),
     )
 
     val width by animateDpAsState(if (collapsed) 72.dp else 230.dp, label = "sidebarWidth")
