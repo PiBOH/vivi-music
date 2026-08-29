@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.40.0-nightly] - 2026-08-29
+
+### Added
+- [DE] **Accent color intensity slider** (Settings → Appearance → Theme & colors): tune how vivid the accent appears from 100% down to 0% (fully desaturated grey of the same lightness). It works in both the tonal Material accent and the flat Spotify style — the saturation is scaled before the accent seeds either palette, without changing the hue. The value persists (`accentIntensity`) and a small row of preview swatches shows 100/75/50/25/0%. New string translated in all 47 languages.
+
 ## [6.4.41_DE-1.39.0-nightly] - 2026-08-29
 
 ### Added

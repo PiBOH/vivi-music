@@ -251,6 +251,7 @@ fun main(args: Array<String>) {
     var language by remember { mutableStateOf(DesktopSettings.load().language) }
     var themeMode by remember { mutableStateOf(ThemeMode.from(DesktopSettings.load().darkMode)) }
     var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
+    var accentIntensity by remember { mutableStateOf(DesktopSettings.load().accentIntensity) }
     var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
     var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
     // Spotify-style layout (3 panels) + flat theme, applied together. Default
@@ -262,6 +263,7 @@ fun main(args: Array<String>) {
             it.copy(
                 darkMode = themeMode.key,
                 accentColor = colorToArgbInt(accent),
+                accentIntensity = accentIntensity,
                 pureBlack = pureBlack,
             )
         }
@@ -436,7 +438,14 @@ fun main(args: Array<String>) {
             }
         }
 
-        AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = selectedFont, spotify = spotifyLayout) {
+        AppTheme(
+            mode = themeMode,
+            accent = accent,
+            pureBlack = pureBlack,
+            font = selectedFont,
+            spotify = spotifyLayout,
+            accentIntensity = accentIntensity,
+        ) {
             // NOTE: do NOT wrap this in a global SelectionContainer. Popup-based
             // components (DropdownMenu, AlertDialog) inherit the selection
             // registrar and crash with "layouts are not part of the same
@@ -474,6 +483,11 @@ fun main(args: Array<String>) {
                         },
                         onAccentChange = {
                             accent = it
+                            saveTheme()
+                        },
+                        accentIntensity = accentIntensity,
+                        onAccentIntensityChange = {
+                            accentIntensity = it
                             saveTheme()
                         },
                         pureBlack = pureBlack,
@@ -573,6 +587,8 @@ fun WindowScope.App(
     accent: Color,
     onThemeModeChange: (ThemeMode) -> Unit,
     onAccentChange: (Color) -> Unit,
+    accentIntensity: Float = 1f,
+    onAccentIntensityChange: (Float) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     spotifyLayout: Boolean = false,
@@ -1721,6 +1737,8 @@ fun WindowScope.App(
                         accent = accent,
                         onThemeModeChange = onThemeModeChange,
                         onAccentChange = onAccentChange,
+                        accentIntensity = accentIntensity,
+                        onAccentIntensityChange = onAccentIntensityChange,
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
                     )
@@ -2390,7 +2408,14 @@ fun WindowScope.App(
             onCloseRequest = { DeveloperOptions.setMode(DevToolsMode.OVERLAY) },
             title = "VIVI Music DE — Developer tools",
         ) {
-            AppTheme(mode = themeMode, accent = accent, pureBlack = pureBlack, font = font, spotify = spotifyLayout) {
+            AppTheme(
+                mode = themeMode,
+                accent = accent,
+                pureBlack = pureBlack,
+                font = font,
+                spotify = spotifyLayout,
+                accentIntensity = accentIntensity,
+            ) {
                 SelectionContainer {
                     DevToolsPanel(syncManager = syncManager, language = language)
                 }

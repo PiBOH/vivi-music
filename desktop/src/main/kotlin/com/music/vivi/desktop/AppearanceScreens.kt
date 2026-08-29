@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -48,6 +51,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import kotlin.math.roundToInt
 
 /**
@@ -268,6 +272,8 @@ fun ThemeSection(
     accent: Color,
     onModeChange: (ThemeMode) -> Unit,
     onAccentChange: (Color) -> Unit,
+    accentIntensity: Float = 1f,
+    onAccentIntensityChange: (Float) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
 ) {
@@ -351,6 +357,43 @@ fun ThemeSection(
                         },
                     )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(Localization.get(language, "accent_intensity"), style = MaterialTheme.typography.titleMedium)
+        Row(
+            Modifier.fillMaxWidth().padding(top = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Slider(
+                value = accentIntensity,
+                onValueChange = onAccentIntensityChange,
+                valueRange = 0f..1f,
+                steps = 18,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "${(accentIntensity * 100).roundToInt()}%",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 14.dp).widthIn(min = 44.dp),
+                textAlign = TextAlign.End,
+            )
+        }
+        // Small live preview of the currently adjusted accent.
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(100, 75, 50, 25, 0).forEach { pct ->
+                val c = adjustAccentIntensity(accent, pct / 100f)
+                Box(
+                    Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(c)
+                        .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), CircleShape),
+                )
             }
         }
 

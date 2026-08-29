@@ -183,6 +183,47 @@ fun argbIntToColor(argb: Int): Color = Color(
 )
 
 /**
+ * Scales the saturation (vividness) of [color] by [intensity] (0..1).
+ * 1 keeps the color unchanged; 0 yields a desaturated (grey) version of the
+ * same lightness. Used so the user can tune how strong the accent appears
+ * without changing which hue it is.
+ */
+fun adjustAccentIntensity(color: Color, intensity: Float): Color {
+    val i = intensity.coerceIn(0f, 1f)
+    if (i >= 1f) return color
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val l = (max + min) / 2f
+    val d = max - min
+    var s = if (d == 0f) 0f else if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+    s = (s * i).coerceIn(0f, 1f)
+    var h = 0f
+    if (d != 0f) {
+        h = when (max) {
+            r -> ((g - b) / d) % 6f
+            g -> (b - r) / d + 2f
+            else -> (r - g) / d + 4f
+        } * 60f
+        if (h < 0f) h += 360f
+    }
+    val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
+    val x = c * (1f - kotlin.math.abs((h / 60f) % 2f - 1f))
+    val m = l - c / 2f
+    val (rr, gg, bb) = when {
+        h < 60f -> Triple(c, x, 0f)
+        h < 120f -> Triple(x, c, 0f)
+        h < 180f -> Triple(0f, c, x)
+        h < 240f -> Triple(0f, x, c)
+        h < 300f -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    return Color(red = rr + m, green = gg + m, blue = bb + m, alpha = color.alpha)
+}
+
+/**
  * Flat Spotify-style palette: fixed surfaces, no tonal Material 3 variation.
  * Dark: bg `#121212`, cards/panels `#181818`, hover `#282828`, secondary text
  * `#B3B3B3`. Light: bg `#FFFFFF`, panels `#F6F6F6`, text `#191414`.
@@ -290,6 +331,7 @@ fun AppTheme(
     pureBlack: Boolean = false,
     font: AppFont = AppFont.SYSTEM,
     spotify: Boolean = false,
+    accentIntensity: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val useDark = when (mode) {
@@ -297,15 +339,18 @@ fun AppTheme(
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
+    // Resolve the sentinel (dynamic) accent, then apply the user-set intensity
+    // (saturation) so it seeds both the flat Spotify primary and the tonal
+    // Material scheme.
+    val appliedAccent = adjustAccentIntensity(AccentPalette.effective(accent), accentIntensity)
     val colorScheme = if (spotify) {
-        // Flat Spotify palette — no tonal engine; the user's accent (or the
-        // OS/dynamic one) is used as the flat primary color.
-        spotifyScheme(useDark, pureBlack && useDark, accent)
+        // Flat Spotify palette — no tonal engine; the accent is the flat primary.
+        spotifyScheme(useDark, pureBlack && useDark, appliedAccent)
     } else {
         // Same seed-based tonal palette as the Android app (TonalSpot +
         // SPEC_2025), so the desktop colors match the mobile app pixel-perfectly.
         rememberDynamicColorScheme(
-            seedColor = AccentPalette.effective(accent),
+            seedColor = appliedAccent,
             isDark = useDark,
             specVersion = ColorSpec.SpecVersion.SPEC_2025,
             style = PaletteStyle.TonalSpot,

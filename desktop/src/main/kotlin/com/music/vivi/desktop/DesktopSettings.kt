@@ -22,6 +22,8 @@ data class DesktopSyncState(
     val includePreReleases: Boolean = false,
     val darkMode: String = "system",
     val accentColor: Int = 0xFFED5564.toInt(),
+    /** Accent saturation/vividness (0..1 scale, 1 = full). */
+    val accentIntensity: Float = 1f,
     val selectedFont: String = "system",
     /** UI density scale (1f = 100%; supports 55%..200% via the density presets). */
     val densityScale: Float = 1f,

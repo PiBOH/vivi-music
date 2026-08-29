@@ -384,11 +384,23 @@ fun SettingsThemeScreen(
     accent: androidx.compose.ui.graphics.Color,
     onThemeModeChange: (ThemeMode) -> Unit,
     onAccentChange: (androidx.compose.ui.graphics.Color) -> Unit,
+    accentIntensity: Float = 1f,
+    onAccentIntensityChange: (Float) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
 ) {
     SettingsSubScreen(language, onBack) {
-        ThemeSection(language, themeMode, accent, onThemeModeChange, onAccentChange, pureBlack, onPureBlackChange)
+        ThemeSection(
+            language = language,
+            mode = themeMode,
+            accent = accent,
+            onModeChange = onThemeModeChange,
+            onAccentChange = onAccentChange,
+            accentIntensity = accentIntensity,
+            onAccentIntensityChange = onAccentIntensityChange,
+            pureBlack = pureBlack,
+            onPureBlackChange = onPureBlackChange,
+        )
     }
 }
 

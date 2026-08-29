@@ -12,6 +12,7 @@ private fun strings_0(): Map<String, String> =
     mapOf(
         "about" to "About",
         "accent_color" to "Accent color",
+        "accent_intensity" to "Accent color intensity",
         "account" to "Account",
         "action_backup" to "Backup",
         "action_restore" to "Restore",
@@ -463,6 +464,7 @@ private fun strings_1(): Map<String, String> =
     mapOf(
         "about" to "حول",
         "accent_color" to "لون التمييز",
+        "accent_intensity" to "شدة لون التمييز",
         "account" to "حساب",
         "action_backup" to "نسخ احتياطي",
         "action_restore" to "استعادة",
@@ -928,6 +930,7 @@ private fun strings_2(): Map<String, String> =
     mapOf(
         "about" to "বিষয়ে",
         "accent_color" to "একচেণ্ট ৰং",
+        "accent_intensity" to "একচেণ্ট ৰংৰ তীব্রতা",
         "account" to "একাউণ্ট",
         "action_backup" to "বেকআপ",
         "action_restore" to "পুনৰুদ্ধাৰ",
@@ -1393,6 +1396,7 @@ private fun strings_3(): Map<String, String> =
     mapOf(
         "about" to "Haqqında",
         "accent_color" to "Vurğu rəngi",
+        "accent_intensity" to "Vurğu rənginin intensivliyi",
         "account" to "Hesab",
         "action_backup" to "Yedək",
         "action_restore" to "Bərpa et",
@@ -1858,6 +1862,7 @@ private fun strings_4(): Map<String, String> =
     mapOf(
         "about" to "Аб праграме",
         "accent_color" to "Акцэнтны колер",
+        "accent_intensity" to "Інтэнсіўнасць акцэнтнага колеру",
         "account" to "Уліковы запіс",
         "action_backup" to "Рэзервовая копія",
         "action_restore" to "Аднавіць",
@@ -2323,6 +2328,7 @@ private fun strings_5(): Map<String, String> =
     mapOf(
         "about" to "Относно",
         "accent_color" to "Акцентен цвят",
+        "accent_intensity" to "Интензитет на акцентния цвят",
         "account" to "Профил",
         "action_backup" to "Архивиране",
         "action_restore" to "Възстановяване",
@@ -2788,6 +2794,7 @@ private fun strings_6(): Map<String, String> =
     mapOf(
         "about" to "অ্যাপ সম্পর্কে",
         "accent_color" to "অ্যাকসেন্ট রঙ",
+        "accent_intensity" to "অ্যাকসেন্ট রঙের তীব্রতা",
         "account" to "অ্যাকাউন্ট",
         "action_backup" to "ব্যাকআপ",
         "action_restore" to "পুনরুদ্ধার",
@@ -3253,6 +3260,7 @@ private fun strings_7(): Map<String, String> =
     mapOf(
         "about" to "O vivimusic-u",
         "accent_color" to "Akcentna boja",
+        "accent_intensity" to "Intenzitet akcentne boje",
         "account" to "Račun",
         "action_backup" to "Rezervna kopija",
         "action_restore" to "Vrati",
@@ -3718,6 +3726,7 @@ private fun strings_8(): Map<String, String> =
     mapOf(
         "about" to "Quant a",
         "accent_color" to "Color d'accent",
+        "accent_intensity" to "Intensitat del color d'accent",
         "account" to "Compte",
         "action_backup" to "Còpia de seguretat",
         "action_restore" to "Restaura",
@@ -4183,6 +4192,7 @@ private fun strings_9(): Map<String, String> =
     mapOf(
         "about" to "O aplikaci",
         "accent_color" to "Barva zvýraznění",
+        "accent_intensity" to "Intenzita barvy zvýraznění",
         "account" to "Účet",
         "action_backup" to "Záloha",
         "action_restore" to "Obnovit",
@@ -4648,6 +4658,7 @@ private fun strings_10(): Map<String, String> =
     mapOf(
         "about" to "Über",
         "accent_color" to "Akzentfarbe",
+        "accent_intensity" to "Intensität der Akzentfarbe",
         "account" to "Konto",
         "action_backup" to "Sicherung",
         "action_restore" to "Wiederherstellen",
@@ -5113,6 +5124,7 @@ private fun strings_11(): Map<String, String> =
     mapOf(
         "about" to "Σχετικά",
         "accent_color" to "Χρώμα έμφασης",
+        "accent_intensity" to "Ένταση του χρώματος έμφασης",
         "account" to "Λογαριασμός",
         "action_backup" to "Αντίγραφο ασφαλείας",
         "action_restore" to "Επαναφορά",
@@ -5578,6 +5590,7 @@ private fun strings_12(): Map<String, String> =
     mapOf(
         "about" to "Acerca de",
         "accent_color" to "Color de acento",
+        "accent_intensity" to "Intensidad del color de acento",
         "account" to "Cuenta",
         "action_backup" to "Copia de seguridad",
         "action_restore" to "Restaurar",
@@ -6043,6 +6056,7 @@ private fun strings_13(): Map<String, String> =
     mapOf(
         "about" to "Rakenduse teave",
         "accent_color" to "Aktsentvärv",
+        "accent_intensity" to "Rõhuvärvi intensiivsus",
         "account" to "Kasutajakonto",
         "action_backup" to "Varundus",
         "action_restore" to "Taasta",
@@ -6508,6 +6522,7 @@ private fun strings_14(): Map<String, String> =
     mapOf(
         "about" to "Honi buruz",
         "accent_color" to "Azentu kolorea",
+        "accent_intensity" to "Azentu kolorearen intentsitatea",
         "account" to "Kontua",
         "action_backup" to "Babeskopia",
         "action_restore" to "Leheneratu",
@@ -6973,6 +6988,7 @@ private fun strings_15(): Map<String, String> =
     mapOf(
         "about" to "Tietoa",
         "accent_color" to "Korostusväri",
+        "accent_intensity" to "Korostusvärin voimakkuus",
         "account" to "Tili",
         "action_backup" to "Varmuuskopio",
         "action_restore" to "Palauta",
@@ -7438,6 +7454,7 @@ private fun strings_16(): Map<String, String> =
     mapOf(
         "about" to "Tungkol",
         "accent_color" to "Accent color",
+        "accent_intensity" to "Tindi ng accent color",
         "account" to "Account",
         "action_backup" to "Backup",
         "action_restore" to "I-restore",
@@ -7903,6 +7920,7 @@ private fun strings_17(): Map<String, String> =
     mapOf(
         "about" to "À propos",
         "accent_color" to "Couleur d'accentuation",
+        "accent_intensity" to "Intensité de la couleur d'accent",
         "account" to "Compte",
         "action_backup" to "Sauvegarde",
         "action_restore" to "Restaurer",
@@ -8368,6 +8386,7 @@ private fun strings_18(): Map<String, String> =
     mapOf(
         "about" to "परिचय",
         "accent_color" to "एक्सेंट रंग",
+        "accent_intensity" to "एक्सेंट रंग की तीव्रता",
         "account" to "खाता",
         "action_backup" to "बैकअप",
         "action_restore" to "पुनर्स्थापित करें",
@@ -8833,6 +8852,7 @@ private fun strings_19(): Map<String, String> =
     mapOf(
         "about" to "Informacije",
         "accent_color" to "Akcentna boja",
+        "accent_intensity" to "Intenzitet akcentne boje",
         "account" to "Račun",
         "action_backup" to "Sigurnosna kopija",
         "action_restore" to "Vrati",
@@ -9298,6 +9318,7 @@ private fun strings_20(): Map<String, String> =
     mapOf(
         "about" to "Névjegy",
         "accent_color" to "Kiemelő szín",
+        "accent_intensity" to "Akcentszín intenzitása",
         "account" to "Fiók",
         "action_backup" to "Biztonsági mentés",
         "action_restore" to "Visszaállítás",
@@ -9763,6 +9784,7 @@ private fun strings_21(): Map<String, String> =
     mapOf(
         "about" to "Tentang",
         "accent_color" to "Warna aksen",
+        "accent_intensity" to "Intensitas warna aksen",
         "account" to "Akun",
         "action_backup" to "Cadangan",
         "action_restore" to "Pulihkan",
@@ -10228,6 +10250,7 @@ private fun strings_22(): Map<String, String> =
     mapOf(
         "about" to "Informazioni",
         "accent_color" to "Colore accento",
+        "accent_intensity" to "Intensità del colore accento",
         "account" to "Account",
         "action_backup" to "Backup",
         "action_restore" to "Ripristina",
@@ -10693,6 +10716,7 @@ private fun strings_23(): Map<String, String> =
     mapOf(
         "about" to "情報",
         "accent_color" to "アクセントカラー",
+        "accent_intensity" to "アクセントカラーの強さ",
         "account" to "アカウント",
         "action_backup" to "バックアップ",
         "action_restore" to "復元",
@@ -11158,6 +11182,7 @@ private fun strings_24(): Map<String, String> =
     mapOf(
         "about" to "អំពី",
         "accent_color" to "ពណ៌សង្កត់",
+        "accent_intensity" to "អាំងតង់ស៊ីតេពណ៌គំហើញ",
         "account" to "គណនី",
         "action_backup" to "បម្រុងទុក",
         "action_restore" to "ស្ដារឡើងវិញ",
@@ -11623,6 +11648,7 @@ private fun strings_25(): Map<String, String> =
     mapOf(
         "about" to "정보",
         "accent_color" to "강조 색상",
+        "accent_intensity" to "강조 색상 강도",
         "account" to "계정",
         "action_backup" to "백업",
         "action_restore" to "복원",
@@ -12088,6 +12114,7 @@ private fun strings_26(): Map<String, String> =
     mapOf(
         "about" to "Apie",
         "accent_color" to "Akcentinė spalva",
+        "accent_intensity" to "Akcento spalvos intensyvumas",
         "account" to "Paskyra",
         "action_backup" to "Atsarginė kopija",
         "action_restore" to "Atkurti",
@@ -12553,6 +12580,7 @@ private fun strings_27(): Map<String, String> =
     mapOf(
         "about" to "കുറിച്ച്",
         "accent_color" to "ആക്സന്റ് നിറം",
+        "accent_intensity" to "ഹൈലൈറ്റ് നിറത്തിന്റെ തീവ്രത",
         "account" to "അക്കൗണ്ട്",
         "action_backup" to "ബാക്കപ്പ്",
         "action_restore" to "പുനഃസ്ഥാപിക്കുക",
@@ -13018,6 +13046,7 @@ private fun strings_28(): Map<String, String> =
     mapOf(
         "about" to "Tentang",
         "accent_color" to "Warna aksen",
+        "accent_intensity" to "Keamatan warna aksen",
         "account" to "Akaun",
         "action_backup" to "Sandaran",
         "action_restore" to "Pulihkan",
@@ -13483,6 +13512,7 @@ private fun strings_29(): Map<String, String> =
     mapOf(
         "about" to "Om",
         "accent_color" to "Aksentfarge",
+        "accent_intensity" to "Intensitet på aksentfarge",
         "account" to "Konto",
         "action_backup" to "Sikkerhetskopi",
         "action_restore" to "Gjenopprett",
@@ -13948,6 +13978,7 @@ private fun strings_30(): Map<String, String> =
     mapOf(
         "about" to "Over",
         "accent_color" to "Accentkleur",
+        "accent_intensity" to "Intensiteit van de accentkleur",
         "account" to "Account",
         "action_backup" to "Back-up",
         "action_restore" to "Herstellen",
@@ -14413,6 +14444,7 @@ private fun strings_31(): Map<String, String> =
     mapOf(
         "about" to "ਐਪ ਦੇ ਬਾਰੇ",
         "accent_color" to "ਐਕਸੈਂਟ ਰੰਗ",
+        "accent_intensity" to "ਐਕਸੈਂਟ ਰੰਗ ਦੀ ਤੀਬਰਤਾ",
         "account" to "ਖਾਤਾ",
         "action_backup" to "ਬੈਕਅੱਪ",
         "action_restore" to "ਰੀਸਟੋਰ",
@@ -14878,6 +14910,7 @@ private fun strings_32(): Map<String, String> =
     mapOf(
         "about" to "O aplikacji",
         "accent_color" to "Kolor akcentu",
+        "accent_intensity" to "Intensywność koloru akcentu",
         "account" to "Konto",
         "action_backup" to "Kopia zapasowa",
         "action_restore" to "Przywróć",
@@ -15343,6 +15376,7 @@ private fun strings_33(): Map<String, String> =
     mapOf(
         "about" to "Sobre",
         "accent_color" to "Cor de destaque",
+        "accent_intensity" to "Intensidade da cor de acento",
         "account" to "Conta",
         "action_backup" to "Cópia de segurança",
         "action_restore" to "Restaurar",
@@ -15808,6 +15842,7 @@ private fun strings_34(): Map<String, String> =
     mapOf(
         "about" to "Despre",
         "accent_color" to "Culoare de accent",
+        "accent_intensity" to "Intensitatea culorii accent",
         "account" to "Cont",
         "action_backup" to "Copie de rezervă",
         "action_restore" to "Restaurează",
@@ -16273,6 +16308,7 @@ private fun strings_35(): Map<String, String> =
     mapOf(
         "about" to "О приложении",
         "accent_color" to "Акцентный цвет",
+        "accent_intensity" to "Интенсивность акцентного цвета",
         "account" to "Аккаунт",
         "action_backup" to "Резервная копия",
         "action_restore" to "Восстановить",
@@ -16738,6 +16774,7 @@ private fun strings_36(): Map<String, String> =
     mapOf(
         "about" to "Informácie",
         "accent_color" to "Farba zvýraznenia",
+        "accent_intensity" to "Intenzita akcentnej farby",
         "account" to "Účet",
         "action_backup" to "Záloha",
         "action_restore" to "Obnoviť",
@@ -17203,6 +17240,7 @@ private fun strings_37(): Map<String, String> =
     mapOf(
         "about" to "O programu",
         "accent_color" to "Poudarjena barva",
+        "accent_intensity" to "Intenzivnost akcentne barve",
         "account" to "Račun",
         "action_backup" to "Varnostna kopija",
         "action_restore" to "Obnovi",
@@ -17668,6 +17706,7 @@ private fun strings_38(): Map<String, String> =
     mapOf(
         "about" to "O vivimusic-u",
         "accent_color" to "Akcentna boja",
+        "accent_intensity" to "Интензитет акцентне боје",
         "account" to "Račun",
         "action_backup" to "Rezervna kopija",
         "action_restore" to "Vrati",
@@ -18133,6 +18172,7 @@ private fun strings_39(): Map<String, String> =
     mapOf(
         "about" to "Om",
         "accent_color" to "Accentfärg",
+        "accent_intensity" to "Intensitet på accentfärg",
         "account" to "Konto",
         "action_backup" to "Säkerhetskopia",
         "action_restore" to "Återställ",
@@ -18598,6 +18638,7 @@ private fun strings_40(): Map<String, String> =
     mapOf(
         "about" to "பற்றி",
         "accent_color" to "உச்சரிப்பு நிறம்",
+        "accent_intensity" to "அக்சென்ட் நிறத்தின் வீரியம்",
         "account" to "கணக்கு",
         "action_backup" to "காப்புப்பிரதி",
         "action_restore" to "மீட்டெடு",
@@ -19063,6 +19104,7 @@ private fun strings_41(): Map<String, String> =
     mapOf(
         "about" to "గురించి",
         "accent_color" to "యాక్సెంట్ రంగు",
+        "accent_intensity" to "యాక్సెంట్ రంగు యొక్క తీవ్రత",
         "account" to "ఖాతా",
         "action_backup" to "బ్యాకప్",
         "action_restore" to "పునరుద్ధరించు",
@@ -19528,6 +19570,7 @@ private fun strings_42(): Map<String, String> =
     mapOf(
         "about" to "เกี่ยวกับ",
         "accent_color" to "สีเน้น",
+        "accent_intensity" to "ความเข้มของสีเน้น",
         "account" to "บัญชี",
         "action_backup" to "สำรองข้อมูล",
         "action_restore" to "กู้คืน",
@@ -19993,6 +20036,7 @@ private fun strings_43(): Map<String, String> =
     mapOf(
         "about" to "Hakkında",
         "accent_color" to "Vurgu rengi",
+        "accent_intensity" to "Vurgu renginin yoğunluğu",
         "account" to "Hesap",
         "action_backup" to "Yedekleme",
         "action_restore" to "Geri yükle",
@@ -20458,6 +20502,7 @@ private fun strings_44(): Map<String, String> =
     mapOf(
         "about" to "Про програму",
         "accent_color" to "Акцентний колір",
+        "accent_intensity" to "Інтенсивність акцентного кольору",
         "account" to "Акаунт",
         "action_backup" to "Резервна копія",
         "action_restore" to "Відновити",
@@ -20923,6 +20968,7 @@ private fun strings_45(): Map<String, String> =
     mapOf(
         "about" to "Giới thiệu",
         "accent_color" to "Màu nhấn",
+        "accent_intensity" to "Cường độ màu nhấn",
         "account" to "Tài Khoản",
         "action_backup" to "Sao lưu",
         "action_restore" to "Khôi phục",
@@ -21388,6 +21434,7 @@ private fun strings_46(): Map<String, String> =
     mapOf(
         "about" to "关于",
         "accent_color" to "强调色",
+        "accent_intensity" to "强调色强度",
         "account" to "账号",
         "action_backup" to "备份",
         "action_restore" to "恢复",
@@ -21853,6 +21900,7 @@ private fun strings_47(): Map<String, String> =
     mapOf(
         "about" to "關於",
         "accent_color" to "強調色",
+        "accent_intensity" to "強調色強度",
         "account" to "帳號",
         "action_backup" to "備份",
         "action_restore" to "還原",
