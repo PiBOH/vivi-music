@@ -67,6 +67,7 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.VerticalSplit
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lyrics
@@ -2592,7 +2593,7 @@ fun ClassicDesktopMiniPlayer(
                         Tooltip("Right panel") {
                             IconButton(onClick = onToggleRightSidebar) {
                                 Icon(
-                                    Icons.AutoMirrored.Filled.QueueMusic,
+                                    Icons.Filled.VerticalSplit,
                                     contentDescription = "Right panel",
                                     tint = if (showRightSidebar) MaterialTheme.colorScheme.primary else mutedColor,
                                     modifier = Modifier.size(20.dp),

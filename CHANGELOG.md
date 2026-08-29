@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.5-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Distinct icons for distinct actions**: the right Now Playing panel toggle now uses the split-panel icon (`VerticalSplit`) instead of reusing the queue icon; playlist entries in the sidebar and the playlist search filter now use the playlist icon (`PlaylistPlay`) instead of the queue icon. The queue icon (`QueueMusic`) is now used only for the queue, matching the mobile app.
+
 ## [6.4.41_DE-1.41.4-nightly] - 2026-08-29
 
 ### Added

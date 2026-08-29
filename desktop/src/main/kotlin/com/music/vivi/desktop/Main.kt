@@ -61,6 +61,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -2862,7 +2863,7 @@ fun Sidebar(
                             horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                imageVector = Icons.Filled.PlaylistPlay,
                                 contentDescription = p.name,
                                 tint = if (selected) selectedFg
                                 else if (spotify) MaterialTheme.colorScheme.onSurfaceVariant
@@ -3309,7 +3310,7 @@ fun WindowScope.SpotifyTopHeader(
                                     FilterOption(YouTube.SearchFilter.FILTER_VIDEO, Localization.get(language, "filter_videos"), Icons.Filled.PlayCircle),
                                     FilterOption(YouTube.SearchFilter.FILTER_ALBUM, Localization.get(language, "filter_albums"), Icons.Filled.Album),
                                     FilterOption(YouTube.SearchFilter.FILTER_ARTIST, Localization.get(language, "filter_artists"), Icons.Filled.Person),
-                                    FilterOption(YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST, Localization.get(language, "filter_playlists"), Icons.Filled.QueueMusic),
+                                    FilterOption(YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST, Localization.get(language, "filter_playlists"), Icons.Filled.PlaylistPlay),
                                 )
                                 filters.forEach { opt ->
                                     val isSelected = selectedFilter == opt.filter
