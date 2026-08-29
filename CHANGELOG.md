@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.11-nightly] - 2026-08-29
+
+### Changed
+- [DE] **Expressive theme now stays inside the Material palette**: the "Made For You" mix cards, the player's live-mesh background, artist placeholder gradients and the Expressive player's bottom toolbar used fixed brand colors (red/blue/purple/grey hex values). They are now derived from the theme's accent color via hue rotations (new `rotateHue` helper) and Material 3 containers, keeping the Spotify/Apple-style expressive design without leaving the Material theme colors.
+
 ## [6.4.41_DE-1.41.10-nightly] - 2026-08-29
 
 ### Fixed

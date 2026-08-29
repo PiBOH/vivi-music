@@ -122,13 +122,16 @@ fun HomeScreen(
         }
     }
 
-    val curatedMixes = remember {
+    // Expressive Spotify/Apple-style mix cards, but derived from the theme's
+    // accent (hue rotations of it) so they stay inside the Material palette.
+    val accent = MaterialTheme.colorScheme.primary
+    val curatedMixes = remember(accent) {
         listOf(
-            CuratedMix("Get Up! Mix", "Upbeat Essentials", listOf(Color(0xFFFF5252), Color(0xFFFFB74D))),
-            CuratedMix("Chill Mix", "Ambient & Relaxing", listOf(Color(0xFF0288D1), Color(0xFF26A69A))),
-            CuratedMix("New Music Mix", "Fresh Releases", listOf(Color(0xFFEC407A), Color(0xFFAB47BC))),
-            CuratedMix("Heavy Rotation Mix", "Most Played", listOf(Color(0xFFF57C00), Color(0xFFFFD54F))),
-            CuratedMix("Focus Mix", "Deep Concentration", listOf(Color(0xFF5C6BC0), Color(0xFF26C6DA))),
+            CuratedMix("Get Up! Mix", "Upbeat Essentials", listOf(accent, rotateHue(accent, 40f))),
+            CuratedMix("Chill Mix", "Ambient & Relaxing", listOf(rotateHue(accent, 160f), rotateHue(accent, 200f))),
+            CuratedMix("New Music Mix", "Fresh Releases", listOf(rotateHue(accent, 280f), rotateHue(accent, 320f))),
+            CuratedMix("Heavy Rotation Mix", "Most Played", listOf(rotateHue(accent, 60f), rotateHue(accent, 100f))),
+            CuratedMix("Focus Mix", "Deep Concentration", listOf(rotateHue(accent, 220f), rotateHue(accent, 260f))),
         )
     }
 

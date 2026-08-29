@@ -305,7 +305,7 @@ private fun BoxScope.LiveMeshBackground(accent: Color) {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF6A4BFF).copy(alpha = 0.4f),
+                            rotateHue(accent, 120f).copy(alpha = 0.4f),
                             Color.Transparent,
                         ),
                         radius = 1000f,
@@ -319,7 +319,7 @@ private fun BoxScope.LiveMeshBackground(accent: Color) {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF00BFA5).copy(alpha = 0.35f),
+                            rotateHue(accent, 240f).copy(alpha = 0.35f),
                             Color.Transparent,
                         ),
                         radius = 900f,

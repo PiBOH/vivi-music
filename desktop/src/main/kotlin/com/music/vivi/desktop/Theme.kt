@@ -224,6 +224,45 @@ fun adjustAccentIntensity(color: Color, intensity: Float): Color {
 }
 
 /**
+ * Rotates the hue of [color] by [degrees] (0..360), keeping its saturation and
+ * lightness. Used to derive expressive accent-based palettes (Spotify/Apple
+ * style gradients) without leaving the Material theme's accent hue family.
+ */
+fun rotateHue(color: Color, degrees: Float): Color {
+    val d = ((degrees % 360f) + 360f) % 360f
+    if (d == 0f) return color
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val l = (max + min) / 2f
+    val diff = max - min
+    if (diff == 0f) return color // greys have no hue to rotate
+    var h = if (l > 0.5f) diff / (2f - max - min) else diff / (max + min)
+    h = when (max) {
+        r -> ((g - b) / diff) % 6f
+        g -> (b - r) / diff + 2f
+        else -> (r - g) / diff + 4f
+    }
+    h = (h * 60f + d) % 360f
+    if (h < 0f) h += 360f
+    val s = if (l > 0.5f) diff / (2f - max - min) else diff / (max + min)
+    val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
+    val x = c * (1f - kotlin.math.abs((h / 60f) % 2f - 1f))
+    val m = l - c / 2f
+    val (rr, gg, bb) = when {
+        h < 60f -> Triple(c, x, 0f)
+        h < 120f -> Triple(x, c, 0f)
+        h < 180f -> Triple(0f, c, x)
+        h < 240f -> Triple(0f, x, c)
+        h < 300f -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    return Color(red = rr + m, green = gg + m, blue = bb + m, alpha = color.alpha)
+}
+
+/**
  * Flat Spotify-style palette: fixed surfaces, no tonal Material 3 variation.
  * Dark: bg `#121212`, cards/panels `#181818`, hover `#282828`, secondary text
  * `#B3B3B3`. Light: bg `#FFFFFF`, panels `#F6F6F6`, text `#191414`.

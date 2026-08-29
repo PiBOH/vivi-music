@@ -646,8 +646,8 @@ private fun M3EPlayerContent(
                     // Floating Bottom Segmented Pill Toolbar (Queue, Lyrics, History)
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xFF1C1C1F).copy(alpha = 0.95f),
-                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                         shadowElevation = 8.dp,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
@@ -663,14 +663,14 @@ private fun M3EPlayerContent(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (activeTab == M3ETab.QUEUE) Color.White.copy(alpha = 0.22f) else Color.Transparent)
+                                    .background(if (activeTab == M3ETab.QUEUE) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                                     .clickable { activeTab = if (activeTab == M3ETab.QUEUE) M3ETab.NONE else M3ETab.QUEUE },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.QueueMusic,
                                     contentDescription = "Queue",
-                                    tint = if (activeTab == M3ETab.QUEUE) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (activeTab == M3ETab.QUEUE) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -680,14 +680,14 @@ private fun M3EPlayerContent(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (activeTab == M3ETab.LYRICS) Color.White.copy(alpha = 0.22f) else Color.Transparent)
+                                    .background(if (activeTab == M3ETab.LYRICS) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                                     .clickable { activeTab = if (activeTab == M3ETab.LYRICS) M3ETab.NONE else M3ETab.LYRICS },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     Icons.Filled.ChatBubbleOutline,
                                     contentDescription = "Lyrics",
-                                    tint = if (activeTab == M3ETab.LYRICS) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (activeTab == M3ETab.LYRICS) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -697,14 +697,14 @@ private fun M3EPlayerContent(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (activeTab == M3ETab.HISTORY) Color.White.copy(alpha = 0.22f) else Color.Transparent)
+                                    .background(if (activeTab == M3ETab.HISTORY) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                                     .clickable { activeTab = if (activeTab == M3ETab.HISTORY) M3ETab.NONE else M3ETab.HISTORY },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     Icons.Filled.AccessTime,
                                     contentDescription = "History",
-                                    tint = if (activeTab == M3ETab.HISTORY) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (activeTab == M3ETab.HISTORY) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
@@ -1990,17 +1990,12 @@ private fun getArtistInitials(name: String): String {
     }
 }
 
-private fun getArtistGradient(name: String): List<Color> {
-    val hash = name.hashCode()
-    val palette = listOf(
-        listOf(Color(0xFF6366F1), Color(0xFFA855F7)),
-        listOf(Color(0xFFEC4899), Color(0xFF8B5CF6)),
-        listOf(Color(0xFF3B82F6), Color(0xFF06B6D4)),
-        listOf(Color(0xFF10B981), Color(0xFF059669)),
-        listOf(Color(0xFFF59E0B), Color(0xFFEF4444)),
-        listOf(Color(0xFF8B5CF6), Color(0xFFD946EF)),
-    )
-    return palette[kotlin.math.abs(hash) % palette.size]
+private fun getArtistGradient(name: String, accent: Color): List<Color> {
+    // Deterministic per-artist hue rotation of the theme accent, so placeholders
+    // stay inside the Material palette instead of using fixed brand colors.
+    val hash = kotlin.math.abs(name.hashCode())
+    val base = rotateHue(accent, (hash % 360).toFloat())
+    return listOf(base, rotateHue(base, (hash / 360) % 90 + 20f))
 }
 
 @Composable
@@ -2153,7 +2148,7 @@ fun SpotifyRightNowPlayingPanel(
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         artistList.forEachIndexed { index, artistName ->
                             val initials = getArtistInitials(artistName)
-                            val gradientColors = getArtistGradient(artistName)
+                            val gradientColors = getArtistGradient(artistName, MaterialTheme.colorScheme.primary)
                             val thumbUrl = artistThumbnails[artistName]
                             Row(
                                 modifier = Modifier
