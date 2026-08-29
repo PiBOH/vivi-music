@@ -121,6 +121,9 @@ dependencies there, or you break the desktop build.
   playlist entries/filter → `PlaylistPlay`, add-to-playlist → `PlaylistAdd`,
   right Now-Playing panel → `VerticalSplit`, library/albums → `LibraryMusic`,
   menu (⋯) → `MoreVert`, settings → `Settings`.
+- **Expressive theme rule (always):** don't move away from expressive theme.
+  You design it like the way the Spotify, Apple, etc. do, but don't move away
+  from Material theme color.
 - Kotlin formatting: keep to the project's existing style; do not run a global
   formatter that rewrites unrelated lines.
 - Verify non-trivial changes by compiling the affected module
