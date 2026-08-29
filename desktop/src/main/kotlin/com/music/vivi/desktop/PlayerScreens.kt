@@ -462,12 +462,30 @@ private fun M3EPlayerContent(
 
                     Spacer(Modifier.height(14.dp))
 
-                    // 5. Main Playback Controls (Previous, Play/Pause, Next)
+                    // 5. Main Playback Controls (Shuffle, Previous, Play/Pause, Next, Repeat)
                     Row(
                         modifier = Modifier.offset(x = controlsOffsetX, y = controlsOffsetY),
                         horizontalArrangement = Arrangement.spacedBy(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        Tooltip(Localization.get(language, "shuffle")) {
+                            Surface(
+                                onClick = onToggleShuffle,
+                                shape = CircleShape,
+                                color = if (isShuffle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(skipButtonSize),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Filled.Shuffle,
+                                        contentDescription = Localization.get(language, "shuffle"),
+                                        tint = if (isShuffle) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+                        }
+
                         Surface(
                             onClick = onPrevious,
                             shape = CircleShape,
@@ -521,6 +539,24 @@ private fun M3EPlayerContent(
                                     tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(26.dp),
                                 )
+                            }
+                        }
+
+                        Tooltip(Localization.get(language, "repeat")) {
+                            Surface(
+                                onClick = onCycleRepeat,
+                                shape = CircleShape,
+                                color = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(skipButtonSize),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        repeatIcon(repeatMode),
+                                        contentDescription = Localization.get(language, "repeat"),
+                                        tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -2625,11 +2661,15 @@ fun NewDesktopMiniPlayer(
     positionMs: Long,
     durationMs: Long,
     volume: Float,
+    isShuffle: Boolean,
+    repeatMode: RepeatMode,
     backgroundStyle: MiniPlayerBackgroundStyle,
     pureBlack: Boolean,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onVolume: (Float) -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit,
     onOpenPlayer: () -> Unit,
     onOpenQueue: () -> Unit,
     language: String,
@@ -2758,6 +2798,16 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
+                Tooltip(Localization.get(language, "shuffle")) {
+                    IconButton(onClick = onToggleShuffle) {
+                        Icon(
+                            Icons.Filled.Shuffle,
+                            contentDescription = Localization.get(language, "shuffle"),
+                            tint = if (isShuffle) primaryColor else mutedColor,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
                 Tooltip(Localization.get(language, "next")) {
                     IconButton(onClick = onNext) {
                         Icon(
@@ -2765,6 +2815,16 @@ fun NewDesktopMiniPlayer(
                             contentDescription = Localization.get(language, "next"),
                             tint = contentColor,
                             modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+                Tooltip(Localization.get(language, "repeat")) {
+                    IconButton(onClick = onCycleRepeat) {
+                        Icon(
+                            repeatIcon(repeatMode),
+                            contentDescription = Localization.get(language, "repeat"),
+                            tint = if (repeatMode != RepeatMode.OFF) primaryColor else mutedColor,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
@@ -2800,10 +2860,14 @@ fun AppleDesktopMiniPlayer(
     isLoading: Boolean,
     positionMs: Long,
     durationMs: Long,
+    isShuffle: Boolean,
+    repeatMode: RepeatMode,
     backgroundStyle: MiniPlayerBackgroundStyle,
     pureBlack: Boolean,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit,
     onOpenPlayer: () -> Unit,
     onOpenQueue: () -> Unit,
     onOpenLyrics: () -> Unit,
@@ -2906,6 +2970,16 @@ fun AppleDesktopMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
+                Tooltip(Localization.get(language, "shuffle")) {
+                    IconButton(onClick = onToggleShuffle) {
+                        Icon(
+                            Icons.Filled.Shuffle,
+                            contentDescription = Localization.get(language, "shuffle"),
+                            tint = if (isShuffle) primaryColor else mutedColor,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
                 Tooltip(Localization.get(language, "next")) {
                     IconButton(onClick = onNext) {
                         Icon(
@@ -2913,6 +2987,16 @@ fun AppleDesktopMiniPlayer(
                             contentDescription = Localization.get(language, "next"),
                             tint = contentColor,
                             modifier = Modifier.size(26.dp),
+                        )
+                    }
+                }
+                Tooltip(Localization.get(language, "repeat")) {
+                    IconButton(onClick = onCycleRepeat) {
+                        Icon(
+                            repeatIcon(repeatMode),
+                            contentDescription = Localization.get(language, "repeat"),
+                            tint = if (repeatMode != RepeatMode.OFF) primaryColor else mutedColor,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
@@ -2992,11 +3076,15 @@ fun DesktopMiniPlayer(
                 positionMs = positionMs,
                 durationMs = durationMs,
                 volume = volume,
+                isShuffle = isShuffle,
+                repeatMode = repeatMode,
                 backgroundStyle = backgroundStyle,
                 pureBlack = pureBlack,
                 onTogglePlay = onTogglePlay,
                 onNext = onNext,
                 onVolume = onVolume,
+                onToggleShuffle = onToggleShuffle,
+                onCycleRepeat = onCycleRepeat,
                 onOpenPlayer = onOpenPlayer,
                 onOpenQueue = onOpenQueue,
                 language = language,
@@ -3010,10 +3098,14 @@ fun DesktopMiniPlayer(
                 isLoading = isLoading,
                 positionMs = positionMs,
                 durationMs = durationMs,
+                isShuffle = isShuffle,
+                repeatMode = repeatMode,
                 backgroundStyle = backgroundStyle,
                 pureBlack = pureBlack,
                 onTogglePlay = onTogglePlay,
                 onNext = onNext,
+                onToggleShuffle = onToggleShuffle,
+                onCycleRepeat = onCycleRepeat,
                 onOpenPlayer = onOpenPlayer,
                 onOpenQueue = onOpenQueue,
                 onOpenLyrics = onOpenLyrics,

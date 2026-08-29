@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.7-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Right Now Playing panel hides while the full player is open**: it disappears when any player type is expanded (it would duplicate the player content) and comes back automatically when leaving the player, without changing the saved preference.
+- [DE] **Shuffle and repeat buttons now present in every player**: they were missing in the Expressive player design and in the New/Apple mini players; they are now shown with the same active/inactive accent highlighting as the classic layouts.
+
 ## [6.4.41_DE-1.41.6-nightly] - 2026-08-29
 
 ### Fixed

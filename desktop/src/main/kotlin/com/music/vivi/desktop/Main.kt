@@ -2349,7 +2349,10 @@ fun WindowScope.App(
                 )
             }
         }
-        if (showRightSidebar && spotifyLayout) {
+        // Hide the right Now Playing panel while the full player screen is
+        // open (it would duplicate what the player already shows); it comes
+        // back automatically when leaving the player.
+        if (showRightSidebar && spotifyLayout && current != Screen.Player) {
             SpotifyRightNowPlayingPanel(
                 nowPlaying = nowPlaying,
                 isPlaying = isPlaying,
