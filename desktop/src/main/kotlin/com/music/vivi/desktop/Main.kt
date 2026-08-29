@@ -2578,15 +2578,17 @@ fun Sidebar(
             // Collapsed: menu button to expand the rail (works in both the
             // Spotify layout and the classic layout).
             if (collapsed) {
-                IconButton(
-                    onClick = onToggleCollapsed,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Menu,
-                        contentDescription = "Toggle Sidebar",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
+                Tooltip("Menu") {
+                    IconButton(
+                        onClick = onToggleCollapsed,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Menu,
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             } else if (showTitleHeader) {
                 // Expanded classic layout: app title with a collapse button so
@@ -2602,12 +2604,14 @@ fun Sidebar(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.weight(1f))
-                    IconButton(onClick = onToggleCollapsed) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.MenuOpen,
-                            contentDescription = "Toggle Sidebar",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
+                    Tooltip("Collapse sidebar") {
+                        IconButton(onClick = onToggleCollapsed) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.MenuOpen,
+                                contentDescription = "Collapse sidebar",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }
@@ -3091,51 +3095,59 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                IconButton(
-                    onClick = { /* overflow menu */ },
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.MoreHoriz,
-                        contentDescription = "Menu",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(18.dp),
-                    )
+                Tooltip("Menu") {
+                    IconButton(
+                        onClick = { /* overflow menu */ },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.MoreHoriz,
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onBack,
-                    enabled = canGoBack,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = Localization.get(language, "back"),
-                        tint = if (canGoBack) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "back")) {
+                    IconButton(
+                        onClick = onBack,
+                        enabled = canGoBack,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = Localization.get(language, "back"),
+                            tint = if (canGoBack) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = { /* forward */ },
-                    enabled = false,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Forward",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip("Forward") {
+                    IconButton(
+                        onClick = { /* forward */ },
+                        enabled = false,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Forward",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onToggleSidebar,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.ViewColumn,
-                        contentDescription = "Toggle Sidebar",
-                        tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip("Toggle sidebar") {
+                    IconButton(
+                        onClick = onToggleSidebar,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.ViewColumn,
+                            contentDescription = "Toggle sidebar",
+                            tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
             }
 
@@ -3144,16 +3156,18 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                IconButton(
-                    onClick = onOpenHome,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Home,
-                        contentDescription = Localization.get(language, "home"),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp),
-                    )
+                Tooltip(Localization.get(language, "home")) {
+                    IconButton(
+                        onClick = onOpenHome,
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Home,
+                            contentDescription = Localization.get(language, "home"),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
 
                 Surface(
@@ -3209,16 +3223,18 @@ fun WindowScope.SpotifyTopHeader(
                             )
                         }
                         if (searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { onSearchQueryChange("") },
-                                modifier = Modifier.size(24.dp),
-                            ) {
-                                Icon(
-                                    Icons.Filled.Close,
-                                    contentDescription = "Clear",
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(16.dp),
-                                )
+                            Tooltip("Clear") {
+                                IconButton(
+                                    onClick = { onSearchQueryChange("") },
+                                    modifier = Modifier.size(24.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Filled.Close,
+                                        contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
                             }
                             Spacer(Modifier.width(4.dp))
                         }
@@ -3347,82 +3363,96 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                IconButton(
-                    onClick = { /* output device */ },
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.SpeakerGroup,
-                        contentDescription = "Output device",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip("Output device") {
+                    IconButton(
+                        onClick = { /* output device */ },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.SpeakerGroup,
+                            contentDescription = "Output device",
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onOpenLyrics,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Subject,
-                        contentDescription = Localization.get(language, "lyrics"),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "lyrics")) {
+                    IconButton(
+                        onClick = onOpenLyrics,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Subject,
+                            contentDescription = Localization.get(language, "lyrics"),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onOpenQueue,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = Localization.get(language, "queue"),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "queue")) {
+                    IconButton(
+                        onClick = onOpenQueue,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = Localization.get(language, "queue"),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onOpenHistory,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.History,
-                        contentDescription = Localization.get(language, "history"),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "history")) {
+                    IconButton(
+                        onClick = onOpenHistory,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.History,
+                            contentDescription = Localization.get(language, "history"),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onOpenStats,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Leaderboard,
-                        contentDescription = Localization.get(language, "wrapped_title"),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "wrapped_title")) {
+                    IconButton(
+                        onClick = onOpenStats,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Leaderboard,
+                            contentDescription = Localization.get(language, "wrapped_title"),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onOpenListenTogether,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Group,
-                        contentDescription = Localization.get(language, "listen_together_title"),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "listen_together_title")) {
+                    IconButton(
+                        onClick = onOpenListenTogether,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Group,
+                            contentDescription = Localization.get(language, "listen_together_title"),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = onOpenSettings,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Settings,
-                        contentDescription = Localization.get(language, "settings"),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                        modifier = Modifier.size(16.dp),
-                    )
+                Tooltip(Localization.get(language, "settings")) {
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = Localization.get(language, "settings"),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.width(4.dp))
                 if (showWindowControls) {
@@ -3454,38 +3484,44 @@ private fun WindowControls(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onMinimize,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                Icons.Filled.Remove,
-                contentDescription = "Minimize",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp),
-            )
+        Tooltip("Minimize") {
+            IconButton(
+                onClick = onMinimize,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Remove,
+                    contentDescription = "Minimize",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
         }
-        IconButton(
-            onClick = onMaximize,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
-                contentDescription = if (isMaximized) "Restore" else "Maximize",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
-            )
+        Tooltip(if (isMaximized) "Restore" else "Maximize") {
+            IconButton(
+                onClick = onMaximize,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
+                    contentDescription = if (isMaximized) "Restore" else "Maximize",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
+                )
+            }
         }
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier.size(32.dp),
-        ) {
-            Icon(
-                Icons.Filled.Close,
-                contentDescription = "Close",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                modifier = Modifier.size(16.dp),
-            )
+        Tooltip("Close") {
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
         }
     }
 }
@@ -3598,37 +3634,43 @@ fun MiniPlayer(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    IconButton(onClick = onTogglePlay) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = if (pureBlack) Color.White else MaterialTheme.colorScheme.primary,
-                            )
-                        } else {
+                    Tooltip(if (isPlaying) "Pause" else "Play") {
+                        IconButton(onClick = onTogglePlay) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = if (pureBlack) Color.White else MaterialTheme.colorScheme.primary,
+                                )
+                            } else {
+                                Icon(
+                                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = if (pureBlack) Color.White else LocalContentColor.current,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                        }
+                    }
+                    Tooltip("Next") {
+                        IconButton(onClick = onNext) {
                             Icon(
-                                if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                contentDescription = null,
+                                Icons.Filled.SkipNext,
+                                contentDescription = "Next",
                                 tint = if (pureBlack) Color.White else LocalContentColor.current,
                                 modifier = Modifier.size(22.dp),
                             )
                         }
                     }
-                    IconButton(onClick = onNext) {
-                        Icon(
-                            Icons.Filled.SkipNext,
-                            contentDescription = null,
-                            tint = if (pureBlack) Color.White else LocalContentColor.current,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                    IconButton(onClick = onOpenQueue) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.QueueMusic,
-                            contentDescription = null,
-                            tint = if (pureBlack) Color.White else LocalContentColor.current,
-                            modifier = Modifier.size(22.dp),
-                        )
+                    Tooltip("Queue") {
+                        IconButton(onClick = onOpenQueue) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.QueueMusic,
+                                contentDescription = "Queue",
+                                tint = if (pureBlack) Color.White else LocalContentColor.current,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -3707,14 +3749,18 @@ fun SettingsScreen(
                     placeholder = { Text(Localization.get(language, "search")) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
-                        IconButton(onClick = { searchActive = false; searchQuery = "" }) {
-                            Icon(Icons.Filled.Close, contentDescription = Localization.get(language, "dismiss"))
+                        Tooltip(Localization.get(language, "dismiss")) {
+                            IconButton(onClick = { searchActive = false; searchQuery = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = Localization.get(language, "dismiss"))
+                            }
                         }
                     },
                 )
             } else {
-                IconButton(onClick = { searchActive = true }) {
-                    Icon(Icons.Filled.Search, contentDescription = Localization.get(language, "search"))
+                Tooltip(Localization.get(language, "search")) {
+                    IconButton(onClick = { searchActive = true }) {
+                        Icon(Icons.Filled.Search, contentDescription = Localization.get(language, "search"))
+                    }
                 }
             }
         }
@@ -4324,8 +4370,10 @@ fun BoxScope.UpdateNotification(
                     )
                 )
             }
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Filled.Close, contentDescription = Localization.get(language, "dismiss"))
+            Tooltip(Localization.get(language, "dismiss")) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = Localization.get(language, "dismiss"))
+                }
             }
         }
     }

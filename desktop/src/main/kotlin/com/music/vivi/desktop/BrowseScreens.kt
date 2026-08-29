@@ -160,19 +160,21 @@ fun HomeScreen(
                         )
                     }
 
-                    IconButton(
-                        onClick = { /* Home hub / notifications */ },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                        ),
-                        modifier = Modifier.size(42.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Notifications,
-                            contentDescription = "Notifications",
-                            modifier = Modifier.size(20.dp),
-                        )
+                    Tooltip("Notifications") {
+                        IconButton(
+                            onClick = { /* Home hub / notifications */ },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurface,
+                            ),
+                            modifier = Modifier.size(42.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Notifications,
+                                contentDescription = "Notifications",
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -348,19 +350,21 @@ fun HomeScreen(
                         ) {
                             val endpoint = section.endpoint
                             if (endpoint != null) {
-                                IconButton(
-                                    onClick = { onOpenBrowse(endpoint.browseId, endpoint.params) },
-                                    colors = IconButtonDefaults.iconButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        contentColor = MaterialTheme.colorScheme.onSurface,
-                                    ),
-                                    modifier = Modifier.size(32.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                        contentDescription = "View section",
-                                        modifier = Modifier.size(18.dp),
-                                    )
+                                Tooltip("See all") {
+                                    IconButton(
+                                        onClick = { onOpenBrowse(endpoint.browseId, endpoint.params) },
+                                        colors = IconButtonDefaults.iconButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            contentColor = MaterialTheme.colorScheme.onSurface,
+                                        ),
+                                        modifier = Modifier.size(32.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                            contentDescription = "View section",
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                    }
                                 }
                             }
                         }

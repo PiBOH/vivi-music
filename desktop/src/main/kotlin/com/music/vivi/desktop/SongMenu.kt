@@ -76,12 +76,14 @@ fun SongMenu(
     val inLibrary = SongActions.isInLibrary(song)
 
     Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(
-                Icons.Filled.MoreVert,
-                contentDescription = Localization.get(language, "more"),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Tooltip(Localization.get(language, "more")) {
+            IconButton(onClick = { expanded = true }) {
+                Icon(
+                    Icons.Filled.MoreVert,
+                    contentDescription = Localization.get(language, "more"),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(

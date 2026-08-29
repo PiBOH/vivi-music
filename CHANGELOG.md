@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.2-nightly] - 2026-08-29
+
+### Added
+- [DE] **Hover tooltips on buttons**: resting the pointer on a button now shows a small hint with its name (like website tooltips). Covered: sidebar toggle, top-bar controls (back, forward, sidebar, home, search, lyrics, queue, history, stats, Listen Together, settings, output device), window controls (minimize/maximize/close), mini-player and full-player controls (play/pause, next, previous, shuffle, repeat, volume, queue, lyrics, full player, favorite, right panel), search clear, home notifications, browse "See all", now-playing widget, playlist rename/delete, song menu, add-to-playlist buttons.
+
 ## [6.4.41_DE-1.41.1-nightly] - 2026-08-29
 
 ### Fixed

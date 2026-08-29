@@ -282,12 +282,14 @@ fun SongRow(
             )
         }
         if (onAddToPlaylist != null) {
-            IconButton(onClick = onAddToPlaylist) {
-                Icon(
-                    Icons.AutoMirrored.Filled.PlaylistAdd,
-                    contentDescription = Localization.get(language, "add_to_playlist"),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            Tooltip(Localization.get(language, "add_to_playlist")) {
+                IconButton(onClick = onAddToPlaylist) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.PlaylistAdd,
+                        contentDescription = Localization.get(language, "add_to_playlist"),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
         SongMenu(song = song, language = language, onAddToPlaylist = onAddToPlaylist)

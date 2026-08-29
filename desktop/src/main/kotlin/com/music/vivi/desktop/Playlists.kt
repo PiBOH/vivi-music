@@ -243,11 +243,15 @@ fun LocalPlaylistsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        IconButton(onClick = { renameTarget = p }) {
-                            Icon(Icons.Filled.Edit, contentDescription = Localization.get(language, "rename"))
+                        Tooltip(Localization.get(language, "rename")) {
+                            IconButton(onClick = { renameTarget = p }) {
+                                Icon(Icons.Filled.Edit, contentDescription = Localization.get(language, "rename"))
+                            }
                         }
-                        IconButton(onClick = { deleteTarget = p }) {
-                            Icon(Icons.Filled.Delete, contentDescription = Localization.get(language, "delete"), tint = MaterialTheme.colorScheme.error)
+                        Tooltip(Localization.get(language, "delete")) {
+                            IconButton(onClick = { deleteTarget = p }) {
+                                Icon(Icons.Filled.Delete, contentDescription = Localization.get(language, "delete"), tint = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                 }

@@ -1357,28 +1357,32 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
-                IconButton(
-                    onClick = { },
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.PlaylistAdd,
-                        contentDescription = "Queue Options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
+                Tooltip("Queue options") {
+                    IconButton(
+                        onClick = { },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.PlaylistAdd,
+                            contentDescription = "Queue options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
 
-                IconButton(
-                    onClick = { isAutoplayEnabled = !isAutoplayEnabled },
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.AllInclusive,
-                        contentDescription = "Autoplay",
-                        tint = if (isAutoplayEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                        modifier = Modifier.size(18.dp),
-                    )
+                Tooltip("Autoplay") {
+                    IconButton(
+                        onClick = { isAutoplayEnabled = !isAutoplayEnabled },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.AllInclusive,
+                            contentDescription = "Autoplay",
+                            tint = if (isAutoplayEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }
@@ -1730,12 +1734,14 @@ fun QueueScreen(
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                IconButton(onClick = { onAddToPlaylist(item) }) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.PlaylistAdd,
-                                        contentDescription = Localization.get(language, "add_to_playlist"),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                Tooltip(Localization.get(language, "add_to_playlist")) {
+                                    IconButton(onClick = { onAddToPlaylist(item) }) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.PlaylistAdd,
+                                            contentDescription = Localization.get(language, "add_to_playlist"),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                                 Text(
                                     "✕",
@@ -2008,12 +2014,14 @@ fun SpotifyRightNowPlayingPanel(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = onClose) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = Localization.get(language, "close"),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                Tooltip(Localization.get(language, "close")) {
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = Localization.get(language, "close"),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
@@ -2055,12 +2063,14 @@ fun SpotifyRightNowPlayingPanel(
                     )
                 }
                 if (onAddToPlaylist != null) {
-                    IconButton(onClick = { onAddToPlaylist(np) }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.PlaylistAdd,
-                            contentDescription = Localization.get(language, "add_to_playlist"),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                    Tooltip(Localization.get(language, "add_to_playlist")) {
+                        IconButton(onClick = { onAddToPlaylist(np) }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.PlaylistAdd,
+                                contentDescription = Localization.get(language, "add_to_playlist"),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 }
             }
@@ -2442,56 +2452,66 @@ fun ClassicDesktopMiniPlayer(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
-                            IconButton(onClick = onToggleShuffle) {
-                                Icon(
-                                    Icons.Filled.Shuffle,
-                                    contentDescription = Localization.get(language, "shuffle"),
-                                    tint = if (isShuffle) MaterialTheme.colorScheme.primary else mutedColor,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            IconButton(onClick = onPrevious) {
-                                Icon(
-                                    Icons.Filled.SkipPrevious,
-                                    contentDescription = Localization.get(language, "previous"),
-                                    tint = contentColor,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                            }
-                            Box(
-                                Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .clickable(onClick = onTogglePlay),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (isLoading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                                } else {
+                            Tooltip(Localization.get(language, "shuffle")) {
+                                IconButton(onClick = onToggleShuffle) {
                                     Icon(
-                                        if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(22.dp),
+                                        Icons.Filled.Shuffle,
+                                        contentDescription = Localization.get(language, "shuffle"),
+                                        tint = if (isShuffle) MaterialTheme.colorScheme.primary else mutedColor,
+                                        modifier = Modifier.size(18.dp),
                                     )
                                 }
                             }
-                            IconButton(onClick = onNext) {
-                                Icon(
-                                    Icons.Filled.SkipNext,
-                                    contentDescription = Localization.get(language, "next"),
-                                    tint = contentColor,
-                                    modifier = Modifier.size(24.dp),
-                                )
+                            Tooltip(Localization.get(language, "previous")) {
+                                IconButton(onClick = onPrevious) {
+                                    Icon(
+                                        Icons.Filled.SkipPrevious,
+                                        contentDescription = Localization.get(language, "previous"),
+                                        tint = contentColor,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
                             }
-                            IconButton(onClick = onCycleRepeat) {
-                                Icon(
-                                    repeatIcon(repeatMode),
-                                    contentDescription = Localization.get(language, "repeat"),
-                                    tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else mutedColor,
-                                    modifier = Modifier.size(18.dp),
-                                )
+                            Tooltip(Localization.get(language, if (isPlaying) "pause" else "play")) {
+                                Box(
+                                    Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                        .clickable(onClick = onTogglePlay),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (isLoading) {
+                                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                                    } else {
+                                        Icon(
+                                            if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                            contentDescription = if (isPlaying) "Pause" else "Play",
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(22.dp),
+                                        )
+                                    }
+                                }
+                            }
+                            Tooltip(Localization.get(language, "next")) {
+                                IconButton(onClick = onNext) {
+                                    Icon(
+                                        Icons.Filled.SkipNext,
+                                        contentDescription = Localization.get(language, "next"),
+                                        tint = contentColor,
+                                        modifier = Modifier.size(24.dp),
+                                    )
+                                }
+                            }
+                            Tooltip(Localization.get(language, "repeat")) {
+                                IconButton(onClick = onCycleRepeat) {
+                                    Icon(
+                                        repeatIcon(repeatMode),
+                                        contentDescription = Localization.get(language, "repeat"),
+                                        tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else mutedColor,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
                             }
                         }
 
@@ -2529,21 +2549,25 @@ fun ClassicDesktopMiniPlayer(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        IconButton(onClick = onOpenLyrics) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Subject,
-                                contentDescription = Localization.get(language, "lyrics"),
-                                tint = mutedColor,
-                                modifier = Modifier.size(20.dp),
-                            )
+                        Tooltip(Localization.get(language, "lyrics")) {
+                            IconButton(onClick = onOpenLyrics) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Subject,
+                                    contentDescription = Localization.get(language, "lyrics"),
+                                    tint = mutedColor,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
-                        IconButton(onClick = onOpenQueue) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.QueueMusic,
-                                contentDescription = Localization.get(language, "queue"),
-                                tint = mutedColor,
-                                modifier = Modifier.size(20.dp),
-                            )
+                        Tooltip(Localization.get(language, "queue")) {
+                            IconButton(onClick = onOpenQueue) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.QueueMusic,
+                                    contentDescription = Localization.get(language, "queue"),
+                                    tint = mutedColor,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                         Row(
                             Modifier.width(110.dp),
@@ -2565,21 +2589,25 @@ fun ClassicDesktopMiniPlayer(
                             )
                         }
                         Spacer(Modifier.width(4.dp))
-                        IconButton(onClick = onToggleRightSidebar) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.QueueMusic,
-                                contentDescription = "Right Panel",
-                                tint = if (showRightSidebar) MaterialTheme.colorScheme.primary else mutedColor,
-                                modifier = Modifier.size(20.dp),
-                            )
+                        Tooltip("Right panel") {
+                            IconButton(onClick = onToggleRightSidebar) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.QueueMusic,
+                                    contentDescription = "Right panel",
+                                    tint = if (showRightSidebar) MaterialTheme.colorScheme.primary else mutedColor,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
-                        IconButton(onClick = onOpenPlayer) {
-                            Icon(
-                                Icons.Filled.Fullscreen,
-                                contentDescription = "Open Full Player",
-                                tint = mutedColor,
-                                modifier = Modifier.size(22.dp),
-                            )
+                        Tooltip("Open full player") {
+                            IconButton(onClick = onOpenPlayer) {
+                                Icon(
+                                    Icons.Filled.Fullscreen,
+                                    contentDescription = "Open full player",
+                                    tint = mutedColor,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -2709,45 +2737,55 @@ fun NewDesktopMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                IconButton(onClick = { onVolume((volume + 0.1f) % 1.05f) }) {
-                    Icon(
-                        Icons.Filled.SpeakerGroup,
-                        contentDescription = "Output device",
-                        tint = mutedColor,
-                        modifier = Modifier.size(20.dp),
-                    )
+                Tooltip("Output device") {
+                    IconButton(onClick = { onVolume((volume + 0.1f) % 1.05f) }) {
+                        Icon(
+                            Icons.Filled.SpeakerGroup,
+                            contentDescription = "Output device",
+                            tint = mutedColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = { isFavorite = !isFavorite }) {
-                    Icon(
-                        if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (isFavorite) primaryColor else mutedColor,
-                        modifier = Modifier.size(20.dp),
-                    )
+                Tooltip("Favorite") {
+                    IconButton(onClick = { isFavorite = !isFavorite }) {
+                        Icon(
+                            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) primaryColor else mutedColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = onNext) {
-                    Icon(
-                        Icons.Filled.SkipNext,
-                        contentDescription = Localization.get(language, "next"),
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp),
-                    )
+                Tooltip(Localization.get(language, "next")) {
+                    IconButton(onClick = onNext) {
+                        Icon(
+                            Icons.Filled.SkipNext,
+                            contentDescription = Localization.get(language, "next"),
+                            tint = contentColor,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = onOpenQueue) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = Localization.get(language, "queue"),
-                        tint = mutedColor,
-                        modifier = Modifier.size(20.dp),
-                    )
+                Tooltip(Localization.get(language, "queue")) {
+                    IconButton(onClick = onOpenQueue) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = Localization.get(language, "queue"),
+                            tint = mutedColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = onOpenPlayer) {
-                    Icon(
-                        Icons.Filled.Fullscreen,
-                        contentDescription = "Open Full Player",
-                        tint = contentColor,
-                        modifier = Modifier.size(22.dp),
-                    )
+                Tooltip("Open full player") {
+                    IconButton(onClick = onOpenPlayer) {
+                        Icon(
+                            Icons.Filled.Fullscreen,
+                            contentDescription = "Open full player",
+                            tint = contentColor,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
             }
         }
@@ -2867,37 +2905,45 @@ fun AppleDesktopMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                IconButton(onClick = onNext) {
-                    Icon(
-                        Icons.Filled.SkipNext,
-                        contentDescription = Localization.get(language, "next"),
-                        tint = contentColor,
-                        modifier = Modifier.size(26.dp),
-                    )
+                Tooltip(Localization.get(language, "next")) {
+                    IconButton(onClick = onNext) {
+                        Icon(
+                            Icons.Filled.SkipNext,
+                            contentDescription = Localization.get(language, "next"),
+                            tint = contentColor,
+                            modifier = Modifier.size(26.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = onOpenLyrics) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Subject,
-                        contentDescription = Localization.get(language, "lyrics"),
-                        tint = mutedColor,
-                        modifier = Modifier.size(20.dp),
-                    )
+                Tooltip(Localization.get(language, "lyrics")) {
+                    IconButton(onClick = onOpenLyrics) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Subject,
+                            contentDescription = Localization.get(language, "lyrics"),
+                            tint = mutedColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = onOpenQueue) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = Localization.get(language, "queue"),
-                        tint = mutedColor,
-                        modifier = Modifier.size(20.dp),
-                    )
+                Tooltip(Localization.get(language, "queue")) {
+                    IconButton(onClick = onOpenQueue) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.QueueMusic,
+                            contentDescription = Localization.get(language, "queue"),
+                            tint = mutedColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
-                IconButton(onClick = onOpenPlayer) {
-                    Icon(
-                        Icons.Filled.Fullscreen,
-                        contentDescription = "Open Full Player",
-                        tint = contentColor,
-                        modifier = Modifier.size(22.dp),
-                    )
+                Tooltip("Open full player") {
+                    IconButton(onClick = onOpenPlayer) {
+                        Icon(
+                            Icons.Filled.Fullscreen,
+                            contentDescription = "Open full player",
+                            tint = contentColor,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
             }
         }
@@ -3155,36 +3201,42 @@ fun LyricsFocusScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onPrevious) {
-                Icon(
-                    Icons.Filled.SkipPrevious,
-                    contentDescription = Localization.get(language, "previous"),
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp),
-                )
+            Tooltip(Localization.get(language, "previous")) {
+                IconButton(onClick = onPrevious) {
+                    Icon(
+                        Icons.Filled.SkipPrevious,
+                        contentDescription = Localization.get(language, "previous"),
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
             }
             Spacer(Modifier.width(20.dp))
-            FilledIconButton(
-                onClick = onTogglePlay,
-                modifier = Modifier.size(56.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ),
-            ) {
-                Icon(
-                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
-                    modifier = Modifier.size(30.dp),
-                )
+            Tooltip(Localization.get(language, if (isPlaying) "pause" else "play")) {
+                FilledIconButton(
+                    onClick = onTogglePlay,
+                    modifier = Modifier.size(56.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+                ) {
+                    Icon(
+                        if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
+                        modifier = Modifier.size(30.dp),
+                    )
+                }
             }
             Spacer(Modifier.width(20.dp))
-            IconButton(onClick = onNext) {
-                Icon(
-                    Icons.Filled.SkipNext,
-                    contentDescription = Localization.get(language, "next"),
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp),
-                )
+            Tooltip(Localization.get(language, "next")) {
+                IconButton(onClick = onNext) {
+                    Icon(
+                        Icons.Filled.SkipNext,
+                        contentDescription = Localization.get(language, "next"),
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp),
+                    )
+                }
             }
         }
     }

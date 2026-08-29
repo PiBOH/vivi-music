@@ -142,41 +142,49 @@ fun NowPlayingWidgetWindow(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    IconButton(onClick = { player.previous() }, modifier = Modifier.size(30.dp)) {
-                        Icon(
-                            Icons.Filled.SkipPrevious,
-                            contentDescription = Localization.get(language, "previous"),
-                            modifier = Modifier.size(20.dp),
-                        )
+                    Tooltip(Localization.get(language, "previous")) {
+                        IconButton(onClick = { player.previous() }, modifier = Modifier.size(30.dp)) {
+                            Icon(
+                                Icons.Filled.SkipPrevious,
+                                contentDescription = Localization.get(language, "previous"),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
-                    IconButton(
-                        onClick = { player.toggle() },
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(17.dp))
-                            .background(MaterialTheme.colorScheme.primary),
-                    ) {
-                        Icon(
-                            if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(20.dp),
-                        )
+                    Tooltip(Localization.get(language, if (isPlaying) "pause" else "play")) {
+                        IconButton(
+                            onClick = { player.toggle() },
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(17.dp))
+                                .background(MaterialTheme.colorScheme.primary),
+                        ) {
+                            Icon(
+                                if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
-                    IconButton(onClick = { player.next() }, modifier = Modifier.size(30.dp)) {
-                        Icon(
-                            Icons.Filled.SkipNext,
-                            contentDescription = Localization.get(language, "next"),
-                            modifier = Modifier.size(20.dp),
-                        )
+                    Tooltip(Localization.get(language, "next")) {
+                        IconButton(onClick = { player.next() }, modifier = Modifier.size(30.dp)) {
+                            Icon(
+                                Icons.Filled.SkipNext,
+                                contentDescription = Localization.get(language, "next"),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                     Spacer(Modifier.width(2.dp))
-                    IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = Localization.get(language, "close"),
-                            modifier = Modifier.size(16.dp),
-                        )
+                    Tooltip(Localization.get(language, "close")) {
+                        IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = Localization.get(language, "close"),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }

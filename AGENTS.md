@@ -105,6 +105,12 @@ dependencies there, or you break the desktop build.
   `TODO.md` stale after a change.
 - Match the existing conventions of the file you edit (naming, formatting,
   KDoc style). Do not reformat untouched code.
+- **Tooltips on buttons (always):** every clickable icon/button in the DE must
+  be wrapped in the shared `Tooltip(text) { … }` composable
+  (`Tooltips.kt`, `@OptIn(ExperimentalFoundationApi::class)`) so hovering shows
+  the button's name. This applies to all new buttons and to existing buttons
+  when touched; use the localized label when one exists, otherwise a short
+  English name. Never show raw localization keys.
 - Kotlin formatting: keep to the project's existing style; do not run a global
   formatter that rewrites unrelated lines.
 - Verify non-trivial changes by compiling the affected module
