@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.39.0-nightly] - 2026-08-29
+
+### Added
+- [DE] **Spotify-style shell (Phase 1)** — the 3-panel shell now follows the Spotify look when the Spotify style is active:
+  - **Sidebar**: pure-black background in dark mode (white in light), no surface frame around it; selected items use a grey pill (`surfaceContainerHighest`) with full-contrast bold text instead of the accent-filled selection; entries get a subtle hover background (`surfaceContainerHigh`); corner radius reduced to 8dp for the main/library/playlist entries. The classic Material layout keeps its accent selection untouched.
+  - **Bottom player bar**: a thin 1dp top border separates it from the content above (Spotify-style). The bar already had the Spotify layout (cover + title/artist left, transport center, volume right).
+  - **Right Now-Playing panel**: its background was hardcoded `#121212` (dark-only, wrong in light mode); it now uses the theme panel color (`surfaceContainer` — `#181818` in dark Spotify, `#F6F6F6` in light).
+
 ## [6.4.41_DE-1.38.2-nightly] - 2026-08-29
 
 ### Fixed

@@ -1974,7 +1974,8 @@ fun SpotifyRightNowPlayingPanel(
     val np = nowPlaying
     Surface(
         modifier = modifier.fillMaxHeight().width(310.dp),
-        color = Color(0xFF121212),
+        // Theme panel color (was hardcoded #121212 — broken in light mode).
+        color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(12.dp),
     ) {
         if (np == null) {

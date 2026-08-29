@@ -1,10 +1,14 @@
 package com.music.vivi.desktop
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1445,7 +1449,9 @@ fun WindowScope.App(
             ) {
                 Surface(
                     modifier = Modifier.fillMaxHeight().padding(start = 6.dp, top = 6.dp, end = 4.dp, bottom = 6.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    // Spotify mode: the black sidebar floats directly on the
+                    // flat background (no surface frame around it).
+                    color = if (spotifyLayout) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Sidebar(
@@ -1457,6 +1463,7 @@ fun WindowScope.App(
                         userName = displayUserName,
                         userHandle = displayUserHandle,
                         isLoggedIn = isLoggedIn,
+                        spotify = spotifyLayout,
                         onToggleCollapsed = {
                             sidebarCollapsed = !sidebarCollapsed
                             DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
@@ -1479,6 +1486,7 @@ fun WindowScope.App(
                     userName = displayUserName,
                     userHandle = displayUserHandle,
                     isLoggedIn = isLoggedIn,
+                    spotify = spotifyLayout,
                     onToggleCollapsed = {
                         sidebarCollapsed = !sidebarCollapsed
                         DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
@@ -2295,6 +2303,17 @@ fun WindowScope.App(
         }
     }
     if (current != Screen.Player) {
+        // Spotify style: a thin top border separates the bottom bar from the
+        // content above (like the desktop app).
+        Column {
+            if (spotifyLayout) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                )
+            }
         SpotifyPlayerBar(
         nowPlaying = nowPlaying,
         isPlaying = isPlaying,
@@ -2335,6 +2354,7 @@ fun WindowScope.App(
         miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
         pureBlackMiniPlayer = pureBlackMiniPlayer,
     )
+        }
     }
 }
 }
@@ -2401,9 +2421,18 @@ fun Sidebar(
     userName: String = "Guest",
     userHandle: String = "Not signed in",
     isLoggedIn: Boolean = false,
+    spotify: Boolean = false,
     onToggleCollapsed: () -> Unit,
     onSelect: (Screen) -> Unit,
 ) {
+    // Spotify style: pure-black sidebar (dark) / white (light) with a grey
+    // selected pill; the classic layout keeps the accent-filled selection.
+    val selectedBg = if (spotify) MaterialTheme.colorScheme.surfaceContainerHighest
+    else MaterialTheme.colorScheme.primaryContainer
+    val selectedFg = if (spotify) MaterialTheme.colorScheme.onSurface
+    else MaterialTheme.colorScheme.onPrimaryContainer
+    val mainRadius = if (spotify) 8.dp else 14.dp
+    val subRadius = if (spotify) 8.dp else 12.dp
     var mainExpanded by remember { mutableStateOf(true) }
     var libraryExpanded by remember { mutableStateOf(true) }
     var playlistsExpanded by remember { mutableStateOf(true) }
@@ -2463,7 +2492,13 @@ fun Sidebar(
 
     val width by animateDpAsState(if (collapsed) 72.dp else 230.dp, label = "sidebarWidth")
 
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+    Surface(
+        color = if (spotify) {
+            if (isSystemInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
+    ) {
         Column(
             Modifier
                 .width(width)
@@ -2544,15 +2579,23 @@ fun Sidebar(
                 if (mainExpanded || collapsed) {
                     mainEntries.forEach { entry ->
                         val selected = current == entry.screen
+                        val interaction = remember(entry.screen) { MutableInteractionSource() }
+                        val hovered by interaction.collectIsHoveredAsState()
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(mainRadius))
                                 .background(
-                                    if (selected) MaterialTheme.colorScheme.primaryContainer
-                                    else Color.Transparent
+                                    when {
+                                        selected -> selectedBg
+                                        spotify && hovered -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                        else -> Color.Transparent
+                                    }
                                 )
-                                .clickable { onSelect(entry.screen) }
+                                .clickable(
+                                    interactionSource = interaction,
+                                    indication = if (spotify) null else LocalIndication.current,
+                                ) { onSelect(entry.screen) }
                                 .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
@@ -2560,7 +2603,7 @@ fun Sidebar(
                             Icon(
                                 if (selected) entry.selectedIcon else entry.icon,
                                 contentDescription = Localization.get(language, entry.key),
-                                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = if (selected) selectedFg
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             if (!collapsed) {
@@ -2570,7 +2613,7 @@ fun Sidebar(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
                                     ),
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = if (selected) selectedFg
                                     else MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -2612,15 +2655,23 @@ fun Sidebar(
                 if (libraryExpanded || collapsed) {
                     librarySubEntries.forEach { entry ->
                         val selected = current == entry.screen
+                        val interaction = remember(entry.screen) { MutableInteractionSource() }
+                        val hovered by interaction.collectIsHoveredAsState()
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(subRadius))
                                 .background(
-                                    if (selected) MaterialTheme.colorScheme.primaryContainer
-                                    else Color.Transparent
+                                    when {
+                                        selected -> selectedBg
+                                        spotify && hovered -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                        else -> Color.Transparent
+                                    }
                                 )
-                                .clickable { onSelect(entry.screen) }
+                                .clickable(
+                                    interactionSource = interaction,
+                                    indication = if (spotify) null else LocalIndication.current,
+                                ) { onSelect(entry.screen) }
                                 .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
@@ -2628,7 +2679,7 @@ fun Sidebar(
                             Icon(
                                 if (selected) entry.selectedIcon else entry.icon,
                                 contentDescription = Localization.get(language, entry.key),
-                                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = if (selected) selectedFg
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -2639,7 +2690,7 @@ fun Sidebar(
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     ),
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = if (selected) selectedFg
                                     else MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -2710,12 +2761,23 @@ fun Sidebar(
                     // Active Local Playlists
                     activeLocalPlaylists.forEach { p ->
                         val selected = current == Screen.LocalPlaylist(p.id)
+                        val interaction = remember(p.id) { MutableInteractionSource() }
+                        val hovered by interaction.collectIsHoveredAsState()
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable { onSelect(Screen.LocalPlaylist(p.id)) }
+                                .clip(RoundedCornerShape(subRadius))
+                                .background(
+                                    when {
+                                        selected -> selectedBg
+                                        spotify && hovered -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                        else -> Color.Transparent
+                                    }
+                                )
+                                .clickable(
+                                    interactionSource = interaction,
+                                    indication = if (spotify) null else LocalIndication.current,
+                                ) { onSelect(Screen.LocalPlaylist(p.id)) }
                                 .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
@@ -2723,7 +2785,9 @@ fun Sidebar(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.QueueMusic,
                                 contentDescription = p.name,
-                                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                tint = if (selected) selectedFg
+                                else if (spotify) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                             if (!collapsed) {
@@ -2733,7 +2797,7 @@ fun Sidebar(
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                     ),
-                                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    color = if (selected) selectedFg else MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -2746,12 +2810,23 @@ fun Sidebar(
                     if (isLoggedIn) {
                         onlinePlaylists.forEach { op ->
                             val selected = current == Screen.Playlist(op.id)
+                            val interaction = remember(op.id) { MutableInteractionSource() }
+                            val hovered by interaction.collectIsHoveredAsState()
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .clickable { onSelect(Screen.Playlist(op.id)) }
+                                    .clip(RoundedCornerShape(subRadius))
+                                    .background(
+                                        when {
+                                            selected -> selectedBg
+                                            spotify && hovered -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                            else -> Color.Transparent
+                                        }
+                                    )
+                                    .clickable(
+                                        interactionSource = interaction,
+                                        indication = if (spotify) null else LocalIndication.current,
+                                    ) { onSelect(Screen.Playlist(op.id)) }
                                     .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
@@ -2759,7 +2834,9 @@ fun Sidebar(
                                 Icon(
                                     imageVector = Icons.Filled.MusicNote,
                                     contentDescription = op.title,
-                                    tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.secondary,
+                                    tint = if (selected) selectedFg
+                                    else if (spotify) MaterialTheme.colorScheme.onSurfaceVariant
+                                    else MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(20.dp),
                                 )
                                 if (!collapsed) {
@@ -2769,7 +2846,7 @@ fun Sidebar(
                                         style = MaterialTheme.typography.bodyMedium.copy(
                                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                                         ),
-                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        color = if (selected) selectedFg else MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
@@ -2782,12 +2859,23 @@ fun Sidebar(
                     // Fallback Favourite Songs entry if no playlists exist yet
                     if (activeLocalPlaylists.isEmpty() && onlinePlaylists.isEmpty()) {
                         val favSelected = current == Screen.LocalPlaylists
+                        val interaction = remember { MutableInteractionSource() }
+                        val hovered by interaction.collectIsHoveredAsState()
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (favSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable { onSelect(Screen.LocalPlaylists) }
+                                .clip(RoundedCornerShape(subRadius))
+                                .background(
+                                    when {
+                                        favSelected -> selectedBg
+                                        spotify && hovered -> MaterialTheme.colorScheme.surfaceContainerHigh
+                                        else -> Color.Transparent
+                                    }
+                                )
+                                .clickable(
+                                    interactionSource = interaction,
+                                    indication = if (spotify) null else LocalIndication.current,
+                                ) { onSelect(Screen.LocalPlaylists) }
                                 .padding(horizontal = if (collapsed) 0.dp else 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
@@ -2795,7 +2883,9 @@ fun Sidebar(
                             Icon(
                                 imageVector = Icons.Filled.Favorite,
                                 contentDescription = "Favourite Songs",
-                                tint = if (favSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                tint = if (favSelected) selectedFg
+                                else if (spotify) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                             if (!collapsed) {
@@ -2803,7 +2893,7 @@ fun Sidebar(
                                 Text(
                                     "Favourite Songs",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = if (favSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                    color = if (favSelected) selectedFg else MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
