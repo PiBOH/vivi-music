@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.10-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **12 strings showed raw key names in the UI**: `open_vivi`, `quit`, `desktop_features`, `desktop_features_desc`, `lyrics_focus`, `now_playing_widget`, `now_playing_widget_desc`, `media_keys`, `media_keys_desc`, `tray_menu`, `tray_menu_desc` and `windows_only` were translated in every language but were never registered in the generator's mapping, so the English table lacked them and the fallback showed the raw key. The keys are now wired into the mapping, regenerated, and present in all 47 languages + English.
+
 ## [6.4.41_DE-1.41.9-nightly] - 2026-08-29
 
 ### Fixed

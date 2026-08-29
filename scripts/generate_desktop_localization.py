@@ -398,6 +398,18 @@ MAPPING = {
     "accent_blue_grey": "Blue Grey",
     "right_panel": "Right panel",
     "right_panel_desc": "Show the Now Playing panel on the right side of the window.",
+    "open_vivi": "Open VIVI Music",
+    "quit": "Quit",
+    "desktop_features": "Desktop features",
+    "desktop_features_desc": "Features specific to the desktop edition of VIVI Music.",
+    "lyrics_focus": "Focus lyrics",
+    "now_playing_widget": "Now Playing widget",
+    "now_playing_widget_desc": "Floating always-on-top window showing the current track.",
+    "media_keys": "Media keys",
+    "media_keys_desc": "Control playback with your keyboard's media keys.",
+    "tray_menu": "Tray menu",
+    "tray_menu_desc": "Show playback controls in the system tray.",
+    "windows_only": "Windows only",
 }
 
 # Full desktop English table (source language).
