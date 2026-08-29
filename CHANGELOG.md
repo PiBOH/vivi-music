@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.38.1-nightly] - 2026-08-29
+
+### Fixed
+- [DE] **Accent color selection works again in Spotify style**: the flat Spotify scheme hardcoded the green `#1DB954` as the primary color, so picking a different accent did nothing. The scheme now uses the user's selected accent (resolved through the dynamic/OS sentinel) as the flat primary — with a contrast-aware text color — so accent changes apply immediately. A new **"Spotify"** accent swatch (`#1DB954`) was added to the accent palette to get the classic green back.
+- [DE] **Queue/Lyrics/History panel in the Expressive player no longer sits on an accent-tinted background**: the right panel was `surface` at 55% opacity over the accent-colored player background, so the accent bled through behind the track list. The panel is now fully opaque, like the plain playlist screens.
+
 ## [6.4.41_DE-1.38.0-nightly] - 2026-08-29
 
 ### Added

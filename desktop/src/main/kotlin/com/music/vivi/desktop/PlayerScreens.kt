@@ -566,7 +566,9 @@ private fun M3EPlayerContent(
                         .weight(1f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f))
+                        // Opaque panel: the accent-tinted player background must
+                        // not bleed through the Queue / Lyrics / History list.
+                        .background(MaterialTheme.colorScheme.surface)
                         .border(
                             BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
                             RoundedCornerShape(20.dp),

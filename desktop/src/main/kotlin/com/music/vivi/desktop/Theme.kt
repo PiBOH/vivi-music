@@ -20,6 +20,7 @@ import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -151,6 +152,7 @@ object AccentPalette {
         AccentColor("Cyan", Color(0xFF00ACC1)),
         AccentColor("Teal", Color(0xFF00897B)),
         AccentColor("Green", Color(0xFF43A047)),
+        AccentColor("Spotify", Color(0xFF1DB954)),
         AccentColor("Light Green", Color(0xFF7CB342)),
         AccentColor("Lime", Color(0xFFC0CA33)),
         AccentColor("Yellow", Color(0xFFFDD835)),
@@ -183,18 +185,22 @@ fun argbIntToColor(argb: Int): Color = Color(
 /**
  * Flat Spotify-style palette: fixed surfaces, no tonal Material 3 variation.
  * Dark: bg `#121212`, cards/panels `#181818`, hover `#282828`, secondary text
- * `#B3B3B3`, accent green `#1DB954`. Light: bg `#FFFFFF`, panels `#F6F6F6`,
- * text `#191414`. [pureBlack] forces a true-black background in dark mode
- * (like Spotify's sidebar).
+ * `#B3B3B3`. Light: bg `#FFFFFF`, panels `#F6F6F6`, text `#191414`.
+ * [pureBlack] forces a true-black background in dark mode (like Spotify's
+ * sidebar). The accent color stays user-selectable (it is used as the flat
+ * primary, e.g. the "Spotify" green `#1DB954` when that swatch is picked).
  */
-private fun spotifyScheme(isDark: Boolean, pureBlack: Boolean): ColorScheme =
-    if (isDark) {
+private fun spotifyScheme(isDark: Boolean, pureBlack: Boolean, accent: Color): ColorScheme {
+    // The sentinel (dynamic) accent resolves to the OS accent / default.
+    val seed = AccentPalette.effective(accent)
+    val onAccent = if (seed.luminance() > 0.5f) Color(0xFF000000) else Color(0xFFFFFFFF)
+    return if (isDark) {
         val bg = if (pureBlack) Color(0xFF000000) else Color(0xFF121212)
         darkColorScheme(
-            primary = Color(0xFF1DB954),
-            onPrimary = Color(0xFF000000),
-            primaryContainer = Color(0xFF1ED760),
-            onPrimaryContainer = Color(0xFF000000),
+            primary = seed,
+            onPrimary = onAccent,
+            primaryContainer = seed,
+            onPrimaryContainer = onAccent,
             secondary = Color(0xFFB3B3B3),
             onSecondary = Color(0xFF121212),
             secondaryContainer = Color(0xFF282828),
@@ -221,15 +227,15 @@ private fun spotifyScheme(isDark: Boolean, pureBlack: Boolean): ColorScheme =
             scrim = Color(0xFF000000),
             inverseSurface = Color(0xFFFFFFFF),
             inverseOnSurface = Color(0xFF121212),
-            inversePrimary = Color(0xFF1DB954),
-            surfaceTint = Color(0xFF1DB954),
+            inversePrimary = seed,
+            surfaceTint = seed,
         )
     } else {
         lightColorScheme(
-            primary = Color(0xFF1DB954),
-            onPrimary = Color(0xFFFFFFFF),
-            primaryContainer = Color(0xFF1ED760),
-            onPrimaryContainer = Color(0xFF003A15),
+            primary = seed,
+            onPrimary = onAccent,
+            primaryContainer = seed,
+            onPrimaryContainer = onAccent,
             secondary = Color(0xFF616161),
             onSecondary = Color(0xFFFFFFFF),
             secondaryContainer = Color(0xFFECECEC),
@@ -256,10 +262,11 @@ private fun spotifyScheme(isDark: Boolean, pureBlack: Boolean): ColorScheme =
             scrim = Color(0xFF000000),
             inverseSurface = Color(0xFF191414),
             inverseOnSurface = Color(0xFFFFFFFF),
-            inversePrimary = Color(0xFF1ED760),
-            surfaceTint = Color(0xFF1DB954),
+            inversePrimary = seed,
+            surfaceTint = seed,
         )
     }
+}
 
 /** Flat 8dp corners everywhere (Spotify uses small, consistent radii). */
 private val spotifyShapes = Shapes(
@@ -291,9 +298,9 @@ fun AppTheme(
         ThemeMode.DARK -> true
     }
     val colorScheme = if (spotify) {
-        // Flat Spotify palette — the accent/tonal engine is not used, so the
-        // accent stays fixed green regardless of the synced accent color.
-        spotifyScheme(useDark, pureBlack && useDark)
+        // Flat Spotify palette — no tonal engine; the user's accent (or the
+        // OS/dynamic one) is used as the flat primary color.
+        spotifyScheme(useDark, pureBlack && useDark, accent)
     } else {
         // Same seed-based tonal palette as the Android app (TonalSpot +
         // SPEC_2025), so the desktop colors match the mobile app pixel-perfectly.
