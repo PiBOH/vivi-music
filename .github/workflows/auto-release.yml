@@ -237,3 +237,22 @@ jobs:
             This release was built automatically from commit `${{ github.sha }}`.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Notify the Telegram bot (PiBOH/vivimusicde_bot) so it posts the release
+      # assets to the @vivimusicde channel. Requires the BOT_DISPATCH_TOKEN
+      # secret (PAT with repo + workflow scope). If it is not configured, the
+      # bot's own hourly schedule still picks the release up within 60 minutes.
+      - name: Dispatch to Telegram bot
+        if: ${{ env.BOT_DISPATCH_TOKEN != '' }}
+        env:
+          BOT_DISPATCH_TOKEN: ${{ secrets.BOT_DISPATCH_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          curl -sS -X POST \
+            -H "Authorization: Bearer $BOT_DISPATCH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/PiBOH/vivimusicde_bot/dispatches \
+            -d "$(printf '{"event_type":"release-published","client_payload":{"tag":"%s"}}' "$TAG")"
+          echo "Dispatched release-published for tag $TAG to PiBOH/vivimusicde_bot"
