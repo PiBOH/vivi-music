@@ -171,6 +171,16 @@ keep them in sync:
 When in doubt about which segment to bump, prefer PATCH for fixes and MINOR for
 features; only use MAJOR for genuinely breaking changes.
 
+#### Explicit user versioning overrides (per-message)
+
+If the user explicitly states the desired versioning **in a single message**
+(e.g. writes "patch", "minor", "major", or "patch/fix are equivalent"), that
+message overrides the default SemVer rules **for that message only**. In that
+case follow the user's stated segment, treating **patch and fix as the same**
+segment (a fix request without an explicit segment defaults to the SemVer
+PATCH). The next message returns to the default SemVer behavior unless it
+states an override again.
+
 **Which version to bump depends on what changed** (this is the rule the user
 considers obvious):
 
