@@ -345,18 +345,21 @@ fun ThemeSection(
                     } else {
                         accent == entry.color
                     }
-                    AccentSwatch(
-                        color = entry.color,
-                        selected = isSelected,
-                        onClick = {
-                            if (entry.color == Color.Transparent) {
-                                AccentPalette.refreshSystemAccent()
-                                onAccentChange(Color.Transparent)
-                            } else {
-                                onAccentChange(entry.color)
-                            }
-                        },
-                    )
+                    val colorName = Localization.get(language, "accent_${entry.key}")
+                    Tooltip(colorName) {
+                        AccentSwatch(
+                            color = entry.color,
+                            selected = isSelected,
+                            onClick = {
+                                if (entry.color == Color.Transparent) {
+                                    AccentPalette.refreshSystemAccent()
+                                    onAccentChange(Color.Transparent)
+                                } else {
+                                    onAccentChange(entry.color)
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }

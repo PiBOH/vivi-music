@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.3-nightly] - 2026-08-29
+
+### Added
+- [DE] **Tooltips on accent color swatches** (Settings → Appearance → Theme & colors): hovering a palette color now shows its name in the app language (e.g. Italian "Viola", "Blu", "Azzurro"). 22 new localized strings `accent_*` in all 47 languages (batch 38); the English fallback matches the palette names.
+
 ## [6.4.41_DE-1.41.2-nightly] - 2026-08-29
 
 ### Added

@@ -35,7 +35,7 @@ enum class ThemeMode(val key: String) {
     }
 }
 
-data class AccentColor(val name: String, val color: Color)
+data class AccentColor(val name: String, val color: Color, val key: String = name.lowercase().replace(' ', '_'))
 
 /**
  * Accent color palette mirroring the Android app's theme colors. The first
