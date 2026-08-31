@@ -1,0 +1,86 @@
+package com.music.vivi.desktop
+
+import kotlinx.serialization.Serializable
+
+/**
+ * Desktop navigation destinations. The top-level entries (Home, Search,
+ * Library, Settings) live in the sidebar; the others are pushed onto a simple
+ * back stack when the user opens an item.
+ */
+sealed interface Screen {
+    data object Home : Screen
+    data object Search : Screen
+    data object Library : Screen
+    data object Settings : Screen
+    data class Album(val browseId: String) : Screen
+    data class Artist(val browseId: String) : Screen
+    data class Playlist(val playlistId: String) : Screen
+    data object LocalPlaylists : Screen
+    data class LocalPlaylist(val playlistId: String) : Screen
+    data class Browse(val browseId: String, val params: String?) : Screen
+    data object History : Screen
+    data object Player : Screen
+    data object Lyrics : Screen
+    data object LyricsFocus : Screen
+    data object Queue : Screen
+    data object Changelog : Screen
+    data object Login : Screen
+    data object NewReleases : Screen
+    data object Charts : Screen
+    data object MoodGenres : Screen
+    data object ListenTogether : Screen
+    data object SongRecognition : Screen
+    data class ArtistItems(val browseId: String, val params: String?) : Screen
+    data class AutoPlaylist(val browseId: String, val title: String) : Screen
+
+    // Settings sub-screens (ported from the mobile settings structure).
+    data object SettingsLanguage : Screen
+    data object SettingsAppearance : Screen
+    data object SettingsTheme : Screen
+    data object SettingsFont : Screen
+    data object SettingsCanvas : Screen
+    data object SettingsDensity : Screen
+    data object SettingsTransitions : Screen
+    data object SettingsPlayer : Screen
+    data object SettingsPlayerDesign : Screen
+    data object SettingsAccount : Screen
+    data object SettingsDevices : Screen
+    data object SettingsContent : Screen
+    data object SettingsLyrics : Screen
+    data object SettingsPrivacy : Screen
+    data object SettingsWrapped : Screen
+    data object SettingsStorage : Screen
+    data object SettingsUpdates : Screen
+    data object SettingsCommits : Screen
+    data object SettingsAbout : Screen
+    data object SettingsDeveloper : Screen
+    data object SettingsSystem : Screen
+    data object SettingsIntro : Screen
+    data object SettingsBackup : Screen
+    data object SettingsNotifications : Screen
+    data object SettingsNotificationsHistory : Screen
+    data object SettingsIntegrations : Screen
+    data object SettingsDesktop : Screen
+}
+
+/**
+ * Lightweight "now playing" state shown by the mini-player and the Player /
+ * Lyrics screens. Actual audio playback lands in Phase 4; until then this only
+ * drives the UI.
+ */
+@Serializable
+data class NowPlaying(
+    val videoId: String,
+    val title: String,
+    val artist: String,
+    val thumbnail: String? = null,
+    val durationMs: Long = 0L,
+)
+
+/** Session listening stats shown by the Home "VIVI Wrapped" card. */
+data class WrappedStats(
+    val trackStarts: Int = 0,
+    val playedMs: Long = 0L,
+    val topSongTitle: String? = null,
+    val topSongCount: Int = 0,
+)

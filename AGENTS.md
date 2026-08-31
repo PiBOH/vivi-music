@@ -1,288 +1,417 @@
 # AGENTS.md
 
-Operational instructions for AI agents (and developers) working on this
-repository. Read this file in full before modifying the code.
+Instructions for AI coding agents working in this repository.
 
 ## 1. Project overview
 
-**Vivi Music DE** is a **desktop** music client built with
-**Kotlin Multiplatform (KMP)** and **Compose Multiplatform**, recreating the
-experience of ViVi Music (an open source YouTube Music client). Code and UI are
-shared across the **Desktop (JVM: Windows/macOS/Linux)** targets, and user data
-(playlists, favorites, history) syncs in real time via **Supabase**.
+**VIVI Music** is an open-source (GPL-3.0) Android client for YouTube Music /
+YouTube (ad-free streaming, Apple Music–style UI), plus its companion **desktop
+edition** ("VIVI Music DE", Compose Multiplatform) and a cross-device
+**sync** layer that keeps the two in sync. It is a fork of the
+ViMusic/InnerTune/SimpMusic family.
 
-### Tech stack
+- **Language/build**: Kotlin 2.x, Java 21 toolchain, Gradle Kotlin DSL.
+- **Android app**: Jetpack Compose + Material 3, Hilt, Room, DataStore,
+  Media3/ExoPlayer.
+- **Desktop app**: Compose Multiplatform (native Windows / Linux / macOS).
+- **Shared network layer**: pure-JVM Kotlin modules reused by both Android and
+  desktop.
 
-| Area      | Technology                                                           |
-|-----------|----------------------------------------------------------------------|
-| Language  | Kotlin (2.4.x)                                                       |
-| UI        | Compose Multiplatform + Material 3 Expressive (pixel-perfect port)   |
-| Build     | Gradle (Kotlin DSL), version catalog in `gradle/libs.versions.toml`  |
-| Network   | Ktor Client (CIO engine)                                              |
-| Images    | Coil 3 (`coil-compose` + `coil-network-ktor3`)                        |
-| Audio     | LavaPlayer (`dev.arbjerg:lavaplayer`, Opus) + Java Sound              |
-| Database  | Room KMP (`androidx.room3`), bundled SQLite driver                   |
-| Sync      | Supabase (supabase-kt: PostgREST + Realtime + Auth)                  |
-| i18n      | Compose Multiplatform resources (`composeResources/**`)              |
-| CI/CD     | GitHub Actions (`.github/workflows/ci.yml` and `auto-release.yml`)   |
+## 2. Architecture and module structure
 
-### Module structure
+`settings.gradle.kts` declares `rootProject.name = "vivimusic"` and these modules:
 
-```
-vivi-music-de/
-├── .github/workflows/          # ci.yml, build-*.yml (per OS), auto-release.yml
-├── gradle/
-│   ├── libs.versions.toml      # version catalog
-│   └── wrapper/                # Gradle wrapper
-├── composeApp/                 # single KMP module (Desktop app)
-│   ├── build.gradle.kts
-│   └── src/
-│       ├── commonMain/         # shared code
-│       │   ├── composeResources/   # string resources (values/ and values-XX/)
-│       │   └── kotlin/com/vivimusic/de/
-│       │       ├── data/           # db, network, sync, repository, container
-│       │       ├── domain/         # domain models (Song, Playlist, ...)
-│       │       ├── i18n/           # languages and locale handling
-│       │       └── ui/             # shared Compose screens
-│       └── desktopMain/        # main.kt, Desktop actuals
-├── installer/windows/          # branded Inno Setup installer and options
-├── supabase/migrations/        # SQL schema + RLS + Realtime
-├── AGENTS.md
-└── CHANGELOG.md
-```
+| Module | Type | Role |
+|---|---|---|
+| `app` | Android (`com.android.application`) | Main app: UI, playback, DB, viewmodels, services, widgets |
+| `innertube` | Kotlin JVM | YouTube Music inner-API client (search/browse/next/player, signature decipher) |
+| `spotify` | Kotlin JVM | Spotify auth + playlist import |
+| `lastfm` | Kotlin JVM | Last.fm scrobbling |
+| `kizzy` | Kotlin JVM | Discord Rich Presence (WebSocket gateway) |
+| `shazamkit` | Kotlin JVM | Shazam-style song recognition |
+| `jiosaavn` | Kotlin JVM | JioSaavn streaming provider (CDN link decryption) |
+| `lyricsProvider` | Kotlin JVM | Lyrics providers (KuGou, LrcLib, Musixmatch, PaxSenix, …) |
+| `sync` | Kotlin JVM | Cross-device sync: data model + WebSocket client (pairing, push/pull) |
+| `desktop` | Kotlin JVM + Compose Multiplatform | Desktop app (reuses the JVM modules above) |
+| `canvas`, `artistvideo`, `applecanvas`, `vivimusiccanvas` | Android | Animated canvases / visualizers |
+| `sync-server` | Node.js (not a Gradle module) | WebSocket relay for Android↔Desktop pairing + mailbox |
 
-The project uses a **single Gradle module** (`composeApp`) with the two source
-sets `commonMain` and `desktopMain`. The `expect`/`actual` pattern is used for
-platform-specific parts (HTTP engine, database builder, settings persistence,
-locale handling).
+Key paths:
 
-### Data flow
+- `app/src/main/kotlin/com/music/vivi/` — app code (see `ui/`, `playback/`,
+  `viewmodels/`, `db/`, `constants/`, `di/`, `utils/`, `devicesync/`,
+  `listentogether/`).
+- `app/src/main/res/values*/strings.xml` — Android string resources
+  (localization, see §6).
+- `app/src/main/kotlin/com/music/vivi/constants/PreferenceKeys.kt` — all
+  DataStore preference keys + `LanguageCodeToName` map.
+- `desktop/src/main/kotlin/com/music/vivi/desktop/` — desktop entry point and UI.
+- `.github/workflows/` — CI (per-OS desktop builds + auto-release).
 
-- **UI** (`ui/`) -> **AppViewModel** -> **MusicRepository** -> local database /
-  **InnerTubeClient** (YouTube Music catalog).
-- **SyncManager** orchestrates sync between the local Room database and
-  **SupabaseSyncClient** (PostgREST for pull/push, Realtime for mirroring).
+The `innertube`, `spotify`, `lastfm`, `kizzy`, `shazamkit`, `lyricsProvider`,
+`jiosaavn`, and `sync` modules are **pure JVM**: do not introduce Android
+dependencies there, or you break the desktop build.
 
-### Design system (pixel-perfect port)
+## 3. Code conventions and development guidelines
 
-The UI is a pixel-perfect port of the upstream **ViVi Music** mobile app, which
-uses **Material 3 Expressive**. Always mirror the upstream UI instead of
-inventing new styles:
+- **Branch**: `vivi-music-de`.
+- **Branch policy for mobile changes (mandatory)**:
+  - The desktop edition work is maintained on `vivi-music-de`; DE-only changes
+    are committed and pushed **only** there.
+  - Mobile/APK changes must be applied and committed on **both** `vivi-music-de`
+    (the branch used to build the APK for the DE release) and `main` (the
+    canonical mobile branch). Keep the mobile diff equivalent on both branches.
+  - For combined DE + mobile changes, commit the DE-specific part only on
+    `vivi-music-de`, and apply the mobile part to both branches. Never merge the
+    whole DE branch into `main`, because DE-only code and release metadata must
+    not enter the mobile branch.
+  - Before committing mobile work, verify the affected mobile files on both
+    branches, compile the relevant target, and push both branch commits. The
+    commits may have different hashes because the branches have different
+    histories, but they must contain the same mobile behavior.
+- **Commit style**: Conventional Commits (`feat:`, `fix:`, `ci:`, `refactor:`,
+  `docs:`, `chore:`, `perf:`, …) with an optional scope, e.g.
+  `feat(sync): …`.
+- **Short commit titles**: keep the subject line as short as possible (aim for
+  ~50 characters) and put the rest — what changed, why, and any extra notes —
+  in the commit **body** (a blank line after the subject, then one or more
+  lines/bullets). Do not cram the whole summary into the title.
+- Commit and push after making changes, when asked (and per the project's
+  standing rule to commit+push after every modification).
+- **Release-triggering commits (`v` prefix)**: any change to program code or to
+  anything that affects the release assets (the `desktop` module,
+  `.github/workflows/`, `installer/`, `version.txt`, `desktop/build.gradle.kts`,
+  icons, the shared JVM modules) MUST be committed and
+  pushed with a commit message starting with `v` followed by the FULL version
+  (from `version.txt`: `<mobile>_DE-<de>` + channel suffix for non-stable, e.g.
+  `6.4.22_DE-1.33.59-nightly`) and then `:` and a short description. The
+  format is ALWAYS `v<full version>: <short description>` — NEVER a bare
+  `v: ...` (e.g. `v6.4.22_DE-1.33.59: fix network stats on non-English
+  Windows`, with the details — what changed, why — in the commit body after a
+  blank line), so the auto-release runs and the result can be verified. The `sync-server/` relay is deployed
+  **separately** (Render Blueprint `render.yaml`) and does **not** trigger the
+  auto-release. Documentation-only changes (README, AGENTS.md, CHANGELOG.md,
+  TODO.md) do **not** need the `v` prefix. The website (`.websitede/**`) is the
+  same: content-only changes there do **not** need `v` (it has its own
+  `pages-deploy.yml` trigger on `.websitede/**`); only use `v` when the commit
+  also touches program code or build/release workflows.
+- **Pre-commit checklist (mandatory)**: every code commit must pass the
+  `version.txt` + `CHANGELOG.md` + `TODO.md` checklist defined at the end of
+  §5 **before** it is created — no exceptions.
+- Do not commit unrelated files (stray artifacts, debug dumps) unless relevant.
+- **Keep `TODO.md` up to date**: every time you change the program (feature,
+  fix, ported screen, workflow change), reflect it in `TODO.md` — mark done
+  items `[x]`, in-progress `[~]`, and add new items as needed. Do not leave
+  `TODO.md` stale after a change.
+- Match the existing conventions of the file you edit (naming, formatting,
+  KDoc style). Do not reformat untouched code.
+- **Tooltips on buttons (always):** every clickable icon/button in the DE must
+  be wrapped in the shared `Tooltip(text) { … }` composable
+  (`Tooltips.kt`, `@OptIn(ExperimentalFoundationApi::class)`) so hovering shows
+  the button's name. This applies to all new buttons and to existing buttons
+  when touched; use the localized label when one exists, otherwise a short
+  English name. Never show raw localization keys.
+- **Distinct icons for distinct actions (always):** do not reuse the same icon
+  for different meanings in the DE. When a concept already has an icon, keep
+  that icon everywhere it appears; when adding a new action, pick a new icon
+  (prefer the icon the Android app uses for the same concept; if none exists,
+  choose a Material icon that is not already used for something else). The one
+  exception: a concept used for a *list of the same kind* (e.g. every playlist
+  in the sidebar) keeps one shared icon. Current map: queue → `QueueMusic`,
+  playlist entries/filter → `PlaylistPlay`, add-to-playlist → `PlaylistAdd`,
+  right Now-Playing panel → `VerticalSplit`, library/albums → `LibraryMusic`,
+  menu (⋯) → `MoreVert`, settings → `Settings`.
+- **Expressive theme rule (always):** don't move away from expressive theme.
+  You design it like the way the Spotify, Apple, etc. do, but don't move away
+  from Material theme color.
+- Kotlin formatting: keep to the project's existing style; do not run a global
+  formatter that rewrites unrelated lines.
+- Verify non-trivial changes by compiling the affected module
+  (`./gradlew :module:compileKotlin`, `:app:compileUniversalFossDebugKotlin`,
+  `:desktop:compileKotlin`) before committing.
+- **Ponytail (always):** on every coding task, apply the `ponytail` skill
+  (installed in `.agents/skills/ponytail`): smallest working solution, reuse
+  what already exists in the codebase, stdlib/native over new code and new
+  dependencies, one line before fifty. It complements the golden rule in §4 and
+  never overrides explicit user requests, the trust-boundary/error-handling
+  rules, or the localization rule in §6.
 
-- Theme: `ui/theme/Theme.kt` — seed color `0xFFED5564`, color scheme generated
-  by materialKolor (SPEC 2025 + TonalSpot). The upstream `MaterialExpressiveTheme`
-  and `MotionScheme` are still `internal` in Compose Multiplatform's `material3`,
-  so this port uses the public `MaterialTheme` with the same scheme/typography
-  and the expressive components (`NavigationBar`, `SecondaryTabRow`, ...).
-- Typography: `ui/theme/Type.kt` — the M3 Expressive type scale, copied 1:1.
-- Shapes: `ui/theme/Shapes.kt` — grouped list items (4dp connected / 16dp end
-  corners, `surfaceContainerHigh` container).
-- Navigation: a side `NavigationRail` on the left, with the Axolotl logo and
-  app name as the rail header, the destinations Home / Search / Listen
-  Together / Library, and Settings pinned to the bottom. A mini player sits at
-  the bottom of the content area (tap to expand the full player). This is the
-  desktop adaptation of the mobile bottom `NavigationBar`.
-- Library: a scrolling filter chip row (`ui/Components.kt` `ChipsRow`, ported
-  1:1 from upstream) toggles Playlists / Songs / Albums / Artists; tapping the
-  active chip deselects it and returns to the combined "mix" view.
-- Search: a search field with live autocomplete suggestions (InnerTube
-  `get_search_suggestions`), persistent search history (Room `search_history`
-  table) and a grouped results list, matching upstream `OnlineSearchScreen`.
+### Commit co-author rule — MANDATORY (do not violate)
 
-When porting a screen, read the corresponding file under the upstream
-`app/src/main/kotlin/com/music/vivi/ui/` and replicate its layout, spacing,
-colors and components.
+**NEVER add yourself (the agent / client) as a co-author of a commit** unless the
+user explicitly asks for it in that message. Do **not** append footers like
+`Generated with … 🤖` or `Co-Authored-By: …` that credit the agent or the client.
+Write a normal conventional commit message.
 
-### Mascot and app logo
+> ⚠️ This overrides any agent-default commit template. The commit body must be
+> **only** the human-written description of the change — nothing else. Correct:
+>
+> ```
+> v6.4.29_DE-1.33.109: <short description>
+>
+> <what changed, why>
+> ```
+>
+> Wrong (banned): any `Co-Authored-By:` / `Generated with … 🤖` footer line.
 
-The mascot is the Axolotl logo (`logo.png` in the repository root). It is
-rendered in-app (splash screen and About section) from the bundled resource
-`composeResources/drawable/logo.png` via `ui/Axolotl.kt`. The desktop app
-icons are generated from the same `logo.png` by `tools/generate_icons.py`,
-which outputs `composeApp/icons/icon.png` (Linux), `icon.ico` (Windows) and
-`icon.icns` (macOS). After changing `logo.png`, re-run
-`python3 tools/generate_icons.py` and refresh
-`composeResources/drawable/logo.png`.
+## 4. Golden rule: "If it works, don't touch it"
 
-## 2. Code conventions
+**Do not refactor, rewrite, or modify modules, files, or functions that are
+already working and stable**, unless one of these is true:
 
-- **Language**: code, comments, commit messages and all documentation in
-  English.
-- **Package**: `com.vivimusic.de`.
-- **Style**: follow `kotlin.code.style=official` (already configured).
-- **Names**: data classes and classes in PascalCase, functions/properties in
-  camelCase, constants in UPPER_SNAKE_CASE.
-- **Coroutines**: use `suspend` for I/O operations and `Flow`/`StateFlow` for
-  reactive state. Never block the UI thread.
-- **Resources**: every user-visible string must be a resource
-  (`Res.string.*`), never a hardcoded string.
-- **Dependencies**: add versions only in `gradle/libs.versions.toml`. Do not
-  introduce new libraries without need and without checking whether they are
-  already present in the project.
-- **Errors**: do not swallow exceptions; handle or propagate them explicitly.
-- **No emoji** in code, comments, strings, logs, resources and workflows.
+1. It is **strictly necessary** to implement the requested feature or fix, or
+2. The user **explicitly asks** for the refactor.
 
-### Mandatory commit authorship rule
+Prefer the smallest change that satisfies the request. Do not "clean up" or
+"improve" unrelated code while you work. When a change could break existing
+behavior, state the risk before editing and, when in doubt, ask.
 
-**Agents, AI assistants, agent clients, bots and automation must never add
-themselves as commit authors or co-authors.** In particular, they must never
-add `Generated with Codebuff`, `Co-Authored-By`, or any equivalent attribution
-footer to a commit unless the user explicitly requests that attribution in the
-current message. This rule applies to every agent and every client used to
-operate agents, including reusable workflows and commit helpers. The user's
-explicit request is the only exception.
+## 5. Versioning and CHANGELOG — MANDATORY
 
-## 3. Golden rule: "What works is not touched"
+### Semantic Versioning (SemVer)
 
-> **Do not refactor or modify modules, classes or functions that already work
-> and are stable, unless it is strictly necessary for the requested feature or
-> explicitly requested by the user.**
+Every version bump follows **SemVer**: `MAJOR.MINOR.PATCH`.
 
-- Before touching existing code, verify that it is really needed for the task.
-- Prefer non-invasive additions (new files, extensions, defaulted parameters)
-  over rewrites.
-- If a change to stable code is unavoidable, justify it in the commit and the
-  changelog.
-- After every change, run the build and tests to confirm nothing broke.
+- **MAJOR** — breaking changes (incompatible API/behavior).
+- **MINOR** — new features, backward-compatible.
+- **PATCH** — backward-compatible fixes.
 
-## 4. Versioning (SemVer)
+The agent must **autonomously advance the version** as part of each change that
+warrants it (no need to wait for the user to ask). Update **all** of these to
+keep them in sync:
 
-Every version bump must strictly follow **Semantic Versioning**
-(`MAJOR.MINOR.PATCH`), as defined at https://semver.org:
+1. `version.txt` — single source of truth for release metadata (mobile
+   version + code + channel, DE version + code + channel — see "Desktop
+   versioning" below).
+2. `app/build.gradle.kts` — `versionName` (SemVer string) and `versionCode`
+   (monotonically increasing integer; the Android requirement is that
+   `versionCode` always increases on each release).
 
-- **MAJOR**: incompatible changes with previous versions.
-- **MINOR**: backwards-compatible new features.
-- **PATCH**: backwards-compatible bug fixes.
+When in doubt about which segment to bump, prefer PATCH for fixes and MINOR for
+features; only use MAJOR for genuinely breaking changes.
 
-The canonical app version is declared in `version.txt` at the repository root
-(SemVer format, e.g. `0.0.2-alpha`). It is the single source of truth: the
-installer/artifact version and the in-app About version are both derived from
-it at build time. The installer `packageVersion` is the numeric part of the
-SemVer with the pre-release suffix dropped and the MAJOR raised to at least 1
-(the Compose/jpackage installer requires MAJOR > 0), so `0.0.2-alpha` maps to
-`1.0.2` (the MINOR.PATCH tracks the SemVer exactly).
+#### Explicit user versioning overrides (per-message)
 
-## 5. Changelog (Keep a Changelog)
+If the user explicitly states the desired versioning **in a single message**
+(e.g. writes "patch", "minor", "major", or "patch/fix are equivalent"), that
+message overrides the default SemVer rules **for that message only**. In that
+case follow the user's stated segment, treating **patch and fix as the same**
+segment (a fix request without an explicit segment defaults to the SemVer
+PATCH). The next message returns to the default SemVer behavior unless it
+states an override again.
 
-The `CHANGELOG.md` file follows the **Keep a Changelog** standard
-(https://keepachangelog.com). **It must be updated on every important change**,
-using the sections:
+**Which version to bump depends on what changed** (this is the rule the user
+considers obvious):
 
-- `Added` — new features.
-- `Changed` — changes to existing features.
-- `Deprecated` — deprecated features.
-- `Removed` — removed features.
-- `Fixed` — bug fixes.
-- `Security` — security fixes.
+- A change to the **Android app** (`app/`, or an Android-only module/behavior)
+  bumps the **mobile** version: `version.txt` line 1 **and**
+  `app/build.gradle.kts` `versionName` (+ `versionCode`). Also advance
+  `version.txt` line 2 (mobile version code) to match `versionCode`.
+- A change to the **desktop edition** (`desktop/`, its build/installer, the
+  `.github/workflows/` release pipeline, or a desktop-only behavior) bumps the
+  **DE** version: `version.txt` line 4 (+ line 5 version code by 1).
+- A change that affects **both** editions bumps **both** versions.
+- A change that touches **only** the website (`.websitede/` content — pages,
+  styles, scripts, images) bumps **no** version: no DE bump, no mobile bump,
+  and the commit is **not** prefixed with `v` (it's not a release signal).
+  Only if the same change also touches app code, build/installer config or
+  release workflows does the usual DE/mobile bump apply.
 
-Each entry lives under a `## [VERSION] - YYYY-MM-DD` section. Do not delete
-past entries.
+Never bump the DE version for a mobile-only change, and never bump the mobile
+version for a DE-only change.
 
-## 6. Localization (i18n)
+#### Desktop versioning (`<mobile>_DE-<de>` + channel)
 
-- Strings live in `composeApp/src/commonMain/composeResources/`.
-- `values/strings.xml` is the **English default** and contains the canonical
-  list of keys.
-- Each language has `values-<qualifier>/strings.xml` (e.g. `values-it`,
-  `values-de`, `values-zh-rCN`, `values-zh-rTW`). Missing keys fall back to
-  English.
-- The list of supported languages is in
-  `i18n/AppLanguage.kt` (`supportedLanguages`), with BCP-47 code and native
-  name.
-- Manual selection uses the `expect/actual LocalAppLocale` pattern
-  (`i18n/Locale.kt` + platform actuals); the choice is persisted via
-  `SettingsStore` (`data/SettingsStore.kt`).
+Desktop releases are distinguished from Android releases with a combined
+version of the form `<mobile>_DE-<de>` (e.g. `6.0.5_DE-1.0.0`):
 
-### Adding a new language
+- `6.0.5` is the Android (mobile) version the desktop is paired with; `1.0.0`
+  is the desktop ("DE") version — the program's own SemVer.
+- `version.txt` holds the release metadata on **six lines** (comment lines
+  prefixed with `#` may follow): line 1 = mobile version, line 2 = mobile
+  version code, line 3 = mobile release channel, line 4 = DE version, line 5 =
+  the desktop **version code** (a small monotonic counter matching the number
+  of DE releases, e.g. `57` — shown in the About screen, and bumped by 1 on
+  every DE release), line 6 = DE release channel. The Android app version also
+  stays numeric in `app/build.gradle.kts` (`versionName` / `versionCode`,
+  e.g. `6.0.5` / `57`).
+- Release channels (lines 3 and 6): the **DE** channel (line 6) drives the
+  desktop release — `stable` (or empty) publishes a stable GitHub release;
+  any other value (`rc`, `beta`, `alpha`, `nightly`, …) publishes a
+  pre-release. The channel is shown (uppercased) in the About screen. The
+  mobile channel (line 3) is informational for the Android side.
+- The GitHub release title and desktop artifact filenames use the full
+  version (`VIVIMusic-6.0.5_DE-1.0.0-setup.exe`, …). Release **tags carry no
+  `v` prefix**: stable releases use the bare version (`6.0.5_DE-1.0.0`), while
+  non-stable releases append the channel (`6.0.5_DE-1.0.0-nightly`). The `v`
+  prefix is used **only** in commit messages, as the auto-release trigger.
+- Windows/macOS installers need a purely numeric `MAJOR.MINOR.PATCH`
+  (jpackage JDK-8283707; Inno Setup `AppVersion` too), so the
+  **installer/package version is the DE version** (`1.0.0`, the part after
+  `DE-`). `desktop/build.gradle.kts` derives both values from `version.txt`
+  (`fullVersion` for display, `numericPackageVersion` for jpackage) and
+  generates `AppInfo` so the About screen can show `fullVersion` + channel.
+  Keep that derivation in place — do not put the full `_DE-` version into
+  `packageVersion`.
 
-1. Add an entry to `supportedLanguages` in `i18n/AppLanguage.kt`.
-2. Create `composeApp/src/commonMain/composeResources/values-XX/strings.xml`
-   (replace `XX` with the language qualifier) translating the keys from the
-   default `values/strings.xml`.
-3. Translating every key is not required: missing keys fall back to English.
-4. Update `CHANGELOG.md` (`Added` section).
+### CHANGELOG.md — Keep a Changelog
 
-## 7. Supabase sync
+Update `CHANGELOG.md` on **every important change**, following
+[Keep a Changelog](https://keepachangelog.com/). Use exactly these sections:
 
-- Configuration is read at runtime in `data/AppConfig.kt` from a JVM system
-  property, the process environment, or a git-ignored `.env` file. Secrets:
-  `SUPABASE_URL`/`SUPABASE_ANON_KEY` (sync) and `INNERTUBE_API_KEY` (InnerTube,
-  injected at build time from the CI secret for releases).
-- The schema (tables, RLS, Realtime) is in `supabase/migrations/0001_init.sql`.
-- If credentials are missing, the app runs in local-only mode
-  (`SyncStatus.Disabled`).
-- The current sync pushes the entire local dataset (no dirty flag): it is
-  correct and simple for small libraries; for large libraries, per-row change
-  tracking should be introduced.
+- `Added` — for new features.
+- `Changed` — for changes in existing functionality.
+- `Deprecated` — for soon-to-be-removed features.
+- `Removed` — for removed features.
+- `Fixed` — for bug fixes.
+- `Security` — in case of vulnerabilities.
 
-## 8. Build, test and run
+Keep an `## [Unreleased]` section at the top; when a version is released,
+convert it to a dated entry (`## [X.Y.Z] - YYYY-MM-DD`) and add the new version
+to the top of `CHANGELOG.md`. Omit sections that have no entries.
 
-Requirements: JDK 17+ (17 recommended for packaging with maximum compatibility;
-Gradle 8.x does not support JDK 25), network access to download dependencies.
+**Desktop-specific entries are marked with `[DE]`** (e.g.
+`- [DE] New desktop feature.`), so desktop and Android changes stay
+distinguishable in the changelog. Desktop releases use the combined
+`<mobile>_DE-<de>` version (`## [6.0.5_DE-1.0.0] - …`).
 
-```bash
-# Compile and run the app
-./gradlew :composeApp:run
+### Mandatory pre-commit checklist — `version.txt` + `CHANGELOG.md` + `TODO.md`
 
-# Native installer for the current OS (.msi/.dmg/.deb/.AppImage)
-./gradlew :composeApp:packageDistributionForCurrentOS
+Before creating **any** commit that touches program code, build files,
+workflows, installer/assets or anything release-affecting, run through this
+checklist. Every item is verified with a real command (`git diff` / `cat`),
+never from memory:
 
-# All checks (tests + build)
-./gradlew build
+1. **`version.txt` bumped — and in the SAME commit as the code?**
+   - DE-only change → line 4 (DE version, SemVer) **and** line 5 (DE version
+     code +1); mobile lines 1–3 untouched.
+   - Mobile-only change → line 1 (mobile version) **and** line 2 (mobile
+     version code); DE lines 4–6 untouched, and `app/build.gradle.kts`
+     `versionName`/`versionCode` kept in sync.
+   - Both editions → both pairs.
+   - Verify: `git diff version.txt` actually shows the new values. Forgetting
+     this has already produced releases with stale versions — the fix must
+     never be left to the user.
+2. **`CHANGELOG.md` updated?**
+   - New dated section `## [<mobile>_DE-<de>-<channel>] - YYYY-MM-DD`
+     directly under `## [Unreleased]`, entries in strict descending version
+     order, correct `Added`/`Changed`/`Fixed`/… heading, changes marked
+     `[DE]` and/or `[APK]`.
+   - Verify: `git diff CHANGELOG.md` shows the new versioned section.
+3. **`TODO.md` updated?**
+   - Completed items marked `[x]`, started-but-unfinished `[~]`, new pending
+     work added. Never leave it stale after a change.
+   - Verify: `git diff TODO.md`.
+4. **Compile the affected module** (`./gradlew :desktop:compileKotlin`,
+   `:app:compileUniversalGmsDebugKotlin`, …) and get BUILD SUCCESSFUL.
+5. **Commit title**: code/release-affecting commits use
+   `v<full version from version.txt>: <short description>`; docs-only commits
+   may use `docs:`. Short title, details in the body, **no agent co-author
+   footer** (see §3).
+6. **Final check before push**: `git status --short` shows only the intended
+   files staged, and `git log -1 --stat` shows `version.txt`, `CHANGELOG.md`
+   and `TODO.md` together with the code changes.
 
-# Regenerate the desktop icons from logo.png
-python3 tools/generate_icons.py
+The checklist is not optional: skipping items has already caused releases
+published with an un-bumped `version.txt` and changelog entries that never
+appeared.
 
-# Clean
-./gradlew clean
-```
+## 6. Localization (multilingual support)
 
-Windows note: JDK 25 (or later) may not be supported by Gradle 8.x; use JDK 21
-(e.g. `JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot`).
+The app is translated through Android string resources. **English is the
+primary language** (the source of truth); every other language is a
+translation of it.
 
-## 9. GitHub Actions workflows
+The **desktop edition** is English-first too, using the same 49-language list
+(locale tag → native name) in
+`desktop/src/main/kotlin/com/music/vivi/desktop/Languages.kt`, with strings in
+`Localization.kt` (English source of truth; other languages fall back to
+English until translated). The language is chosen on first launch and can be
+changed from the desktop Language menu.
 
-- **CI** (`.github/workflows/ci.yml`): on every push to `main` and pull request
-  it builds the desktop target (`./gradlew :composeApp:build`).
-- **Build workflows** (reusable, invoked by Auto Release):
-  - `build-windows-custom.yml` -> first Windows packaging attempt with the branded Inno Setup package;
-  - `build-windows.yml` -> reliable standard `.msi`/portable `.exe` fallback on `windows-latest` (JDK 17), started only if the custom attempt fails;
-  - `build-linux.yml` -> `.deb`/`.AppImage` on `ubuntu-latest` (JDK 17);
-  - `build-macos.yml` -> `.dmg` on `macos-15-intel` and `macos-15` (JDK 17).
-- **Auto Release** (`.github/workflows/auto-release.yml`): does not build
-  anything itself. It collects the artifacts produced by the build workflows,
-  the matching `CHANGELOG.md` section and the commits since the previous tag,
-  then publishes the GitHub Release. It triggers on:
-  - a push to `main` whose commit message starts with `v` (e.g.
-    `v0.0.1-alpha: ...`), or
-  - a manual `workflow_dispatch` (with an optional version).
-  The version is read from `version.txt` (tag = version without the `v` prefix).
-- The Windows release starts `build-windows-custom.yml` first for the branded
-  Inno Setup installer (`installer/windows/ViviMusicDE.iss`). Only if that job
-  fails does it start `build-windows.yml` as the standard fallback. The release
-  job accepts either successful Windows job, plus successful Linux and macOS
-  jobs, and therefore publishes exactly one Windows package set without
-  duplicating work.
+> **Rule (always)**: when you modify code you MUST complete ALL missing
+> translations for every new or changed string across all supported languages —
+> never leave a key with an English-only fallback. For the desktop edition,
+> add the missing entries to the `EXTRA_TRANSLATIONS` tables under
+> `scripts/desktop_extra_translations*.py` and re-run
+> `python3 scripts/generate_desktop_localization.py` so `Localization.kt` stays
+> complete, then compile `:desktop`.
 
-### Releasing a new version
+### Structure
 
-1. Update `version.txt` with the new SemVer version.
-2. Update `CHANGELOG.md` with a `## [VERSION] - YYYY-MM-DD` section.
-3. Commit with a message starting with `v` and push:
-   `git commit -m "v$(cat version.txt): description" && git push`.
-4. Do not add agent, client or automation attribution trailers unless the user
-   explicitly requests them in the current message; see the mandatory commit
-   authorship rule above.
+- `app/src/main/res/values/strings.xml` — **default/English** strings.
+- `app/src/main/res/values-<locale>/strings.xml` — one folder per language
+  (e.g. `values-it/`, `values-de/`, `values-zh-rCN/`).
+- Some folders also contain `vivi_strings.xml` and `updater_strings.xml`
+  (app-specific and updater strings). Keep the same set of files per language
+  as English when adding new translatable strings.
+- The list of **selectable app languages** lives in code, in
+  `app/src/main/kotlin/com/music/vivi/constants/PreferenceKeys.kt`, in the
+  `LanguageCodeToName` map (locale tag → display name).
 
-## 10. Definition of "Done"
+### How to add a new language
 
-A task is complete only when:
+1. Create the resource folder for the locale, e.g.
+   `app/src/main/res/values-<locale>/`, and add a `strings.xml` that translates
+   every key from `values/strings.xml`. Do **not** invent new keys; translate
+   the existing English keys.
+2. Add the language to the `LanguageCodeToName` map in `PreferenceKeys.kt` so it
+   appears in the language picker.
+3. If the language was requested but is not in the supported list below, confirm
+   with the user first.
 
-1. the code compiles (`./gradlew build`) and the tests pass;
-2. no emoji were introduced in code/resources/workflows;
-3. no stable code was refactored without necessity;
-4. `CHANGELOG.md` is updated (correct section) when the change is relevant;
-5. `version.txt` and `CHANGELOG.md` follow SemVer/Keep a Changelog when the app
-   behavior changed;
-6. `TODO.md` (porting phase tracker) is updated: mark completed phases/items
-   as done whenever a phase advances.
+### Supported languages
+
+English is the base language. The supported translations are (display name →
+locale tag):
+
+| Language | Locale |
+|---|---|
+| English (primary) | `values/` |
+| Azərbaycan dili | `az` |
+| Bosanski | `bs` |
+| Català | `ca` |
+| Čeština | `cs` |
+| Deutsch | `de` |
+| Eesti | `et` |
+| Español | `es` |
+| Euskara | `eu` |
+| Filipino | `fil` |
+| Français | `fr` |
+| Hrvatski | `hr` |
+| Bahasa Indonesia | `id` |
+| Italiano | `it` |
+| Lietuvių | `lt` |
+| Magyar | `hu` |
+| Bahasa Melayu | `ms` |
+| Nederlands | `nl` |
+| Norsk bokmål | `nb` |
+| Polski | `pl` |
+| Português | `pt` |
+| Română | `ro` |
+| Slovenčina | `sk` |
+| Slovenščina | `sl` |
+| Српски | `sr` |
+| Suomi | `fi` |
+| Svenska | `sv` |
+| Tiếng Việt | `vi` |
+| Türkçe | `tr` |
+| Ελληνικά | `el` |
+| Беларуская | `be` |
+| Български | `bg` |
+| Русский | `ru` |
+| Українська | `uk` |
+| العربية | `ar` |
+| हिन्दी | `hi` |
+| অসমীয়া | `as` |
+| বাংলা | `bn` |
+| ਪੰਜਾਬੀ | `pa` |
+| தமிழ் | `ta` |
+| తెలుగు | `te` |
+| മലയാളം | `ml` |
+| ไทย | `th` |
+| ខ្មែរ | `km` |
+| 한국어 | `ko` |
+| 简体中文 | `zh-rCN` |
+| 繁體中文 | `zh-rTW` |
+| 日本語 | `ja` |

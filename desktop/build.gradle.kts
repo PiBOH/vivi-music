@@ -1,0 +1,182 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
+// version.txt is the single source of truth for release metadata. Layout:
+//   line 1 = mobile (Android) version, e.g. 6.4.21
+//   line 2 = mobile version code (monotonic int)
+//   line 3 = mobile release channel (stable / rc / beta / alpha / nightly)
+//   line 4 = desktop ("DE") version, e.g. 1.33.52 (the program's own SemVer)
+//   line 5 = desktop version code (monotonic counter)
+//   line 6 = desktop release channel (stable / rc / beta / alpha / nightly)
+//   (comment lines, prefixed with '#', may follow and are ignored)
+// The human-readable desktop version is "<mobile>_DE-<de>", e.g. 6.4.21_DE-1.33.52.
+val versionLines: List<String> = rootProject.file("version.txt")
+    .takeIf { it.exists() }
+    ?.readLines()
+    ?.map { it.trim() }
+    ?.filter { it.isNotEmpty() && !it.startsWith("#") }
+    ?: emptyList()
+
+val mobileVersion: String = versionLines.getOrNull(0)?.takeIf { it.isNotEmpty() } ?: "0.0.0"
+val deVersion: String = versionLines.getOrNull(3)?.takeIf { it.isNotEmpty() } ?: "0.0.0"
+val releaseChannel: String = versionLines.getOrNull(5)?.takeIf { it.isNotEmpty() } ?: "stable"
+val fullVersion: String = "${mobileVersion}_DE-${deVersion}"
+
+// Installers/package managers require a purely numeric MAJOR.MINOR.PATCH on
+// Windows and macOS (jpackage JDK-8283707, Inno Setup AppVersion). That numeric
+// version is the DE version — the part after "DE-".
+val numericPackageVersion: String = deVersion.substringBefore('+').substringBefore('-')
+
+plugins {
+    kotlin("jvm")
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+}
+
+// Ship version.txt + CHANGELOG.md as classpath resources so the About screen
+// can read build metadata and the changelog at runtime (config-cache friendly).
+tasks.processResources {
+    from(rootProject.file("version.txt"))
+    from(rootProject.file("CHANGELOG.md"))
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+dependencies {
+    implementation(compose.desktop.currentOs)
+    implementation(compose.material3)
+    implementation(compose.materialIconsExtended)
+
+    // Material 3 tonal color palette (same seed-based scheme as the Android app)
+    implementation(libs.materialKolor)
+
+    // Reused JVM-pure network/parsing modules (same code as the Android app)
+    implementation(project(":innertube"))
+    implementation(project(":spotify"))
+    implementation(project(":lastfm"))
+    implementation(project(":kizzy"))
+    implementation(project(":shazamkit"))
+    implementation(project(":jiosaavn"))
+    implementation(project(":lyricsProvider"))
+    implementation(project(":sync"))
+    implementation(project(":canvas"))
+    implementation(project(":applecanvas"))
+    implementation(project(":vivimusiccanvas"))
+
+    implementation(libs.kotlinx.coroutines.core)
+    // Provides the Swing-based Main dispatcher backed by the AWT/Swing event
+    // dispatch thread, required by Dispatchers.Main on desktop. Without it
+    // running code that hops back to the Main dispatcher throws
+    // "Module with the Main dispatcher is missing". Same version as core.
+    implementation(libs.kotlinx.coroutines.swing)
+
+    // Thumbnail / artwork loading (Coil 3, desktop JVM support)
+    implementation(libs.coil)
+    implementation(libs.coil.network.okhttp)
+
+    // Pure-Java MP4 (incl. fragmented/DASH fMP4) demuxer + bundled JAAD AAC decoder
+    // for self-contained desktop audio playback.
+    implementation("org.jcodec:jcodec:0.2.5")
+
+    // Native OS system-volume access (WinMM wave output on Windows) so the
+    // Android system volume can be mirrored on the desktop and vice versa.
+    implementation("net.java.dev.jna:jna:5.14.0")
+
+    // JavaFX WebView for the embedded YouTube sign-in window. The platform
+    // classifier is picked from the BUILDING machine: each OS CI job builds its
+    // own package, so the packaged app always ships the matching natives.
+    val buildOs = System.getProperty("os.name").lowercase()
+    val buildArm = System.getProperty("os.arch").lowercase().let { it.contains("aarch64") || it.contains("arm") }
+    val javafxClassifier = when {
+        buildOs.contains("win") -> "win"
+        buildOs.contains("mac") || buildOs.contains("darwin") -> if (buildArm) "mac-aarch64" else "mac"
+        else -> if (buildArm) "linux-aarch64" else "linux"
+    }
+    val javafxVersion = "21.0.4"
+    implementation("org.openjfx:javafx-base:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-graphics:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-controls:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-media:$javafxVersion:$javafxClassifier")
+    implementation("org.openjfx:javafx-web:$javafxVersion:$javafxClassifier")
+
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.okhttp)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.json)
+
+    // Local LAN relay (embedded WebSocket server) for offline device pairing
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.websockets)
+
+    // QR code (ZXing) + mDNS service registration (JmDNS) for LAN discovery
+    implementation(libs.zxing.core)
+    implementation(libs.jmdns)
+
+    // Drag-to-reorder for the Queue screen (same lib as the Android app)
+    implementation(libs.compose.reorderable)
+}
+
+compose.desktop {
+    application {
+        mainClass = "com.music.vivi.desktop.MainKt"
+
+        nativeDistributions {
+            targetFormats(
+                TargetFormat.Msi,
+                TargetFormat.Exe,
+                TargetFormat.Dmg,
+                TargetFormat.Pkg,
+                TargetFormat.Deb,
+            )
+            // jlink bundles only a minimal set of modules by default. The dev
+            // tools (CPU/RAM/thread stats) use `java.lang.management` and the
+            // richer `com.sun.management` bean; without these modules the
+            // packaged launcher crashes on startup with "Failed to launch JVM".
+            // jlink includes only JDK modules. JavaFX is shipped as regular runtime
+            // dependencies in the application image and is launched via Stage,
+            // so the packaged embedded WebView does not need Swing interop.
+            // jdk.jsobject provides netscape.javascript.JSObject, which the
+            // JavaFX WebView requires at runtime — without it WebView creation
+            // throws NoClassDefFoundError in packaged builds.
+            //
+            // JavaFX is shipped as CLASSPATH jars, so jlink cannot see its
+            // module requirements. Missing modules silently break the WebView:
+            //  - java.net.http  → javafx.web requires it; without it the page
+            //    load hangs at RUNNING forever (white window, no error dialog);
+            //  - jdk.unsupported → sun.misc.Unsafe needed by the Marlin 2D
+            //    rendering engine; without it QuantumRenderer aborts painting
+            //    (white window).
+            // Both verified with a limited-modules reproduction (DE 1.34.2).
+            modules(
+                "java.management", "jdk.management", "jdk.jsobject",
+                "java.net.http", "jdk.unsupported",
+            )
+            packageName = "VIVIMusic"
+            packageVersion = numericPackageVersion
+            description = "VIVI Music — desktop client"
+            vendor = "VIVI Music"
+
+            windows {
+                menuGroup = "VIVI Music"
+                // Machine-wide install into Program Files (requires admin/UAC).
+                perUserInstall = false
+                installationPath = "C:/Program Files/VIVIMusic"
+                iconFile.set(project.file("icons/logo_vmde.ico"))
+            }
+
+            linux {
+                debMaintainer = "VIVI Music"
+                iconFile.set(project.file("icons/logo_vmde.png"))
+            }
+
+            macOS {
+                bundleID = "com.vivi.vivimusic.desktop"
+                minimumSystemVersion = "10.15"
+                iconFile.set(project.file("icons/logo_vmde.icns"))
+            }
+        }
+    }
+}

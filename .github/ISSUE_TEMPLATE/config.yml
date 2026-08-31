@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: "💬 GitHub Discussions"
-    url: "https://github.com/PiBOH/vivi-music-de/discussions"
-    about: "Use Discussions for questions, setup help, and general support that is not a bug or a feature request."
-  - name: "📖 Project documentation"
-    url: "https://github.com/PiBOH/vivi-music-de/blob/main/AGENTS.md"
-    about: "Read AGENTS.md and README.md for architecture, build instructions, Supabase setup, and i18n guidelines."
-  - name: "🔐 Report a security vulnerability"
-    url: "https://github.com/PiBOH/vivi-music-de/security/advisories/new"
-    about: "Do not post Supabase URLs, keys, tokens, or private data in a public issue; report security problems privately."
+  - name: 💬 Join the Community (Telegram)
+    url: https://t.me/+Nen-QpiY0tk1OTE9
+    about: Ask questions, chat with developers, or share your setups.
+  - name: ❓ GitHub Discussions
+    url: https://github.com/vivizzz007/vivi-music/discussions
+    about: Use this for Q&A and general ideas that are not yet feature requests.
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/vivizzz007/vivi-music/security/policy
+    about: Please strictly report security issues here.

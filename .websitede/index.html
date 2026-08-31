@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
+  <title>VIVI Music DE — the player that follows you</title>
+  <meta name="description" content="VIVI Music DE: a free, open-source music player for Windows, Linux and macOS that stays in sync with your phone." />
+  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap nav-inner">
+      <a class="brand" href="index.html">
+        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        VIVI Music <em>DE</em>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="downloads.html">Downloads</a>
+        <a href="install-guide.html">Guide</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="sync.html">Sync</a>
+        <a href="about.html">About</a>
+      </div>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap reveal">
+      <span class="hero-eyebrow"><span class="dot"></span> Free &amp; open source · Desktop edition</span>
+      <h1>The player<br />that <span class="gr">follows you.</span></h1>
+      <p class="tagline">
+        VIVI Music DE streams high-fidelity audio from YouTube Music and stays
+        in lockstep with your phone — queue, playback, volume and playlists,
+        synced in real time. One player, two devices.
+      </p>
+
+      <div class="nowplaying" aria-hidden="true">
+        <div class="disc"></div>
+        <div class="np-body">
+          <div class="np-meta">Now playing · demo</div>
+          <div class="np-title">Midnight Drive</div>
+          <div class="np-artist">The Night Session — courtesy of VIVI Music DE</div>
+          <div class="np-track"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <span class="np-clock mono">02:41</span>
+      </div>
+
+      <p class="readout-list"><span class="rk">●</span>&nbsp; LIVE · <span data-version>…</span> · <a href="https://github.com/PiBOH/vivi-music/releases">all releases</a></p>
+
+      <div class="tabs">
+        <button class="tab active" data-channel="stable" type="button">Stable</button>
+        <button class="tab" data-channel="nightly" type="button">Nightly builds</button>
+      </div>
+
+      <div class="platforms">
+        <a class="platform" data-download="winExe" href="https://github.com/PiBOH/vivi-music/releases/latest">
+          <span class="os">🪟</span>
+          <span><span class="pl-name">Windows</span><br /><span class="pl-fmt">.exe installer</span></span>
+        </a>
+        <a class="platform" data-download="deb" href="https://github.com/PiBOH/vivi-music/releases/latest">
+          <span class="os">🐧</span>
+          <span><span class="pl-name">Linux</span><br /><span class="pl-fmt">.deb · AppImage</span></span>
+        </a>
+        <a class="platform" data-download="dmg" href="https://github.com/PiBOH/vivi-music/releases/latest">
+          <span class="os">🍎</span>
+          <span><span class="pl-name">macOS</span><br /><span class="pl-fmt">.dmg · .pkg</span></span>
+        </a>
+        <a class="platform" href="https://vivimusic.mkmdevilmi.workers.dev/">
+          <span class="os">🤖</span>
+          <span><span class="pl-name">VIVI Music</span><br /><span class="pl-fmt">Android — original app</span></span>
+        </a>
+      </div>
+
+      <p class="hint">New here? Read the <a href="install-guide.html">install guide</a>.</p>
+    </div>
+  </header>
+
+  <section class="section reveal">
+    <div class="wrap">
+      <h2>Why VIVI Music DE</h2>
+      <p class="sub">Everything you like from the Android app, rebuilt for your desktop.</p>
+      <div class="cards">
+        <div class="card">
+          <div class="emoji">📱💻</div>
+          <h3>Phone sync</h3>
+          <p>Pair on LAN or the cloud relay. Queue, playlists, volume and settings stay in sync in real time.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🎵</div>
+          <h3>Full player</h3>
+          <p>Material 3 player with synced lyrics, a mini-player and an animated canvas background.</p>
+        </div>
+        <div class="card">
+          <div class="emoji">🔓</div>
+          <h3>Open source</h3>
+          <p>Free and open source under the GPL-3.0 license. No ads, no tracking.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section tinted reveal">
+    <div class="wrap syncband">
+      <div class="phones" aria-hidden="true">
+        <span>📱</span><span>⇄</span><span>💻</span>
+      </div>
+      <div>
+        <h2>Two devices, one playback.</h2>
+        <p class="sub" style="margin-bottom:12px">
+          Search a song on your phone and it plays on the desktop. Skip on the
+          computer and the phone follows. Volume, playlists and settings stay
+          in step — over Wi-Fi or anywhere with the cloud relay.
+        </p>
+        <a class="btn" href="sync.html">See how pairing works</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section reveal" data-gallery>
+    <div class="wrap">
+      <h2>Screenshots</h2>
+      <p class="sub">Take a look at the player before you install.</p>
+      <div class="gallery">
+        <div class="gallery-track"></div>
+        <div class="gallery-dots"></div>
+        <p class="gallery-empty" style="display:none">Screenshots coming soon — drop PNG files into
+          <code>.websitede/images/screenshots/</code> named <code>player.png</code>, <code>library.png</code>,
+          <code>lyrics.png</code> and <code>sync.png</code> and they will appear here automatically.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <span>VIVI Music DE</span>
+      <div class="links">
+        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
+        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
+        <a href="https://t.me/vivimusicde">Telegram</a>
+        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    window.VMDE_SCREENSHOTS = [
+      "images/screenshots/player.png",
+      "images/screenshots/library.png",
+      "images/screenshots/lyrics.png",
+      "images/screenshots/sync.png"
+    ];
+  </script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+package com.music.vivi.desktop
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import com.sun.jna.Function
+import com.sun.jna.Memory
+import com.sun.jna.Native
+import com.sun.jna.Pointer
+import java.awt.GraphicsEnvironment
+import java.io.File
+import java.lang.management.ManagementFactory
+import java.util.Base64
+import kotlin.math.roundToInt
+
+/** Where the live dev-tools stats are shown. */
+enum class DevToolsMode { OVERLAY, WINDOW, TITLE_BAR }
+
+/** How much detail the dev tools show. */
+enum class DevToolsProfile { FULL, PERFORMANCE }
+
+/**
+ * Developer options gate (enabled by tapping the About "version code" seven
+ * times, or via the always-visible "Developer options" settings screen).
+ * Persisted in [DesktopSettings] and shared across the whole app so both the
+ * overlay (main window) and the dedicated window can react to it.
+ */
+object DeveloperOptions {
+    private val _enabled = MutableStateFlow(false)
+    val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
+
+    private val _mode = MutableStateFlow(DevToolsMode.OVERLAY)
+    val mode: StateFlow<DevToolsMode> = _mode.asStateFlow()
+
+    private val _profile = MutableStateFlow(DevToolsProfile.FULL)
+    val profile: StateFlow<DevToolsProfile> = _profile.asStateFlow()
+
+    private val _overlayMovable = MutableStateFlow(true)
+    val overlayMovable: StateFlow<Boolean> = _overlayMovable.asStateFlow()
+
+    private val _showInTitleBar = MutableStateFlow(false)
+    val showInTitleBar: StateFlow<Boolean> = _showInTitleBar.asStateFlow()
+
+    /** Emitted when the options transition from disabled to enabled (unlock notification). */
+    private val _unlocked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val unlocked: SharedFlow<Unit> = _unlocked.asSharedFlow()
+
+    fun load() {
+        val s = DesktopSettings.load()
+        _enabled.value = s.developerOptions
+        _mode.value = runCatching { DevToolsMode.valueOf(s.devToolsMode) }.getOrDefault(DevToolsMode.OVERLAY)
+        _profile.value = runCatching { DevToolsProfile.valueOf(s.devProfile) }.getOrDefault(DevToolsProfile.FULL)
+        _overlayMovable.value = s.devOverlayMovable
+        _showInTitleBar.value = s.devShowInTitleBar
+        if (_enabled.value) SystemMonitor.start() else SystemMonitor.stop()
+    }
+
+    fun setEnabled(value: Boolean) {
+        val was = _enabled.value
+        _enabled.value = value
+        DesktopSettings.update { it.copy(developerOptions = value) }
+        if (value) SystemMonitor.start() else SystemMonitor.stop()
+        if (value && !was) _unlocked.tryEmit(Unit)
+    }
+
+    fun setMode(value: DevToolsMode) {
+        _mode.value = value
+        DesktopSettings.update { it.copy(devToolsMode = value.name) }
+    }
+
+    fun setProfile(value: DevToolsProfile) {
+        _profile.value = value
+        DesktopSettings.update { it.copy(devProfile = value.name) }
+    }
+
+    fun setOverlayMovable(value: Boolean) {
+        _overlayMovable.value = value
+        DesktopSettings.update { it.copy(devOverlayMovable = value) }
+    }
+
+    fun setShowInTitleBar(value: Boolean) {
+        _showInTitleBar.value = value
+        DesktopSettings.update { it.copy(devShowInTitleBar = value) }
+    }
+}
+
+/** One snapshot of the metrics shown by the dev tools. */
+data class SystemStats(
+    val cpuProcess: Double,       // 0..1, or -1 when unknown
+    val cpuSystem: Double,        // 0..1, or -1 when unknown
+    val heapUsedBytes: Long,
+    val heapMaxBytes: Long,
+    val sysRamUsedBytes: Long,    // -1 when unknown
+    val sysRamTotalBytes: Long,   // -1 when unknown
+    val processRamBytes: Long,    // real program RSS/working set, -1 when unknown
+    val threadCount: Int,
+    val netDownBps: Long,         // -1 when unknown
+    val netUpBps: Long,           // -1 when unknown
+    val netDownTotalBytes: Long,  // -1 when unknown
+    val netUpTotalBytes: Long,    // -1 when unknown
+    val availableProcessors: Int,
+    val uptimeMs: Long,
+    val osName: String,
+    val javaVersion: String,
+    val gpuDevice: String,
+)
+
+/**
+ * Samples JVM + OS metrics on a fixed interval and exposes the latest snapshot
+ * as a [StateFlow]. CPU / memory come from the JDK's [com.sun.management.OperatingSystemMXBean];
+ * network totals are read best-effort from the OS (see [readNetworkTotals]);
+ * GPU usage is not measurable cross-platform, so only the device id is shown.
+ */
+object SystemMonitor {
+    private val osBean: com.sun.management.OperatingSystemMXBean? =
+        ManagementFactory.getOperatingSystemMXBean() as? com.sun.management.OperatingSystemMXBean
+
+    private val threadBean = ManagementFactory.getThreadMXBean()
+    private val runtimeBean = ManagementFactory.getRuntimeMXBean()
+    private val runtime = Runtime.getRuntime()
+    private val memoryBean = ManagementFactory.getMemoryMXBean()
+
+    // Declared before `_stats` on purpose: `emptyStats()` reads this during the
+    // object's initialization, and reading a Kotlin `val` before its initializer
+    // has run throws a NullPointerException at startup (the packaged launcher
+    // then reports it as "Failed to launch JVM").
+    val gpuDevice: String = runCatching {
+        GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.getIDstring()
+    }.getOrDefault("—")
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val _stats = MutableStateFlow(emptyStats())
+    val stats: StateFlow<SystemStats> = _stats.asStateFlow()
+
+    private var job: Job? = null
+
+    private var lastRx = -1L
+    private var lastTx = -1L
+    private var lastSampleMs = 0L
+
+    fun start() {
+        if (job != null) return
+        job = scope.launch {
+            while (true) {
+                sample()
+                delay(2000L)
+            }
+        }
+    }
+
+    fun stop() {
+        job?.cancel()
+        job = null
+    }
+
+    private fun emptyStats() = SystemStats(
+        cpuProcess = -1.0, cpuSystem = -1.0,
+        heapUsedBytes = 0, heapMaxBytes = 0,
+        sysRamUsedBytes = -1, sysRamTotalBytes = -1,
+        processRamBytes = -1,
+        threadCount = 0,
+        netDownBps = -1, netUpBps = -1, netDownTotalBytes = -1, netUpTotalBytes = -1,
+        availableProcessors = runtime.availableProcessors(),
+        uptimeMs = 0,
+        osName = System.getProperty("os.name").orEmpty(),
+        javaVersion = System.getProperty("java.version").orEmpty(),
+        gpuDevice = gpuDevice,
+    )
+
+    private fun sample() {
+        val cpuProcess = osBean?.processCpuLoad?.takeIf { it >= 0 } ?: -1.0
+        val cpuSystem = osBean?.systemCpuLoad?.takeIf { it >= 0 } ?: -1.0
+        val heapUsed = runtime.totalMemory() - runtime.freeMemory()
+        val heapMax = runtime.maxMemory()
+        val ramTotal = osBean?.totalMemorySize ?: -1
+        val ramFree = osBean?.freeMemorySize ?: -1
+        val ramUsed = if (ramTotal >= 0 && ramFree >= 0) ramTotal - ramFree else -1
+        val processRam = readProcessRam()
+        val threads = threadBean.threadCount
+
+        val (rx, tx) = readNetworkTotals()
+        val now = System.currentTimeMillis()
+        var downBps = -1L
+        var upBps = -1L
+        if (lastRx >= 0 && rx >= 0 && tx >= 0 && now > lastSampleMs) {
+            val dtSec = (now - lastSampleMs) / 1000.0
+            if (dtSec > 0) {
+                downBps = ((rx - lastRx) / dtSec).toLong().coerceAtLeast(0)
+                upBps = ((tx - lastTx) / dtSec).toLong().coerceAtLeast(0)
+            }
+        }
+        lastRx = rx
+        lastTx = tx
+        lastSampleMs = now
+
+        _stats.value = SystemStats(
+            cpuProcess = cpuProcess,
+            cpuSystem = cpuSystem,
+            heapUsedBytes = heapUsed,
+            heapMaxBytes = heapMax,
+            sysRamUsedBytes = ramUsed,
+            sysRamTotalBytes = ramTotal,
+            processRamBytes = processRam,
+            threadCount = threads,
+            netDownBps = downBps,
+            netUpBps = upBps,
+            netDownTotalBytes = rx,
+            netUpTotalBytes = tx,
+            availableProcessors = runtime.availableProcessors(),
+            uptimeMs = runtimeBean.uptime,
+            osName = System.getProperty("os.name").orEmpty(),
+            javaVersion = System.getProperty("java.version").orEmpty(),
+            gpuDevice = gpuDevice,
+        )
+    }
+
+    /** Real process memory (RSS / working set) where the OS provides it, else the
+     *  JVM's committed heap + non-heap. This is what Task Manager reports for the
+     *  process, unlike the heap-only figure previously shown. */
+    private fun readProcessRam(): Long = when (Platform.os) {
+        DesktopOs.WINDOWS -> windowsProcessRam()
+        DesktopOs.LINUX -> linuxProcessRam()
+        DesktopOs.MACOS -> committedMemory()
+    }.takeIf { it > 0 } ?: committedMemory()
+
+    /** JVM committed heap + non-heap (metaspace/code cache) — cross-platform fallback. */
+    private fun committedMemory(): Long = runCatching {
+        memoryBean.heapMemoryUsage.committed + memoryBean.nonHeapMemoryUsage.committed
+    }.getOrDefault(-1L)
+
+    private fun windowsProcessRam(): Long = runCatching {
+        // psapi!GetProcessMemoryInfo(GetCurrentProcess(), &counters, cb) → WorkingSetSize.
+        val getProcessMemoryInfo = Function.getFunction("psapi", "GetProcessMemoryInfo", Function.ALT_CONVENTION)
+        val is64 = Native.POINTER_SIZE == 8
+        val size = if (is64) 72 else 40
+        val counters = Memory(size.toLong())
+        counters.clear()
+        counters.setInt(0, size) // cb
+        val ok = getProcessMemoryInfo.invoke(
+            Integer::class.java,
+            arrayOf(Pointer.createConstant(-1L), counters, size), // -1 = GetCurrentProcess()
+        )
+        if (ok == 0) -1L
+        else if (is64) counters.getLong(16)
+        else Integer.toUnsignedLong(counters.getInt(12))
+    }.getOrDefault(-1L)
+
+    private fun linuxProcessRam(): Long = runCatching {
+        val line = File("/proc/self/status").readLines().firstOrNull { it.startsWith("VmRSS:") }
+            ?: return@runCatching -1L
+        val kb = line.split(Regex("\\s+")).getOrNull(1)?.toLongOrNull() ?: return@runCatching -1L
+        kb * 1024
+    }.getOrDefault(-1L)
+
+    private fun readNetworkTotals(): Pair<Long, Long> = runCatching {
+        when (Platform.os) {
+            DesktopOs.LINUX -> linuxNetTotals()
+            DesktopOs.MACOS -> macNetTotals()
+            DesktopOs.WINDOWS -> windowsNetTotals()
+        }
+    }.getOrDefault(-1L to -1L)
+
+    private fun linuxNetTotals(): Pair<Long, Long> {
+        var rx = 0L
+        var tx = 0L
+        File("/proc/net/dev").readLines().drop(2).forEach { line ->
+            val idx = line.indexOf(':')
+            if (idx < 0) return@forEach
+            val iface = line.substring(0, idx).trim()
+            if (iface == "lo") return@forEach
+            val fields = line.substring(idx + 1).trim().split(Regex("\\s+"))
+            if (fields.size >= 9) {
+                rx += fields[0].toLongOrNull() ?: 0L
+                tx += fields[8].toLongOrNull() ?: 0L
+            }
+        }
+        return rx to tx
+    }
+
+    private fun macNetTotals(): Pair<Long, Long> {
+        val out = ProcessBuilder("netstat", "-ib").redirectErrorStream(true)
+            .start().inputStream.bufferedReader().readText()
+        var rx = 0L
+        var tx = 0L
+        var rxIdx = -1
+        var txIdx = -1
+        for (line in out.lines()) {
+            if (line.contains("Ibytes") && line.contains("Obytes")) {
+                val header = line.split(Regex("\\s+"))
+                rxIdx = header.indexOfFirst { it == "Ibytes" }
+                txIdx = header.indexOfFirst { it == "Obytes" }
+                continue
+            }
+            if (rxIdx < 0) continue
+            val fields = line.split(Regex("\\s+"))
+            if (fields.size > maxOf(rxIdx, txIdx)) {
+                rx += fields.getOrNull(rxIdx)?.toLongOrNull() ?: 0L
+                tx += fields.getOrNull(txIdx)?.toLongOrNull() ?: 0L
+            }
+        }
+        return rx to tx
+    }
+
+    private fun windowsNetTotals(): Pair<Long, Long> {
+        // `netstat -e` labels are localized on non-English Windows ("Byte" /
+        // "Ricevuti"/"Trasmessi"), so matching the English "Bytes" row silently
+        // failed and the network stats stayed "—". Get-NetAdapterStatistics
+        // exposes culture-invariant property names, so sum ReceivedBytes /
+        // SentBytes across all adapters via PowerShell instead.
+        val script = """
+            ${'$'}ErrorActionPreference = 'Stop'
+            (Get-NetAdapterStatistics -ErrorAction SilentlyContinue | Measure-Object -Property ReceivedBytes, SentBytes -Sum | ForEach-Object { [long]${'$'}_.Sum }) -join ' '
+        """.trimIndent()
+        val encoded = Base64.getEncoder().encodeToString(script.toByteArray(Charsets.UTF_16LE))
+        val out = runCatching {
+            ProcessBuilder(
+                "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                "-EncodedCommand", encoded,
+            ).redirectErrorStream(true).start().inputStream.bufferedReader().readText()
+        }.getOrDefault("")
+        val m = Regex("(\\d+)\\s+(\\d+)").find(out.trim())
+        return if (m != null) {
+            (m.groupValues[1].toLongOrNull() ?: -1L) to (m.groupValues[2].toLongOrNull() ?: -1L)
+        } else {
+            -1L to -1L
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// UI
+// ---------------------------------------------------------------------------
+
+private fun formatBytes(bytes: Long): String {
+    if (bytes < 0) return "—"
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return "%.1f KB".format(kb)
+    if (kb / 1024.0 < 1024) return "%.1f MB".format(kb / 1024.0)
+    return "%.2f GB".format(kb / 1024.0 / 1024.0)
+}
+
+private fun formatSpeed(bps: Long): String = if (bps < 0) "—" else "${formatBytes(bps)}/s"
+
+private fun pct(x: Double): String = if (x < 0) "—" else "%.1f%%".format(x * 100)
+
+private fun formatUptime(ms: Long): String {
+    if (ms < 0) return "—"
+    val totalSec = ms / 1000
+    val d = totalSec / 86400
+    val h = (totalSec % 86400) / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (d > 0) "${d}d ${h}h" else if (h > 0) "${h}h ${m}m" else "${m}m ${s}s"
+}
+
+/** Compact, title-bar friendly suffix with the most important live stats. */
+internal fun SystemStats.titleBarText(): String = " · CPU ${pct(cpuProcess)} · RAM ${formatBytes(processRamBytes)}"
+
+@Composable
+private fun StatRow(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(value, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** Full dev-tools content, shared by the overlay and the dedicated window. */
+@Composable
+fun DevToolsPanel(syncManager: DesktopSyncManager?, language: String) {
+    val stats by SystemMonitor.stats.collectAsState()
+    val peerName = syncManager?.peerDeviceName?.collectAsState()?.value.orEmpty()
+    val paired = syncManager?.paired?.collectAsState()?.value == true
+    val profile by DeveloperOptions.profile.collectAsState()
+    val performance = profile == DevToolsProfile.PERFORMANCE
+
+    Column(Modifier.padding(12.dp)) {
+        Text(Localization.get(language, "developer_options"), style = MaterialTheme.typography.titleMedium)
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
+
+        StatRow(
+            "${Localization.get(language, "cpu")} · ${Localization.get(language, "process")}",
+            pct(stats.cpuProcess),
+        )
+        StatRow(
+            "${Localization.get(language, "cpu")} · ${Localization.get(language, "system")}",
+            pct(stats.cpuSystem),
+        )
+        StatRow(
+            "${Localization.get(language, "memory")} · ${Localization.get(language, "process")}",
+            formatBytes(stats.processRamBytes),
+        )
+        StatRow(
+            Localization.get(language, "gpu"),
+            stats.gpuDevice.ifBlank { "—" },
+        )
+        if (!performance) {
+            StatRow(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "heap")}",
+                "${formatBytes(stats.heapUsedBytes)} / ${formatBytes(stats.heapMaxBytes)}",
+            )
+            StatRow(
+                "${Localization.get(language, "memory")} · ${Localization.get(language, "system")}",
+                if (stats.sysRamTotalBytes >= 0) {
+                    "${formatBytes(stats.sysRamUsedBytes)} / ${formatBytes(stats.sysRamTotalBytes)}"
+                } else "—",
+            )
+            StatRow(
+                "${Localization.get(language, "network")} ↓",
+                formatSpeed(stats.netDownBps),
+            )
+            StatRow(
+                "${Localization.get(language, "network")} ↑",
+                formatSpeed(stats.netUpBps),
+            )
+            StatRow(
+                Localization.get(language, "total_traffic"),
+                "↓ ${formatBytes(stats.netDownTotalBytes)} · ↑ ${formatBytes(stats.netUpTotalBytes)}",
+            )
+            StatRow(
+                Localization.get(language, "paired_device"),
+                if (paired && peerName.isNotBlank()) peerName else Localization.get(language, "no_paired_device"),
+            )
+            StatRow(Localization.get(language, "threads"), stats.threadCount.toString())
+            StatRow(Localization.get(language, "uptime"), formatUptime(stats.uptimeMs))
+            StatRow(
+                Localization.get(language, "system_info"),
+                "${stats.osName} · Java ${stats.javaVersion} · ${stats.availableProcessors} cores",
+            )
+        }
+    }
+}
+
+/**
+ * Compact, non-invasive overlay shown in the bottom-end corner of the main
+ * window. Collapses to a small pill, expands to reveal [DevToolsPanel], and —
+ * when [movable] — can be dragged anywhere with the mouse.
+ */
+@Composable
+fun BoxScope.DevToolsOverlay(syncManager: DesktopSyncManager?, language: String, movable: Boolean) {
+    var expanded by remember { mutableStateOf(false) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+    val stats by SystemMonitor.stats.collectAsState()
+
+    Surface(
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(12.dp)
+            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+            .then(
+                if (movable) {
+                    Modifier.pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            offsetX += dragAmount.x
+                            offsetY += dragAmount.y
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            ),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        tonalElevation = 4.dp,
+        shadowElevation = 4.dp,
+    ) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+            Row(
+                Modifier.fillMaxWidth().clickable { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "DEV",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "CPU ${pct(stats.cpuProcess)} · RAM ${formatBytes(stats.processRamBytes)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    if (expanded) "−" else "+",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (expanded) {
+                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                DevToolsPanel(syncManager, language)
+            }
+        }
+    }
+}
