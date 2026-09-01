@@ -1548,9 +1548,12 @@ fun WindowScope.App(
 
     // UI density scale: multiply the density so every dp-based measurement
     // zooms (200% down to 55%), matching the Android density setting.
+    // CALIBRATION: the desktop layout is drawn generously, so the "100%"
+    // preset would look oversized next to the phone; scale 100% down to the
+    // size the mobile UI has at 75% (0.75x), keeping the relative presets.
     val baseDensity = LocalDensity.current
     CompositionLocalProvider(
-        LocalDensity provides Density(baseDensity.density * densityScale, baseDensity.fontScale)
+        LocalDensity provides Density(baseDensity.density * densityScale * DENSITY_CALIBRATION, baseDensity.fontScale)
     ) {
     CompositionLocalProvider(
         LocalPlayback provides PlaybackContext(
@@ -4996,6 +4999,14 @@ private val GithubIcon: ImageVector by lazy {
         )
     }.build()
 }
+
+/**
+ * Density calibration factor: the desktop layout is drawn generously, so
+ * the "100%" preset would look oversized next to the phone. Scaling 100%
+ * down to 0.75x makes it match the size the mobile UI has at 75%, while
+ * keeping the relative presets (200% still zooms in, 55% zooms out).
+ */
+private const val DENSITY_CALIBRATION = 0.75f
 
 private const val GITHUB_MARK_PATH =
     "M12,2A10,10 0,0 0,2 12c0,4.42 2.87,8.17 6.84,9.5c0.5,0.08 0.66,-0.23 0.66,-0.5c0,-0.23 0,-0.86 0,-1.69c-2.77,0.6 -3.36,-1.34 -3.36,-1.34c-0.46,-1.16 -1.11,-1.47 -1.11,-1.47c-0.91,-0.62 0.07,-0.6 0.07,-0.6c1,0.07 1.53,1.03 1.53,1.03c0.87,1.52 2.34,1.07 2.91,0.83c0.09,-0.65 0.35,-1.09 0.63,-1.34c-2.22,-0.25 -4.55,-1.11 -4.55,-4.92c0,-1.11 0.38,-2 1.03,-2.71c-0.1,-0.25 -0.45,-1.29 0.1,-2.64c0,0 0.84,-0.27 2.75,1.02c0.79,-0.22 1.65,-0.33 2.5,-0.33c0.85,0 1.71,0.11 2.5,0.33c1.91,-1.29 2.75,-1.02 2.75,-1.02c0.55,1.35 0.2,2.39 0.1,2.64c0.65,0.71 1.03,1.6 1.03,2.71c0,3.82 -2.34,4.66 -4.57,4.91c0.36,0.31 0.69,0.92 0.69,1.85c0,1.34 0,2.42 0,2.74c0,0.27 0.16,0.59 0.67,0.5C19.14,20.16 22,16.42 22,12A10,10 0,0 0,12 2Z"
