@@ -554,7 +554,11 @@ fun main(args: Array<String>) {
             // hierarchy" on pointer events (see Compose CMP-2326). Use targeted
             // SelectionContainer wrappers on individual text instead.
             var showIntro by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
-            Crossfade(targetState = showIntro, animationSpec = tween(400), label = "intro") { intro ->
+            Crossfade(
+                targetState = showIntro,
+                animationSpec = if (DesktopSettings.load().animationsEnabled) tween(400) else tween(0),
+                label = "intro",
+            ) { intro ->
                 when {
                     intro -> IntroSplash(
                         language = language,
@@ -803,6 +807,7 @@ fun WindowScope.App(
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
     var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
+    var animationsEnabled by remember { mutableStateOf(DesktopSettings.load().animationsEnabled) }
     var sliderStyle by remember { mutableStateOf(DesktopSettings.load().sliderStyle) }
     var playerDesign by remember { mutableStateOf(PlayerDesign.from(DesktopSettings.load().playerDesign)) }
     var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(DesktopSettings.load().playerBackground)) }
@@ -1688,11 +1693,15 @@ fun WindowScope.App(
                         AnimatedContent(
                             targetState = current,
                             transitionSpec = {
-                                when (screenTransition) {
-                                    "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
-                                        (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
-                                    "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
-                                    else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                if (!animationsEnabled) {
+                                    fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
+                                } else {
+                                    when (screenTransition) {
+                                        "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
+                                            (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
+                                        "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
+                                        else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                    }
                                 }
                             },
                             label = "screenTransition",
@@ -1851,6 +1860,11 @@ fun WindowScope.App(
                         onScreenTransitionChange = { t ->
                             screenTransition = t
                             DesktopSettings.update { it.copy(screenTransition = t) }
+                        },
+                        animationsEnabled = animationsEnabled,
+                        onAnimationsEnabledChange = { v ->
+                            animationsEnabled = v
+                            DesktopSettings.update { it.copy(animationsEnabled = v) }
                         },
                         playerDesign = playerDesign,
                         onPlayerDesignChange = { d ->

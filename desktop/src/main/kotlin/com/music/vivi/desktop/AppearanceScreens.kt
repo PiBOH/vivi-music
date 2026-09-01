@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.MotionPhotosOn
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material3.AlertDialog
@@ -94,6 +95,8 @@ fun AppearanceSection(
     onGridItemSizeChange: (Int) -> Unit = {},
     screenTransition: String = "fade",
     onScreenTransitionChange: (String) -> Unit = {},
+    animationsEnabled: Boolean = true,
+    onAnimationsEnabledChange: (Boolean) -> Unit = {},
     playerDesign: PlayerDesign = PlayerDesign.CLASSIC,
     onPlayerDesignChange: (PlayerDesign) -> Unit = {},
     playerBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
@@ -344,21 +347,35 @@ fun AppearanceSection(
         ),
     )
 
-    M3SettingsDropdownItem(
-        icon = Icons.Filled.MotionPhotosOn,
-        title = Localization.get(language, "screen_transitions"),
-        value = Localization.get(language, when (screenTransition) {
-            "slide" -> "transition_slide"
-            "off" -> "transition_off"
-            else -> "transition_fade"
-        }),
-        options = listOf(
-            "off" to Localization.get(language, "transition_off"),
-            "fade" to Localization.get(language, "transition_fade"),
-            "slide" to Localization.get(language, "transition_slide"),
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.MotionPhotosOn,
+                title = { Text(Localization.get(language, "animations")) },
+                description = { Text(Localization.get(language, "animations_desc")) },
+                trailing = { Switch(checked = animationsEnabled, onCheckedChange = onAnimationsEnabledChange) },
+                onClick = { onAnimationsEnabledChange(!animationsEnabled) },
+            ),
         ),
-        onSelect = onScreenTransitionChange,
     )
+
+    if (animationsEnabled) {
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.PlayArrow,
+            title = Localization.get(language, "screen_transitions"),
+            value = Localization.get(language, when (screenTransition) {
+                "slide" -> "transition_slide"
+                "off" -> "transition_off"
+                else -> "transition_fade"
+            }),
+            options = listOf(
+                "off" to Localization.get(language, "transition_off"),
+                "fade" to Localization.get(language, "transition_fade"),
+                "slide" to Localization.get(language, "transition_slide"),
+            ),
+            onSelect = onScreenTransitionChange,
+        )
+    }
 
     M3SettingsGroup(
         items = listOf(

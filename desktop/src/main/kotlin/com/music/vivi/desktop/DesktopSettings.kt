@@ -35,6 +35,8 @@ data class DesktopSyncState(
     val gridItemSize: Int = 160,
     /** Screen transition style between navigations: off / fade / slide. */
     val screenTransition: String = "fade",
+    /** Master switch for UI animations; when off, screen transitions become instant. */
+    val animationsEnabled: Boolean = true,
     /** Player slider style: slim / squiggly / wavy. */
     val sliderStyle: String = "slim",
     /** Full-player layout variant: classic / new / v2 / expressive. */

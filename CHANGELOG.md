@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.47.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Animations master switch** (Appearance → Animations): turning it off makes screen transitions instant (no fade/slide) and the intro splash switches without animation. When animations are off, the Screen transitions picker is hidden.
+
 ## [6.4.41_DE-1.46.0-nightly] - 2026-09-01
 
 ### Added
