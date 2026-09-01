@@ -79,6 +79,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SpeakerGroup
@@ -3849,12 +3852,6 @@ fun MiniPlayer(
     }
 }
 
-private data class SettingsRowSpec(
-    val title: String,
-    val subtitle: String?,
-    val icon: ImageVector,
-    val onClick: () -> Unit,
-)
 
 @Composable
 fun SettingsScreen(
@@ -3875,34 +3872,173 @@ fun SettingsScreen(
         ThemeMode.LIGHT -> Localization.get(language, "theme_light")
         ThemeMode.DARK -> Localization.get(language, "theme_dark")
     }
-    val rows = listOf(
-        SettingsRowSpec(Localization.get(language, "language"), Languages.name(language), Icons.Filled.Translate) { onOpen(Screen.SettingsLanguage) },
-        SettingsRowSpec(Localization.get(language, "updates"), if (updateStatus is UpdateStatus.Available) Localization.get(language, "update_available") else AppInfo.FULL_VERSION, Icons.Filled.Refresh) { onOpen(Screen.SettingsUpdates) },
-        SettingsRowSpec(Localization.get(language, "notifications"), Localization.get(language, if (DesktopSettings.load().notificationMode == "native") "notification_native" else "notification_main_window"), Icons.Filled.Notifications) { onOpen(Screen.SettingsNotifications) },
-        SettingsRowSpec(Localization.get(language, "appearance"), themeLabel, Icons.Filled.Palette) { onOpen(Screen.SettingsAppearance) },
-        SettingsRowSpec(Localization.get(language, "player_audio"), null, Icons.Filled.GraphicEq) { onOpen(Screen.SettingsPlayer) },
-        SettingsRowSpec(Localization.get(language, "account"), if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in"), Icons.Filled.Person) { onOpen(Screen.SettingsAccount) },
-        SettingsRowSpec(Localization.get(language, "device_sync"), null, Icons.Filled.Devices) { onOpen(Screen.SettingsDevices) },
-        SettingsRowSpec(Localization.get(language, "content"), null, Icons.Filled.Language) { onOpen(Screen.SettingsContent) },
-        SettingsRowSpec(Localization.get(language, "ai_lyrics_translation"), null, Icons.Filled.AutoAwesome) { onOpen(Screen.SettingsAi) },
-        SettingsRowSpec(Localization.get(language, "data_saver"), null, Icons.Filled.EnergySavingsLeaf) { onOpen(Screen.SettingsDataSaver) },
-        SettingsRowSpec(Localization.get(language, "lyrics"), null, Icons.Filled.Lyrics) { onOpen(Screen.SettingsLyrics) },
-        SettingsRowSpec(Localization.get(language, "privacy"), null, Icons.Filled.Security) { onOpen(Screen.SettingsPrivacy) },
-        SettingsRowSpec(Localization.get(language, "storage"), null, Icons.Filled.Storage) { onOpen(Screen.SettingsStorage) },
-        SettingsRowSpec(Localization.get(language, "wrapped_title"), "${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}", Icons.Filled.AutoAwesome) { onOpen(Screen.SettingsWrapped) },
-        SettingsRowSpec(Localization.get(language, "integrations"), if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"), Icons.Filled.Tune) { onOpen(Screen.SettingsIntegrations) },
-        SettingsRowSpec(Localization.get(language, "backup_restore"), null, Icons.Filled.SettingsBackupRestore) { onOpen(Screen.SettingsBackup) },
-        SettingsRowSpec(Localization.get(language, "desktop_features"), null, Icons.Filled.DesktopWindows) { onOpen(Screen.SettingsDesktop) },
-        SettingsRowSpec(Localization.get(language, "system"), if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"), Icons.Filled.Build) { onOpen(Screen.SettingsSystem) },
-        SettingsRowSpec(Localization.get(language, "about"), null, Icons.Filled.Info) { onOpen(Screen.SettingsAbout) },
+    val generalItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Translate,
+            title = { Text(Localization.get(language, "language")) },
+            description = { Text(Languages.name(language)) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsLanguage) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Refresh,
+            title = { Text(Localization.get(language, "updates")) },
+            description = {
+                Text(if (updateStatus is UpdateStatus.Available) Localization.get(language, "update_available") else AppInfo.FULL_VERSION)
+            },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsUpdates) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Notifications,
+            title = { Text(Localization.get(language, "notifications")) },
+            description = {
+                Text(Localization.get(language, if (DesktopSettings.load().notificationMode == "native") "notification_native" else "notification_main_window"))
+            },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsNotifications) },
+        ),
+    )
+    val appearanceItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Palette,
+            title = { Text(Localization.get(language, "appearance")) },
+            description = { Text(themeLabel) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAppearance) },
+        ),
+    )
+    val playerItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.GraphicEq,
+            title = { Text(Localization.get(language, "player_audio")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsPlayer) },
+        ),
+    )
+    val accountItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Person,
+            title = { Text(Localization.get(language, "account")) },
+            description = { Text(if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAccount) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Devices,
+            title = { Text(Localization.get(language, "device_sync")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDevices) },
+        ),
+    )
+    val contentItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Language,
+            title = { Text(Localization.get(language, "content")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsContent) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.AutoAwesome,
+            title = { Text(Localization.get(language, "ai_lyrics_translation")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAi) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Lyrics,
+            title = { Text(Localization.get(language, "lyrics")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsLyrics) },
+        ),
+    )
+    val privacyItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Security,
+            title = { Text(Localization.get(language, "privacy")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsPrivacy) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.EnergySavingsLeaf,
+            title = { Text(Localization.get(language, "data_saver")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDataSaver) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Storage,
+            title = { Text(Localization.get(language, "storage")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsStorage) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.SettingsBackupRestore,
+            title = { Text(Localization.get(language, "backup_restore")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsBackup) },
+        ),
+    )
+    val aboutItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.AutoAwesome,
+            title = { Text(Localization.get(language, "wrapped_title")) },
+            description = { Text("${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}") },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsWrapped) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Tune,
+            title = { Text(Localization.get(language, "integrations")) },
+            description = {
+                Text(if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"))
+            },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsIntegrations) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.DesktopWindows,
+            title = { Text(Localization.get(language, "desktop_features")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDesktop) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Build,
+            title = { Text(Localization.get(language, "system")) },
+            description = { Text(if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsSystem) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Info,
+            title = { Text(Localization.get(language, "about")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAbout) },
+        ),
+    )
+
+    val allRows = listOf(
+        "language" to Localization.get(language, "language"),
+        "updates" to Localization.get(language, "updates"),
+        "notifications" to Localization.get(language, "notifications"),
+        "appearance" to Localization.get(language, "appearance"),
+        "player_audio" to Localization.get(language, "player_audio"),
+        "account" to Localization.get(language, "account"),
+        "device_sync" to Localization.get(language, "device_sync"),
+        "content" to Localization.get(language, "content"),
+        "ai_lyrics_translation" to Localization.get(language, "ai_lyrics_translation"),
+        "lyrics" to Localization.get(language, "lyrics"),
+        "privacy" to Localization.get(language, "privacy"),
+        "data_saver" to Localization.get(language, "data_saver"),
+        "storage" to Localization.get(language, "storage"),
+        "backup_restore" to Localization.get(language, "backup_restore"),
+        "wrapped_title" to Localization.get(language, "wrapped_title"),
+        "integrations" to Localization.get(language, "integrations"),
+        "desktop_features" to Localization.get(language, "desktop_features"),
+        "system" to Localization.get(language, "system"),
+        "about" to Localization.get(language, "about"),
     )
 
     val query = searchQuery.trim()
-    val visible = rows.filter { row ->
-        query.isEmpty() ||
-            row.title.contains(query, ignoreCase = true) ||
-            (row.subtitle?.contains(query, ignoreCase = true) == true)
-    }
+    val searching = query.isNotEmpty()
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
@@ -3939,16 +4075,73 @@ fun SettingsScreen(
         }
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
-        visible.forEach { row ->
-            SettingsEntryRow(
-                language = language,
-                icon = row.icon,
-                title = row.title,
-                subtitle = row.subtitle,
-                onClick = row.onClick,
+        val matches = { key: String -> query.isEmpty() || allRows.any { it.first == key && it.second.contains(query, ignoreCase = true) } }
+
+        if (!searching || matches("language") || matches("updates") || matches("notifications")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "general"),
+                items = listOfNotNull(
+                    generalItems[0].takeIf { !searching || matches("language") },
+                    generalItems[1].takeIf { !searching || matches("updates") },
+                    generalItems[2].takeIf { !searching || matches("notifications") },
+                ),
             )
         }
-        if (query.isNotEmpty() && visible.isEmpty()) {
+        if (!searching || matches("appearance")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "appearance"),
+                items = listOfNotNull(appearanceItems[0].takeIf { !searching || matches("appearance") }),
+            )
+        }
+        if (!searching || matches("player_audio")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "player_audio"),
+                items = listOfNotNull(playerItems[0].takeIf { !searching || matches("player_audio") }),
+            )
+        }
+        if (!searching || matches("account") || matches("device_sync")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "account"),
+                items = listOfNotNull(
+                    accountItems[0].takeIf { !searching || matches("account") },
+                    accountItems[1].takeIf { !searching || matches("device_sync") },
+                ),
+            )
+        }
+        if (!searching || matches("content") || matches("ai_lyrics_translation") || matches("lyrics")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "content"),
+                items = listOfNotNull(
+                    contentItems[0].takeIf { !searching || matches("content") },
+                    contentItems[1].takeIf { !searching || matches("ai_lyrics_translation") },
+                    contentItems[2].takeIf { !searching || matches("lyrics") },
+                ),
+            )
+        }
+        if (!searching || matches("privacy") || matches("data_saver") || matches("storage") || matches("backup_restore")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "privacy"),
+                items = listOfNotNull(
+                    privacyItems[0].takeIf { !searching || matches("privacy") },
+                    privacyItems[1].takeIf { !searching || matches("data_saver") },
+                    privacyItems[2].takeIf { !searching || matches("storage") },
+                    privacyItems[3].takeIf { !searching || matches("backup_restore") },
+                ),
+            )
+        }
+        if (!searching || matches("wrapped_title") || matches("integrations") || matches("desktop_features") || matches("system") || matches("about")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "about"),
+                items = listOfNotNull(
+                    aboutItems[0].takeIf { !searching || matches("wrapped_title") },
+                    aboutItems[1].takeIf { !searching || matches("integrations") },
+                    aboutItems[2].takeIf { !searching || matches("desktop_features") },
+                    aboutItems[3].takeIf { !searching || matches("system") },
+                    aboutItems[4].takeIf { !searching || matches("about") },
+                ),
+            )
+        }
+        if (searching && !allRows.any { it.second.contains(query, ignoreCase = true) }) {
             Text(
                 Localization.get(language, "no_results_found"),
                 style = MaterialTheme.typography.bodyMedium,
@@ -3958,6 +4151,7 @@ fun SettingsScreen(
         }
     }
 }
+
 
 @Composable
 fun SettingsSystemScreen(
@@ -3970,54 +4164,27 @@ fun SettingsSystemScreen(
     val devEnabled by DeveloperOptions.enabled.collectAsState()
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "system"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Build,
-            title = Localization.get(language, "developer_options"),
-            subtitle = if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"),
-            onClick = onOpenDeveloper,
-        )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Movie,
-            title = Localization.get(language, "intro"),
-            subtitle = if (showIntroSplash) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"),
-            onClick = onOpenIntro,
-        )
-    }
-}
-
-@Composable
-private fun SettingsEntryRow(
-    language: String,
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Build,
+                    title = { Text(Localization.get(language, "developer_options")) },
+                    description = {
+                        Text(if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"))
+                    },
+                    trailing = { SettingsChevron() },
+                    onClick = onOpenDeveloper,
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Movie,
+                    title = { Text(Localization.get(language, "intro")) },
+                    description = {
+                        Text(if (showIntroSplash) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"))
+                    },
+                    trailing = { SettingsChevron() },
+                    onClick = onOpenIntro,
+                ),
+            ),
         )
     }
 }
@@ -5021,22 +5188,45 @@ fun PlayerSection(
 
     Text(Localization.get(language, "player_audio"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
-    Row(
-        Modifier.fillMaxWidth().padding(top = 12.dp).clickable(onClick = onOpenEqualizer),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(Localization.get(language, "vivi_equalizer"), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-    }
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.GraphicEq,
+                title = { Text(Localization.get(language, "vivi_equalizer")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenEqualizer,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.MusicNote,
+                title = { Text(Localization.get(language, "player_design")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenPlayerDesign,
+            ),
+        ),
+    )
 
-    Text(Localization.get(language, "audio_quality"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-    Box(Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = { qualityExpanded = true }) {
-            Text(audioQualityLabel(language, audioQuality))
-        }
-        DropdownMenu(expanded = qualityExpanded, onDismissRequest = { qualityExpanded = false }) {
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.GraphicEq,
+                title = { Text(Localization.get(language, "audio_quality")) },
+                description = { Text(audioQualityLabel(language, audioQuality)) },
+                onClick = { qualityExpanded = true },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.SwapHoriz,
+                title = { Text(Localization.get(language, "slider_style")) },
+                description = { Text(sliderStyleLabel(language, sliderStyle)) },
+                onClick = { sliderExpanded = true },
+            ),
+        ),
+    )
+
+    if (qualityExpanded) {
+        DropdownMenu(
+            expanded = qualityExpanded,
+            onDismissRequest = { qualityExpanded = false },
+        ) {
             listOf("auto", "high", "low").forEach { q ->
                 DropdownMenuItem(
                     text = { Text(audioQualityLabel(language, q)) },
@@ -5045,33 +5235,63 @@ fun PlayerSection(
             }
         }
     }
-
-    Row(
-        Modifier.fillMaxWidth().padding(top = 12.dp).clickable(onClick = onOpenPlayerDesign),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(Localization.get(language, "player_design"), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+    if (sliderExpanded) {
+        DropdownMenu(
+            expanded = sliderExpanded,
+            onDismissRequest = { sliderExpanded = false },
+        ) {
+            listOf("slim", "squiggly", "wavy").forEach { s ->
+                DropdownMenuItem(
+                    text = { Text(sliderStyleLabel(language, s)) },
+                    onClick = { sliderExpanded = false; onSliderStyleChange(s) },
+                )
+            }
+        }
     }
 
-    SettingSwitch(language, "autoplay_next", autoPlayNext, onToggleAutoPlayNext)
-    SettingSwitch(language, "remember_shuffle_repeat", rememberShuffleRepeat, onToggleRememberShuffleRepeat)
-    SettingSwitch(language, "persistent_queue", persistentQueue, onTogglePersistentQueue)
-    SettingSwitch(language, "sync_vivi_volume", syncViviVolume, onToggleSyncViviVolume)
-
-    Text(
-        "${Localization.get(language, "stream_cache_minutes")}: " +
-            if (streamCacheMinutes <= 0) Localization.get(language, "stream_cache_forever")
-            else "${streamCacheMinutes} min",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 16.dp),
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.PlayArrow,
+                title = { Text(Localization.get(language, "autoplay_next")) },
+                trailing = { Switch(checked = autoPlayNext, onCheckedChange = onToggleAutoPlayNext) },
+                onClick = { onToggleAutoPlayNext(!autoPlayNext) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Repeat,
+                title = { Text(Localization.get(language, "remember_shuffle_repeat")) },
+                trailing = { Switch(checked = rememberShuffleRepeat, onCheckedChange = onToggleRememberShuffleRepeat) },
+                onClick = { onToggleRememberShuffleRepeat(!rememberShuffleRepeat) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.QueueMusic,
+                title = { Text(Localization.get(language, "persistent_queue")) },
+                trailing = { Switch(checked = persistentQueue, onCheckedChange = onTogglePersistentQueue) },
+                onClick = { onTogglePersistentQueue(!persistentQueue) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VolumeUp,
+                title = { Text(Localization.get(language, "sync_vivi_volume")) },
+                trailing = { Switch(checked = syncViviVolume, onCheckedChange = onToggleSyncViviVolume) },
+                onClick = { onToggleSyncViviVolume(!syncViviVolume) },
+            ),
+        ),
     )
-    Text(
-        Localization.get(language, "stream_cache_minutes_desc"),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.History,
+                title = {
+                    Text(
+                        "${Localization.get(language, "stream_cache_minutes")}: " +
+                            if (streamCacheMinutes <= 0) Localization.get(language, "stream_cache_forever")
+                            else "${streamCacheMinutes} min",
+                    )
+                },
+                description = { Text(Localization.get(language, "stream_cache_minutes_desc")) },
+            ),
+        ),
     )
     Slider(
         value = if (streamCacheMinutes <= 0) 61f else streamCacheMinutes.toFloat(),
@@ -5081,23 +5301,8 @@ fun PlayerSection(
         },
         valueRange = 1f..61f,
         steps = 59,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
-
-    Text(Localization.get(language, "slider_style"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-    Box(Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = { sliderExpanded = true }) {
-            Text(sliderStyleLabel(language, sliderStyle))
-        }
-        DropdownMenu(expanded = sliderExpanded, onDismissRequest = { sliderExpanded = false }) {
-            listOf("slim", "squiggly", "wavy").forEach { s ->
-                DropdownMenuItem(
-                    text = { Text(sliderStyleLabel(language, s)) },
-                    onClick = { sliderExpanded = false; onSliderStyleChange(s) },
-                )
-            }
-        }
-    }
 }
 
 private fun sliderStyleLabel(language: String, style: String): String = when (style) {

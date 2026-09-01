@@ -163,6 +163,8 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Translations for the whole Phase 10 port filled across all 47 languages (Listen Together, recognition, Stats/Charts/New releases/Mood & genres, comments, username, Undo/Redo/Items) (DE 1.33.90).
 
 ### Settings sub-screens missing
+- [x] Settings redesign — the whole Settings tree now follows the mobile Material 3 look: a shared card-based settings component (`M3SettingsGroup`/`M3SettingsItem`) styles the main Settings screen (grouped into General / Appearance / Player & audio / Account / Content / Privacy / About sections, search still working) and the sub-screens (Appearance, Player & audio, Notifications, Lyrics, System, Data saver) use the same card rows for navigation/toggle entries (DE 1.43.0).
+- [x] ERRORS.md — error-code reference (playback codes 1000–6008 + VIVI codes E1000–E1012), linked from the website footer; the fake "Now playing" card and the LIVE badge were removed from the site hero (DE 1.43.0).
 - [ ] Listen Together settings (hub entry).
 - [x] AI Lyrics Translation (`settings/ai`) — full provider/API-key/base-URL/model/target-language/mode/DeepL-formality screen (DE 1.42.0).
 - [x] Data saver (`settings/datasaver`) — master toggle that backs up and forces off canvas + rotating artwork, restores on disable (DE 1.42.0).

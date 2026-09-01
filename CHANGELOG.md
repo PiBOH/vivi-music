@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.43.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Settings sub-menus redesigned to match the mobile Material 3 look**: a shared card-based settings component (rounded cards, tinted icon tiles, section titles) now styles the main Settings screen — grouped into General / Appearance / Player & audio / Account / Content / Privacy / About sections with the search bar still working — and the sub-screens (Appearance, Player & audio, Notifications, Lyrics, System, Data saver) use the same card rows for navigation and toggle entries.
+- [DE] **ERRORS.md**: new error-code reference (root + linked from the website footer) listing every playback error code (1000–6008, ExoPlayer/media3) and VIVI-specific codes (E1000–E1012: login, sync, backup, update, EQ import, AI translation) in ascending order, each with cause and how to fix it.
+- [WEBSITE] Footer now links to the error-code reference; the fake "Now playing · demo" card and the LIVE version badge in the hero were removed (the real latest version is still shown on Downloads/Changelog).
+
 ## [6.4.41_DE-1.42.1-nightly] - 2026-09-01
 
 ### Added

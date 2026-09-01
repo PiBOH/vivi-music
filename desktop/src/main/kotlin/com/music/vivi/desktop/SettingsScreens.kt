@@ -20,12 +20,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -1157,21 +1163,17 @@ fun LyricsSection(
     onLyricsLineSpacingChange: (Float) -> Unit = {},
 ) {
     Text(Localization.get(language, "lyrics"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
-    Row(
-        Modifier.fillMaxWidth().padding(top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Switch(checked = syncedLyrics, onCheckedChange = onToggleSyncedLyrics)
-        Column(Modifier.clickable { onToggleSyncedLyrics(!syncedLyrics) }) {
-            Text(Localization.get(language, "synced_lyrics"))
-            Text(
-                Localization.get(language, "synced_lyrics_desc"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Lyrics,
+                title = { Text(Localization.get(language, "synced_lyrics")) },
+                description = { Text(Localization.get(language, "synced_lyrics_desc")) },
+                trailing = { Switch(checked = syncedLyrics, onCheckedChange = onToggleSyncedLyrics) },
+                onClick = { onToggleSyncedLyrics(!syncedLyrics) },
+            ),
+        ),
+    )
 
     Text(
         "${Localization.get(language, "lyrics_text_size")}: ${lyricsTextSize.toInt()} sp",
@@ -1656,18 +1658,30 @@ fun SettingsNotificationsScreen(
         )
         Spacer(Modifier.height(12.dp))
 
-        NotificationModeOption(
-            language = language,
-            title = Localization.get(language, "notification_main_window"),
-            selected = notificationMode != "native",
-            onClick = { onNotificationModeChange("in_app") },
-        )
-        NotificationModeOption(
-            language = language,
-            title = Localization.get(language, "notification_native"),
-            tag = Localization.get(language, "experimental"),
-            selected = notificationMode == "native",
-            onClick = { onNotificationModeChange("native") },
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.DesktopWindows,
+                    title = { Text(Localization.get(language, "notification_main_window")) },
+                    trailing = {
+                        if (notificationMode != "native") {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = { onNotificationModeChange("in_app") },
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Notifications,
+                    title = { Text(Localization.get(language, "notification_native")) },
+                    description = { Text(Localization.get(language, "experimental")) },
+                    trailing = {
+                        if (notificationMode == "native") {
+                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
+                    onClick = { onNotificationModeChange("native") },
+                ),
+            ),
         )
 
         Spacer(Modifier.height(12.dp))
@@ -1716,39 +1730,22 @@ fun SettingsNotificationsScreen(
         )
 
         Spacer(Modifier.height(16.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { onSaveHistoryChange(!saveHistory) }
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                Localization.get(language, "save_notification_history"),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Switch(checked = saveHistory, onCheckedChange = onSaveHistoryChange)
-        }
-
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenHistory)
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                Localization.get(language, "notification_history"),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.History,
+                    title = { Text(Localization.get(language, "save_notification_history")) },
+                    trailing = { Switch(checked = saveHistory, onCheckedChange = onSaveHistoryChange) },
+                    onClick = { onSaveHistoryChange(!saveHistory) },
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Notifications,
+                    title = { Text(Localization.get(language, "notification_history")) },
+                    trailing = { SettingsChevron() },
+                    onClick = onOpenHistory,
+                ),
+            ),
+        )
     }
 }
 
@@ -2301,18 +2298,18 @@ fun SettingsDataSaverScreen(
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(Localization.get(language, "data_saver"), style = MaterialTheme.typography.bodyLarge)
-            Spacer(Modifier.weight(1f))
-            Switch(checked = dataSaver, onCheckedChange = onToggleDataSaver)
-        }
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.EnergySavingsLeaf,
+                    title = { Text(Localization.get(language, "data_saver")) },
+                    trailing = { Switch(checked = dataSaver, onCheckedChange = onToggleDataSaver) },
+                    onClick = { onToggleDataSaver(!dataSaver) },
+                ),
+            ),
+        )
 
-        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+        Spacer(Modifier.height(8.dp))
 
         Text(
             Localization.get(language, "data_saver_turns_off_header"),

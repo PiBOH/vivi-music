@@ -20,7 +20,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ViewSidebar
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Palette
@@ -81,110 +83,114 @@ fun AppearanceSection(
 
     Text(Localization.get(language, "appearance"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "theme_colors"),
-        onClick = onOpenTheme,
-    )
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.FontDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "app_font"),
-        subtitle = Localization.get(language, when (selectedFont) {
-            AppFont.SYSTEM -> "font_system"
-            AppFont.GOOGLE_SANS -> "font_google_sans"
-            AppFont.SANS_FLEX -> "font_sans_flex"
-            AppFont.OUTFIT -> "font_outfit"
-            AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
-            AppFont.CUSTOM -> "custom_font"
-        }),
-        onClick = onOpenFont,
-    )
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.Movie, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "vivimusic_canvas"),
-        onClick = onOpenCanvas,
-    )
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.SettingsBrightness, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "density_and_grid"),
-        subtitle = densityLabel(densityScale),
-        onClick = onOpenDensity,
-    )
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "player_design"),
-        onClick = onOpenPlayerDesign,
-    )
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.MotionPhotosOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "screen_transitions"),
-        subtitle = Localization.get(language, when (screenTransition) {
-            "slide" -> "transition_slide"
-            "off" -> "transition_off"
-            else -> "transition_fade"
-        }),
-        onClick = onOpenTransitions,
-    )
-    AppearanceEntryRow(
-        language = language,
-        icon = { Icon(Icons.Filled.Movie, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = Localization.get(language, "intro"),
-        subtitle = Localization.get(language, "show_intro_on_startup"),
-        onClick = onOpenIntro,
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Palette,
+                title = { Text(Localization.get(language, "theme_colors")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenTheme,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FontDownload,
+                title = { Text(Localization.get(language, "app_font")) },
+                description = {
+                    Text(Localization.get(language, when (selectedFont) {
+                        AppFont.SYSTEM -> "font_system"
+                        AppFont.GOOGLE_SANS -> "font_google_sans"
+                        AppFont.SANS_FLEX -> "font_sans_flex"
+                        AppFont.OUTFIT -> "font_outfit"
+                        AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
+                        AppFont.CUSTOM -> "custom_font"
+                    }))
+                },
+                trailing = { SettingsChevron() },
+                onClick = onOpenFont,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Movie,
+                title = { Text(Localization.get(language, "vivimusic_canvas")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenCanvas,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.SettingsBrightness,
+                title = { Text(Localization.get(language, "density_and_grid")) },
+                description = { Text(densityLabel(densityScale)) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenDensity,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.MusicNote,
+                title = { Text(Localization.get(language, "player_design")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenPlayerDesign,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.MotionPhotosOn,
+                title = { Text(Localization.get(language, "screen_transitions")) },
+                description = {
+                    Text(Localization.get(language, when (screenTransition) {
+                        "slide" -> "transition_slide"
+                        "off" -> "transition_off"
+                        else -> "transition_fade"
+                    }))
+                },
+                trailing = { SettingsChevron() },
+                onClick = onOpenTransitions,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Movie,
+                title = { Text(Localization.get(language, "intro")) },
+                description = { Text(Localization.get(language, "show_intro_on_startup")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenIntro,
+            ),
+        ),
     )
 
     // Native system title bar vs VIVI's custom one. The window chrome is fixed
     // at creation, so the change is applied on the next launch.
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Switch(
-            checked = nativeTitleBar,
-            onCheckedChange = { v ->
-                onNativeTitleBarChange(v)
-                showRestartDialog = true
-            },
-        )
-        Column(Modifier.clickable {
-            onNativeTitleBarChange(!nativeTitleBar)
-            showRestartDialog = true
-        }) {
-            Text(Localization.get(language, "native_title_bar"))
-            Text(
-                Localization.get(language, "native_title_bar_desc"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.DesktopWindows,
+                title = { Text(Localization.get(language, "native_title_bar")) },
+                description = { Text(Localization.get(language, "native_title_bar_desc")) },
+                trailing = {
+                    Switch(
+                        checked = nativeTitleBar,
+                        onCheckedChange = { v ->
+                            onNativeTitleBarChange(v)
+                            showRestartDialog = true
+                        },
+                    )
+                },
+                onClick = {
+                    onNativeTitleBarChange(!nativeTitleBar)
+                    showRestartDialog = true
+                },
+            ),
+        ),
+    )
 
     // Right Now Playing panel (the Spotify-style right sidebar in the player).
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Switch(
-            checked = showRightSidebar,
-            onCheckedChange = onShowRightSidebarChange,
-        )
-        Column(Modifier.clickable { onShowRightSidebarChange(!showRightSidebar) }) {
-            Text(Localization.get(language, "right_panel"))
-            Text(
-                Localization.get(language, "right_panel_desc"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.AutoMirrored.Filled.ViewSidebar,
+                title = { Text(Localization.get(language, "right_panel")) },
+                description = { Text(Localization.get(language, "right_panel_desc")) },
+                trailing = {
+                    Switch(
+                        checked = showRightSidebar,
+                        onCheckedChange = onShowRightSidebarChange,
+                    )
+                },
+                onClick = { onShowRightSidebarChange(!showRightSidebar) },
+            ),
+        ),
+    )
 
     if (showRestartDialog) {
         AlertDialog(

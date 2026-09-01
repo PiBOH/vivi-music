@@ -229,96 +229,6 @@ code {
   margin: 0 auto 34px;
 }
 
-/* Now Playing card — the signature */
-.nowplaying {
-  width: min(560px, 92vw);
-  margin: 0 auto 38px;
-  background: linear-gradient(160deg, var(--surface), var(--bg-2));
-  border: 1px solid var(--line-strong);
-  border-radius: 22px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  text-align: left;
-  box-shadow: var(--shadow);
-  position: relative;
-}
-.nowplaying::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 22px;
-  background: var(--grad);
-  opacity: 0.08;
-  pointer-events: none;
-}
-.nowplaying .disc {
-  position: relative;
-  width: 86px;
-  height: 86px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, #1a1420 0 24%, var(--accent) 26% 27%, transparent 28%),
-    repeating-radial-gradient(circle at 50% 50%, #0e0b12 0 2px, #241d2c 2px 4px);
-  animation: spin 9s linear infinite;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-.nowplaying .np-body { flex: 1; min-width: 0; }
-.nowplaying .np-meta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent-2);
-  margin-bottom: 6px;
-}
-.nowplaying .np-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 20px;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.np-artist { color: var(--muted); font-size: 14px; margin-top: 2px; }
-.np-track {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 22px;
-  margin-top: 12px;
-}
-.np-track i {
-  display: block;
-  width: 4px;
-  border-radius: 2px;
-  background: var(--grad);
-  animation: eq 0.9s ease-in-out infinite alternate;
-}
-.np-track i:nth-child(1) { height: 40%; animation-delay: 0s; }
-.np-track i:nth-child(2) { height: 90%; animation-delay: 0.15s; }
-.np-track i:nth-child(3) { height: 60%; animation-delay: 0.3s; }
-.np-track i:nth-child(4) { height: 100%; animation-delay: 0.45s; }
-.np-track i:nth-child(5) { height: 70%; animation-delay: 0.1s; }
-.np-track i:nth-child(6) { height: 46%; animation-delay: 0.25s; }
-.np-track i:nth-child(7) { height: 84%; animation-delay: 0.4s; }
-@keyframes eq { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
-.nowplaying .np-clock {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-  align-self: flex-end;
-  padding-bottom: 4px;
-}
-
-/* Readout of live version under the hero */
-.readout-list { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--muted); margin-bottom: 26px; }
-.readout-list .rk { color: var(--accent-2); }
-
 /* Channel tabs (hero + downloads) */
 .tabs { display: flex; justify-content: center; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
 .tab {
@@ -416,6 +326,7 @@ code {
   gap: 12px;
   font-size: 40px;
 }
+@keyframes eq { from { transform: scaleY(0.35); } to { transform: scaleY(1); } }
 .syncband .pulse {
   animation: eq 1s ease-in-out infinite alternate;
 }
@@ -785,8 +696,6 @@ code {
   body.nav-open { overflow: hidden; }
 }
 @media (max-width: 560px) {
-  .nowplaying { flex-wrap: wrap; }
-  .nowplaying .np-clock { width: 100%; text-align: right; }
   .dl-row { flex-direction: column; align-items: stretch; }
   .dl-row .btn { justify-content: center; }
   .sync-diagram { grid-template-columns: 1fr; }

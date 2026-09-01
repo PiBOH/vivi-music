@@ -337,6 +337,12 @@ changed from the desktop Language menu.
 > `python3 scripts/generate_desktop_localization.py` so `Localization.kt` stays
 > complete, then compile `:desktop`.
 
+> **Translations-only work = patch (always)**: when a message consists only of
+> translating strings (no code/feature change), it is ALWAYS a patch — even if
+> no explicit "patch" label is given. Follow the user's explicit versioning
+> when stated in the message; otherwise semver defaults apply. Never bump a
+> minor/major for translations alone.
+
 ### Structure
 
 - `app/src/main/res/values/strings.xml` — **default/English** strings.

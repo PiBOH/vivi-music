@@ -112,6 +112,7 @@ MAPPING = {
     "about": "about",
     "download": "action_download",
     "appearance": "appearance",
+    "general": "general",
     "theme_mode": "theme_mode",
     "theme": "theme",
     "theme_colors": "theme_colors",
@@ -1318,12 +1319,13 @@ from desktop_extra_translations_42 import EXTRA_TRANSLATIONS as _EXTRA_42
 from desktop_extra_translations_43 import EXTRA_TRANSLATIONS as _EXTRA_43
 from desktop_extra_translations_44 import EXTRA_TRANSLATIONS as _EXTRA_44
 from desktop_extra_translations_45 import EXTRA_TRANSLATIONS as _EXTRA_45
+from desktop_extra_translations_46 import EXTRA_TRANSLATIONS as _EXTRA_46
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
