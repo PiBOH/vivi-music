@@ -200,27 +200,29 @@ fun M3SettingsDropdownItem(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier.fillMaxWidth()) {
-        M3SettingsItem(
-            icon = icon,
-            title = { Text(title) },
-            description = {
-                Text(description ?: value)
-            },
-            trailing = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Icon(
-                        Icons.Filled.ArrowDropDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            },
-            onClick = { expanded = true },
+        M3SettingsItemRow(
+            item = M3SettingsItem(
+                icon = icon,
+                title = { Text(title) },
+                description = {
+                    Text(description ?: value)
+                },
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = value,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Icon(
+                            Icons.Filled.ArrowDropDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                onClick = { expanded = true },
+            ),
         )
         DropdownMenu(
             expanded = expanded,

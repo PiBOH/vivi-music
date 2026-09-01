@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.3-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **[CRITICAL FIX] All single-choice dropdown options were invisible since 1.44.0**: `M3SettingsDropdownItem` constructed its row (`M3SettingsItem`) but never rendered it, so every dropdown-based option disappeared from the UI — Font / Canvas source / Density & grid / Screen transitions / Player design / Mini-player design & background / Slider style / Notification mode & duration / Intro style & background all looked "missing", their sub-screens appeared empty and the rows did nothing when clicked. The row is now actually composed (wrapped in `M3SettingsItemRow`), restoring every dropdown everywhere.
+
 ## [6.4.41_DE-1.49.2-nightly] - 2026-09-02
 
 ### Added
