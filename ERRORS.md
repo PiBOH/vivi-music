@@ -64,6 +64,22 @@ table below to understand what happened and how to try to fix it.
 | E1010 | UPDATE_INSTALL_FAILED | Installing the update failed. | Close VIVI and run the downloaded installer manually, or restart and retry. |
 | E1011 | IMPORT_EQ_FAILED | The equalizer profile could not be imported. | The file is not a valid AutoEQ `ParametricEQ.txt` — check the file and retry. |
 | E1012 | AI_TRANSLATION_FAILED | The AI lyrics translation request failed. | Check the provider URL, your API key and the network; see Settings → AI Lyrics Translation. |
+| E1013 | UPDATE_CHECK_FAILED | Checking for updates failed (network, GitHub API error or no desktop release found). | Check your connection and retry; the update check runs again automatically on the next start. |
+| E1014 | UPDATE_DOWNLOAD_HTTP | Downloading the installer failed with an HTTP error from the release server. | Retry the download; if it keeps failing, open the release page and download the installer manually. |
+| E1015 | UPDATE_INSTALLER_NOT_FOUND | The release has no installer for your operating system/architecture. | Open the release page and check the available assets, or switch update source (fork/original) in Settings → Updates. |
+| E1016 | SYNC_SELF_PAIR | The pairing was rejected because the two devices are the same one. | Generate a new pairing code on the desktop and retry with the phone. |
+| E1017 | SYNC_NOT_PAIRED | A sync message arrived from a device that is not paired. | Re-pair the device from the Devices screen; the pairing is cleared when either app closes. |
+| E1018 | SYNC_RELAY_BIND_FAILED | The LAN relay could not bind a port (usually already in use). | Restart VIVI or close the app holding the port; the relay picks a new port automatically. |
+| E1019 | SYNC_LAN_ERROR | A LAN sync error occurred while talking to the paired device. | Check that both devices are on the same network (or hotspot) and that the relay URL is correct. |
+| E1020 | BACKUP_EMPTY_ARCHIVE | The backup archive contains no settings entries. | The file is not a valid VIVI backup — choose the right file and retry. |
+| E1021 | BACKUP_CREATE_FAILED | Creating the backup failed. | Check disk space/permissions in the destination folder and retry. |
+| E1022 | LOGIN_COOKIE_EMPTY | The pasted cookie is empty. | Copy the full `Cookie` header value and paste it again (Settings → Account → manual sign-in). |
+| E1023 | LOGIN_COOKIE_MISSING_SAPISID | The pasted cookie is missing `SAPISID` — it is not a full Cookie header. | Copy the whole Cookie header from the browser (it contains several `name=value` pairs separated by `;`). |
+| E1024 | LOGIN_WEBVIEW_TIMEOUT | The embedded sign-in window did not start in time. | Try again, or use the manual cookie method. |
+| E1025 | RECOGNITION_NO_MIC | Song recognition could not find/access a microphone. | Check the microphone permission and that a mic is connected; retry. |
+| E1026 | LISTEN_TOGETHER_FAILED | Connecting to a Listen Together room failed. | Check the room code and your connection, then retry. |
+| E1027 | COMMITS_LOAD_FAILED | Loading the commit list failed. | Check your connection and reopen the Commit screen. |
+| E1028 | STREAM_RESOLUTION_FAILED | VIVI could not resolve a playable stream for the track. | Skip the track and come back (forces a fresh URL), or try a different audio quality. |
 
 ---
 
