@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.42.1-nightly] - 2026-09-01
+
+### Added
+- [DE] **Full translation coverage for the new sub-screens**: the Equalizer, Data saver and AI Lyrics Translation keys are now translated in all 47 languages (reusing the mobile translations where they exist and filling every gap, so no string falls back to English). Verified by `check_localization.py` — every language table now contains every English key.
+
 ## [6.4.41_DE-1.42.0-nightly] - 2026-09-01
 
 ### Added
