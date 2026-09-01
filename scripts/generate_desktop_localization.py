@@ -408,6 +408,19 @@ MAPPING = {
     "accent_brown": "Brown",
     "accent_grey": "Grey",
     "accent_blue_grey": "Blue Grey",
+    "accent_magenta": "Magenta",
+    "accent_turquoise": "Turquoise",
+    "accent_coral": "Coral",
+    "accent_lavender": "Lavender",
+    "accent_gold": "Gold",
+    "accent_navy": "Navy",
+    "custom_colors": "Custom colors",
+    "custom_color": "Custom color",
+    "hue": "Hue",
+    "saturation": "Saturation",
+    "brightness": "Brightness",
+    "add_to_palette": "Add to palette",
+    "remove_custom_color": "Remove custom color",
     "right_panel": "Right panel",
     "right_panel_desc": "Show the Now Playing panel on the right side of the window.",
     "open_vivi": "Open VIVI Music",
@@ -1331,12 +1344,14 @@ from desktop_extra_translations_43 import EXTRA_TRANSLATIONS as _EXTRA_43
 from desktop_extra_translations_44 import EXTRA_TRANSLATIONS as _EXTRA_44
 from desktop_extra_translations_45 import EXTRA_TRANSLATIONS as _EXTRA_45
 from desktop_extra_translations_46 import EXTRA_TRANSLATIONS as _EXTRA_46
+from desktop_extra_translations_47 import EXTRA_TRANSLATIONS as _EXTRA_47
+from desktop_extra_translations_48 import EXTRA_TRANSLATIONS as _EXTRA_48
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

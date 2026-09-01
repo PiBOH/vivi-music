@@ -320,6 +320,7 @@ fun main(args: Array<String>) {
     var themeMode by remember { mutableStateOf(ThemeMode.from(DesktopSettings.load().darkMode)) }
     var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
     var accentIntensity by remember { mutableStateOf(DesktopSettings.load().accentIntensity) }
+    var customAccents by remember { mutableStateOf(DesktopSettings.load().customAccents) }
     var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
     var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
     var customFontPath by remember { mutableStateOf(DesktopSettings.load().customFontPath) }
@@ -591,6 +592,15 @@ fun main(args: Array<String>) {
                             accentIntensity = it
                             saveTheme()
                         },
+                        customAccents = customAccents,
+                        onAddCustomAccent = { argb ->
+                            customAccents = (customAccents + argb).distinct()
+                            DesktopSettings.update { it.copy(customAccents = customAccents) }
+                        },
+                        onRemoveCustomAccent = { argb ->
+                            customAccents = customAccents - argb
+                            DesktopSettings.update { it.copy(customAccents = customAccents) }
+                        },
                         customFontPath = customFontPath,
                         onImportFont = importFont,
                         pureBlack = pureBlack,
@@ -694,6 +704,9 @@ fun WindowScope.App(
     onAccentChange: (Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    customAccents: List<Int> = emptyList(),
+    onAddCustomAccent: (Int) -> Unit = {},
+    onRemoveCustomAccent: (Int) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     spotifyLayout: Boolean = false,
@@ -1891,6 +1904,15 @@ fun WindowScope.App(
                         onAccentIntensityChange = onAccentIntensityChange,
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
+                        customAccents = customAccents,
+                        onAddCustomAccent = { argb ->
+                            val updated = (customAccents + argb).distinct()
+                            DesktopSettings.update { it.copy(customAccents = updated) }
+                        },
+                        onRemoveCustomAccent = { argb ->
+                            val updated = customAccents - argb
+                            DesktopSettings.update { it.copy(customAccents = updated) }
+                        },
                     )
                     is Screen.SettingsPlayer -> SettingsPlayerScreen(
                         language = language,

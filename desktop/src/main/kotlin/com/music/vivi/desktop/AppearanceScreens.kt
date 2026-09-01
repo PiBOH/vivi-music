@@ -3,14 +3,19 @@ package com.music.vivi.desktop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,9 +26,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ViewSidebar
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Wallpaper
@@ -54,7 +61,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -439,6 +450,9 @@ fun ThemeSection(
     onAccentIntensityChange: (Float) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
+    customAccents: List<Int> = emptyList(),
+    onAddCustomAccent: (Int) -> Unit = {},
+    onRemoveCustomAccent: (Int) -> Unit = {},
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(Localization.get(language, "theme_colors"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -526,6 +540,43 @@ fun ThemeSection(
             }
         }
 
+        if (customAccents.isNotEmpty()) {
+            Spacer(Modifier.height(20.dp))
+            Text(Localization.get(language, "custom_colors"), style = MaterialTheme.typography.titleMedium)
+            customAccents.chunked(7).forEach { row ->
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    row.forEach { argb ->
+                        val c = argbIntToColor(argb)
+                        val isSelected = accent == c
+                        Tooltip(Localization.get(language, "remove_custom_color")) {
+                            Box {
+                                AccentSwatch(
+                                    color = c,
+                                    selected = isSelected,
+                                    onClick = { onAccentChange(c) },
+                                )
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .clickable { onRemoveCustomAccent(argb) }
+                                        .padding(2.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
 
         Text(Localization.get(language, "accent_intensity"), style = MaterialTheme.typography.titleMedium)
@@ -563,7 +614,130 @@ fun ThemeSection(
             }
         }
 
+        // --- Custom color picker (HSV gradient bars) ---
+        Spacer(Modifier.height(28.dp))
+        Text(Localization.get(language, "custom_color"), style = MaterialTheme.typography.titleMedium)
+
+        val initialHsv = remember(accent) { colorToHsv(accent) }
+        var hue by remember { mutableStateOf(initialHsv[0]) }
+        var saturation by remember { mutableStateOf(initialHsv[1]) }
+        var brightness by remember { mutableStateOf(initialHsv[2]) }
+        val customColor = hsvToColor(hue, saturation, brightness)
+        val alreadySaved = remember(customAccents, customColor) {
+            customAccents.any { argbIntToColor(it) == customColor }
+        }
+
+        Spacer(Modifier.height(14.dp))
+        Text(
+            Localization.get(language, "hue"),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        GradientBar(
+            gradient = Brush.horizontalGradient(
+                listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red),
+            ),
+            fraction = hue / 360f,
+            onFractionChange = { hue = it * 360f },
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            Localization.get(language, "saturation"),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        GradientBar(
+            gradient = Brush.horizontalGradient(
+                listOf(hsvToColor(hue, 0f, brightness), hsvToColor(hue, 1f, brightness)),
+            ),
+            fraction = saturation,
+            onFractionChange = { saturation = it },
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            Localization.get(language, "brightness"),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        GradientBar(
+            gradient = Brush.horizontalGradient(
+                listOf(hsvToColor(hue, saturation, 0f), hsvToColor(hue, saturation, 1f)),
+            ),
+            fraction = brightness,
+            onFractionChange = { brightness = it },
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+
+        Spacer(Modifier.height(16.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(customColor)
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), CircleShape),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "#%06X".format(java.util.Locale.US, colorToArgbInt(customColor) and 0xFFFFFF),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.weight(1f))
+            Button(
+                onClick = { onAddCustomAccent(colorToArgbInt(customColor)) },
+                enabled = !alreadySaved,
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(Localization.get(language, "add_to_palette"))
+            }
+        }
+
         Spacer(Modifier.height(36.dp))
+    }
+}
+
+@Composable
+private fun GradientBar(
+    gradient: Brush,
+    fraction: Float,
+    onFractionChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var barWidthPx by remember { mutableStateOf(1f) }
+    BoxWithConstraints(
+        modifier = modifier
+            .height(24.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(gradient)
+            .onSizeChanged { barWidthPx = it.width.toFloat() }
+            .pointerInput(barWidthPx) {
+                fun pick(x: Float) = onFractionChange((x / barWidthPx).coerceIn(0f, 1f))
+                detectTapGestures { pick(it.x) }
+                detectDragGestures(
+                    onDragStart = { pick(it.x) },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        pick(change.position.x)
+                    },
+                )
+            },
+    ) {
+        val thumbX = (fraction * maxWidth.value).dp.coerceIn(0.dp, maxWidth)
+        Box(
+            Modifier
+                .offset(x = thumbX - 6.dp)
+                .width(12.dp)
+                .fillMaxHeight()
+                .border(2.dp, Color.White, RoundedCornerShape(3.dp))
+                .shadow(2.dp, RoundedCornerShape(3.dp)),
+        )
     }
 }
 

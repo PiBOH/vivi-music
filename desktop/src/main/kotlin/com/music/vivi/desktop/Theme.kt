@@ -162,7 +162,52 @@ object AccentPalette {
         AccentColor("Brown", Color(0xFF6D4C41)),
         AccentColor("Grey", Color(0xFF757575)),
         AccentColor("Blue Grey", Color(0xFF546E7A)),
+        AccentColor("Magenta", Color(0xFFC2185B)),
+        AccentColor("Turquoise", Color(0xFF00BFA5)),
+        AccentColor("Coral", Color(0xFFFF7043)),
+        AccentColor("Lavender", Color(0xFF9575CD)),
+        AccentColor("Gold", Color(0xFFFFC107)),
+        AccentColor("Navy", Color(0xFF283593)),
     )
+}
+
+/** Converts HSV (hue 0..360, saturation/value 0..1) to an opaque RGB [Color]. */
+fun hsvToColor(h: Float, s: Float, v: Float): Color {
+    val hh = ((h % 360f) + 360f) % 360f
+    val c = v * s
+    val x = c * (1f - kotlin.math.abs((hh / 60f) % 2f - 1f))
+    val m = v - c
+    val (r, g, b) = when {
+        hh < 60f -> Triple(c, x, 0f)
+        hh < 120f -> Triple(x, c, 0f)
+        hh < 180f -> Triple(0f, c, x)
+        hh < 240f -> Triple(0f, x, c)
+        hh < 300f -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    return Color(r + m, g + m, b + m)
+}
+
+/** Converts an RGB [Color] to HSV (hue 0..360, saturation/value 0..1). */
+fun colorToHsv(color: Color): FloatArray {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val d = max - min
+    val v = max
+    val s = if (max == 0f) 0f else d / max
+    var h = 0f
+    if (d != 0f) {
+        h = when (max) {
+            r -> ((g - b) / d) % 6f
+            g -> (b - r) / d + 2f
+            else -> (r - g) / d + 4f
+        } * 60f
+        if (h < 0f) h += 360f
+    }
+    return floatArrayOf(h, s, v)
 }
 
 /** Packs a [Color] into an opaque ARGB [Int] (cross-platform, no Android API). */

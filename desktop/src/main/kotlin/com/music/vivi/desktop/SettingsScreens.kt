@@ -422,6 +422,9 @@ fun SettingsThemeScreen(
     onAccentIntensityChange: (Float) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
+    customAccents: List<Int> = emptyList(),
+    onAddCustomAccent: (Int) -> Unit = {},
+    onRemoveCustomAccent: (Int) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         ThemeSection(
@@ -434,6 +437,9 @@ fun SettingsThemeScreen(
             onAccentIntensityChange = onAccentIntensityChange,
             pureBlack = pureBlack,
             onPureBlackChange = onPureBlackChange,
+            customAccents = customAccents,
+            onAddCustomAccent = onAddCustomAccent,
+            onRemoveCustomAccent = onRemoveCustomAccent,
         )
     }
 }

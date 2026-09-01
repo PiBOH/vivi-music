@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.45.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Custom accent color picker**: in the Theme screen there is now a full HSV gradient picker (hue / saturation / brightness bars you can click or drag) with a live preview, the hex code, and an “Add to palette” button. Saved custom colors appear as extra swatches in the palette (click to select, small × to remove) and are persisted across restarts.
+- [DE] **6 new accent palette colors**: Magenta, Turquoise, Coral, Lavender, Gold and Navy (with tooltips in all 47 languages).
+- [i18n] Completed the missing `mini_player_*` translations (mini-player design/background options and the pure-black mini-player toggle) in all 47 languages.
+
 ## [6.4.41_DE-1.44.0-nightly] - 2026-09-01
 
 ### Added
