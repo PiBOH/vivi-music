@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.0-nightly] - 2026-09-01
+
+### Changed
+- [DE] **First-launch screen redesigned as a Material 3 welcome**: bundled logo, welcome title and description, the language list rendered as M3 option cards with a checkmark, and a full-width Continue button (previously a bare text list that went straight in on click).
+
 ## [6.4.41_DE-1.48.0-nightly] - 2026-09-01
 
 ### Changed

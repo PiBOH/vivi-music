@@ -4542,28 +4542,69 @@ fun LanguageSection(language: String, onLanguageChange: (String) -> Unit) {
 }
 
 @Composable
-fun LanguageSelectionScreen(onSelect: (String) -> Unit) {
+fun LanguageSelectionScreen(
+    language: String = "en",
+    onSelect: (String) -> Unit,
+) {
+    var selected by remember { mutableStateOf("en") }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Choose your language", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "VIVI Music DE is available in the following languages. You can change this later from the Language menu.",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Column(Modifier.padding(top = 16.dp)) {
-            Languages.all.forEach { lang ->
-                Text(
-                    lang.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect(lang.code) }
-                        .padding(vertical = 8.dp),
-                )
-            }
+        Spacer(Modifier.height(32.dp))
+        val logo = remember { loadLogo() }
+        if (logo != null) {
+            Image(
+                bitmap = logo,
+                contentDescription = "VIVI Music DE",
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(24.dp)),
+            )
         }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            Localization.get(language, "welcome_title"),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            Localization.get(language, "welcome_desc"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        )
+        Spacer(Modifier.height(24.dp))
+        M3SettingsGroup(
+            items = Languages.all.map { lang ->
+                M3SettingsItem(
+                    icon = null,
+                    title = { Text(lang.name) },
+                    trailing = {
+                        if (selected == lang.code) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
+                    onClick = { selected = lang.code },
+                )
+            },
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = { onSelect(selected) },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+        ) {
+            Text(Localization.get(language, "continue"))
+        }
+        Spacer(Modifier.height(32.dp))
     }
 }
 

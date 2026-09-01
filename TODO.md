@@ -170,7 +170,10 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] Data saver (`settings/datasaver`) — master toggle that backs up and forces off canvas + rotating artwork, restores on disable (DE 1.42.0).
 - [ ] Romanization (`settings/content/romanization`).
 - [ ] JioSaavn (`settings/player/jio`).
-- [x] Equalizer (`settings/equalizer` + dialog) — AutoEQ `.txt` profile import, active-profile radio, delete; the DSP (biquad PK/LSC/HSC + preamp) is applied to the decoded PCM just before the output write as a pure add-on (null default = byte-identical pass-through, frozen playback core untouched) (DE 1.42.0).
+- [x] Equalizer (`settings/equalizer` + dialog) — AutoEQ `.txt` profile import, active-profile radio, delete; the DSP (biquad PK/LSC/HSC + preamp) is applied to the decoded PCM just before the output write as a pure add-on (null default = byte-identical pass-through, frozen playback core untouched) (DE 1.42.0). DE 1.46.0: added a one-click **Example: V-Shape** profile (7 bands) and a **live editor** — selecting a profile shows draggable sliders for preamp and per-band gain/Q applied to playback in real time.
+- [x] Appearance → Animations master switch — when off, screen transitions and the intro splash switch instantly (no animations); the Screen transitions picker hides while disabled (DE 1.47.0).
+- [x] Custom accent color picker — HSV gradient bars (hue/saturation/brightness) with live preview + hex, “Add to palette” saves the color as a persistent palette swatch (removable via a small ×); 6 new palette colors (Magenta, Turquoise, Coral, Lavender, Gold, Navy) with 47-language tooltips (DE 1.45.0).
+- [x] First-launch screen restyled as an M3 welcome/onboarding — bundled logo, welcome title/description, language selection as Material 3 option cards with a checkmark and a Continue button (replaces the old plain language list) (DE 1.49.0).
 - [ ] Spotify import (`settings/spotify`).
 - [x] Integrations hub (Discord Rich Presence + Last.fm scrobbling) — Settings → Integrations (DE 1.33.76).
 - [ ] Discord login.
