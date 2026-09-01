@@ -754,57 +754,129 @@ fun FontSection(
     customFontPath: String = "",
     onImportFont: () -> Unit = {},
 ) {
-    val fontOptions = buildList {
-        AppFont.entries.filter { it != AppFont.CUSTOM }.forEach { f ->
-            add(f.value to Localization.get(language, when (f) {
-                AppFont.SYSTEM -> "font_system"
-                AppFont.GOOGLE_SANS -> "font_google_sans"
-                AppFont.SANS_FLEX -> "font_sans_flex"
-                AppFont.OUTFIT -> "font_outfit"
-                AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
-                AppFont.CUSTOM -> "custom_font"
-            }))
-        }
-        if (customFontPath.isNotBlank()) {
-            add(AppFont.CUSTOM.value to Localization.get(language, "custom_font"))
-        }
-    }
+    // Restored to the pre-1.44.0 rich layout: a big themed typography preview
+    // card + each font listed as its own radio row rendered in that typeface.
+    val activeFamily = AppFonts.familyFor(selectedFont, customFontPath)
 
     Column(Modifier.fillMaxWidth()) {
-        Text(Localization.get(language, "font_selection"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
-        Spacer(Modifier.height(4.dp))
-        M3SettingsDropdownItem(
-            icon = Icons.Filled.FontDownload,
-            title = Localization.get(language, "font_selection"),
-            value = Localization.get(language, when (selectedFont) {
-                AppFont.SYSTEM -> "font_system"
-                AppFont.GOOGLE_SANS -> "font_google_sans"
-                AppFont.SANS_FLEX -> "font_sans_flex"
-                AppFont.OUTFIT -> "font_outfit"
-                AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
-                AppFont.CUSTOM -> "custom_font"
-            }),
-            options = fontOptions,
-            onSelect = { key -> onFontChange(AppFont.fromValue(key)) },
-        )
-        Spacer(Modifier.height(16.dp))
-        // Live typography preview in the selected font.
+        Text(Localization.get(language, "app_font"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
+
         Card(
-            Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            ),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
         ) {
-            Text(
-                "Dove la parola fallisce la musica stupisce.",
-                fontFamily = AppFonts.familyFor(selectedFont, customFontPath),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp),
+            Column(Modifier.fillMaxWidth().padding(24.dp)) {
+                Text(
+                    Localization.get(language, "typography_preview").uppercase(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                Text(
+                    Localization.get(language, "preview_text_quote"),
+                    fontFamily = activeFamily,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+                Text(
+                    Localization.get(language, "font_selection"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Text(Localization.get(language, "font_selection"), style = MaterialTheme.typography.titleMedium)
+
+        FontOption(
+            title = Localization.get(language, "font_system"),
+            desc = Localization.get(language, "font_system_desc"),
+            family = FontFamily.Default,
+            selected = selectedFont == AppFont.SYSTEM,
+            onClick = { onFontChange(AppFont.SYSTEM) },
+        )
+        FontOption(
+            title = Localization.get(language, "font_google_sans"),
+            desc = Localization.get(language, "font_google_sans_desc"),
+            family = AppFonts.googleSans,
+            selected = selectedFont == AppFont.GOOGLE_SANS,
+            onClick = { onFontChange(AppFont.GOOGLE_SANS) },
+        )
+        FontOption(
+            title = Localization.get(language, "font_sans_flex"),
+            desc = Localization.get(language, "font_sans_flex_desc"),
+            family = AppFonts.sansFlex,
+            selected = selectedFont == AppFont.SANS_FLEX,
+            onClick = { onFontChange(AppFont.SANS_FLEX) },
+        )
+        FontOption(
+            title = Localization.get(language, "font_outfit"),
+            desc = Localization.get(language, "font_outfit_desc"),
+            family = AppFonts.outfit,
+            selected = selectedFont == AppFont.OUTFIT,
+            onClick = { onFontChange(AppFont.OUTFIT) },
+        )
+        FontOption(
+            title = Localization.get(language, "font_plus_jakarta_sans"),
+            desc = Localization.get(language, "font_plus_jakarta_sans_desc"),
+            family = AppFonts.plusJakartaSans,
+            selected = selectedFont == AppFont.PLUS_JAKARTA_SANS,
+            onClick = { onFontChange(AppFont.PLUS_JAKARTA_SANS) },
+        )
+
+        if (customFontPath.isNotBlank()) {
+            FontOption(
+                title = Localization.get(language, "custom_font"),
+                desc = customFontPath.substringAfterLast("\\").substringAfterLast("/"),
+                family = AppFonts.familyFor(AppFont.CUSTOM, customFontPath),
+                selected = selectedFont == AppFont.CUSTOM,
+                onClick = { onFontChange(AppFont.CUSTOM) },
             )
         }
-        Spacer(Modifier.height(16.dp))
-        OutlinedButton(onClick = onImportFont, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Filled.Add, contentDescription = null)
+
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = onImportFont) {
+            Icon(Icons.Filled.FontDownload, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(Localization.get(language, "import_font"))
+        }
+
+        Spacer(Modifier.height(36.dp))
+    }
+}
+
+@Composable
+private fun FontOption(
+    title: String,
+    desc: String,
+    family: FontFamily,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            Text(title, fontFamily = family, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                desc,
+                fontFamily = family,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

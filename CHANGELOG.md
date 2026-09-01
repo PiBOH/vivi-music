@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.4-nightly] - 2026-09-02
+
+### Changed
+- [DE] **Font sub-screen restored to the pre-1.44.0 rich layout**: the big themed typography preview card (primary-container, "Typography Preview" label + the quote rendered in the selected font) is back, and each font is listed as its own radio row rendered in that typeface with its description (System / Google Sans / Sans Flex / Outfit / Plus Jakarta Sans / Custom), instead of the compact dropdown. Verified live on Windows.
+
 ## [6.4.41_DE-1.49.3-nightly] - 2026-09-02
 
 ### Fixed
