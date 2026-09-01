@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.44.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Inline dropdowns for single-choice settings**: options that previously opened a dedicated sub-screen or an unanchored menu (font, canvas source, UI density, grid size, player design, player background, mini-player design, mini-player background, audio quality, slider style) are now Material 3 dropdowns anchored directly under their row — no more popup menus appearing in the top-left corner of the window. The dedicated Font/Canvas/Density/Transitions/Player-design sub-screens were removed.
+
 ## [6.4.41_DE-1.43.2-nightly] - 2026-09-01
 
 ### Fixed

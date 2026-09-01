@@ -1811,36 +1811,19 @@ fun WindowScope.App(
                         language = language,
                         onBack = goBack,
                         selectedFont = font,
-                        densityScale = densityScale,
-                        screenTransition = screenTransition,
-                        onOpenTheme = { navigate(Screen.SettingsTheme) },
-                        onOpenFont = { navigate(Screen.SettingsFont) },
-                        onOpenCanvas = { navigate(Screen.SettingsCanvas) },
-                        onOpenDensity = { navigate(Screen.SettingsDensity) },
-                        onOpenTransitions = { navigate(Screen.SettingsTransitions) },
-                        onOpenIntro = { navigate(Screen.SettingsIntro) },
-                        onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
-                        nativeTitleBar = nativeTitleBar,
-                        onNativeTitleBarChange = onNativeTitleBarChange,
-                        showRightSidebar = showRightSidebar,
-                        onShowRightSidebarChange = { v ->
-                            showRightSidebar = v
-                            DesktopSettings.update { it.copy(showRightSidebar = v) }
+                        onFontChange = onFontChange,
+                        customFontPath = customFontPath,
+                        onImportFont = onImportFont,
+                        canvasEnabled = canvasEnabled,
+                        onCanvasEnabledChange = { enabled ->
+                            canvasEnabled = enabled
+                            DesktopSettings.update { it.copy(canvasEnabled = enabled) }
                         },
-                        onRestart = onRestart,
-                    )
-                    is Screen.SettingsTransitions -> SettingsTransitionsScreen(
-                        language = language,
-                        onBack = goBack,
-                        screenTransition = screenTransition,
-                        onScreenTransitionChange = { t ->
-                            screenTransition = t
-                            DesktopSettings.update { it.copy(screenTransition = t) }
+                        canvasSource = canvasSource,
+                        onCanvasSourceChange = { s ->
+                            canvasSource = s
+                            DesktopSettings.update { it.copy(canvasSource = s.key) }
                         },
-                    )
-                    is Screen.SettingsDensity -> SettingsDensityScreen(
-                        language = language,
-                        onBack = goBack,
                         densityScale = densityScale,
                         onDensityScaleChange = { s ->
                             densityScale = s
@@ -1851,6 +1834,51 @@ fun WindowScope.App(
                             gridItemSize = g
                             DesktopSettings.update { it.copy(gridItemSize = g) }
                         },
+                        screenTransition = screenTransition,
+                        onScreenTransitionChange = { t ->
+                            screenTransition = t
+                            DesktopSettings.update { it.copy(screenTransition = t) }
+                        },
+                        playerDesign = playerDesign,
+                        onPlayerDesignChange = { d ->
+                            playerDesign = d
+                            DesktopSettings.update { it.copy(playerDesign = d.key) }
+                        },
+                        playerBackground = playerBackground,
+                        onPlayerBackgroundChange = { b ->
+                            playerBackground = b
+                            DesktopSettings.update { it.copy(playerBackground = b.key) }
+                        },
+                        rotatingThumbnail = rotatingThumbnail,
+                        onRotatingThumbnailChange = { r ->
+                            rotatingThumbnail = r
+                            DesktopSettings.update { it.copy(rotatingThumbnail = r) }
+                        },
+                        miniPlayerDesign = miniPlayerDesign,
+                        onMiniPlayerDesignChange = { d ->
+                            miniPlayerDesign = d
+                            DesktopSettings.update { it.copy(miniPlayerDesign = d.key) }
+                        },
+                        miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+                        onMiniPlayerBackgroundStyleChange = { b ->
+                            miniPlayerBackgroundStyle = b
+                            DesktopSettings.update { it.copy(miniPlayerBackgroundStyle = b.key) }
+                        },
+                        pureBlackMiniPlayer = pureBlackMiniPlayer,
+                        onPureBlackMiniPlayerChange = { p ->
+                            pureBlackMiniPlayer = p
+                            DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
+                        },
+                        onOpenTheme = { navigate(Screen.SettingsTheme) },
+                        onOpenIntro = { navigate(Screen.SettingsIntro) },
+                        nativeTitleBar = nativeTitleBar,
+                        onNativeTitleBarChange = onNativeTitleBarChange,
+                        showRightSidebar = showRightSidebar,
+                        onShowRightSidebarChange = { v ->
+                            showRightSidebar = v
+                            DesktopSettings.update { it.copy(showRightSidebar = v) }
+                        },
+                        onRestart = onRestart,
                     )
                     is Screen.SettingsTheme -> SettingsThemeScreen(
                         language = language,
@@ -1863,28 +1891,6 @@ fun WindowScope.App(
                         onAccentIntensityChange = onAccentIntensityChange,
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
-                    )
-                    is Screen.SettingsFont -> SettingsFontScreen(
-                        language = language,
-                        onBack = goBack,
-                        selectedFont = font,
-                        onFontChange = onFontChange,
-                        customFontPath = customFontPath,
-                        onImportFont = onImportFont,
-                    )
-                    is Screen.SettingsCanvas -> SettingsCanvasScreen(
-                        language = language,
-                        onBack = goBack,
-                        canvasEnabled = canvasEnabled,
-                        onCanvasEnabledChange = { enabled ->
-                            canvasEnabled = enabled
-                            DesktopSettings.update { it.copy(canvasEnabled = enabled) }
-                        },
-                        canvasSource = canvasSource,
-                        onCanvasSourceChange = { s ->
-                            canvasSource = s
-                            DesktopSettings.update { it.copy(canvasSource = s.key) }
-                        },
                     )
                     is Screen.SettingsPlayer -> SettingsPlayerScreen(
                         language = language,
@@ -1919,7 +1925,6 @@ fun WindowScope.App(
                             sliderStyle = s
                             DesktopSettings.update { it.copy(sliderStyle = s) }
                         },
-                        onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
                         onOpenEqualizer = { navigate(Screen.SettingsEqualizer) },
                         streamCacheMinutes = streamCacheMinutes,
                         onStreamCacheMinutesChange = { m ->
@@ -2015,45 +2020,6 @@ fun WindowScope.App(
                             onDeeplFormalityChange = { v -> DesktopSettings.update { it.copy(deeplFormality = v) } },
                         )
                     }
-                    is Screen.SettingsPlayerDesign -> SettingsPlayerDesignScreen(
-                        language = language,
-                        onBack = goBack,
-                        design = playerDesign,
-                        onDesignChange = { d ->
-                            playerDesign = d
-                            DesktopSettings.update { it.copy(playerDesign = d.key) }
-                        },
-                        background = playerBackground,
-                        onBackgroundChange = { b ->
-                            playerBackground = b
-                            DesktopSettings.update { it.copy(playerBackground = b.key) }
-                        },
-                        rotatingThumbnail = rotatingThumbnail,
-                        onRotatingThumbnailChange = { r ->
-                            rotatingThumbnail = r
-                            DesktopSettings.update { it.copy(rotatingThumbnail = r) }
-                        },
-                        miniPlayerStyle = miniPlayerStyle,
-                        onMiniPlayerStyleChange = { s ->
-                            miniPlayerStyle = s
-                            DesktopSettings.update { it.copy(miniPlayerStyle = s) }
-                        },
-                        miniPlayerDesign = miniPlayerDesign,
-                        onMiniPlayerDesignChange = { d ->
-                            miniPlayerDesign = d
-                            DesktopSettings.update { it.copy(miniPlayerDesign = d.key) }
-                        },
-                        miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
-                        onMiniPlayerBackgroundStyleChange = { b ->
-                            miniPlayerBackgroundStyle = b
-                            DesktopSettings.update { it.copy(miniPlayerBackgroundStyle = b.key) }
-                        },
-                        pureBlackMiniPlayer = pureBlackMiniPlayer,
-                        onPureBlackMiniPlayerChange = { p ->
-                            pureBlackMiniPlayer = p
-                            DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
-                        },
-                    )
                     is Screen.SettingsAccount -> SettingsAccountScreen(
                         language = language,
                         onBack = goBack,
@@ -5189,14 +5155,10 @@ fun PlayerSection(
     onToggleSyncViviVolume: (Boolean) -> Unit,
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
-    onOpenPlayerDesign: () -> Unit,
     onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
 ) {
-    var qualityExpanded by remember { mutableStateOf(false) }
-    var sliderExpanded by remember { mutableStateOf(false) }
-
     Text(Localization.get(language, "player_audio"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
     M3SettingsGroup(
@@ -5207,58 +5169,24 @@ fun PlayerSection(
                 trailing = { SettingsChevron() },
                 onClick = onOpenEqualizer,
             ),
-            M3SettingsItem(
-                icon = Icons.Filled.MusicNote,
-                title = { Text(Localization.get(language, "player_design")) },
-                trailing = { SettingsChevron() },
-                onClick = onOpenPlayerDesign,
-            ),
         ),
     )
 
-    M3SettingsGroup(
-        items = listOf(
-            M3SettingsItem(
-                icon = Icons.Filled.GraphicEq,
-                title = { Text(Localization.get(language, "audio_quality")) },
-                description = { Text(audioQualityLabel(language, audioQuality)) },
-                onClick = { qualityExpanded = true },
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.SwapHoriz,
-                title = { Text(Localization.get(language, "slider_style")) },
-                description = { Text(sliderStyleLabel(language, sliderStyle)) },
-                onClick = { sliderExpanded = true },
-            ),
-        ),
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.GraphicEq,
+        title = Localization.get(language, "audio_quality"),
+        value = audioQualityLabel(language, audioQuality),
+        options = listOf("auto", "high", "low").map { it to audioQualityLabel(language, it) },
+        onSelect = onAudioQualityChange,
     )
 
-    if (qualityExpanded) {
-        DropdownMenu(
-            expanded = qualityExpanded,
-            onDismissRequest = { qualityExpanded = false },
-        ) {
-            listOf("auto", "high", "low").forEach { q ->
-                DropdownMenuItem(
-                    text = { Text(audioQualityLabel(language, q)) },
-                    onClick = { qualityExpanded = false; onAudioQualityChange(q) },
-                )
-            }
-        }
-    }
-    if (sliderExpanded) {
-        DropdownMenu(
-            expanded = sliderExpanded,
-            onDismissRequest = { sliderExpanded = false },
-        ) {
-            listOf("slim", "squiggly", "wavy").forEach { s ->
-                DropdownMenuItem(
-                    text = { Text(sliderStyleLabel(language, s)) },
-                    onClick = { sliderExpanded = false; onSliderStyleChange(s) },
-                )
-            }
-        }
-    }
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.SwapHoriz,
+        title = Localization.get(language, "slider_style"),
+        value = sliderStyleLabel(language, sliderStyle),
+        options = listOf("slim", "squiggly", "wavy").map { it to sliderStyleLabel(language, it) },
+        onSelect = onSliderStyleChange,
+    )
 
     M3SettingsGroup(
         items = listOf(

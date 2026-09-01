@@ -302,15 +302,33 @@ fun SettingsAppearanceScreen(
     language: String,
     onBack: () -> Unit,
     selectedFont: AppFont,
-    densityScale: Float,
-    screenTransition: String,
-    onOpenTheme: () -> Unit,
-    onOpenFont: () -> Unit,
-    onOpenCanvas: () -> Unit,
-    onOpenDensity: () -> Unit,
-    onOpenTransitions: () -> Unit,
-    onOpenIntro: () -> Unit,
-    onOpenPlayerDesign: () -> Unit = {},
+    onFontChange: (AppFont) -> Unit = {},
+    customFontPath: String = "",
+    onImportFont: () -> Unit = {},
+    canvasEnabled: Boolean = true,
+    onCanvasEnabledChange: (Boolean) -> Unit = {},
+    canvasSource: CanvasSource = CanvasSource.AUTO,
+    onCanvasSourceChange: (CanvasSource) -> Unit = {},
+    densityScale: Float = 1f,
+    onDensityScaleChange: (Float) -> Unit = {},
+    gridItemSize: Int = 160,
+    onGridItemSizeChange: (Int) -> Unit = {},
+    screenTransition: String = "fade",
+    onScreenTransitionChange: (String) -> Unit = {},
+    playerDesign: PlayerDesign = PlayerDesign.CLASSIC,
+    onPlayerDesignChange: (PlayerDesign) -> Unit = {},
+    playerBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
+    onPlayerBackgroundChange: (PlayerBackgroundStyle) -> Unit = {},
+    rotatingThumbnail: Boolean = false,
+    onRotatingThumbnailChange: (Boolean) -> Unit = {},
+    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
+    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
+    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
+    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
+    pureBlackMiniPlayer: Boolean = false,
+    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
+    onOpenTheme: () -> Unit = {},
+    onOpenIntro: () -> Unit = {},
     nativeTitleBar: Boolean = false,
     onNativeTitleBarChange: (Boolean) -> Unit = {},
     showRightSidebar: Boolean = true,
@@ -319,11 +337,40 @@ fun SettingsAppearanceScreen(
 ) {
     SettingsSubScreen(language, onBack) {
         AppearanceSection(
-            language, selectedFont, densityScale, screenTransition,
-            onOpenTheme, onOpenFont, onOpenCanvas, onOpenDensity, onOpenTransitions, onOpenIntro, onOpenPlayerDesign,
-            nativeTitleBar, onNativeTitleBarChange,
-            showRightSidebar, onShowRightSidebarChange,
-            onRestart,
+            language = language,
+            selectedFont = selectedFont,
+            onFontChange = onFontChange,
+            customFontPath = customFontPath,
+            onImportFont = onImportFont,
+            canvasEnabled = canvasEnabled,
+            onCanvasEnabledChange = onCanvasEnabledChange,
+            canvasSource = canvasSource,
+            onCanvasSourceChange = onCanvasSourceChange,
+            densityScale = densityScale,
+            onDensityScaleChange = onDensityScaleChange,
+            gridItemSize = gridItemSize,
+            onGridItemSizeChange = onGridItemSizeChange,
+            screenTransition = screenTransition,
+            onScreenTransitionChange = onScreenTransitionChange,
+            playerDesign = playerDesign,
+            onPlayerDesignChange = onPlayerDesignChange,
+            playerBackground = playerBackground,
+            onPlayerBackgroundChange = onPlayerBackgroundChange,
+            rotatingThumbnail = rotatingThumbnail,
+            onRotatingThumbnailChange = onRotatingThumbnailChange,
+            miniPlayerDesign = miniPlayerDesign,
+            onMiniPlayerDesignChange = onMiniPlayerDesignChange,
+            miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+            onMiniPlayerBackgroundStyleChange = onMiniPlayerBackgroundStyleChange,
+            pureBlackMiniPlayer = pureBlackMiniPlayer,
+            onPureBlackMiniPlayerChange = onPureBlackMiniPlayerChange,
+            onOpenTheme = onOpenTheme,
+            onOpenIntro = onOpenIntro,
+            nativeTitleBar = nativeTitleBar,
+            onNativeTitleBarChange = onNativeTitleBarChange,
+            showRightSidebar = showRightSidebar,
+            onShowRightSidebarChange = onShowRightSidebarChange,
+            onRestart = onRestart,
         )
     }
 }
@@ -364,38 +411,6 @@ fun SettingsWrappedScreen(
 }
 
 @Composable
-fun SettingsTransitionsScreen(
-    language: String,
-    onBack: () -> Unit,
-    screenTransition: String,
-    onScreenTransitionChange: (String) -> Unit,
-) {
-    SettingsSubScreen(language, onBack) {
-        TransitionsScreen(language, screenTransition, onScreenTransitionChange)
-    }
-}
-
-@Composable
-fun SettingsDensityScreen(
-    language: String,
-    onBack: () -> Unit,
-    densityScale: Float,
-    onDensityScaleChange: (Float) -> Unit,
-    gridItemSize: Int,
-    onGridItemSizeChange: (Int) -> Unit,
-) {
-    SettingsSubScreen(language, onBack) {
-        DensityScreen(
-            language = language,
-            densityScale = densityScale,
-            onDensityScaleChange = onDensityScaleChange,
-            gridItemSize = gridItemSize,
-            onGridItemSizeChange = onGridItemSizeChange,
-        )
-    }
-}
-
-@Composable
 fun SettingsThemeScreen(
     language: String,
     onBack: () -> Unit,
@@ -424,40 +439,6 @@ fun SettingsThemeScreen(
 }
 
 @Composable
-fun SettingsFontScreen(
-    language: String,
-    onBack: () -> Unit,
-    selectedFont: AppFont,
-    onFontChange: (AppFont) -> Unit,
-    customFontPath: String = "",
-    onImportFont: () -> Unit = {},
-) {
-    SettingsSubScreen(language, onBack) {
-        FontSection(
-            language = language,
-            selectedFont = selectedFont,
-            onFontChange = onFontChange,
-            customFontPath = customFontPath,
-            onImportFont = onImportFont,
-        )
-    }
-}
-
-@Composable
-fun SettingsCanvasScreen(
-    language: String,
-    onBack: () -> Unit,
-    canvasEnabled: Boolean,
-    onCanvasEnabledChange: (Boolean) -> Unit,
-    canvasSource: CanvasSource,
-    onCanvasSourceChange: (CanvasSource) -> Unit,
-) {
-    SettingsSubScreen(language, onBack) {
-        CanvasSection(language, canvasEnabled, onCanvasEnabledChange, canvasSource, onCanvasSourceChange)
-    }
-}
-
-@Composable
 fun SettingsPlayerScreen(
     language: String,
     onBack: () -> Unit,
@@ -473,7 +454,6 @@ fun SettingsPlayerScreen(
     onToggleSyncViviVolume: (Boolean) -> Unit,
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
-    onOpenPlayerDesign: () -> Unit,
     onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
@@ -493,50 +473,9 @@ fun SettingsPlayerScreen(
             onToggleSyncViviVolume,
             sliderStyle,
             onSliderStyleChange,
-            onOpenPlayerDesign,
             onOpenEqualizer,
             streamCacheMinutes,
             onStreamCacheMinutesChange,
-        )
-    }
-}
-
-@Composable
-fun SettingsPlayerDesignScreen(
-    language: String,
-    onBack: () -> Unit,
-    design: PlayerDesign,
-    onDesignChange: (PlayerDesign) -> Unit,
-    background: PlayerBackgroundStyle,
-    onBackgroundChange: (PlayerBackgroundStyle) -> Unit,
-    rotatingThumbnail: Boolean,
-    onRotatingThumbnailChange: (Boolean) -> Unit,
-    miniPlayerStyle: String = "standard",
-    onMiniPlayerStyleChange: (String) -> Unit = {},
-    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
-    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
-    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
-    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
-    pureBlackMiniPlayer: Boolean = false,
-    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
-) {
-    SettingsSubScreen(language, onBack) {
-        PlayerDesignScreen(
-            language = language,
-            design = design,
-            onDesignChange = onDesignChange,
-            background = background,
-            onBackgroundChange = onBackgroundChange,
-            rotatingThumbnail = rotatingThumbnail,
-            onRotatingThumbnailChange = onRotatingThumbnailChange,
-            miniPlayerStyle = miniPlayerStyle,
-            onMiniPlayerStyleChange = onMiniPlayerStyleChange,
-            miniPlayerDesign = miniPlayerDesign,
-            onMiniPlayerDesignChange = onMiniPlayerDesignChange,
-            miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
-            onMiniPlayerBackgroundStyleChange = onMiniPlayerBackgroundStyleChange,
-            pureBlackMiniPlayer = pureBlackMiniPlayer,
-            onPureBlackMiniPlayerChange = onPureBlackMiniPlayerChange,
         )
     }
 }

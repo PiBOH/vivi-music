@@ -21,7 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ViewSidebar
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material.icons.filled.Movie
@@ -57,22 +62,41 @@ import androidx.compose.ui.text.style.TextAlign
 import kotlin.math.roundToInt
 
 /**
- * Appearance hub: three rows mirroring the Android app's Appearance sub-menu
- * (Theme, App font, Canvas), each opening a dedicated sub-screen.
+ * Appearance hub: rows mirroring the Android app's Appearance sub-menu.
+ * Single-choice options (font, canvas source, density, transitions, player
+ * design) are inline dropdowns — no extra sub-screen, matching mobile.
  */
 @Composable
 fun AppearanceSection(
     language: String,
     selectedFont: AppFont,
-    densityScale: Float,
-    screenTransition: String,
+    onFontChange: (AppFont) -> Unit,
+    customFontPath: String = "",
+    onImportFont: () -> Unit = {},
+    canvasEnabled: Boolean = true,
+    onCanvasEnabledChange: (Boolean) -> Unit = {},
+    canvasSource: CanvasSource = CanvasSource.AUTO,
+    onCanvasSourceChange: (CanvasSource) -> Unit = {},
+    densityScale: Float = 1f,
+    onDensityScaleChange: (Float) -> Unit = {},
+    gridItemSize: Int = 160,
+    onGridItemSizeChange: (Int) -> Unit = {},
+    screenTransition: String = "fade",
+    onScreenTransitionChange: (String) -> Unit = {},
+    playerDesign: PlayerDesign = PlayerDesign.CLASSIC,
+    onPlayerDesignChange: (PlayerDesign) -> Unit = {},
+    playerBackground: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
+    onPlayerBackgroundChange: (PlayerBackgroundStyle) -> Unit = {},
+    rotatingThumbnail: Boolean = false,
+    onRotatingThumbnailChange: (Boolean) -> Unit = {},
+    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
+    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
+    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
+    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
+    pureBlackMiniPlayer: Boolean = false,
+    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
     onOpenTheme: () -> Unit,
-    onOpenFont: () -> Unit,
-    onOpenCanvas: () -> Unit,
-    onOpenDensity: () -> Unit,
-    onOpenTransitions: () -> Unit,
     onOpenIntro: () -> Unit,
-    onOpenPlayerDesign: () -> Unit = {},
     nativeTitleBar: Boolean = false,
     onNativeTitleBarChange: (Boolean) -> Unit = {},
     showRightSidebar: Boolean = true,
@@ -80,6 +104,22 @@ fun AppearanceSection(
     onRestart: () -> Unit = {},
 ) {
     var showRestartDialog by remember { mutableStateOf(false) }
+
+    val fontOptions = buildList {
+        AppFont.entries.filter { it != AppFont.CUSTOM }.forEach { f ->
+            add(f to Localization.get(language, when (f) {
+                AppFont.SYSTEM -> "font_system"
+                AppFont.GOOGLE_SANS -> "font_google_sans"
+                AppFont.SANS_FLEX -> "font_sans_flex"
+                AppFont.OUTFIT -> "font_outfit"
+                AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
+                AppFont.CUSTOM -> "custom_font"
+            }))
+        }
+        if (customFontPath.isNotBlank()) {
+            add(AppFont.CUSTOM to Localization.get(language, "custom_font"))
+        }
+    }
 
     Text(Localization.get(language, "appearance"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
@@ -91,54 +131,226 @@ fun AppearanceSection(
                 trailing = { SettingsChevron() },
                 onClick = onOpenTheme,
             ),
+        ),
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.FontDownload,
+        title = Localization.get(language, "app_font"),
+        value = Localization.get(language, when (selectedFont) {
+            AppFont.SYSTEM -> "font_system"
+            AppFont.GOOGLE_SANS -> "font_google_sans"
+            AppFont.SANS_FLEX -> "font_sans_flex"
+            AppFont.OUTFIT -> "font_outfit"
+            AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
+            AppFont.CUSTOM -> "custom_font"
+        }),
+        options = fontOptions.map { (f, label) -> f.value to label },
+        onSelect = { v -> onFontChange(AppFont.fromValue(v)) },
+    )
+
+    // Import a custom .ttf/.otf font file (shown when one is installed).
+    M3SettingsGroup(
+        items = listOf(
             M3SettingsItem(
                 icon = Icons.Filled.FontDownload,
-                title = { Text(Localization.get(language, "app_font")) },
-                description = {
-                    Text(Localization.get(language, when (selectedFont) {
-                        AppFont.SYSTEM -> "font_system"
-                        AppFont.GOOGLE_SANS -> "font_google_sans"
-                        AppFont.SANS_FLEX -> "font_sans_flex"
-                        AppFont.OUTFIT -> "font_outfit"
-                        AppFont.PLUS_JAKARTA_SANS -> "font_plus_jakarta_sans"
-                        AppFont.CUSTOM -> "custom_font"
-                    }))
+                title = { Text(Localization.get(language, "import_font")) },
+                description = customFontPath.takeIf { it.isNotBlank() }?.let {
+                    { Text(it.substringAfterLast("\\").substringAfterLast("/")) }
                 },
                 trailing = { SettingsChevron() },
-                onClick = onOpenFont,
+                onClick = onImportFont,
             ),
+        ),
+    )
+
+    M3SettingsGroup(
+        items = listOf(
             M3SettingsItem(
                 icon = Icons.Filled.Movie,
-                title = { Text(Localization.get(language, "vivimusic_canvas")) },
-                trailing = { SettingsChevron() },
-                onClick = onOpenCanvas,
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.SettingsBrightness,
-                title = { Text(Localization.get(language, "density_and_grid")) },
-                description = { Text(densityLabel(densityScale)) },
-                trailing = { SettingsChevron() },
-                onClick = onOpenDensity,
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.MusicNote,
-                title = { Text(Localization.get(language, "player_design")) },
-                trailing = { SettingsChevron() },
-                onClick = onOpenPlayerDesign,
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.MotionPhotosOn,
-                title = { Text(Localization.get(language, "screen_transitions")) },
-                description = {
-                    Text(Localization.get(language, when (screenTransition) {
-                        "slide" -> "transition_slide"
-                        "off" -> "transition_off"
-                        else -> "transition_fade"
-                    }))
+                title = { Text(Localization.get(language, "use_canvas")) },
+                description = { Text(Localization.get(language, "vivimusic_canvas_desc")) },
+                trailing = {
+                    Switch(checked = canvasEnabled, onCheckedChange = onCanvasEnabledChange)
                 },
-                trailing = { SettingsChevron() },
-                onClick = onOpenTransitions,
+                onClick = { onCanvasEnabledChange(!canvasEnabled) },
             ),
+        ),
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.Movie,
+        title = Localization.get(language, "canvas_source"),
+        value = Localization.get(language, when (canvasSource) {
+            CanvasSource.AUTO -> "canvas_source_auto"
+            CanvasSource.APPLE_MUSIC -> "canvas_source_apple_music"
+            CanvasSource.VIVIMUSIC -> "canvas_source_vivimusic"
+            CanvasSource.TIDAL -> "canvas_source_tidal"
+        }),
+        options = CanvasSource.entries.map { s ->
+            s.key to Localization.get(language, when (s) {
+                CanvasSource.AUTO -> "canvas_source_auto"
+                CanvasSource.APPLE_MUSIC -> "canvas_source_apple_music"
+                CanvasSource.VIVIMUSIC -> "canvas_source_vivimusic"
+                CanvasSource.TIDAL -> "canvas_source_tidal"
+            })
+        },
+        onSelect = { key -> onCanvasSourceChange(CanvasSource.from(key)) },
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.SettingsBrightness,
+        title = Localization.get(language, "density_and_grid"),
+        value = densityLabel(densityScale),
+        options = DENSITY_PRESETS.map { it.toString() to densityLabel(it) },
+        onSelect = { s -> onDensityScaleChange(s.toFloatOrNull() ?: densityScale) },
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.ViewAgenda,
+        title = Localization.get(language, "grid_item_size"),
+        value = Localization.get(language, when (gridItemSize) {
+            140 -> "grid_small"
+            200 -> "grid_large"
+            240 -> "grid_xlarge"
+            else -> "grid_medium"
+        }),
+        options = GRID_PRESETS.map { (size, key) -> size.toString() to Localization.get(language, key) },
+        onSelect = { s -> onGridItemSizeChange(s.toIntOrNull() ?: gridItemSize) },
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.MusicNote,
+        title = Localization.get(language, "player_design"),
+        value = Localization.get(language, when (playerDesign) {
+            PlayerDesign.CLASSIC -> "player_design_classic"
+            PlayerDesign.NEW -> "player_design_new"
+            PlayerDesign.V2 -> "player_design_v2"
+            PlayerDesign.EXPRESSIVE -> "player_design_expressive"
+        }),
+        options = PlayerDesign.entries.map { d ->
+            d.key to Localization.get(language, when (d) {
+                PlayerDesign.CLASSIC -> "player_design_classic"
+                PlayerDesign.NEW -> "player_design_new"
+                PlayerDesign.V2 -> "player_design_v2"
+                PlayerDesign.EXPRESSIVE -> "player_design_expressive"
+            })
+        },
+        onSelect = { key -> onPlayerDesignChange(PlayerDesign.from(key)) },
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.Wallpaper,
+        title = Localization.get(language, "player_background"),
+        value = Localization.get(language, when (playerBackground) {
+            PlayerBackgroundStyle.CANVAS -> "canvas"
+            PlayerBackgroundStyle.GRADIENT -> "player_background_gradient"
+            PlayerBackgroundStyle.BLUR -> "player_background_blur"
+            PlayerBackgroundStyle.GLOW -> "player_background_glow"
+            PlayerBackgroundStyle.APPLE_MUSIC -> "player_background_apple"
+            PlayerBackgroundStyle.LIVE_MESH -> "player_background_mesh"
+            PlayerBackgroundStyle.VISUALIZER -> "player_background_visualizer"
+        }),
+        options = PlayerBackgroundStyle.entries.map { b ->
+            b.key to Localization.get(language, when (b) {
+                PlayerBackgroundStyle.CANVAS -> "canvas"
+                PlayerBackgroundStyle.GRADIENT -> "player_background_gradient"
+                PlayerBackgroundStyle.BLUR -> "player_background_blur"
+                PlayerBackgroundStyle.GLOW -> "player_background_glow"
+                PlayerBackgroundStyle.APPLE_MUSIC -> "player_background_apple"
+                PlayerBackgroundStyle.LIVE_MESH -> "player_background_mesh"
+                PlayerBackgroundStyle.VISUALIZER -> "player_background_visualizer"
+            })
+        },
+        onSelect = { key -> onPlayerBackgroundChange(PlayerBackgroundStyle.from(key)) },
+    )
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Album,
+                title = { Text(Localization.get(language, "rotating_thumbnail")) },
+                description = { Text(Localization.get(language, "rotating_thumbnail_desc")) },
+                trailing = {
+                    Switch(checked = rotatingThumbnail, onCheckedChange = onRotatingThumbnailChange)
+                },
+                onClick = { onRotatingThumbnailChange(!rotatingThumbnail) },
+            ),
+        ),
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.Devices,
+        title = Localization.get(language, "mini_player_design"),
+        value = Localization.get(language, when (miniPlayerDesign) {
+            MiniPlayerDesign.CLASSIC -> "mini_player_classic"
+            MiniPlayerDesign.NEW -> "mini_player_new"
+            MiniPlayerDesign.APPLE -> "mini_player_apple"
+        }),
+        options = MiniPlayerDesign.entries.map { d ->
+            d.key to Localization.get(language, when (d) {
+                MiniPlayerDesign.CLASSIC -> "mini_player_classic"
+                MiniPlayerDesign.NEW -> "mini_player_new"
+                MiniPlayerDesign.APPLE -> "mini_player_apple"
+            })
+        },
+        onSelect = { key -> onMiniPlayerDesignChange(MiniPlayerDesign.from(key)) },
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.Wallpaper,
+        title = Localization.get(language, "mini_player_background"),
+        value = Localization.get(language, when (miniPlayerBackgroundStyle) {
+            MiniPlayerBackgroundStyle.FOLLOW_THEME -> "mini_player_bg_follow_theme"
+            MiniPlayerBackgroundStyle.GRADIENT -> "mini_player_bg_gradient"
+            MiniPlayerBackgroundStyle.BLUR -> "mini_player_bg_blur"
+            MiniPlayerBackgroundStyle.GLOW_MOTION -> "mini_player_bg_glow_motion"
+            MiniPlayerBackgroundStyle.LIVE_MESH -> "mini_player_bg_live_mesh"
+        }),
+        options = MiniPlayerBackgroundStyle.entries.map { b ->
+            b.key to Localization.get(language, when (b) {
+                MiniPlayerBackgroundStyle.FOLLOW_THEME -> "mini_player_bg_follow_theme"
+                MiniPlayerBackgroundStyle.GRADIENT -> "mini_player_bg_gradient"
+                MiniPlayerBackgroundStyle.BLUR -> "mini_player_bg_blur"
+                MiniPlayerBackgroundStyle.GLOW_MOTION -> "mini_player_bg_glow_motion"
+                MiniPlayerBackgroundStyle.LIVE_MESH -> "mini_player_bg_live_mesh"
+            })
+        },
+        onSelect = { key -> onMiniPlayerBackgroundStyleChange(MiniPlayerBackgroundStyle.from(key)) },
+    )
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Brightness1,
+                title = { Text(Localization.get(language, "pure_black_mini")) },
+                description = { Text(Localization.get(language, "pure_black_mini_desc")) },
+                trailing = {
+                    Switch(checked = pureBlackMiniPlayer, onCheckedChange = onPureBlackMiniPlayerChange)
+                },
+                onClick = { onPureBlackMiniPlayerChange(!pureBlackMiniPlayer) },
+            ),
+        ),
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.MotionPhotosOn,
+        title = Localization.get(language, "screen_transitions"),
+        value = Localization.get(language, when (screenTransition) {
+            "slide" -> "transition_slide"
+            "off" -> "transition_off"
+            else -> "transition_fade"
+        }),
+        options = listOf(
+            "off" to Localization.get(language, "transition_off"),
+            "fade" to Localization.get(language, "transition_fade"),
+            "slide" to Localization.get(language, "transition_slide"),
+        ),
+        onSelect = onScreenTransitionChange,
+    )
+
+    M3SettingsGroup(
+        items = listOf(
             M3SettingsItem(
                 icon = Icons.Filled.Movie,
                 title = { Text(Localization.get(language, "intro")) },
@@ -207,84 +419,6 @@ fun AppearanceSection(
                     Text(Localization.get(language, "later"))
                 }
             },
-        )
-    }
-}
-
-/**
- * Screen transitions sub-screen: Off / Fade / Slide (matches the Android
- * navigation transition options).
- */
-@Composable
-fun TransitionsScreen(
-    language: String,
-    screenTransition: String,
-    onScreenTransitionChange: (String) -> Unit,
-) {
-    // NOTE: hosted inside the scrollable SettingsSubScreen, so only
-    // fillMaxWidth — fillMaxSize here would be measured with an infinite
-    // maximum height and blow up the layout (giant UI + freeze).
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    ) {
-        Text(
-            Localization.get(language, "screen_transitions"),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-        )
-        listOf("off" to "transition_off", "fade" to "transition_fade", "slide" to "transition_slide").forEach { (value, key) ->
-            RadioRow(
-                title = Localization.get(language, key),
-                desc = "",
-                selected = screenTransition == value,
-                onClick = { onScreenTransitionChange(value) },
-            )
-        }
-    }
-}
-
-/** Human-readable density label (e.g. "110%") for a scale value. */
-private fun densityLabel(scale: Float): String = "${(scale * 100).roundToInt()}%"
-
-@Composable
-private fun AppearanceEntryRow(
-    language: String,
-    icon: @Composable () -> Unit,
-    title: String,
-    subtitle: String? = null,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center,
-        ) { icon() }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -615,263 +749,8 @@ private fun ThemePreviewCard(modifier: Modifier = Modifier) {
     }
 }
 
-/**
- * Font sub-screen: the 5 fonts from the Android app with a live typography
- * preview and radio selection. Bundled `.ttf` fonts are loaded from resources.
- */
-@Composable
-fun FontSection(
-    language: String,
-    selectedFont: AppFont,
-    onFontChange: (AppFont) -> Unit,
-    customFontPath: String = "",
-    onImportFont: () -> Unit = {},
-) {
-    val activeFamily = AppFonts.familyFor(selectedFont, customFontPath)
-
-    Column(Modifier.fillMaxWidth()) {
-        Text(Localization.get(language, "app_font"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
-
-        Card(
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            ),
-            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-        ) {
-            Column(Modifier.fillMaxWidth().padding(24.dp)) {
-                Text(
-                    Localization.get(language, "typography_preview").uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-                Text(
-                    Localization.get(language, "preview_text_quote"),
-                    fontFamily = activeFamily,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(bottom = 12.dp),
-                )
-                Text(
-                    Localization.get(language, "font_selection"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Text(Localization.get(language, "font_selection"), style = MaterialTheme.typography.titleMedium)
-
-        FontOption(
-            language = language,
-            title = Localization.get(language, "font_system"),
-            desc = Localization.get(language, "font_system_desc"),
-            family = FontFamily.Default,
-            selected = selectedFont == AppFont.SYSTEM,
-            onClick = { onFontChange(AppFont.SYSTEM) },
-        )
-        FontOption(
-            language = language,
-            title = Localization.get(language, "font_google_sans"),
-            desc = Localization.get(language, "font_google_sans_desc"),
-            family = AppFonts.googleSans,
-            selected = selectedFont == AppFont.GOOGLE_SANS,
-            onClick = { onFontChange(AppFont.GOOGLE_SANS) },
-        )
-        FontOption(
-            language = language,
-            title = Localization.get(language, "font_sans_flex"),
-            desc = Localization.get(language, "font_sans_flex_desc"),
-            family = AppFonts.sansFlex,
-            selected = selectedFont == AppFont.SANS_FLEX,
-            onClick = { onFontChange(AppFont.SANS_FLEX) },
-        )
-        FontOption(
-            language = language,
-            title = Localization.get(language, "font_outfit"),
-            desc = Localization.get(language, "font_outfit_desc"),
-            family = AppFonts.outfit,
-            selected = selectedFont == AppFont.OUTFIT,
-            onClick = { onFontChange(AppFont.OUTFIT) },
-        )
-        FontOption(
-            language = language,
-            title = Localization.get(language, "font_plus_jakarta_sans"),
-            desc = Localization.get(language, "font_plus_jakarta_sans_desc"),
-            family = AppFonts.plusJakartaSans,
-            selected = selectedFont == AppFont.PLUS_JAKARTA_SANS,
-            onClick = { onFontChange(AppFont.PLUS_JAKARTA_SANS) },
-        )
-
-        if (customFontPath.isNotBlank()) {
-            FontOption(
-                language = language,
-                title = Localization.get(language, "custom_font"),
-                desc = customFontPath.substringAfterLast("\\").substringAfterLast("/"),
-                family = AppFonts.familyFor(AppFont.CUSTOM, customFontPath),
-                selected = selectedFont == AppFont.CUSTOM,
-                onClick = { onFontChange(AppFont.CUSTOM) },
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = onImportFont) {
-            Icon(Icons.Filled.FontDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(Localization.get(language, "import_font"))
-        }
-
-        Spacer(Modifier.height(36.dp))
-    }
-}
-
-@Composable
-private fun FontOption(
-    language: String,
-    title: String,
-    desc: String,
-    family: FontFamily,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(title, fontFamily = family, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                desc,
-                fontFamily = family,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/**
- * Canvas sub-screen: enable/disable the animated canvas and choose its source
- * (Auto / Apple Music / ViViMusic / Tidal), matching the Android canvas screen.
- */
-@Composable
-fun CanvasSection(
-    language: String,
-    canvasEnabled: Boolean,
-    onCanvasEnabledChange: (Boolean) -> Unit,
-    canvasSource: CanvasSource,
-    onCanvasSourceChange: (CanvasSource) -> Unit,
-) {
-    Column(Modifier.fillMaxWidth()) {
-        Text(Localization.get(language, "vivimusic_canvas"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
-
-        Text(
-            Localization.get(language, "vivimusic_canvas_desc"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp, bottom = 20.dp),
-        )
-
-        // Main toggle as a capsule banner (like the Android app).
-        Surface(
-            onClick = { onCanvasEnabledChange(!canvasEnabled) },
-            shape = RoundedCornerShape(50),
-            color = if (canvasEnabled) MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    Localization.get(language, "use_canvas"),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (canvasEnabled) MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Switch(checked = canvasEnabled, onCheckedChange = onCanvasEnabledChange)
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        Text(Localization.get(language, "canvas_source"), style = MaterialTheme.typography.titleMedium)
-
-        CanvasSourceOption(
-            language = language,
-            title = Localization.get(language, "canvas_source_auto"),
-            desc = Localization.get(language, "canvas_source_auto_desc"),
-            selected = canvasSource == CanvasSource.AUTO,
-            enabled = canvasEnabled,
-            onClick = { onCanvasSourceChange(CanvasSource.AUTO) },
-        )
-        CanvasSourceOption(
-            language = language,
-            title = Localization.get(language, "canvas_source_apple_music"),
-            desc = Localization.get(language, "canvas_source_apple_music_desc"),
-            selected = canvasSource == CanvasSource.APPLE_MUSIC,
-            enabled = canvasEnabled,
-            onClick = { onCanvasSourceChange(CanvasSource.APPLE_MUSIC) },
-        )
-        CanvasSourceOption(
-            language = language,
-            title = Localization.get(language, "canvas_source_vivimusic"),
-            desc = Localization.get(language, "canvas_source_vivimusic_desc"),
-            selected = canvasSource == CanvasSource.VIVIMUSIC,
-            enabled = canvasEnabled,
-            onClick = { onCanvasSourceChange(CanvasSource.VIVIMUSIC) },
-        )
-        CanvasSourceOption(
-            language = language,
-            title = Localization.get(language, "canvas_source_tidal"),
-            desc = Localization.get(language, "canvas_source_tidal_desc"),
-            selected = canvasSource == CanvasSource.TIDAL,
-            enabled = canvasEnabled,
-            onClick = { onCanvasSourceChange(CanvasSource.TIDAL) },
-        )
-
-        Spacer(Modifier.height(36.dp))
-    }
-}
-
-@Composable
-private fun CanvasSourceOption(
-    language: String,
-    title: String,
-    desc: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null, enabled = enabled)
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                desc,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
+/** Human-readable density label (e.g. "110%") for a scale value. */
+private fun densityLabel(scale: Float): String = "${(scale * 100).roundToInt()}%"
 
 /** Density scale presets (fractional; 1f = 100%). */
 private val DENSITY_PRESETS = listOf(
@@ -881,268 +760,3 @@ private val DENSITY_PRESETS = listOf(
 
 /** Grid cell width presets in dp (small / medium / large). */
 private val GRID_PRESETS = listOf(140 to "grid_small", 160 to "grid_medium", 200 to "grid_large", 240 to "grid_xlarge")
-
-/**
- * Density & grid sub-screen: UI density scale (200% down to 55%) and the
- * adaptive grid cell size used by album/artist/playlist grids.
- */
-@Composable
-fun DensityScreen(
-    language: String,
-    densityScale: Float,
-    onDensityScaleChange: (Float) -> Unit,
-    gridItemSize: Int,
-    onGridItemSizeChange: (Int) -> Unit,
-) {
-    // NOTE: hosted inside the scrollable SettingsSubScreen, so only
-    // fillMaxWidth — fillMaxSize here would be measured with an infinite
-    // maximum height and blow up the layout (giant UI + freeze).
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    ) {
-        Text(
-            Localization.get(language, "density_and_grid"),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-        )
-        Text(
-            Localization.get(language, "density_desc"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        DENSITY_PRESETS.forEach { scale ->
-            RadioRow(
-                title = densityLabel(scale),
-                desc = "",
-                selected = kotlin.math.abs(scale - densityScale) < 0.001f,
-                onClick = { onDensityScaleChange(scale) },
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            Localization.get(language, "grid_item_size"),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
-        Text(
-            Localization.get(language, "grid_item_size_desc"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        GRID_PRESETS.forEach { (size, key) ->
-            RadioRow(
-                title = Localization.get(language, key),
-                desc = "",
-                selected = gridItemSize == size,
-                onClick = { onGridItemSizeChange(size) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun RadioRow(
-    title: String,
-    desc: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (desc.isNotEmpty()) {
-                Text(
-                    desc,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
-
-/**
- * Player design sub-screen: full-player layout variant (classic / new / v2 /
- * expressive), background style (canvas / gradient / blur / glow / apple
- * music / live mesh), rotating artwork and the Apple mini-player variant.
- */
-@Composable
-fun PlayerDesignScreen(
-    language: String,
-    design: PlayerDesign,
-    onDesignChange: (PlayerDesign) -> Unit,
-    background: PlayerBackgroundStyle,
-    onBackgroundChange: (PlayerBackgroundStyle) -> Unit,
-    rotatingThumbnail: Boolean,
-    onRotatingThumbnailChange: (Boolean) -> Unit,
-    miniPlayerStyle: String = "standard",
-    onMiniPlayerStyleChange: (String) -> Unit = {},
-    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
-    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
-    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
-    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
-    pureBlackMiniPlayer: Boolean = false,
-    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
-) {
-    // NOTE: hosted inside the scrollable SettingsSubScreen, so only
-    // fillMaxWidth — fillMaxSize here would be measured with an infinite
-    // maximum height and blow up the layout (giant UI + freeze).
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    ) {
-        Text(
-            Localization.get(language, "player_design"),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-        )
-        Text(
-            Localization.get(language, "player_design_desc"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        listOf(
-            PlayerDesign.CLASSIC to "player_design_classic",
-            PlayerDesign.NEW to "player_design_new",
-            PlayerDesign.V2 to "player_design_v2",
-            PlayerDesign.EXPRESSIVE to "player_design_expressive",
-        ).forEach { (value, key) ->
-            RadioRow(
-                title = Localization.get(language, key),
-                desc = "",
-                selected = design == value,
-                onClick = { onDesignChange(value) },
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            Localization.get(language, "player_background"),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
-        Text(
-            Localization.get(language, "player_background_desc"),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        listOf(
-            PlayerBackgroundStyle.CANVAS to "canvas",
-            PlayerBackgroundStyle.GRADIENT to "player_background_gradient",
-            PlayerBackgroundStyle.BLUR to "player_background_blur",
-            PlayerBackgroundStyle.GLOW to "player_background_glow",
-            PlayerBackgroundStyle.APPLE_MUSIC to "player_background_apple",
-            PlayerBackgroundStyle.LIVE_MESH to "player_background_mesh",
-            PlayerBackgroundStyle.VISUALIZER to "player_background_visualizer",
-        ).forEach { (value, key) ->
-            RadioRow(
-                title = Localization.get(language, key),
-                desc = "",
-                selected = background == value,
-                onClick = { onBackgroundChange(value) },
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        SwitchRow(
-            title = Localization.get(language, "rotating_thumbnail"),
-            desc = Localization.get(language, "rotating_thumbnail_desc"),
-            checked = rotatingThumbnail,
-            onCheckedChange = onRotatingThumbnailChange,
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Mini-player design",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
-        Text(
-            "Choose between Classic, New, or Apple-style bottom player layout",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        listOf(
-            MiniPlayerDesign.CLASSIC to "Classic mini player",
-            MiniPlayerDesign.NEW to "New mini player design",
-            MiniPlayerDesign.APPLE to "Apple-style mini player",
-        ).forEach { (value, label) ->
-            RadioRow(
-                title = label,
-                desc = "",
-                selected = miniPlayerDesign == value,
-                onClick = { onMiniPlayerDesignChange(value) },
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            "Mini-player background style",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 4.dp),
-        )
-        Text(
-            "Dynamic background effect behind the mini player",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-        listOf(
-            MiniPlayerBackgroundStyle.FOLLOW_THEME to "Follow theme",
-            MiniPlayerBackgroundStyle.GRADIENT to "Gradient",
-            MiniPlayerBackgroundStyle.BLUR to "Blur",
-            MiniPlayerBackgroundStyle.GLOW_MOTION to "Glow motion",
-            MiniPlayerBackgroundStyle.LIVE_MESH to "Live mesh",
-        ).forEach { (value, label) ->
-            RadioRow(
-                title = label,
-                desc = "",
-                selected = miniPlayerBackgroundStyle == value,
-                onClick = { onMiniPlayerBackgroundStyleChange(value) },
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        SwitchRow(
-            title = "Pure black mini-player",
-            desc = "Use true AMOLED black background for dark mode mini player",
-            checked = pureBlackMiniPlayer,
-            onCheckedChange = onPureBlackMiniPlayerChange,
-        )
-    }
-}
-
-@Composable
-private fun SwitchRow(
-    title: String,
-    desc: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                desc,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
