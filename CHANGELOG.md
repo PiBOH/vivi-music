@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.41.17-nightly] - 2026-09-01
+
+### Fixed
+- [DE] **WebView sign-in now captures the same cookies the manual method does**: the capture dumped the whole cookie store with a coin-flip domain tie-break (`.google.com` vs `.youtube.com` have equal length), and the full-session gate required the legacy `SID` cookie that modern Google logins never issue. The capture now asks the cookie handler which cookies it would actually send to `music.youtube.com` (identical to the manually pasted header), prefers the `.youtube.com` variant on domain ties, accepts `__Secure-1PSID`/`__Secure-3PSID` as session ids, and backfills any critical auth cookies the scoped lookup misses.
+
+## [6.4.41_DE-1.41.16-nightly] - 2026-09-01
+
+### Fixed
+- [DE] **WebView sign-in now captures the same cookie set the manual method does**: the capture built the session header by dumping the whole cookie store with an arbitrary domain tie-break, so `SAPISID`/`__Secure-3PSID` could be taken from `.google.com` instead of `.youtube.com`, and the full-session gate required the legacy `SID` cookie that modern Google logins never issue. The capture now asks the cookie handler which cookies it would actually send to `music.youtube.com` (same domain/path/secure matching a browser applies — identical to the manually pasted header), prefers the `.youtube.com` variant on domain ties, accepts `__Secure-1PSID`/`__Secure-3PSID` as session ids, and backfills any critical auth cookie the scoped lookup missed. Failed WebView logins are kept in the manual cookie field for a one-click retry.
+
 ## [6.4.41_DE-1.41.15-nightly] - 2026-08-29
 
 ### Added
