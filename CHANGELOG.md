@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.42.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Equalizer** (Settings → Player & audio → Equalizer): import AutoEQ `ParametricEQ.txt` profiles (native file picker), select the active profile or "Disabled", delete with confirmation. The parametric DSP (peaking/low-shelf/high-shelf biquads + preamp, ported verbatim from the mobile `eq` module) is applied to the decoded 16-bit PCM right before it is written to the output line; with no profile active the processor is null and the audio path stays byte-identical, so the frozen playback core is untouched. The active profile is restored on startup.
+- [DE] **Data saver** (Settings → Data saver): master toggle that backs up the current canvas and rotating-artwork settings, forces them off while enabled, and restores the saved values on disable (port of the mobile `DataSaverSetting`).
+- [DE] **AI Lyrics Translation** (Settings → AI Lyrics Translation): provider picker (OpenRouter/OpenAI/Perplexity/Claude/Gemini/XAi/Mistral/DeepL/Custom) with per-provider base URL + first model auto-selection, API key entry (masked), editable base URL, model dropdown (or hidden for DeepL/Custom), translation mode (Literal/Transcribed), DeepL formality and target language — all persisted for the future lyrics-translation integration.
+
 ## [6.4.41_DE-1.41.17-nightly] - 2026-09-01
 
 ### Fixed

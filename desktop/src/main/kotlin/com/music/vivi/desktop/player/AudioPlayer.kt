@@ -1,5 +1,6 @@
 package com.music.vivi.desktop.player
 
+import com.music.vivi.desktop.EqualizerProcessor
 import net.sourceforge.jaad.aac.Decoder
 import net.sourceforge.jaad.aac.SampleBuffer
 import org.jcodec.common.io.NIOUtils
@@ -90,6 +91,14 @@ class AudioPlayer {
     }
 
     @Volatile private var line: SourceDataLine? = null
+
+    /**
+     * Optional parametric-EQ processor applied to the decoded 16-bit PCM just
+     * before it is written to the output line. Default null = pass-through,
+     * byte-identical to the previous behaviour; the UI sets it from the active
+     * EQ profile (Settings → Player & audio → Equalizer).
+     */
+    @Volatile var equalizer: EqualizerProcessor? = null
 
     private var onPosition: ((Long) -> Unit)? = null
     private var onDuration: ((Long) -> Unit)? = null
@@ -607,14 +616,21 @@ class AudioPlayer {
                         } else {
                             buffer.data
                         }
+                        // Optional EQ: applied to the final PCM buffer (after the
+                        // volume scale) so it stays a pure add-on — null default
+                        // keeps the audio path identical to before.
+                        val outData = equalizer?.let { eq ->
+                            if (bitsPerSample == 16) eq.process(data, bigEndian, buffer.sampleRate, buffer.channels)
+                            else data
+                        } ?: data
                         var written = 0
-                        while (written < data.size) {
-                            val n = out.write(data, written, data.size - written)
+                        while (written < outData.size) {
+                            val n = out.write(outData, written, outData.size - written)
                             if (n <= 0) break
                             written += n
                         }
                         if (bitsPerSample == 16) {
-                            onLevel?.invoke(rms16(data, bigEndian))
+                            onLevel?.invoke(rms16(outData, bigEndian))
                         }
                     }
                 }

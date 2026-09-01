@@ -148,6 +148,32 @@ data class DesktopSyncState(
     val mediaKeysEnabled: Boolean = true,
     /** Tray icon right-click menu (Play/Pause/Next/Prev/Open/Quit). */
     val trayMenuEnabled: Boolean = true,
+    /** Saved parametric-EQ profiles (port of the mobile equalizer). */
+    val eqProfiles: List<SavedEQProfile> = emptyList(),
+    /** Id of the currently active EQ profile (empty = equalization off). */
+    val activeEqProfileId: String = "",
+    /** Data saver: forces canvas/rotating artwork off and restores on disable. */
+    val dataSaver: Boolean = false,
+    /** Canvas value backed up while Data saver is active (restored on disable). */
+    val dataSaverBackupCanvas: Boolean = true,
+    /** Rotating-artwork value backed up while Data saver is active. */
+    val dataSaverBackupRotating: Boolean = false,
+    /** AI lyrics translation provider ("OpenRouter", "OpenAI", "DeepL", …). */
+    val aiProvider: String = "OpenRouter",
+    /** AI API key (or DeepL key when [aiProvider] is "DeepL"). */
+    val aiApiKey: String = "",
+    /** AI base URL (OpenAI-compatible chat-completions endpoint). */
+    val aiBaseUrl: String = "https://openrouter.ai/api/v1/chat/completions",
+    /** AI model id (e.g. google/gemini-2.5-flash-lite). */
+    val aiModel: String = "google/gemini-2.5-flash-lite",
+    /** Target language code for translated lyrics (e.g. "en"). */
+    val translateLanguage: String = "en",
+    /** Translation mode: "Literal" or "Transcribed". */
+    val translateMode: String = "Literal",
+    /** DeepL API key (used when [aiProvider] is "DeepL"). */
+    val deeplApiKey: String = "",
+    /** DeepL formality: "default" / "more" / "less". */
+    val deeplFormality: String = "default",
 )
 
 object DesktopSettings {

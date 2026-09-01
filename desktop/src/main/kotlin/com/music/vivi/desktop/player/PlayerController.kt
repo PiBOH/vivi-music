@@ -1,8 +1,11 @@
 package com.music.vivi.desktop.player
 
 import com.music.vivi.desktop.DesktopSettings
+import com.music.vivi.desktop.EqualizerProcessor
 import com.music.vivi.desktop.GuestSession
 import com.music.vivi.desktop.NowPlaying
+import com.music.vivi.desktop.ParametricEQ
+import com.music.vivi.desktop.SavedEQProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -328,6 +331,19 @@ class PlayerController {
     fun setVolume(v: Float) {
         player.setVolume(v)
         _state.update { it.copy(volume = v.coerceIn(0f, 1f)) }
+    }
+
+    /**
+     * Applies an EQ profile to the PCM stream (null = equalization off). The
+     * processor is a pure add-on to the output write path: when null the audio
+     * path is byte-identical to before, so the frozen playback core is untouched.
+     */
+    fun setEqualizer(profile: SavedEQProfile?) {
+        player.equalizer = EqualizerProcessor().apply {
+            setProfile(profile?.let {
+                ParametricEQ(preamp = it.preamp, bands = it.bands)
+            })
+        }
     }
 
     /** True when [videoId] already has a valid on-disk cache file (prefetch check). */

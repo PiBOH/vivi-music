@@ -59,6 +59,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.PlaylistPlay
@@ -711,6 +712,15 @@ fun WindowScope.App(
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
     val audioLevel by player.audioLevel.collectAsState()
+
+    // Restore the active EQ profile (Settings → Player & audio → Equalizer) on
+    // startup so the saved equalization applies from the first track.
+    LaunchedEffect(Unit) {
+        val s = DesktopSettings.load()
+        if (s.activeEqProfileId.isNotEmpty()) {
+            player.setEqualizer(s.eqProfiles.find { it.id == s.activeEqProfileId })
+        }
+    }
 
     // Cider-style desktop features state (floating widget, media keys, tray menu).
     var showWidget by remember { mutableStateOf(DesktopSettings.load().showNowPlayingWidget) }
@@ -1904,12 +1914,101 @@ fun WindowScope.App(
                             DesktopSettings.update { it.copy(sliderStyle = s) }
                         },
                         onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
+                        onOpenEqualizer = { navigate(Screen.SettingsEqualizer) },
                         streamCacheMinutes = streamCacheMinutes,
                         onStreamCacheMinutesChange = { m ->
                             streamCacheMinutes = m
                             DesktopSettings.update { it.copy(streamCacheMinutes = m) }
                         },
                     )
+                    is Screen.SettingsEqualizer -> {
+                        val s = DesktopSettings.load()
+                        SettingsEqualizerScreen(
+                            language = language,
+                            onBack = goBack,
+                            profiles = s.eqProfiles,
+                            activeProfileId = s.activeEqProfileId,
+                            onSelectProfile = { id ->
+                                DesktopSettings.update { it.copy(activeEqProfileId = id ?: "") }
+                                player.setEqualizer(s.eqProfiles.find { p -> p.id == id })
+                            },
+                            onImportProfile = { name, eq ->
+                                val profile = SavedEQProfile(
+                                    id = "custom_${System.currentTimeMillis()}",
+                                    name = name,
+                                    deviceModel = name,
+                                    bands = eq.bands,
+                                    preamp = eq.preamp,
+                                    isCustom = true,
+                                    addedTimestamp = System.currentTimeMillis(),
+                                )
+                                DesktopSettings.update { state ->
+                                    val profiles = state.eqProfiles + profile
+                                    // Auto-activate the freshly imported profile, like the mobile screen.
+                                    state.copy(eqProfiles = profiles, activeEqProfileId = profile.id)
+                                }
+                                player.setEqualizer(profile)
+                            },
+                            onDeleteProfile = { id ->
+                                DesktopSettings.update { state ->
+                                    val profiles = state.eqProfiles.filterNot { it.id == id }
+                                    val active = if (state.activeEqProfileId == id) "" else state.activeEqProfileId
+                                    state.copy(eqProfiles = profiles, activeEqProfileId = active)
+                                }
+                                if (DesktopSettings.load().activeEqProfileId.isEmpty()) player.setEqualizer(null)
+                            },
+                        )
+                    }
+                    is Screen.SettingsDataSaver -> {
+                        val s = DesktopSettings.load()
+                        SettingsDataSaverScreen(
+                            language = language,
+                            onBack = goBack,
+                            dataSaver = s.dataSaver,
+                            onToggleDataSaver = { enabled ->
+                                DesktopSettings.update { state ->
+                                    if (enabled) {
+                                        state.copy(
+                                            dataSaver = true,
+                                            dataSaverBackupCanvas = state.canvasEnabled,
+                                            dataSaverBackupRotating = state.rotatingThumbnail,
+                                            canvasEnabled = false,
+                                            rotatingThumbnail = false,
+                                        )
+                                    } else {
+                                        state.copy(
+                                            dataSaver = false,
+                                            canvasEnabled = state.dataSaverBackupCanvas,
+                                            rotatingThumbnail = state.dataSaverBackupRotating,
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    is Screen.SettingsAi -> {
+                        val s = DesktopSettings.load()
+                        SettingsAiScreen(
+                            language = language,
+                            onBack = goBack,
+                            aiProvider = s.aiProvider,
+                            aiApiKey = s.aiApiKey,
+                            aiBaseUrl = s.aiBaseUrl,
+                            aiModel = s.aiModel,
+                            translateLanguage = s.translateLanguage,
+                            translateMode = s.translateMode,
+                            deeplApiKey = s.deeplApiKey,
+                            deeplFormality = s.deeplFormality,
+                            onAiProviderChange = { v -> DesktopSettings.update { it.copy(aiProvider = v) } },
+                            onAiApiKeyChange = { v -> DesktopSettings.update { it.copy(aiApiKey = v) } },
+                            onAiBaseUrlChange = { v -> DesktopSettings.update { it.copy(aiBaseUrl = v) } },
+                            onAiModelChange = { v -> DesktopSettings.update { it.copy(aiModel = v) } },
+                            onTranslateLanguageChange = { v -> DesktopSettings.update { it.copy(translateLanguage = v) } },
+                            onTranslateModeChange = { v -> DesktopSettings.update { it.copy(translateMode = v) } },
+                            onDeeplApiKeyChange = { v -> DesktopSettings.update { it.copy(deeplApiKey = v) } },
+                            onDeeplFormalityChange = { v -> DesktopSettings.update { it.copy(deeplFormality = v) } },
+                        )
+                    }
                     is Screen.SettingsPlayerDesign -> SettingsPlayerDesignScreen(
                         language = language,
                         onBack = goBack,
@@ -3785,6 +3884,8 @@ fun SettingsScreen(
         SettingsRowSpec(Localization.get(language, "account"), if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in"), Icons.Filled.Person) { onOpen(Screen.SettingsAccount) },
         SettingsRowSpec(Localization.get(language, "device_sync"), null, Icons.Filled.Devices) { onOpen(Screen.SettingsDevices) },
         SettingsRowSpec(Localization.get(language, "content"), null, Icons.Filled.Language) { onOpen(Screen.SettingsContent) },
+        SettingsRowSpec(Localization.get(language, "ai_lyrics_translation"), null, Icons.Filled.AutoAwesome) { onOpen(Screen.SettingsAi) },
+        SettingsRowSpec(Localization.get(language, "data_saver"), null, Icons.Filled.EnergySavingsLeaf) { onOpen(Screen.SettingsDataSaver) },
         SettingsRowSpec(Localization.get(language, "lyrics"), null, Icons.Filled.Lyrics) { onOpen(Screen.SettingsLyrics) },
         SettingsRowSpec(Localization.get(language, "privacy"), null, Icons.Filled.Security) { onOpen(Screen.SettingsPrivacy) },
         SettingsRowSpec(Localization.get(language, "storage"), null, Icons.Filled.Storage) { onOpen(Screen.SettingsStorage) },
@@ -4911,6 +5012,7 @@ fun PlayerSection(
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
     onOpenPlayerDesign: () -> Unit,
+    onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
 ) {
@@ -4918,6 +5020,16 @@ fun PlayerSection(
     var sliderExpanded by remember { mutableStateOf(false) }
 
     Text(Localization.get(language, "player_audio"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
+
+    Row(
+        Modifier.fillMaxWidth().padding(top = 12.dp).clickable(onClick = onOpenEqualizer),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(Localization.get(language, "vivi_equalizer"), style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+    }
 
     Text(Localization.get(language, "audio_quality"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
     Box(Modifier.padding(top = 8.dp)) {

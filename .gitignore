@@ -113,3 +113,9 @@ app/src/main/cpp/vibrafp/third_party/.build-fftw/
 
 # Agent-local skill installs (community skills like ponytail)
 .agents/
+# Python cache
+__pycache__/
+*.pyc
+
+# Skills lock
+skills-lock.json

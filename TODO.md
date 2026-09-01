@@ -164,11 +164,11 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 
 ### Settings sub-screens missing
 - [ ] Listen Together settings (hub entry).
-- [ ] AI Lyrics Translation (`settings/ai`).
-- [ ] Data saver (`settings/datasaver`).
+- [x] AI Lyrics Translation (`settings/ai`) — full provider/API-key/base-URL/model/target-language/mode/DeepL-formality screen (DE 1.42.0).
+- [x] Data saver (`settings/datasaver`) — master toggle that backs up and forces off canvas + rotating artwork, restores on disable (DE 1.42.0).
 - [ ] Romanization (`settings/content/romanization`).
 - [ ] JioSaavn (`settings/player/jio`).
-- [ ] Equalizer (`settings/equalizer` + dialog).
+- [x] Equalizer (`settings/equalizer` + dialog) — AutoEQ `.txt` profile import, active-profile radio, delete; the DSP (biquad PK/LSC/HSC + preamp) is applied to the decoded PCM just before the output write as a pure add-on (null default = byte-identical pass-through, frozen playback core untouched) (DE 1.42.0).
 - [ ] Spotify import (`settings/spotify`).
 - [x] Integrations hub (Discord Rich Presence + Last.fm scrobbling) — Settings → Integrations (DE 1.33.76).
 - [ ] Discord login.

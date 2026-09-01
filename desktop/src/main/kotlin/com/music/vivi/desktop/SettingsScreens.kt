@@ -19,6 +19,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,6 +35,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -459,6 +468,7 @@ fun SettingsPlayerScreen(
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
     onOpenPlayerDesign: () -> Unit,
+    onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
 ) {
@@ -478,6 +488,7 @@ fun SettingsPlayerScreen(
             sliderStyle,
             onSliderStyleChange,
             onOpenPlayerDesign,
+            onOpenEqualizer,
             streamCacheMinutes,
             onStreamCacheMinutesChange,
         )
@@ -2112,5 +2123,469 @@ fun SettingsDesktopScreen(
             Switch(checked = trayMenuEnabled, onCheckedChange = onTrayMenuChange)
         }
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+/* =====================================================================
+ * Phase 10 settings sub-screens: Equalizer, Data saver, AI translation
+ * (ports of the mobile `EqScreen` / `DataSaverSetting` / `AiSettings`).
+ * ===================================================================== */
+
+/** Equalizer: profile list + import (AutoEQ .txt) + delete + active radio. */
+@Composable
+fun SettingsEqualizerScreen(
+    language: String,
+    onBack: () -> Unit,
+    profiles: List<SavedEQProfile>,
+    activeProfileId: String,
+    onSelectProfile: (String?) -> Unit,
+    onImportProfile: (String, ParametricEQ) -> Unit,
+    onDeleteProfile: (String) -> Unit,
+) {
+    var error by remember { mutableStateOf<String?>(null) }
+    var deleteTarget by remember { mutableStateOf<SavedEQProfile?>(null) }
+
+    fun pickFile(): File? = runCatching {
+        val dialog = java.awt.FileDialog(
+            null as java.awt.Frame?,
+            Localization.get(language, "import_profile"),
+            java.awt.FileDialog.LOAD,
+        )
+        dialog.isVisible = true
+        val dir = dialog.directory
+        val name = dialog.file
+        dialog.dispose()
+        if (dir != null && name != null) File(dir, name) else null
+    }.getOrNull()
+
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "equalizer_header"),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+
+        // "No Equalization" option (always first, like the mobile screen).
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { onSelectProfile(null) }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = activeProfileId.isEmpty(), onClick = { onSelectProfile(null) })
+            Spacer(Modifier.width(12.dp))
+            Text(Localization.get(language, "eq_disabled"), style = MaterialTheme.typography.bodyLarge)
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+        if (profiles.isEmpty()) {
+            Text(
+                Localization.get(language, "no_profiles"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 16.dp),
+            )
+        } else {
+            profiles.forEach { profile ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectProfile(profile.id) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = activeProfileId == profile.id, onClick = { onSelectProfile(profile.id) })
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(profile.deviceModel, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            Localization.get(language, "band_count").replace("%d", profile.bands.size.toString()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { deleteTarget = profile }) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = Localization.get(language, "delete_profile_desc"),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = {
+                val file = pickFile()
+                if (file != null) {
+                    runCatching {
+                        val eq = ParametricEQParser.parseText(file.readText())
+                        if (eq.bands.isEmpty()) throw IllegalArgumentException("No filters found")
+                        onImportProfile(file.nameWithoutExtension, eq)
+                    }.onFailure {
+                        error = it.message ?: Localization.get(language, "import_error_title")
+                    }
+                }
+            },
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(Localization.get(language, "import_profile"))
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+
+    error?.let { message ->
+        AlertDialog(
+            onDismissRequest = { error = null },
+            title = { Text(Localization.get(language, "import_error_title")) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { error = null }) { Text(Localization.get(language, "ok")) }
+            },
+        )
+    }
+
+    deleteTarget?.let { profile ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text(Localization.get(language, "delete_profile_desc")) },
+            text = {
+                Text(
+                    Localization.get(language, "delete_profile_confirmation")
+                        .replace("%1\$s", profile.name)
+                        .replace("%s", profile.name),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteProfile(profile.id)
+                    deleteTarget = null
+                }) {
+                    Text(Localization.get(language, "delete"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) {
+                    Text(Localization.get(language, "cancel"))
+                }
+            },
+        )
+    }
+}
+
+/** Data saver: master toggle + the list of what gets turned off. */
+@Composable
+fun SettingsDataSaverScreen(
+    language: String,
+    onBack: () -> Unit,
+    dataSaver: Boolean,
+    onToggleDataSaver: (Boolean) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "data_saver"),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+
+        Text(
+            Localization.get(language, "data_saver_desc"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 16.dp),
+        )
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(Localization.get(language, "data_saver"), style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.weight(1f))
+            Switch(checked = dataSaver, onCheckedChange = onToggleDataSaver)
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+        Text(
+            Localization.get(language, "data_saver_turns_off_header"),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+        )
+        listOf(
+            "data_saver_player_canvas",
+            "data_saver_artist_video",
+            "data_saver_artist_bg_video",
+            "data_saver_album_canvas",
+            "data_saver_high_quality_images",
+        ).forEach { key ->
+            Text(
+                "•  " + Localization.get(language, key),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 3.dp),
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** AI lyrics translation settings (provider, keys, model, target language…). */
+@Composable
+fun SettingsAiScreen(
+    language: String,
+    onBack: () -> Unit,
+    aiProvider: String,
+    aiApiKey: String,
+    aiBaseUrl: String,
+    aiModel: String,
+    translateLanguage: String,
+    translateMode: String,
+    deeplApiKey: String,
+    deeplFormality: String,
+    onAiProviderChange: (String) -> Unit,
+    onAiApiKeyChange: (String) -> Unit,
+    onAiBaseUrlChange: (String) -> Unit,
+    onAiModelChange: (String) -> Unit,
+    onTranslateLanguageChange: (String) -> Unit,
+    onTranslateModeChange: (String) -> Unit,
+    onDeeplApiKeyChange: (String) -> Unit,
+    onDeeplFormalityChange: (String) -> Unit,
+) {
+    val aiProviders = mapOf(
+        "OpenRouter" to "https://openrouter.ai/api/v1/chat/completions",
+        "OpenAI" to "https://api.openai.com/v1/chat/completions",
+        "Perplexity" to "https://api.perplexity.ai/chat/completions",
+        "Claude" to "https://api.anthropic.com/v1/messages",
+        "Gemini" to "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "XAi" to "https://api.x.ai/v1/chat/completions",
+        "Mistral" to "https://api.mistral.ai/v1/chat/completions",
+        "DeepL" to "https://api.deepl.com/v2/translate",
+        "Custom" to "",
+    )
+    val modelsByProvider = mapOf(
+        "OpenRouter" to listOf(
+            "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "x-ai/grok-4.1-fast",
+            "deepseek/deepseek-v3.1-terminus:exacto", "openai/gpt-4o-mini", "google/gemini-3-flash-preview",
+        ),
+        "OpenAI" to listOf("gpt-4o-mini", "gpt-4o", "gpt-4-turbo"),
+        "Claude" to listOf("claude-3-5-haiku-latest", "claude-3-5-sonnet-latest", "claude-3-opus-latest"),
+        "Gemini" to listOf(
+            "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash",
+            "gemini-1.5-flash", "gemini-3.5-flash", "gemini-3-flash", "gemini-3.1-flash-lite", "gemini-3.1-pro",
+        ),
+        "Perplexity" to listOf("sonar", "sonar-pro", "sonar-reasoning"),
+        "XAi" to listOf("grok-4-1-fast", "grok-vision-beta"),
+        "Mistral" to listOf("mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "mistral-tiny-latest"),
+        "DeepL" to emptyList(),
+        "Custom" to emptyList(),
+    )
+
+    var providerExpanded by remember { mutableStateOf(false) }
+    var modelExpanded by remember { mutableStateOf(false) }
+    var languageExpanded by remember { mutableStateOf(false) }
+    var modeExpanded by remember { mutableStateOf(false) }
+    var formalityExpanded by remember { mutableStateOf(false) }
+    var editingKey by remember { mutableStateOf<String?>(null) }
+    var keyInput by remember { mutableStateOf("") }
+    var editingBaseUrl by remember { mutableStateOf(false) }
+    var baseUrlInput by remember { mutableStateOf("") }
+
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "ai_lyrics_translation"),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+
+        // Provider
+        Text(Localization.get(language, "ai_provider"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+        Box(Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { providerExpanded = true }) { Text(aiProvider) }
+            DropdownMenu(expanded = providerExpanded, onDismissRequest = { providerExpanded = false }) {
+                aiProviders.keys.forEach { p ->
+                    DropdownMenuItem(
+                        text = { Text(p) },
+                        onClick = {
+                            providerExpanded = false
+                            val newBase = if (p == "Custom" || p == "DeepL") "" else (aiProviders[p] ?: "")
+                            onAiBaseUrlChange(newBase)
+                            onAiProviderChange(p)
+                            val models = modelsByProvider[p] ?: emptyList()
+                            onAiModelChange(models.firstOrNull() ?: "")
+                        },
+                    )
+                }
+            }
+        }
+
+        // API key
+        Text(Localization.get(language, "ai_api_key"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        OutlinedButton(onClick = {
+            editingKey = "main"
+            keyInput = aiApiKey
+        }) {
+            Text(
+                if (aiApiKey.isNotEmpty()) "•".repeat(minOf(aiApiKey.length, 8)) else Localization.get(language, "not_set"),
+            )
+        }
+
+        // Base URL
+        Text(Localization.get(language, "ai_base_url"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        OutlinedButton(onClick = {
+            editingBaseUrl = true
+            baseUrlInput = aiBaseUrl
+        }) {
+            Text(aiBaseUrl.ifBlank { Localization.get(language, "not_set") })
+        }
+
+        // Model (hidden for DeepL / Custom)
+        if (aiProvider != "DeepL" && aiProvider != "Custom") {
+            Text(Localization.get(language, "ai_model"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+            Box(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = { modelExpanded = true }) { Text(aiModel.ifBlank { Localization.get(language, "not_set") }) }
+                DropdownMenu(expanded = modelExpanded, onDismissRequest = { modelExpanded = false }) {
+                    (modelsByProvider[aiProvider] ?: emptyList()).forEach { m ->
+                        DropdownMenuItem(
+                            text = { Text(m) },
+                            onClick = { modelExpanded = false; onAiModelChange(m) },
+                        )
+                    }
+                }
+            }
+        }
+
+        // Translation mode (not DeepL)
+        if (aiProvider != "DeepL") {
+            Text(Localization.get(language, "ai_translation_mode"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+            Box(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = { modeExpanded = true }) {
+                    Text(
+                        when (translateMode) {
+                            "Transcribed" -> Localization.get(language, "ai_translation_transcribed")
+                            else -> Localization.get(language, "ai_translation_literal")
+                        },
+                    )
+                }
+                DropdownMenu(expanded = modeExpanded, onDismissRequest = { modeExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_translation_literal")) },
+                        onClick = { modeExpanded = false; onTranslateModeChange("Literal") },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_translation_transcribed")) },
+                        onClick = { modeExpanded = false; onTranslateModeChange("Transcribed") },
+                    )
+                }
+            }
+        }
+
+        // DeepL formality
+        if (aiProvider == "DeepL") {
+            Text(Localization.get(language, "ai_deepl_formality"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+            Box(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = { formalityExpanded = true }) {
+                    Text(
+                        when (deeplFormality) {
+                            "more" -> Localization.get(language, "ai_deepl_formality_more")
+                            "less" -> Localization.get(language, "ai_deepl_formality_less")
+                            else -> Localization.get(language, "ai_deepl_formality_default")
+                        },
+                    )
+                }
+                DropdownMenu(expanded = formalityExpanded, onDismissRequest = { formalityExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_deepl_formality_default")) },
+                        onClick = { formalityExpanded = false; onDeeplFormalityChange("default") },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_deepl_formality_more")) },
+                        onClick = { formalityExpanded = false; onDeeplFormalityChange("more") },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_deepl_formality_less")) },
+                        onClick = { formalityExpanded = false; onDeeplFormalityChange("less") },
+                    )
+                }
+            }
+        }
+
+        // Target language
+        Text(Localization.get(language, "ai_target_language"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        Box(Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { languageExpanded = true }) {
+                Text(LanguageCodeToName[translateLanguage] ?: translateLanguage)
+            }
+            DropdownMenu(expanded = languageExpanded, onDismissRequest = { languageExpanded = false }) {
+                LanguageCodeToName.toList().sortedBy { it.second }.forEach { (code, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = { languageExpanded = false; onTranslateLanguageChange(code) },
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // API key dialog
+    editingKey?.let { which ->
+        AlertDialog(
+            onDismissRequest = { editingKey = null },
+            title = { Text(Localization.get(language, "ai_api_key")) },
+            text = {
+                OutlinedTextField(
+                    value = keyInput,
+                    onValueChange = { keyInput = it },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (which == "main") onAiApiKeyChange(keyInput.trim())
+                    editingKey = null
+                }) {
+                    Text(Localization.get(language, "save"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingKey = null }) { Text(Localization.get(language, "cancel")) }
+            },
+        )
+    }
+
+    // Base URL dialog
+    if (editingBaseUrl) {
+        AlertDialog(
+            onDismissRequest = { editingBaseUrl = false },
+            title = { Text(Localization.get(language, "ai_base_url")) },
+            text = {
+                OutlinedTextField(
+                    value = baseUrlInput,
+                    onValueChange = { baseUrlInput = it },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAiBaseUrlChange(baseUrlInput.trim())
+                    editingBaseUrl = false
+                }) {
+                    Text(Localization.get(language, "save"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingBaseUrl = false }) { Text(Localization.get(language, "cancel")) }
+            },
+        )
     }
 }
