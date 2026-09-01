@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.43.2-nightly] - 2026-09-01
+
+### Fixed
+- [DE] **UI density calibrated**: the "100%" preset no longer looks oversized next to the phone — it now matches the size the mobile UI has at 75% (a calibration factor of 0.75 is applied to the density scale, keeping all presets from 55% to 200% relative).
+- [DE] **Duplicate option labels disambiguated**: in 11 languages (including Italian) the slider styles `Squiggly` and `Wavy` translated to the same word (e.g. "Ondulato"), making two options in the picker indistinguishable. The localization generator now numbers repeated labels automatically ("Ondulato 1", "Ondulato 2").
+
 ### Added
 - [DOCS] `ERRORS.md` expanded from 13 to 29 VIVI-specific error codes (E1000–E1028): new codes for update check/download/installer-not-found (E1013–E1015), sync self-pair/not-paired/relay-bind/LAN (E1016–E1019), backup empty-archive/create-failed (E1020–E1021), login cookie empty/missing-SAPISID/webview-timeout (E1022–E1024), song recognition no-mic (E1025), Listen Together (E1026), commit list (E1027) and stream resolution (E1028). Each new code mirrors a real failure path in the DE code.
 - [WEBSITE] New interactive **Error codes** page (`errors.html`, linked in the nav and footer of every page) that loads `ERRORS.md` from the repository automatically, parses the Markdown tables and renders them as searchable rows with Playback/VIVI category tabs, a result counter and a click-to-copy code button.

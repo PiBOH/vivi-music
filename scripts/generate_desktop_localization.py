@@ -1329,6 +1329,39 @@ for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTR
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
+# Disambiguate duplicate option labels within the same selection list.
+# Several languages translate `slider_squiggly` and `slider_wavy` to the same
+# word (e.g. Italian "Ondulato" for both), which makes two options in the
+# slider-style picker indistinguishable. When a known pair shares a label,
+# append " 1" / " 2" to the second/third entry so every option stays unique.
+_DISAMBIGUATION_PAIRS = [
+    ("slider_slim", "slider_squiggly", "slider_wavy"),
+]
+
+
+def _disambiguate_duplicates(tables):
+    """In-place: ensure the labels of a known option group are unique per lang.
+
+    When a label repeats inside the group (e.g. slider_squiggly and
+    slider_wavy both "Ondulato"), every occurrence gets a numbered suffix
+    ("Ondulato 1", "Ondulato 2", ...) so no two options look identical.
+    """
+    for group in _DISAMBIGUATION_PAIRS:
+        for lang, entries in tables.items():
+            if lang == "en":
+                continue
+            labels = [entries.get(k) for k in group]
+            seen = {}
+            for idx, label in enumerate(labels):
+                if label is None:
+                    continue
+                seen.setdefault(label, []).append(idx)
+            for label, indexes in seen.items():
+                if len(indexes) < 2:
+                    continue
+                for n, j in enumerate(indexes, start=1):
+                    entries[group[j]] = "%s %d" % (label, n)
+
 
 def android_unescape(s):
     """Decode Android resource string escapes (aapt-style) to real chars.
@@ -1436,6 +1469,10 @@ def main():
             if lang == "en":
                 continue
             languages.setdefault(lang, {})[key] = text
+
+    # Ensure no two options in the same selection list share a label in any
+    # language (e.g. slider styles both translated as "Ondulato" in Italian).
+    _disambiguate_duplicates(languages)
 
     # Ensure the default also contributes any translated fallback values, so
     # the "en" table uses the Android English wording for the mapped keys.
