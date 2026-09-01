@@ -5090,7 +5090,7 @@ fun AboutSection(language: String) {
     AboutInfoRow(
         icon = Icons.Filled.Description,
         title = Localization.get(language, "license"),
-        onClick = { openUrl("https://github.com/PiBOH/vivi-music/blob/main/LICENSE") },
+        onClick = { openUrl("https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE") },
     )
 }
 

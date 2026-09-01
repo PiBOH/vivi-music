@@ -216,6 +216,6 @@ On Windows `~` is `C:\Users\<you>`, on Linux/macOS it's `/home/<you>` /
 
 ---
 
-*VIVI Music DE — free software under the
-[GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) license. The original
+*VIVI Music DE — free software under a
+[modified GPL-3.0](https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE) license. The original
 mobile app is created by [VIVIDH P ASHOKAN](https://github.com/vivizzz007).*

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.43.1-nightly] - 2026-09-01
+
+### Changed
+- [DE] License references now correctly say **modified GPL-3.0** (the LICENSE file itself was left untouched): README footer, INSTALL-GUIDE.md, the website (About, home, install guide) and the desktop About screen link (now pointing at the `vivi-music-de` branch LICENSE, matching the README badge).
+
 ## [6.4.41_DE-1.43.0-nightly] - 2026-09-01
 
 ### Added

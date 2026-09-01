@@ -215,7 +215,7 @@
 <hr>
 
 <h2>📄 License</h2>
-<p>This project is licensed under the terms specified in the <a href="LICENSE">LICENSE</a> (GPL-3.0) file.</p>
+<p>This project is licensed under the terms specified in the <a href="LICENSE">LICENSE</a> (modified GPL-3.0) file.</p>
 
 <hr>
 
