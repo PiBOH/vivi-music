@@ -11,7 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
-## [6.4.41_DE-1.49.0-nightly] - 2026-09-01
+## [6.4.41_DE-1.49.1-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **[CRITICAL FIX] Restored the Appearance sub-screens that were flattened into inline dropdowns in 1.44.0**: Font, VIVI Music Canvas, Density & grid, Screen transitions and Player design are back in Settings → Appearance as Material 3 sub-screens (anchored dropdowns inside each screen), and the Player design entry is back under Player & audio.
+- [DE] **Mini-player design style no longer resets on launch**: removed the legacy `miniPlayerStyle` setting that duplicated `miniPlayerDesign` and could shadow the chosen style; a single setting is now read, changed and saved consistently.
+- [DE] **Player background option "Canvas" was showing the raw key in every language**: it had no translation entry at all; added the `canvas` label translated in all 47 languages.
 
 ### Changed
 - [DE] **First-launch screen redesigned as a Material 3 welcome**: bundled logo, welcome title and description, the language list rendered as M3 option cards with a checkmark, and a full-width Continue button (previously a bare text list that went straight in on click).

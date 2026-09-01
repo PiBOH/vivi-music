@@ -51,7 +51,6 @@ data class DesktopSyncState(
     val playerArtTopOffset: Int = 33,
     /** Custom artwork corner radius in dp (0..36). */
     val playerArtCornerRadius: Int = 11,
-    val miniPlayerStyle: String = "standard",
     val miniPlayerDesign: String = "classic",
     val miniPlayerBackgroundStyle: String = "follow_theme",
     val pureBlackMiniPlayer: Boolean = false,

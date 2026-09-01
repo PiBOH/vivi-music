@@ -37,6 +37,11 @@ sealed interface Screen {
     data object SettingsLanguage : Screen
     data object SettingsAppearance : Screen
     data object SettingsTheme : Screen
+    data object SettingsFont : Screen
+    data object SettingsCanvas : Screen
+    data object SettingsDensity : Screen
+    data object SettingsTransitions : Screen
+    data object SettingsPlayerDesign : Screen
     data object SettingsPlayer : Screen
     data object SettingsAccount : Screen
     data object SettingsDevices : Screen

@@ -812,7 +812,6 @@ fun WindowScope.App(
     var playerDesign by remember { mutableStateOf(PlayerDesign.from(DesktopSettings.load().playerDesign)) }
     var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(DesktopSettings.load().playerBackground)) }
     var rotatingThumbnail by remember { mutableStateOf(DesktopSettings.load().rotatingThumbnail) }
-    var miniPlayerStyle by remember { mutableStateOf(DesktopSettings.load().miniPlayerStyle) }
     var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
     var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
     var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
@@ -1832,10 +1831,38 @@ fun WindowScope.App(
                     is Screen.SettingsAppearance -> SettingsAppearanceScreen(
                         language = language,
                         onBack = goBack,
+                        animationsEnabled = animationsEnabled,
+                        onAnimationsEnabledChange = { v ->
+                            animationsEnabled = v
+                            DesktopSettings.update { it.copy(animationsEnabled = v) }
+                        },
+                        onOpenTheme = { navigate(Screen.SettingsTheme) },
+                        onOpenFont = { navigate(Screen.SettingsFont) },
+                        onOpenCanvas = { navigate(Screen.SettingsCanvas) },
+                        onOpenDensity = { navigate(Screen.SettingsDensity) },
+                        onOpenTransitions = { navigate(Screen.SettingsTransitions) },
+                        onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
+                        onOpenIntro = { navigate(Screen.SettingsIntro) },
+                        nativeTitleBar = nativeTitleBar,
+                        onNativeTitleBarChange = onNativeTitleBarChange,
+                        showRightSidebar = showRightSidebar,
+                        onShowRightSidebarChange = { v ->
+                            showRightSidebar = v
+                            DesktopSettings.update { it.copy(showRightSidebar = v) }
+                        },
+                        onRestart = onRestart,
+                    )
+                    is Screen.SettingsFont -> SettingsFontScreen(
+                        language = language,
+                        onBack = goBack,
                         selectedFont = font,
                         onFontChange = onFontChange,
                         customFontPath = customFontPath,
                         onImportFont = onImportFont,
+                    )
+                    is Screen.SettingsCanvas -> SettingsCanvasScreen(
+                        language = language,
+                        onBack = goBack,
                         canvasEnabled = canvasEnabled,
                         onCanvasEnabledChange = { enabled ->
                             canvasEnabled = enabled
@@ -1846,6 +1873,10 @@ fun WindowScope.App(
                             canvasSource = s
                             DesktopSettings.update { it.copy(canvasSource = s.key) }
                         },
+                    )
+                    is Screen.SettingsDensity -> SettingsDensityScreen(
+                        language = language,
+                        onBack = goBack,
                         densityScale = densityScale,
                         onDensityScaleChange = { s ->
                             densityScale = s
@@ -1856,23 +1887,26 @@ fun WindowScope.App(
                             gridItemSize = g
                             DesktopSettings.update { it.copy(gridItemSize = g) }
                         },
+                    )
+                    is Screen.SettingsTransitions -> SettingsTransitionsScreen(
+                        language = language,
+                        onBack = goBack,
                         screenTransition = screenTransition,
                         onScreenTransitionChange = { t ->
                             screenTransition = t
                             DesktopSettings.update { it.copy(screenTransition = t) }
                         },
-                        animationsEnabled = animationsEnabled,
-                        onAnimationsEnabledChange = { v ->
-                            animationsEnabled = v
-                            DesktopSettings.update { it.copy(animationsEnabled = v) }
-                        },
-                        playerDesign = playerDesign,
-                        onPlayerDesignChange = { d ->
+                    )
+                    is Screen.SettingsPlayerDesign -> SettingsPlayerDesignScreen(
+                        language = language,
+                        onBack = goBack,
+                        design = playerDesign,
+                        onDesignChange = { d ->
                             playerDesign = d
                             DesktopSettings.update { it.copy(playerDesign = d.key) }
                         },
-                        playerBackground = playerBackground,
-                        onPlayerBackgroundChange = { b ->
+                        background = playerBackground,
+                        onBackgroundChange = { b ->
                             playerBackground = b
                             DesktopSettings.update { it.copy(playerBackground = b.key) }
                         },
@@ -1896,16 +1930,6 @@ fun WindowScope.App(
                             pureBlackMiniPlayer = p
                             DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
                         },
-                        onOpenTheme = { navigate(Screen.SettingsTheme) },
-                        onOpenIntro = { navigate(Screen.SettingsIntro) },
-                        nativeTitleBar = nativeTitleBar,
-                        onNativeTitleBarChange = onNativeTitleBarChange,
-                        showRightSidebar = showRightSidebar,
-                        onShowRightSidebarChange = { v ->
-                            showRightSidebar = v
-                            DesktopSettings.update { it.copy(showRightSidebar = v) }
-                        },
-                        onRestart = onRestart,
                     )
                     is Screen.SettingsTheme -> SettingsThemeScreen(
                         language = language,
@@ -5250,6 +5274,7 @@ fun PlayerSection(
     onToggleSyncViviVolume: (Boolean) -> Unit,
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
+    onOpenPlayerDesign: () -> Unit = {},
     onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
@@ -5258,6 +5283,12 @@ fun PlayerSection(
 
     M3SettingsGroup(
         items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.MusicNote,
+                title = { Text(Localization.get(language, "player_design")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenPlayerDesign,
+            ),
             M3SettingsItem(
                 icon = Icons.Filled.GraphicEq,
                 title = { Text(Localization.get(language, "vivi_equalizer")) },

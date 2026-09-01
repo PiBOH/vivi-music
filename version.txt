@@ -1,8 +1,8 @@
 6.4.41
 124
 nightly
-1.49.0
-264
+1.49.1
+265
 nightly
 
 # Line 1 — Mobile (Android) version (SemVer), e.g. 6.4.21
