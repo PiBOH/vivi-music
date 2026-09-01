@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.46.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Equalizer example profile + live editor**: a one-click “Add example profile” inserts a predefined V-shape profile (7 bands), and selecting a profile now opens an inline live editor with draggable sliders for preamp, per-band gain (−12…+12 dB) and Q factor (0.4…8) applied to playback in real time — no more guessing the AutoEQ text format.
+
 ## [6.4.41_DE-1.45.0-nightly] - 2026-09-01
 
 ### Added

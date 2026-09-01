@@ -1990,6 +1990,24 @@ fun WindowScope.App(
                                 }
                                 if (DesktopSettings.load().activeEqProfileId.isEmpty()) player.setEqualizer(null)
                             },
+                            onAddExampleProfile = {
+                                val profile = exampleEQProfile()
+                                DesktopSettings.update { state ->
+                                    val existing = state.eqProfiles.any { it.id == profile.id }
+                                    val profiles = if (existing) state.eqProfiles else state.eqProfiles + profile
+                                    state.copy(eqProfiles = profiles, activeEqProfileId = profile.id)
+                                }
+                                player.setEqualizer(profile)
+                            },
+                            onUpdateProfile = { id, bands, preamp ->
+                                DesktopSettings.update { state ->
+                                    val profiles = state.eqProfiles.map {
+                                        if (it.id == id) it.copy(bands = bands, preamp = preamp) else it
+                                    }
+                                    state.copy(eqProfiles = profiles)
+                                }
+                                player.setEqualizer(DesktopSettings.load().eqProfiles.find { it.id == id })
+                            },
                         )
                     }
                     is Screen.SettingsDataSaver -> {

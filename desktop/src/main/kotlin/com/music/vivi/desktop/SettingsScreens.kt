@@ -11,8 +11,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DesktopWindows
@@ -46,11 +48,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,6 +62,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -2073,7 +2078,28 @@ fun SettingsDesktopScreen(
  * (ports of the mobile `EqScreen` / `DataSaverSetting` / `AiSettings`).
  * ===================================================================== */
 
-/** Equalizer: profile list + import (AutoEQ .txt) + delete + active radio. */
+/**
+ * Predefined example EQ profile (V-shape) so new users can see real values and
+ * tweak them with the live editor instead of importing a file blindly.
+ */
+fun exampleEQProfile(): SavedEQProfile = SavedEQProfile(
+    id = "example_v_shape",
+    name = "Example: V-Shape",
+    deviceModel = "VIVI Example",
+    bands = listOf(
+        ParametricEQBand(frequency = 60.0, gain = 6.0, q = 0.9),
+        ParametricEQBand(frequency = 150.0, gain = 3.0, q = 1.0),
+        ParametricEQBand(frequency = 400.0, gain = 0.0, q = 1.0),
+        ParametricEQBand(frequency = 1000.0, gain = -2.0, q = 1.1),
+        ParametricEQBand(frequency = 2500.0, gain = 2.0, q = 1.0),
+        ParametricEQBand(frequency = 6000.0, gain = 4.0, q = 0.9),
+        ParametricEQBand(frequency = 15000.0, gain = 5.0, q = 0.8),
+    ),
+    preamp = 0.0,
+    isCustom = true,
+)
+
+/** Equalizer: profile list + import (AutoEQ .txt) + delete + active radio + live editor. */
 @Composable
 fun SettingsEqualizerScreen(
     language: String,
@@ -2083,6 +2109,8 @@ fun SettingsEqualizerScreen(
     onSelectProfile: (String?) -> Unit,
     onImportProfile: (String, ParametricEQ) -> Unit,
     onDeleteProfile: (String) -> Unit,
+    onAddExampleProfile: () -> Unit = {},
+    onUpdateProfile: (String, List<ParametricEQBand>, Double) -> Unit = { _, _, _ -> },
 ) {
     var error by remember { mutableStateOf<String?>(null) }
     var deleteTarget by remember { mutableStateOf<SavedEQProfile?>(null) }
@@ -2160,23 +2188,134 @@ fun SettingsEqualizerScreen(
         }
 
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(
-            onClick = {
-                val file = pickFile()
-                if (file != null) {
-                    runCatching {
-                        val eq = ParametricEQParser.parseText(file.readText())
-                        if (eq.bands.isEmpty()) throw IllegalArgumentException("No filters found")
-                        onImportProfile(file.nameWithoutExtension, eq)
-                    }.onFailure {
-                        error = it.message ?: Localization.get(language, "import_error_title")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = {
+                    val file = pickFile()
+                    if (file != null) {
+                        runCatching {
+                            val eq = ParametricEQParser.parseText(file.readText())
+                            if (eq.bands.isEmpty()) throw IllegalArgumentException("No filters found")
+                            onImportProfile(file.nameWithoutExtension, eq)
+                        }.onFailure {
+                            error = it.message ?: Localization.get(language, "import_error_title")
+                        }
+                    }
+                },
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(Localization.get(language, "import_profile"))
+            }
+            OutlinedButton(onClick = onAddExampleProfile) {
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(Localization.get(language, "add_example_profile"))
+            }
+        }
+
+        // --- Live editor for the active profile: adjust gains/Q/preamp in real time. ---
+        val editingProfile = profiles.find { it.id == activeProfileId }
+        if (editingProfile != null) {
+            key(editingProfile.id) {
+                var draftBands by remember { mutableStateOf(editingProfile.bands) }
+                var draftPreamp by remember { mutableStateOf(editingProfile.preamp) }
+
+                fun commit() = onUpdateProfile(editingProfile.id, draftBands, draftPreamp)
+
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "${Localization.get(language, "eq_edit_profile")}: ${editingProfile.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Text(
+                    Localization.get(language, "eq_preamp"),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Slider(
+                        value = draftPreamp.toFloat(),
+                        onValueChange = { draftPreamp = it.toDouble(); commit() },
+                        valueRange = -12f..12f,
+                        steps = 47,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "${if (draftPreamp > 0) "+" else ""}${java.lang.String.format(java.util.Locale.US, "%.1f", draftPreamp)} dB",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp).widthIn(min = 64.dp),
+                        textAlign = TextAlign.End,
+                    )
+                }
+
+                draftBands.forEachIndexed { i, band ->
+                    Card(
+                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                            Text(
+                                "${Localization.get(language, "eq_band")} ${i + 1} · ${java.lang.String.format(java.util.Locale.US, "%.0f", band.frequency)} Hz",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    Localization.get(language, "eq_gain"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 44.dp),
+                                )
+                                Slider(
+                                    value = band.gain.toFloat(),
+                                    onValueChange = { g ->
+                                        draftBands = draftBands.toMutableList().also { it[i] = band.copy(gain = g.toDouble()) }
+                                        commit()
+                                    },
+                                    valueRange = -12f..12f,
+                                    steps = 47,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    "${if (band.gain > 0) "+" else ""}${java.lang.String.format(java.util.Locale.US, "%.1f", band.gain)} dB",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 56.dp),
+                                    textAlign = TextAlign.End,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    Localization.get(language, "eq_q_factor"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 44.dp),
+                                )
+                                Slider(
+                                    value = band.q.toFloat(),
+                                    onValueChange = { q ->
+                                        draftBands = draftBands.toMutableList().also { it[i] = band.copy(q = q.toDouble()) }
+                                        commit()
+                                    },
+                                    valueRange = 0.4f..8f,
+                                    steps = 37,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    java.lang.String.format(java.util.Locale.US, "%.2f", band.q),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 56.dp),
+                                    textAlign = TextAlign.End,
+                                )
+                            }
+                        }
                     }
                 }
-            },
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(Localization.get(language, "import_profile"))
+            }
         }
 
         Spacer(Modifier.height(24.dp))
