@@ -512,6 +512,83 @@ code {
 .changelog-body hr { border: none; border-top: 1px solid var(--line); margin: 18px 0; }
 .changelog-no-results { text-align: center; color: var(--muted); padding: 26px; }
 
+/* -------- Error codes page -------- */
+.errors-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: 860px;
+  margin: 0 auto 16px;
+}
+.errors-controls input[type="search"] {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 9px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.errors-controls input[type="search"]:focus { outline: none; border-color: var(--accent); }
+.errors-tabs { display: flex; gap: 6px; }
+.errors-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+.errors {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
+.errors-loading,
+.errors-empty { text-align: center; color: var(--muted); padding: 26px; }
+.errors-table-wrap { overflow-x: auto; }
+.errors-table { width: 100%; border-collapse: collapse; }
+.errors-table th,
+.errors-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  font-size: 14px;
+}
+.errors-table th {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.errors-table tr:hover td { background: var(--surface-2); }
+.err-code {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  background: var(--bg-2);
+  color: var(--accent-2);
+  white-space: nowrap;
+}
+.err-code:hover { border-color: var(--accent); color: var(--accent); }
+.err-code.code-vivi { color: var(--accent); }
+.err-code.code-vivi:hover { color: var(--accent-2); }
+@media (max-width: 640px) {
+  .errors-count { margin-left: 0; }
+  .errors-table th,
+  .errors-table td { padding: 8px 9px; font-size: 13px; }
+}
+
 /* -------- Sync diagram -------- */
 .sync-diagram {
   display: grid;

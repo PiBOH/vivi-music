@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
-  <title>Changelog — VIVI Music DE</title>
-  <meta name="description" content="Latest changes and release notes for VIVI Music DE." />
+  <title>Error codes — VIVI Music DE</title>
+  <meta name="description" content="Look up any VIVI Music DE error code: what it means and how to try to fix it." />
   <link rel="icon" href="images/logo_vmde.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,21 +34,33 @@
   </nav>
 
   <main class="page">
-    <h1>Changelog</h1>
+    <h1>Error codes</h1>
     <p class="lede">
-      Latest release: <strong data-version>…</strong> — the notes below are
-      loaded live from GitHub. For the full history see the
-      <a href="https://github.com/PiBOH/vivi-music/releases">releases page</a>.
+      Every error that can appear in VIVI Music carries a code. If you hit one,
+      find it below — the list is loaded live from
+      <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/ERRORS.md">ERRORS.md</a>
+      in the repository. <strong data-errors-total></strong>
     </p>
 
-    <div class="changelog-controls reveal">
-      <input type="search" id="changelog-search" placeholder="Search release notes…" aria-label="Search release notes" />
-      <label for="changelog-select">Version:</label>
-      <select id="changelog-select" aria-label="Choose a version to view its release notes"></select>
+    <div class="errors-controls reveal">
+      <input
+        type="search"
+        id="errors-search"
+        placeholder="Search code, name or hint… e.g. 1009 or login"
+        aria-label="Search error codes"
+      />
+      <div class="errors-tabs" role="tablist" aria-label="Error category">
+        <button class="tab active" type="button" role="tab" aria-selected="true" data-cat="all">All</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-cat="playback">Playback</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-cat="vivi">VIVI</button>
+      </div>
+      <span class="errors-count mono" data-errors-count aria-live="polite"></span>
     </div>
 
-    <div class="changelog reveal">
-      <div id="changelog-body" class="changelog-body"><p>Loading latest release notes…</p></div>
+    <div class="errors reveal">
+      <div id="errors-body" class="errors-body">
+        <p class="errors-loading">Loading error codes…</p>
+      </div>
     </div>
   </main>
 
@@ -66,5 +78,6 @@
   </footer>
 
   <script src="assets/app.js"></script>
+  <script src="assets/errors.js"></script>
 </body>
 </html>

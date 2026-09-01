@@ -11,6 +11,9 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+### Added
+- [WEBSITE] New interactive **Error codes** page (`errors.html`, linked in the nav and footer of every page) that loads `ERRORS.md` from the repository automatically, parses the Markdown tables and renders them as searchable rows with Playback/VIVI category tabs, a result counter and a click-to-copy code button.
+
 ## [6.4.41_DE-1.43.1-nightly] - 2026-09-01
 
 ### Changed
