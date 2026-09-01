@@ -2088,6 +2088,20 @@ fun exampleEQProfile(): SavedEQProfile = SavedEQProfile(
     isCustom = true,
 )
 
+/**
+ * Maps an EQ band center frequency to its localized range-name key, so the
+ * live editor can show whether a band sits in the sub-bass, bass, low-mid,
+ * mid, high-mid or treble region next to its frequency (e.g. "Band 2 · 150 Hz · Bass").
+ */
+private fun eqRangeKey(frequency: Double): String = when {
+    frequency < 60.0 -> "eq_range_sub_bass"
+    frequency < 250.0 -> "eq_range_bass"
+    frequency < 500.0 -> "eq_range_low_mid"
+    frequency < 2000.0 -> "eq_range_mid"
+    frequency < 8000.0 -> "eq_range_high_mid"
+    else -> "eq_range_treble"
+}
+
 /** Equalizer: profile list + import (AutoEQ .txt) + delete + active radio + live editor. */
 @Composable
 fun SettingsEqualizerScreen(
@@ -2248,7 +2262,7 @@ fun SettingsEqualizerScreen(
                     ) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                             Text(
-                                "${Localization.get(language, "eq_band")} ${i + 1} · ${java.lang.String.format(java.util.Locale.US, "%.0f", band.frequency)} Hz",
+                                "${Localization.get(language, "eq_band")} ${i + 1} · ${java.lang.String.format(java.util.Locale.US, "%.0f", band.frequency)} Hz · ${Localization.get(language, eqRangeKey(band.frequency))}",
                                 style = MaterialTheme.typography.titleSmall,
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {

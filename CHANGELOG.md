@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.2-nightly] - 2026-09-02
+
+### Added
+- [DE] **EQ band range labels**: the live equalizer editor now shows the frequency region next to each band's center frequency (Sub-bass / Bass / Low mid / Mid / High mid / Treble), translated in all 47 languages (e.g. "Band 2 · 150 Hz · Bass").
+
 ## [6.4.41_DE-1.49.1-nightly] - 2026-09-02
 
 ### Fixed
