@@ -23,8 +23,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.History
@@ -33,7 +35,9 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -598,51 +602,57 @@ fun SettingsIntroScreen(
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "intro"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
 
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Switch(checked = showIntroSplash, onCheckedChange = onShowIntroSplashChange)
-            Column(Modifier.clickable { onShowIntroSplashChange(!showIntroSplash) }) {
-                Text(Localization.get(language, "show_intro_on_startup"))
-                Text(
-                    Localization.get(language, "intro_desc"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Movie,
+                    title = { Text(Localization.get(language, "show_intro_on_startup")) },
+                    description = { Text(Localization.get(language, "intro_desc")) },
+                    trailing = { Switch(checked = showIntroSplash, onCheckedChange = onShowIntroSplashChange) },
+                    onClick = { onShowIntroSplashChange(!showIntroSplash) },
+                ),
+            ),
+        )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
 
-        IntroSectionLabel(Localization.get(language, "intro_style"))
-        listOf(
-            "logo" to "intro_style_logo",
-            "logo_name" to "intro_style_logo_name",
-            "logo_tagline" to "intro_style_logo_tagline",
-        ).forEach { (value, key) ->
-            IntroRadioRow(
-                title = Localization.get(language, key),
-                selected = introStyle == value,
-                onClick = { onIntroStyleChange(value) },
-            )
-        }
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.AutoAwesome,
+            title = Localization.get(language, "intro_style"),
+            value = Localization.get(language, when (introStyle) {
+                "logo" -> "intro_style_logo"
+                "logo_name" -> "intro_style_logo_name"
+                else -> "intro_style_logo_tagline"
+            }),
+            options = listOf("logo", "logo_name", "logo_tagline").map { v ->
+                v to Localization.get(language, when (v) {
+                    "logo" -> "intro_style_logo"
+                    "logo_name" -> "intro_style_logo_name"
+                    else -> "intro_style_logo_tagline"
+                })
+            },
+            onSelect = onIntroStyleChange,
+        )
 
         Spacer(Modifier.height(8.dp))
 
-        IntroSectionLabel(Localization.get(language, "intro_background"))
-        listOf(
-            "gradient" to "intro_background_gradient",
-            "glow" to "intro_background_glow",
-            "dark" to "intro_background_dark",
-        ).forEach { (value, key) ->
-            IntroRadioRow(
-                title = Localization.get(language, key),
-                selected = introBackground == value,
-                onClick = { onIntroBackgroundChange(value) },
-            )
-        }
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.Palette,
+            title = Localization.get(language, "intro_background"),
+            value = Localization.get(language, when (introBackground) {
+                "gradient" -> "intro_background_gradient"
+                "glow" -> "intro_background_glow"
+                else -> "intro_background_dark"
+            }),
+            options = listOf("gradient", "glow", "dark").map { v ->
+                v to Localization.get(language, when (v) {
+                    "gradient" -> "intro_background_gradient"
+                    "glow" -> "intro_background_glow"
+                    else -> "intro_background_dark"
+                })
+            },
+            onSelect = onIntroBackgroundChange,
+        )
 
         Spacer(Modifier.height(20.dp))
 
@@ -652,38 +662,6 @@ fun SettingsIntroScreen(
         ) {
             Text(Localization.get(language, "preview_intro"))
         }
-    }
-}
-
-@Composable
-private fun IntroSectionLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun IntroRadioRow(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Text(
-            title,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = 12.dp),
-        )
     }
 }
 
@@ -1612,30 +1590,15 @@ fun SettingsNotificationsScreen(
         )
         Spacer(Modifier.height(12.dp))
 
-        M3SettingsGroup(
-            items = listOf(
-                M3SettingsItem(
-                    icon = Icons.Filled.DesktopWindows,
-                    title = { Text(Localization.get(language, "notification_main_window")) },
-                    trailing = {
-                        if (notificationMode != "native") {
-                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                    onClick = { onNotificationModeChange("in_app") },
-                ),
-                M3SettingsItem(
-                    icon = Icons.Filled.Notifications,
-                    title = { Text(Localization.get(language, "notification_native")) },
-                    description = { Text(Localization.get(language, "experimental")) },
-                    trailing = {
-                        if (notificationMode == "native") {
-                            Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    },
-                    onClick = { onNotificationModeChange("native") },
-                ),
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.DesktopWindows,
+            title = Localization.get(language, "notification_mode"),
+            value = Localization.get(language, if (notificationMode == "native") "notification_native" else "notification_main_window"),
+            options = listOf(
+                "in_app" to Localization.get(language, "notification_main_window"),
+                "native" to Localization.get(language, "notification_native"),
             ),
+            onSelect = onNotificationModeChange,
         )
 
         Spacer(Modifier.height(12.dp))
@@ -1647,40 +1610,13 @@ fun SettingsNotificationsScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-        Text(
-            Localization.get(language, "notification_duration"),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            Localization.get(language, "notification_duration_desc"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
-        )
-        NotificationDurationOption(
-            seconds = 3,
-            selected = notificationDurationSeconds == 3,
-            onClick = { onNotificationDurationChange(3) },
-        )
-        NotificationDurationOption(
-            seconds = 5,
-            selected = notificationDurationSeconds == 5,
-            onClick = { onNotificationDurationChange(5) },
-        )
-        NotificationDurationOption(
-            seconds = 10,
-            selected = notificationDurationSeconds == 10,
-            onClick = { onNotificationDurationChange(10) },
-        )
-        NotificationDurationOption(
-            seconds = 15,
-            selected = notificationDurationSeconds == 15,
-            onClick = { onNotificationDurationChange(15) },
-        )
-        NotificationDurationOption(
-            seconds = 30,
-            selected = notificationDurationSeconds == 30,
-            onClick = { onNotificationDurationChange(30) },
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.AccessTime,
+            title = Localization.get(language, "notification_duration"),
+            description = Localization.get(language, "notification_duration_desc"),
+            value = "${notificationDurationSeconds}s",
+            options = listOf(3, 5, 10, 15, 30).map { it.toString() to "${it}s" },
+            onSelect = { s -> onNotificationDurationChange(s.toIntOrNull() ?: notificationDurationSeconds) },
         )
 
         Spacer(Modifier.height(16.dp))
@@ -1700,19 +1636,6 @@ fun SettingsNotificationsScreen(
                 ),
             ),
         )
-    }
-}
-
-@Composable
-private fun NotificationDurationOption(seconds: Int, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("${seconds}s", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        if (selected) {
-            Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge)
-        }
     }
 }
 
@@ -1862,33 +1785,23 @@ fun SettingsPrivacyScreen(
         Text(Localization.get(language, "privacy"), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
 
-        Text(
-            Localization.get(language, "listen_history"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        BackupToggleRow(
-            language = language,
-            titleKey = "pause_listen_history",
-            descKey = "pause_listen_history_desc",
-            checked = pauseListenHistory,
-            onCheckedChange = onPauseListenHistoryChange,
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        Text(
-            Localization.get(language, "search_history"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        BackupToggleRow(
-            language = language,
-            titleKey = "pause_search_history",
-            descKey = "pause_search_history_desc",
-            checked = pauseSearchHistory,
-            onCheckedChange = onPauseSearchHistoryChange,
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.History,
+                    title = { Text(Localization.get(language, "pause_listen_history")) },
+                    description = { Text(Localization.get(language, "pause_listen_history_desc")) },
+                    trailing = { Switch(checked = pauseListenHistory, onCheckedChange = onPauseListenHistoryChange) },
+                    onClick = { onPauseListenHistoryChange(!pauseListenHistory) },
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Search,
+                    title = { Text(Localization.get(language, "pause_search_history")) },
+                    description = { Text(Localization.get(language, "pause_search_history_desc")) },
+                    trailing = { Switch(checked = pauseSearchHistory, onCheckedChange = onPauseSearchHistoryChange) },
+                    onClick = { onPauseSearchHistoryChange(!pauseSearchHistory) },
+                ),
+            ),
         )
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = { showClearDialog = true }) {

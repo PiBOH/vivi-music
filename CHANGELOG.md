@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.48.0-nightly] - 2026-09-01
+
+### Changed
+- [DE] **Inner settings sub-screens restyled to Material 3**: the Intro screen (show-intro switch into a card + style/background as anchored dropdowns), the Privacy screen (history toggles into M3 grouped cards) and the Notifications screen (mode + duration as inline dropdowns instead of cramped radio rows). Removed the squashed flat rows.
+
 ## [6.4.41_DE-1.47.0-nightly] - 2026-09-01
 
 ### Added
