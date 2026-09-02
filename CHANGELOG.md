@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.43_DE-1.50.3-nightly] - 2026-09-03
+
+### Fixed
+- [DE] [APK] The "Sync VIVI volume" toggle now gates only the in-app VIVI volume channel — the native OS system-volume sync is an independent channel again and keeps syncing whenever the devices are paired, so turning the toggle off no longer stops the system volume from following the peer (on either edition).
+- [DE] The Devices sync screen gained a connection-method selector at the top (Server relay, recommended / Local LAN server) and the "how to connect" steps adapt to the chosen method; the pairing QR code is now generated for both methods; the Connect button shows "Connecting…" (with a note that it can take a few seconds — up to 2 minutes if the relay server has to wake up) instead of staying static; and the mobile-download button reads "Download the adapted VIVI Music for Android (APK)".
+
 ## [6.4.42_DE-1.50.2-nightly] - 2026-09-03
 
 ### Fixed

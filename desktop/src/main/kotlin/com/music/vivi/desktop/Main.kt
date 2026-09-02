@@ -1360,11 +1360,12 @@ fun WindowScope.App(
     // Poll the OS system volume and push changes to the peer (so changing the
     // Windows/Linux/mac volume controls the phone's system volume, and vice
     // versa). Echo-suppressed so a locally-applied remote value isn't bounced.
-    // Both the system-volume and in-app channels share the "Sync VIVI volume"
-    // toggle: with it off, no volume leaves this device and none is applied.
+    // The native OS volume is its own channel: it syncs whenever paired,
+    // independent of the "Sync VIVI volume" toggle (which only gates the
+    // in-app VIVI volume slider).
     LaunchedEffect(syncManager) {
         while (true) {
-            val sv = if (DesktopSettings.load().syncViviVolume) SystemVolume.get() else null
+            val sv = SystemVolume.get()
             if (sv != null) {
                 val isEcho = System.currentTimeMillis() < systemVolumeGuard.echoUntil &&
                     abs(sv - systemVolumeGuard.echoValue) < 0.02f
@@ -1415,16 +1416,14 @@ fun WindowScope.App(
                 }
             }
             // Native OS system volume sync: mirror the peer's system volume.
-            // Gated by the same toggle as the in-app channel, so turning
-            // "Sync VIVI volume" off on either device stops the OS volume
-            // from changing both systems (it used to sync unconditionally).
-            if (DesktopSettings.load().syncViviVolume) {
-                pb.systemVolume?.let { v ->
-                    systemVolumeGuard.echoUntil = System.currentTimeMillis() + 1500L
-                    systemVolumeGuard.echoValue = v
-                    systemVolumeGuard.lastPushed = v
-                    SystemVolume.set(v)
-                }
+            // Independent channel: it syncs whenever paired, so turning
+            // "Sync VIVI volume" off (which only gates the in-app slider)
+            // does not stop the OS volume from following the peer.
+            pb.systemVolume?.let { v ->
+                systemVolumeGuard.echoUntil = System.currentTimeMillis() + 1500L
+                systemVolumeGuard.echoValue = v
+                systemVolumeGuard.lastPushed = v
+                SystemVolume.set(v)
             }
             // Repeat mode + shuffle sync (independent of the queue/position).
             pb.repeatMode?.let { mode ->
@@ -4362,18 +4361,50 @@ fun DeviceSyncSection(
     }
     val remainingMs = (pairCodeExpiresAt - nowMs).coerceAtLeast(0L)
 
-    // The QR code carries both the LAN relay address and the current 6-digit
-    // pairing code (when available), so the phone can auto-fill the code and
-    // the user only has to verify it before tapping Pair.
-    val qrContent = if (lanAddress.isNotEmpty() && pairCode.isNotEmpty()) {
-        "vivimusic://pair?addr=${URLEncoder.encode(lanAddress, "UTF-8")}&code=$pairCode"
-    } else {
-        lanAddress
-    }
-
     Text(Localization.get(language, "device_sync"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
-    DeviceSyncHowTo(language)
+    // Connection method selector: the relay (recommended, works from any
+    // network) or the local LAN server (same Wi-Fi). The how-to steps and the
+    // shown controls follow the chosen method.
+    var connectionMethod by remember { mutableStateOf("relay") }
+    val relayMode = connectionMethod == "relay"
+    var methodExpanded by remember { mutableStateOf(false) }
+
+    // The QR code carries the active connection address (relay server or LAN
+    // relay) plus the current 6-digit pairing code (when available), so the
+    // phone can auto-fill both and the user only has to verify before pairing.
+    // Shown for both connection methods.
+    val qrAddr = if (relayMode) serverUrl.trim() else lanAddress
+    val qrContent = if (qrAddr.isNotEmpty() && pairCode.isNotEmpty()) {
+        "vivimusic://pair?addr=${URLEncoder.encode(qrAddr, "UTF-8")}&code=$pairCode"
+    } else {
+        qrAddr
+    }
+    Box(Modifier.padding(top = 8.dp)) {
+        Tooltip(Localization.get(language, "connection_method")) {
+            OutlinedButton(onClick = { methodExpanded = true }) {
+                Text(Localization.get(language, if (relayMode) "method_relay" else "method_lan"))
+            }
+        }
+        DropdownMenu(expanded = methodExpanded, onDismissRequest = { methodExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text(Localization.get(language, "method_relay")) },
+                onClick = {
+                    methodExpanded = false
+                    connectionMethod = "relay"
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(Localization.get(language, "method_lan")) },
+                onClick = {
+                    methodExpanded = false
+                    connectionMethod = "lan"
+                },
+            )
+        }
+    }
+
+    DeviceSyncHowTo(language, relayMode)
 
     // Download link for the mobile version of VIVI (the Android APK), so the
     // phone runs the matching build before pairing. The APK URL is fetched
@@ -4425,32 +4456,42 @@ fun DeviceSyncSection(
         onCheckedChange = onToggleSyncViviVolume,
     )
 
+    val connecting = connectionState == SyncConnectionState.CONNECTING
     // Connected to the relay from the field above (not via the LAN server).
-    // While this holds, the LAN section is hidden: pairing already goes through
-    // the relay, so a second transport would only confuse — it reappears once
-    // the user disconnects.
     val relayConnected = connectionState == SyncConnectionState.CONNECTED && !lanRunning
 
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            value = serverUrl,
-            onValueChange = { serverUrl = it },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            label = { Text(Localization.get(language, "relay_server")) },
-        )
-        if (relayConnected) {
-            Tooltip(Localization.get(language, "disconnect")) {
-                Button(onClick = { syncManager.disconnect() }) { Text(Localization.get(language, "disconnect")) }
-            }
-        } else {
-            Tooltip(Localization.get(language, "connect")) {
-                Button(onClick = { syncManager.connect(serverUrl) }) { Text(Localization.get(language, "connect")) }
+    if (relayMode) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = serverUrl,
+                onValueChange = { serverUrl = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                label = { Text(Localization.get(language, "relay_server")) },
+            )
+            when {
+                connecting -> Tooltip(Localization.get(language, "lt_connecting")) {
+                    Button(onClick = {}, enabled = false) { Text(Localization.get(language, "lt_connecting")) }
+                }
+                relayConnected -> Tooltip(Localization.get(language, "disconnect")) {
+                    Button(onClick = { syncManager.disconnect() }) { Text(Localization.get(language, "disconnect")) }
+                }
+                else -> Tooltip(Localization.get(language, "connect")) {
+                    Button(onClick = { syncManager.connect(serverUrl) }) { Text(Localization.get(language, "connect")) }
+                }
             }
         }
-    }
-
-    if (!relayConnected) {
+        // The first connect to a sleeping free-tier relay can take a while: it
+        // has to wake the server before the WebSocket handshake completes.
+        if (connecting || connectionState == SyncConnectionState.ERROR) {
+            Text(
+                Localization.get(language, "connect_hint"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    } else {
         Text(Localization.get(language, "lan_sync"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
         Button(
             onClick = { if (lanRunning) syncManager.stopLan() else syncManager.startLan() },
@@ -4458,15 +4499,17 @@ fun DeviceSyncSection(
         ) {
             Text(Localization.get(language, if (lanRunning) "stop_lan" else "start_lan"))
         }
-    } else {
-        Text(
-            Localization.get(language, "lan_hidden_while_relay"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 16.dp),
-        )
+        if (lanRunning && lanAddress.isNotEmpty()) {
+            Text(
+                Localization.get(language, "lan_hint"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
     }
-    if (lanRunning && lanAddress.isNotEmpty()) {
+
+    if (pairCode.isNotEmpty() && qrAddr.isNotEmpty()) {
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -4478,7 +4521,7 @@ fun DeviceSyncSection(
             ) {
                 QrCode(qrContent, size = 180.dp)
                 Text(
-                    "${Localization.get(language, "lan_address")}: $lanAddress",
+                    "${Localization.get(language, if (relayMode) "relay_server" else "lan_address")}: $qrAddr",
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -4500,15 +4543,7 @@ fun DeviceSyncSection(
                 modifier = Modifier.weight(1f),
             )
         }
-        Text(
-            Localization.get(language, "lan_hint"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
     } else {
-        // When the LAN server is off, the code can still be generated against
-        // the relay configured in the field above.
         PairingCodePanel(
             language = language,
             pairCode = pairCode,
@@ -4553,7 +4588,7 @@ fun DeviceSyncSection(
 }
 
 @Composable
-private fun DeviceSyncHowTo(language: String) {
+private fun DeviceSyncHowTo(language: String, relayMode: Boolean) {
     Surface(
         tonalElevation = 2.dp,
         shape = RoundedCornerShape(12.dp),
@@ -4566,10 +4601,16 @@ private fun DeviceSyncHowTo(language: String) {
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
-            HowToStep(1, Localization.get(language, "how_to_step1"))
-            HowToStep(2, Localization.get(language, "how_to_step2"))
-            HowToStep(3, Localization.get(language, "how_to_step3"))
-            HowToStep(4, Localization.get(language, "how_to_step4"))
+            if (relayMode) {
+                HowToStep(1, Localization.get(language, "how_to_relay_step1"))
+                HowToStep(2, Localization.get(language, "how_to_relay_step2"))
+                HowToStep(3, Localization.get(language, "how_to_relay_step3"))
+            } else {
+                HowToStep(1, Localization.get(language, "how_to_step1"))
+                HowToStep(2, Localization.get(language, "how_to_step2"))
+                HowToStep(3, Localization.get(language, "how_to_step3"))
+                HowToStep(4, Localization.get(language, "how_to_step4"))
+            }
         }
     }
 }

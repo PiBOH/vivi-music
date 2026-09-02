@@ -194,7 +194,7 @@ MAPPING = {
     "wrapped_top_song": "top song",
     "wrapped_show_on_home": "Show on Home",
     "wrapped_show_on_home_desc": "Show the VIVI Wrapped card on the Home screen.",
-    "download_mobile_apk": "Download VIVI for Android (APK)",
+    "download_mobile_apk": "Download the adapted VIVI Music for Android (APK)",
     "opening_download": "Opening download…",
     "native_title_bar": "Native system title bar",
     "home_greeting_morning": "Good morning",
@@ -571,7 +571,13 @@ ENGLISH = {
     "scan_qr": "Scan to connect",
     "lan_hint": "On your phone, open Settings → Devices, set the relay server to the address above, then enter the code.",
     "waiting_for_pairing": "Waiting for a device to pair…",
-    "lan_hidden_while_relay": "LAN sync is hidden while connected to the relay. Disconnect to use it.",
+    "connect_hint": "This can take a few seconds — up to 2 minutes if the relay server needs to wake up.",
+    "connection_method": "Connection method",
+    "method_relay": "Server relay (recommended)",
+    "method_lan": "Local LAN server",
+    "how_to_relay_step1": "Press Connect to reach the relay server — the default (wss://vivimusic-device-sync.onrender.com) works from any network.",
+    "how_to_relay_step2": "On your phone, open Settings → Devices and scan the QR code below — the relay address and the 6-digit code fill in automatically.",
+    "how_to_relay_step3": "Check the code and tap Pair. The two devices stay synchronized over the internet.",
     "how_to_connect": "How to connect your phone",
     "how_to_step1": "Connect your phone and this computer to the same Wi-Fi network.",
     "how_to_step2": "Tap \"Start LAN server\" — a QR code and a 6-digit code appear (recommended).",
@@ -1419,12 +1425,13 @@ from desktop_extra_translations_55 import EXTRA_TRANSLATIONS as _EXTRA_55
 from desktop_extra_translations_56 import EXTRA_TRANSLATIONS as _EXTRA_56
 from desktop_extra_translations_57 import EXTRA_TRANSLATIONS as _EXTRA_57
 from desktop_extra_translations_58 import EXTRA_TRANSLATIONS as _EXTRA_58
+from desktop_extra_translations_59 import EXTRA_TRANSLATIONS as _EXTRA_59
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
