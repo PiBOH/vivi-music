@@ -1211,6 +1211,10 @@ fun WindowScope.App(
     // ---- Device sync (Android <-> desktop) ----
     val syncManager = remember { DesktopSyncManager() }
 
+    // ---- Listen Together (shared rooms over the relay) ----
+    val listenTogetherManager = remember { ListenTogetherManager(player) }
+    LaunchedEffect(listenTogetherManager) { listenTogetherManager.initialize() }
+
     // Echo guards: when we apply a remote volume, we must not push the
     // resulting local change straight back to the peer.
     val systemVolumeGuard = remember { VolumeGuard() }
@@ -2491,7 +2495,7 @@ fun WindowScope.App(
                     is Screen.ListenTogether -> ListenTogetherScreen(
                         language = language,
                         onBack = goBack,
-                        onPlaySong = playSong,
+                        manager = listenTogetherManager,
                     )
                     is Screen.ArtistItems -> BrowseScreen(
                         browseId = screen.browseId,

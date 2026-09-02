@@ -151,7 +151,7 @@ The desktop should look exactly like the Android app, except:
 Only allowed difference: the bottom navigation bar becomes the collapsible/expandable sidebar. Everything below is still missing or divergent.
 
 ### Screens / sections missing entirely
-- [~] Listen Together (mobile main tab) + its chat and "from topbar" variants (DE 1.33.88: JSON WebSocket client + create/join room, connected users, join approvals and chat).
+- [x] Listen Together (mobile main tab) + its chat and "from topbar" variants (DE 1.33.88: JSON WebSocket client + create/join room, connected users, join approvals and chat). DE 1.50.0: full port of the mobile Listen Together — complete wire protocol (playback actions with queue/volume/server-time, buffering protocol, suggestions, kick/transfer host, chat with replies, session-based reconnection), a manager bridging the desktop player (host broadcasts track/play/pause/seek/queue/volume + 10s heartbeat; guests apply with debounce/tolerance and the buffer protocol), and a rebuilt M3 screen (room code + copy, users with kick/transfer, join approvals, suggestions, buffering status, volume sync, request sync/reconnect).
 - [x] Stats screen — removed as a duplicate of VIVI Wrapped; the sidebar entry now links straight to Settings → VIVI Wrapped (DE 1.33.91).
 - [x] New Release albums screen (DE 1.33.88).
 - [x] Charts screen (DE 1.33.88).
@@ -176,7 +176,7 @@ Only allowed difference: the bottom navigation bar becomes the collapsible/expan
 - [x] **Developer options: export logs as .zip (DE 1.49.6)** — button in Settings → Developer options packages `~/.vivimusic/*.log` + generated system-info.txt + redacted settings-summary.txt into a STORED zip via a native save dialog; device-sync.json (contains the session cookie) is never included.
 - [x] **Native title bar compatibility hint (DE 1.49.6)** — Appearance → Native system title bar shows a recommended-if-compatibility-issues hint line; translated in all 47 languages (extra translations file 55).
 - [x] ERRORS.md — error-code reference (playback codes 1000–6008 + VIVI codes E1000–E1012), linked from the website footer; the fake "Now playing" card and the LIVE badge were removed from the site hero (DE 1.43.0).
-- [ ] Listen Together settings (hub entry).
+- [x] Listen Together settings (hub entry) — the Listen Together screen is reachable from the sidebar (DE 1.33.88) and now hosts the full room controls (DE 1.50.0).
 - [x] AI Lyrics Translation (`settings/ai`) — full provider/API-key/base-URL/model/target-language/mode/DeepL-formality screen (DE 1.42.0).
 - [x] Data saver (`settings/datasaver`) — master toggle that backs up and forces off canvas + rotating artwork, restores on disable (DE 1.42.0).
 - [ ] Romanization (`settings/content/romanization`).

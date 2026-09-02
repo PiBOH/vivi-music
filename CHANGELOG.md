@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.50.0-nightly] - 2026-09-02
+
+### Added
+- [DE] **Real Listen Together (full port of the mobile feature)**: the desktop Listen Together screen now speaks the complete mobile wire protocol and synchronizes real playback between devices.
+  - **Host**: observes the local player and broadcasts track changes (with the full queue), play/pause, user seeks, queue edits (debounced) and in-app volume (when "Sync volume" is on), plus a 10-second playback heartbeat so guests auto-correct drift.
+  - **Guest**: applies the host's actions with debounce + position tolerance (no audible seek glitches), the buffering protocol (buffer-ready/wait/complete), whole-queue replacement that preserves the current track, queue add/remove/clear, volume sync and smart re-sync after reconnection.
+  - **Rooms**: create/join with room code, join requests with approve/reject (optional auto-approve), kick and transfer-host, suggestion flow (guests paste a YouTube link/ID, host approves/rejects → inserted next), chat with replies, buffering indicator, connection state badge, request-sync/reconnect buttons and a copy-code button.
+  - **Session persistence**: the room session token is saved in settings, so a reconnect (or app restart) resumes the room automatically.
+- [DE] **PlayerController: `insertNext` + `replaceQueuePreservingCurrent`** — the two primitives Listen Together needs to play-next and to swap a guest's queue without restarting the current track.
+- [DE] 18 new Listen Together strings translated into all 47 languages (618 keys total; `check_localization` passes).
+
 ## [6.4.41_DE-1.49.9-nightly] - 2026-09-02
 
 ### Fixed

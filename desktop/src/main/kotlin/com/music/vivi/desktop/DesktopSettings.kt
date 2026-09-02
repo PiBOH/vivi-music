@@ -140,6 +140,22 @@ data class DesktopSyncState(
     val syncViviVolume: Boolean = true,
     /** Last username used for Listen Together. */
     val listenTogetherUsername: String = "",
+    /** Listen Together relay server URL (default = mobile's Hugging Face relay). */
+    val listenTogetherServerUrl: String = "wss://devilmi-vivi-music-listen-together.hf.space",
+    /** Auto-approve join requests without asking the host. */
+    val listenTogetherAutoApproval: Boolean = false,
+    /** Host syncs its in-app volume to guests. */
+    val listenTogetherSyncVolume: Boolean = true,
+    /** Guest re-requests a fresh sync after a reconnect. */
+    val listenTogetherSmartResync: Boolean = true,
+    /** Persisted Listen Together session (resume after restart). */
+    val listenTogetherSessionToken: String = "",
+    val listenTogetherRoomCode: String = "",
+    val listenTogetherUserId: String = "",
+    val listenTogetherIsHost: Boolean = false,
+    val listenTogetherSessionTimestamp: Long = 0L,
+    /** Usernames blocked from joining/suggesting (persisted). */
+    val listenTogetherBlockedUsers: List<String> = emptyList(),
     /** Song recognition (Shazam) history, newest first. */
     val recognitionHistory: List<RecognitionHistoryItem> = emptyList(),
     /** Cider-style floating always-on-top "Now Playing" widget. */

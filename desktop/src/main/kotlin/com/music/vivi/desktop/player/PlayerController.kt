@@ -154,6 +154,55 @@ class PlayerController {
         }
     }
 
+    /**
+     * Inserts [track] right after the currently playing item ("play next",
+     * used by Listen Together suggestions and QUEUE_ADD insert_next). If the
+     * queue is empty, starts the track instead.
+     */
+    fun insertNext(track: NowPlaying) {
+        val s = _state.value
+        if (s.current == null) {
+            play(track)
+            return
+        }
+        val idx = (s.index + 1).coerceAtMost(s.queue.size)
+        _state.update { it.copy(queue = it.queue.toMutableList().apply { add(idx, track) }) }
+    }
+
+    /**
+     * Replaces the whole queue WITHOUT restarting the current track: if the
+     * currently playing [videoId] is still present, the index is remapped and
+     * playback/position are preserved (used by Listen Together SYNC_QUEUE so a
+     * guest doesn't hear a glitch when the host adds/removes songs). Falls back
+     * to a full [applyRemotePlayback] when the current track is gone.
+     */
+    fun replaceQueuePreservingCurrent(newQueue: List<NowPlaying>, positionMs: Long, isPlaying: Boolean) {
+        if (newQueue.isEmpty()) {
+            clearQueue()
+            return
+        }
+        val s = _state.value
+        val currentId = s.current?.videoId
+        if (currentId == null) {
+            restoreQueue(newQueue, 0)
+            return
+        }
+        val newIndex = newQueue.indexOfFirst { it.videoId == currentId }
+        if (newIndex < 0) {
+            applyRemotePlayback(newQueue, 0, positionMs, isPlaying)
+        } else {
+            val wasPlaying = s.isPlaying
+            _state.update {
+                it.copy(queue = newQueue, index = newIndex, isPlaying = wasPlaying || isPlaying)
+            }
+            if (!wasPlaying && isPlaying) {
+                // Current track still loaded: just resume instead of reloading.
+                player.resume()
+                _state.update { st -> st.copy(isPlaying = true) }
+            }
+        }
+    }
+
     fun next() {
         val s = _state.value
         if (s.queue.isEmpty()) return
