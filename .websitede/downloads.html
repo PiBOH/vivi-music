@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Downloads — VIVI Music DE</title>
-  <meta name="description" content="Installers for VIVI Music DE: Windows (.exe, .msi), Linux (.deb, AppImage, PKGBUILD), macOS (.dmg, .pkg) — stable and nightly channels, from GitHub Releases." />
+  <meta name="description" content="Installers for VIVI Music DE: Windows (.exe, .msi), Linux (.deb, AppImage, PKGBUILD), macOS (.dmg, .pkg) — stable and prerelease channels, from GitHub Releases." />
   <link rel="icon" type="image/png" href="images/logo_vmde.png" />
   <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -54,9 +54,9 @@
 
       <div class="tabs" role="tablist" aria-label="Release channel">
         <button class="tab active" data-channel-tab="stable" type="button" role="tab">Stable</button>
-        <button class="tab" data-channel-tab="nightly" type="button" role="tab">Nightly builds</button>
+        <button class="tab" data-channel-tab="prerelease" type="button" role="tab">Prerelease</button>
       </div>
-      <p class="hnote">nightly = bleeding edge. breakage included, reporting it is a feature.</p>
+      <p class="hnote">Stable is the default. If no stable release exists, the newest prerelease is used automatically. Prereleases are bleeding edge; breakage included.</p>
 
       <div class="rel-head" id="relHead" aria-live="polite">
         <div>
@@ -76,13 +76,13 @@
           <div class="dl">
             <span class="t">.exe installer</span>
             <span class="d">Inno Setup installer — the recommended one.</span>
-            <a class="btn sm" data-dl=".exe" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .exe</a>
+            <a class="btn sm" data-dl=".exe" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .exe</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
           <div class="dl">
             <span class="t">.msi package</span>
             <span class="d">For silent / enterprise deployments.</span>
-            <a class="btn sm" data-dl=".msi" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .msi</a>
+            <a class="btn sm" data-dl=".msi" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .msi</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
         </div>
@@ -94,13 +94,13 @@
           <div class="dl">
             <span class="t">Debian / Ubuntu</span>
             <span class="d">Works on Debian, Ubuntu and derivatives.</span>
-            <a class="btn sm" data-dl=".deb" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .deb</a>
+            <a class="btn sm" data-dl=".deb" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .deb</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
           <div class="dl">
             <span class="t">AppImage</span>
             <span class="d">Portable, any distro. Run it, it runs.</span>
-            <a class="btn sm" data-dl=".AppImage" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .AppImage</a>
+            <a class="btn sm" data-dl=".AppImage" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .AppImage</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
           <div class="dl">
@@ -118,13 +118,13 @@
           <div class="dl">
             <span class="t">Disk image</span>
             <span class="d">For Apple Silicon Macs (M1 and newer).</span>
-            <a class="btn sm" data-dl=".dmg-arm" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .dmg</a>
+            <a class="btn sm" data-dl=".dmg-arm" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .dmg</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
           <div class="dl">
             <span class="t">Installer package</span>
             <span class="d">Double-click, follow the wizard, done.</span>
-            <a class="btn sm" data-dl=".pkg-arm" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .pkg</a>
+            <a class="btn sm" data-dl=".pkg-arm" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .pkg</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
         </div>
@@ -136,13 +136,13 @@
           <div class="dl">
             <span class="t">Disk image</span>
             <span class="d">For Intel Macs — the classic x86-64 build.</span>
-            <a class="btn sm" data-dl=".dmg-x64" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .dmg</a>
+            <a class="btn sm" data-dl=".dmg-x64" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .dmg</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
           <div class="dl">
             <span class="t">Installer package</span>
             <span class="d">Double-click, follow the wizard, done.</span>
-            <a class="btn sm" data-dl=".pkg-x64" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .pkg</a>
+            <a class="btn sm" data-dl=".pkg-x64" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download .pkg</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
         </div>
@@ -228,14 +228,15 @@
           void sec.offsetWidth;
           sec.classList.add("flash");
         } else {
-          window.open(REL_URL + "/latest", "_blank", "noopener");
+          window.open(REL_URL, "_blank", "noopener");
         }
       });
     }
 
     /* ---- channels ---- */
+    /* Stable is intentionally the default on every visit. */
     var current = "stable";
-    var data = { stable: null, nightly: null };
+    var data = { stable: null, prerelease: null };
     var failed = false;
     var want = [
       { fmt: ".exe", re: /\.exe$/i },
@@ -249,20 +250,22 @@
     ];
 
     function render() {
-      var rel = data[current];
       var lbl = document.getElementById("relLabel");
       var ver = document.getElementById("relVer");
       var dt = document.getElementById("relDate");
-      lbl.textContent = current === "stable" ? "latest stable" : "latest nightly";
+      var requestedStable = current === "stable";
+      var stableFallback = requestedStable && !data.stable && data.prerelease;
+      var rel = stableFallback ? data.prerelease : data[current];
+      lbl.textContent = requestedStable ? (stableFallback ? "latest prerelease (stable fallback)" : "latest stable") : "latest prerelease";
       if (failed) {
         ver.textContent = "GitHub API unreachable";
         dt.textContent = "buttons below point at the releases page instead";
       } else if (!rel) {
-        ver.textContent = current === "nightly" ? "no nightly published right now" : "no release found";
-        dt.textContent = current === "nightly" ? "the stable tab is your friend" : "…";
+        ver.textContent = current === "prerelease" ? "no prerelease published right now" : "no release found";
+        dt.textContent = current === "prerelease" ? "the stable option is your fallback" : "…";
       } else {
         ver.textContent = rel.tag_name || "release";
-        dt.textContent = window.vmFmtDate(rel.published_at) + (rel.prerelease ? " · pre-release" : "");
+        dt.textContent = window.vmFmtDate(rel.published_at) + (isPrerelease(rel) ? " · pre-release" : "") + (stableFallback ? " · no stable release yet" : "");
       }
       want.forEach(function (w) {
         var b = document.querySelector('[data-dl="' + w.fmt + '"]');
@@ -281,11 +284,11 @@
           } else {
             b.classList.add("off");
             if (dl) dl.classList.add("off");
-            if (miss) miss.textContent = current === "nightly" ? "not in this release" : "not shipped yet";
+            if (miss) miss.textContent = current === "prerelease" ? "not in this release" : "not shipped yet";
           }
         } else {
           b.classList.remove("off");
-          b.href = REL_URL + "/latest";
+          b.href = REL_URL;
           b.target = "_blank";
           b.rel = "noopener";
           if (dl) dl.classList.remove("off");
@@ -302,12 +305,26 @@
       });
     });
 
-    window.vmReleases(15).then(function (list) {
+    $$(".tabs [data-channel-tab]").forEach(function (t) {
+      t.classList.toggle("active", t.dataset.channelTab === current);
+    });
+
+    function isPrerelease(r) {
+      return !!(r && (r.prerelease || /-(nightly|alpha|beta|rc)\d*(?:$|[-.])/i.test(r.tag_name || "")));
+    }
+
+    window.vmReleases(100).then(function (list) {
       list.forEach(function (r) {
-        if (r.prerelease) { if (!data.nightly) data.nightly = r; }
+        if (isPrerelease(r)) { if (!data.prerelease) data.prerelease = r; }
         else if (!data.stable) data.stable = r;
       });
-      if (!data.stable && !data.nightly) throw new Error("empty");
+      if (!data.stable && !data.prerelease) throw new Error("empty");
+      /* Stable is the default, but it intentionally falls back to the newest
+         prerelease when no stable tag exists. vmReleases already sorted by tag. */
+      if (current === "prerelease" && !data.prerelease) current = "stable";
+      $$(".tabs [data-channel-tab]").forEach(function (t) {
+        t.classList.toggle("active", t.dataset.channelTab === current);
+      });
       render();
     })["catch"](function () {
       failed = true;
