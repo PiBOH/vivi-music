@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.42_DE-1.50.2-nightly] - 2026-09-03
+
+### Fixed
+- [APK] The relay server field in Settings → Devices can be cleared and changed again: it is now kept as local state while editing and persisted with an app-lifetime scope, so a cleared or edited value no longer snaps back to the last-used one when leaving the screen. A blank value means "not set": when not paired, re-entering the screen always shows the default cloud relay (`wss://vivimusic-device-sync.onrender.com`).
+- [DE] The Device sync section no longer claims to be "Connected" when it is only connected to the relay: until a device is actually paired the status says it is waiting for a device to pair. While connected to the relay the LAN sync section is hidden (with a note explaining that disconnecting brings it back), and the Connect button becomes Disconnect so the relay connection can actually be ended.
+
 ## [6.4.41_DE-1.50.1-nightly] - 2026-09-02
 
 ### Fixed

@@ -207,6 +207,7 @@ import com.music.vivi.desktop.player.RepeatMode
 import com.music.vivi.desktop.player.StreamResolver
 import com.music.vivi.sync.LibrarySnapshot
 import com.music.vivi.sync.PlaybackSnapshot
+import com.music.vivi.sync.SyncConnectionState
 import com.music.vivi.sync.SyncServer
 import com.music.vivi.sync.SyncedSong
 import com.music.vivi.sync.TrackRef
@@ -4424,6 +4425,12 @@ fun DeviceSyncSection(
         onCheckedChange = onToggleSyncViviVolume,
     )
 
+    // Connected to the relay from the field above (not via the LAN server).
+    // While this holds, the LAN section is hidden: pairing already goes through
+    // the relay, so a second transport would only confuse — it reappears once
+    // the user disconnects.
+    val relayConnected = connectionState == SyncConnectionState.CONNECTED && !lanRunning
+
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = serverUrl,
@@ -4432,15 +4439,32 @@ fun DeviceSyncSection(
             singleLine = true,
             label = { Text(Localization.get(language, "relay_server")) },
         )
-        Button(onClick = { syncManager.connect(serverUrl) }) { Text(Localization.get(language, "connect")) }
+        if (relayConnected) {
+            Tooltip(Localization.get(language, "disconnect")) {
+                Button(onClick = { syncManager.disconnect() }) { Text(Localization.get(language, "disconnect")) }
+            }
+        } else {
+            Tooltip(Localization.get(language, "connect")) {
+                Button(onClick = { syncManager.connect(serverUrl) }) { Text(Localization.get(language, "connect")) }
+            }
+        }
     }
 
-    Text(Localization.get(language, "lan_sync"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
-    Button(
-        onClick = { if (lanRunning) syncManager.stopLan() else syncManager.startLan() },
-        modifier = Modifier.padding(top = 4.dp),
-    ) {
-        Text(Localization.get(language, if (lanRunning) "stop_lan" else "start_lan"))
+    if (!relayConnected) {
+        Text(Localization.get(language, "lan_sync"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+        Button(
+            onClick = { if (lanRunning) syncManager.stopLan() else syncManager.startLan() },
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Text(Localization.get(language, if (lanRunning) "stop_lan" else "start_lan"))
+        }
+    } else {
+        Text(
+            Localization.get(language, "lan_hidden_while_relay"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 16.dp),
+        )
     }
     if (lanRunning && lanAddress.isNotEmpty()) {
         Row(
@@ -4508,7 +4532,15 @@ fun DeviceSyncSection(
         )
     }
 
-    Text("${Localization.get(language, "status")}: $connectionState — $status", modifier = Modifier.padding(top = 8.dp))
+    // Honest status: CONNECTED only means the relay socket is open. Until a
+    // device is actually paired, say it is waiting instead of implying that
+    // sync is already active.
+    val statusText = if (connectionState == SyncConnectionState.CONNECTED && !paired) {
+        Localization.get(language, "waiting_for_pairing")
+    } else {
+        status
+    }
+    Text("${Localization.get(language, "status")}: $connectionState — $statusText", modifier = Modifier.padding(top = 8.dp))
 
     if (syncedSettings.isNotEmpty()) {
         Text(Localization.get(language, "synced_settings"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
