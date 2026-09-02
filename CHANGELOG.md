@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.44_DE-1.50.3-nightly] - 2026-09-03
+
+### Fixed
+- [APK] **Startup freeze after in-place updates** (previously only recoverable by uninstalling and reinstalling the app): the first image load ran an unbounded `runBlocking` on the main thread waiting for DataStore, the preference cache stopped retrying after a single DataStore error (so every synchronous settings read fell into the slow fallback path and stalled startup), and the persisted queue/automix/player-state files were deserialized on the main thread. All three are now non-blocking: the image-loader cache-size read is bounded with a timeout and default, the preference cache keeps retrying, and the persisted queue restore runs off the main thread (DE 1.50.3 / APK 6.4.44).
+
 ## [6.4.43_DE-1.50.3-nightly] - 2026-09-03
 
 ### Fixed
