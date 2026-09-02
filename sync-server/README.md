@@ -82,11 +82,27 @@ Per testare il pairing usa due client (o un tool come `wscat`) collegati a
    `wss://xxxx.onrender.com`: è il valore da impostare nell'app (chiave
    `deviceSyncServerUrl`) e nel desktop.
 
-### Deploy su Hugging Face Spaces
+### Deploy su Hugging Face Spaces (fallback)
 
-- Crea uno **Space** con Docker SDK, base `node:18`.
-- Copia `server.js`, `package.json` dentro lo Space e avvia `node server.js`.
-- Hugging Face espone già HTTPS; usa l'URL con `wss://` come sopra.
+Se Render non fa per te (o il nome `vivimusic-device-sync` risultasse occupato),
+puoi usare Hugging Face Spaces. In `sync-server/` c'è già un `Dockerfile` pronto
+(base `node:18-slim`, porta 7860, `npm start`).
+
+1. Vai su [huggingface.co/spaces](https://huggingface.co/spaces) → **Create new Space**.
+2. **SDK**: seleziona **Docker**.
+3. Scegli un nome (es. `vivi-device-sync`) e l'hardware **CPU basic (free)**.
+4. Carica i file: `server.js`, `package.json`, `package-lock.json` e `Dockerfile`
+   (trascina i file nella pagina "Files" dello Space, oppure clona lo Space e
+   copiali dentro).
+5. Lo Space si builda da solo (Dockerfile) e diventa raggiungibile su
+   `https://<username>-<space>.hf.space` — usa **`wss://<username>-<space>.hf.space`**
+   nell'app (chiave `deviceSyncServerUrl`) e nel desktop.
+6. Health check: apri `https://<username>-<space>.hf.space/health` → deve
+   rispondere `ok`.
+
+⚠️ Nota onesta su HF Spaces: il free tier va in **sleep dopo ~48 ore di
+inattività** e il proxy HF può a volte interrompere WebSocket di lunga durata.
+Render resta la scelta consigliata; HF è il piano B funzionante.
 
 ## Protocollo (riepilogo)
 
