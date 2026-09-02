@@ -59,6 +59,7 @@
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 html:focus-within { scroll-behavior: smooth; }
+html { scroll-padding-top: 92px; }
 body {
   margin: 0;
   min-height: 100vh;
@@ -385,7 +386,9 @@ pre.code code {
 .tab.active { background: var(--grad); color: #fff7f2; border-color: transparent; }
 
 /* accordion (native details, styled) */
-details.qa { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 10px; overflow: hidden; }
+details.qa { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s ease; }
+details.qa:hover { border-color: var(--line2); }
+details.qa[open] { border-color: var(--line2); }
 details.qa summary {
   cursor: pointer;
   padding: 15px 18px;
@@ -407,6 +410,12 @@ details.qa summary::after {
 }
 details.qa[open] summary::after { transform: rotate(45deg); }
 details.qa .a { padding: 0 18px 16px; color: var(--muted); font-size: 14.5px; }
+/* accordion open animation: content fades/slides in under the summary */
+@keyframes qaIn { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: none; } }
+details.qa[open] .a { animation: qaIn 0.28s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  details.qa[open] .a { animation: none; }
+}
 
 /* chips */
 .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
@@ -1366,6 +1375,66 @@ details.qa .a { padding: 0 18px 16px; color: var(--muted); font-size: 14.5px; }
   .foot-bar { justify-content: center; text-align: center; }
   .rel-head { flex-direction: column; align-items: flex-start; }
 }
+
+/* ---------- device-based responsive (phone / tablet via UA) ----------
+   The layout follows the *device*, not just the viewport: a phone gets the
+   full stacked mobile layout even when mirrored on a big external screen,
+   while tablets and foldables degrade to desktop. The media queries above
+   stay as a viewport fallback for desktop windows narrower than the
+   breakpoints. */
+.vm-phone .nav-toggle { display: inline-block; }
+.vm-phone .nav-links {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--line);
+  padding: 14px 20px 20px;
+}
+.vm-phone .nav.open .nav-links { display: flex; }
+.vm-phone .nav-links a { padding: 11px 14px; border-radius: 10px; }
+.vm-phone .nav-links .nav-gh { margin: 4px 0 0; text-align: center; }
+
+.vm-phone .hero-grid { grid-template-columns: 1fr; gap: 44px; }
+.vm-phone .hero-right { max-width: 560px; }
+.vm-phone .band-grid { grid-template-columns: 1fr; gap: 30px; }
+.vm-phone .guide { grid-template-columns: 1fr; gap: 30px; }
+.vm-phone .toc { display: none; }
+.vm-phone .about-grid { grid-template-columns: 1fr; gap: 34px; }
+.vm-phone .glance { position: static; }
+.vm-phone .shots { grid-template-columns: 1fr 1fr; }
+.vm-phone .news { grid-template-columns: 1fr 1fr; }
+.vm-phone .foot-grid { grid-template-columns: 1fr 1fr; }
+
+.vm-phone .bento { grid-template-columns: 1fr 1fr; }
+.vm-phone .b1, .vm-phone .b4 { grid-column: span 2; }
+.vm-phone .b2, .vm-phone .b3 { grid-column: span 1; }
+.vm-phone .duo { grid-template-columns: 1fr; }
+.vm-phone .duo-mid { width: 2px; height: 44px; margin: 0 auto; background: repeating-linear-gradient(180deg, var(--line2) 0 8px, transparent 8px 16px); }
+.vm-phone .duo-mid .pd, .vm-phone .duo-mid .pd.back { display: none; }
+.vm-phone .tip { position: static; transform: none; width: auto; opacity: 1; pointer-events: auto; box-shadow: none; margin-top: 12px; }
+.vm-phone .tip::after { display: none; }
+.vm-phone .pair-demo { grid-template-columns: 1fr; }
+.vm-phone .qrbox { margin: 0 auto; }
+
+.vm-phone .section { padding: 54px 0; }
+.vm-phone .shots { grid-template-columns: 1fr; }
+.vm-phone .news { grid-template-columns: 1fr; }
+.vm-phone .bento { grid-template-columns: 1fr; }
+.vm-phone .b1, .vm-phone .b4, .vm-phone .b2, .vm-phone .b3 { grid-column: span 1; }
+.vm-phone .reqs .row { grid-template-columns: 1fr; gap: 4px; }
+.vm-phone .foot-grid { grid-template-columns: 1fr; gap: 26px; }
+.vm-phone .foot-bar { justify-content: center; text-align: center; }
+.vm-phone .rel-head { flex-direction: column; align-items: flex-start; }
+
+/* tablets / foldables: keep desktop layout but drop the two-pane guide */
+.vm-tablet .guide { grid-template-columns: 1fr; gap: 30px; }
+.vm-tablet .toc { display: none; }
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

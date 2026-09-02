@@ -6,7 +6,7 @@
   <title>Downloads — VIVI Music DE</title>
   <meta name="description" content="Installers for VIVI Music DE: Windows (.exe, .msi), Linux (.deb, AppImage, PKGBUILD), macOS (.dmg, .pkg) — stable and nightly channels, from GitHub Releases." />
   <link rel="icon" type="image/png" href="images/logo_vmde.png" />
-  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -113,18 +113,36 @@
       </section>
 
       <section class="os-sec" id="dl-macos">
-        <h2><span class="oi" aria-hidden="true">🍎</span> macOS 10.15+</h2>
+        <h2><span class="oi" aria-hidden="true">🍎</span> macOS 11+ (Apple Silicon)</h2>
         <div class="dl-grid">
           <div class="dl">
             <span class="t">Disk image</span>
-            <span class="d">Intel and Apple Silicon builds are published separately.</span>
-            <a class="btn sm" data-dl=".dmg" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .dmg</a>
+            <span class="d">For Apple Silicon Macs (M1 and newer).</span>
+            <a class="btn sm" data-dl=".dmg-arm" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .dmg</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
           <div class="dl">
             <span class="t">Installer package</span>
             <span class="d">Double-click, follow the wizard, done.</span>
-            <a class="btn sm" data-dl=".pkg" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .pkg</a>
+            <a class="btn sm" data-dl=".pkg-arm" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .pkg</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="os-sec" id="dl-macos-intel">
+        <h2><span class="oi" aria-hidden="true">🍏</span> macOS 10.15+ (Intel)</h2>
+        <div class="dl-grid">
+          <div class="dl">
+            <span class="t">Disk image</span>
+            <span class="d">For Intel Macs — the classic x86-64 build.</span>
+            <a class="btn sm" data-dl=".dmg-x64" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .dmg</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+          <div class="dl">
+            <span class="t">Installer package</span>
+            <span class="d">Double-click, follow the wizard, done.</span>
+            <a class="btn sm" data-dl=".pkg-x64" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .pkg</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
         </div>
@@ -225,8 +243,10 @@
       { fmt: ".msi", re: /\.msi$/i },
       { fmt: ".deb", re: /\.deb$/i },
       { fmt: ".AppImage", re: /\.appimage$/i },
-      { fmt: ".dmg", re: /\.dmg$/i },
-      { fmt: ".pkg", re: /\.pkg$/i }
+      { fmt: ".dmg-arm", re: /arm64.*\.dmg$/i },
+      { fmt: ".pkg-arm", re: /arm64.*\.pkg$/i },
+      { fmt: ".dmg-x64", re: /x64.*\.dmg$/i },
+      { fmt: ".pkg-x64", re: /x64.*\.pkg$/i }
     ];
 
     function render() {

@@ -118,6 +118,17 @@
   })();
 
   /* ---------- os sniffing (used by downloads + install guide) ---------- */
+  /* device kind straight from the user agent: the layout follows the
+     device (html.vm-phone / html.vm-tablet, set in each page head),
+     not just the viewport width. */
+  window.vmDeviceKind = function () {
+    var ua = navigator.userAgent || "";
+    var tablet = /iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (tablet) return "tablet";
+    if (/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua)) return "phone";
+    return "desktop";
+  };
+
   window.vmDetectOS = function () {
     var ua = navigator.userAgent || "";
     if (/Windows/i.test(ua)) return { id: "windows", name: "Windows", icon: "🪟" };

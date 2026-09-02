@@ -6,7 +6,7 @@
   <title>About — VIVI Music DE</title>
   <meta name="description" content="What VIVI Music DE is, who makes it, what it's built on, the license, and the questions people actually ask." />
   <link rel="icon" type="image/png" href="images/logo_vmde.png" />
-  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -90,7 +90,6 @@
           <p class="prose">Released under a <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE" target="_blank" rel="noopener">modified GNU General Public License v3.0</a>. Free software — you can use it, study it, share it and improve it. The modifications to the standard GPL-3.0 text are written out in the LICENSE file, read it if you plan to build on this.</p>
 
           <h2>The questions people actually ask</h2>
-          <p class="hnote" style="margin-bottom:12px"><button class="copy-btn" type="button" id="faqAll" style="position:static">expand all / collapse all</button></p>
 
           <details class="qa">
             <summary>Is VIVI Music DE free?</summary>
@@ -165,13 +164,13 @@
   <script>
   (function () {
     "use strict";
-    var btn = document.getElementById("faqAll");
-    if (!btn) return;
-    var qas = document.querySelectorAll("details.qa");
-    btn.addEventListener("click", function () {
-      var allOpen = Array.prototype.every.call(qas, function (q) { return q.open; });
-      Array.prototype.forEach.call(qas, function (q) { q.open = !allOpen; });
-      btn.textContent = allOpen ? "expand all" : "collapse all";
+    /* accordion: opening one closes the others — always a single open item */
+    var qas = Array.prototype.slice.call(document.querySelectorAll("details.qa"));
+    qas.forEach(function (q) {
+      q.addEventListener("toggle", function () {
+        if (!q.open) return;
+        qas.forEach(function (o) { if (o !== q && o.open) o.open = false; });
+      });
     });
   })();
   </script>
