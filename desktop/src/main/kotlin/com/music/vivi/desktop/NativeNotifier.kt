@@ -9,6 +9,7 @@ import java.awt.RenderingHints
 import java.awt.SystemTray
 import java.awt.TrayIcon
 import java.awt.image.BufferedImage
+import java.util.concurrent.TimeUnit
 
 /**
  * Unified notification dispatcher. All app notifications (update available,
@@ -106,8 +107,18 @@ object NativeNotifier {
     /** Shows a native system notification with [title] and [message]. */
     fun notify(title: String, message: String, section: String? = null) {
         runCatching {
+            val osName = System.getProperty("os.name").orEmpty().lowercase()
+            WindowsToast.log("NativeNotifier.notify: os=$osName title=\"$title\"")
+            // macOS: java.awt.SystemTray balloons are unreliable there (they
+            // often never show, especially on Apple Silicon), so use the native
+            // `osascript` notification center instead — it works on Intel and
+            // Apple Silicon alike. Fall back to the tray balloon if osascript
+            // is missing or fails.
+            if (osName.startsWith("mac")) {
+                if (macOsNotify(title, message)) return
+                WindowsToast.log("NativeNotifier: osascript failed, falling back to SystemTray")
+            }
             val winToast = WindowsToast.isAvailable()
-            WindowsToast.log("NativeNotifier.notify: winToast=$winToast os=${System.getProperty("os.name")} title=\"$title\"")
             if (winToast) {
                 WindowsToast.show(title, message, section)
                 return
@@ -121,6 +132,21 @@ object NativeNotifier {
             icon.displayMessage(title, message, TrayIcon.MessageType.INFO)
         }
     }
+
+    /**
+     * Shows a macOS Notification Center banner via `osascript` (built into
+     * every macOS). Returns true when the notification was actually posted.
+     */
+    private fun macOsNotify(title: String, message: String): Boolean = runCatching {
+        fun esc(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
+        val script = "display notification \"${esc(message)}\" with title \"${esc(title)}\""
+        val p = ProcessBuilder("osascript", "-e", script)
+            .redirectErrorStream(false)
+            .start()
+        val finished = p.waitFor(10, TimeUnit.SECONDS)
+        if (finished) p.destroyForcibly()
+        finished && p.exitValue() == 0
+    }.getOrDefault(false)
 
     /**
      * Creates the tray icon eagerly (no notification needed) and (re)builds its

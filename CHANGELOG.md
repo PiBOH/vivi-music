@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.6-nightly] - 2026-09-02
+
+### Added
+- [DE] **Developer options → "Export logs (.zip)"**: packages VIVI's diagnostic data into a STORED .zip for support requests — every log file from `~/.vivimusic/` (login-debug.log, native-notify.log, …) plus a generated `system-info.txt` (app version, OS, Java, key settings) and a redacted `settings-summary.txt` (the settings file itself is never included because it holds the YouTube cookie). The save dialog suggests `vivi-de-logs-<version>-<date>.zip`.
+- [DE] **Appearance → Native system title bar now shows a compatibility hint** below the description: recommended when window/rendering problems occur (translated in all 47 languages).
+
+### Fixed
+- [DE] **Native notifications on macOS now actually fire**: the old path used the `java.awt.SystemTray` balloon, which usually never shows on macOS (especially Apple Silicon). Native notifications now go through `osascript display notification` (Notification Center) with a fallback to the tray balloon if that fails.
+- [DE] **Login validation failures caused by a YouTube Music server error (HTTP 5xx, e.g. 500 "Internal error encountered") are now tagged with error code E1029** (LOGIN_SERVER_ERROR, added to ERRORS.md): the error message starts with `E1029` and ERRORS.md explains it is a Google backend error, not a stale session — wait and retry instead of re-copying cookies. Happens on every OS with both the embedded sign-in and the manual cookie method.
+
 ## [6.4.41_DE-1.49.5-nightly] - 2026-09-02
 
 ### Fixed

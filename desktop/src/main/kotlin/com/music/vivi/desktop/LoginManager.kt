@@ -98,9 +98,18 @@ object LoginManager {
         }
 
         YouTube.cookie = null
-        val detail = lastError?.message?.takeIf { it.isNotBlank() }
+        val rawDetail = lastError?.message?.takeIf { it.isNotBlank() }
             ?: lastError?.javaClass?.simpleName
             ?: "unknown error"
+        // A Ktor server exception surfaces as "Server error(POST <url>: 5xx. Text: ...)".
+        // That is a Google backend error, not a credential problem — tag it with
+        // its own code (E1029, see ERRORS.md) so the user can look it up instead
+        // of assuming their cookie/session is broken.
+        val detail = if (rawDetail.startsWith("Server error") && Regex("\\b5\\d\\d\\b").containsMatchIn(rawDetail)) {
+            "E1029 $rawDetail"
+        } else {
+            rawDetail
+        }
         // Append the failure to the same debug file used by the WebView capture,
         // so the next user report tells us exactly what went wrong.
         runCatching {

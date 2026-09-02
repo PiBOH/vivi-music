@@ -163,7 +163,15 @@ fun AppearanceSection(
             M3SettingsItem(
                 icon = Icons.Filled.DesktopWindows,
                 title = { Text(Localization.get(language, "native_title_bar")) },
-                description = { Text(Localization.get(language, "native_title_bar_desc")) },
+                description = {
+                    Column {
+                        Text(Localization.get(language, "native_title_bar_desc"))
+                        Text(
+                            Localization.get(language, "native_title_bar_desc_hint"),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                },
                 trailing = {
                     Switch(
                         checked = nativeTitleBar,

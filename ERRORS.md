@@ -80,6 +80,7 @@ table below to understand what happened and how to try to fix it.
 | E1026 | LISTEN_TOGETHER_FAILED | Connecting to a Listen Together room failed. | Check the room code and your connection, then retry. |
 | E1027 | COMMITS_LOAD_FAILED | Loading the commit list failed. | Check your connection and reopen the Commit screen. |
 | E1028 | STREAM_RESOLUTION_FAILED | VIVI could not resolve a playable stream for the track. | Skip the track and come back (forces a fresh URL), or try a different audio quality. |
+| E1029 | LOGIN_SERVER_ERROR | YouTube Music answered with a server error (HTTP 5xx, e.g. 500 "Internal error encountered") while validating the session — the credentials may be fine, Google's backend just failed (can happen on any OS, with both the embedded sign-in and the manual cookie method). | Wait a few minutes and try again; if it keeps failing, check https://status.google.com or wait for YouTube to recover, then retry the sign-in. |
 
 ---
 
