@@ -2057,12 +2057,16 @@ fun WindowScope.App(
                         )
                     }
                     is Screen.SettingsDataSaver -> {
-                        val s = DesktopSettings.load()
+                        // Local observable state: DesktopSettings.load() is a plain
+                        // file read, so without this the Switch would only reflect
+                        // the change after leaving and re-entering the screen.
+                        var dataSaver by remember { mutableStateOf(DesktopSettings.load().dataSaver) }
                         SettingsDataSaverScreen(
                             language = language,
                             onBack = goBack,
-                            dataSaver = s.dataSaver,
+                            dataSaver = dataSaver,
                             onToggleDataSaver = { enabled ->
+                                dataSaver = enabled
                                 DesktopSettings.update { state ->
                                     if (enabled) {
                                         state.copy(

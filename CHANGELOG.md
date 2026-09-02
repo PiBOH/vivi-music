@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.9-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **Data saver toggle now updates live**: flipping the switch in Settings → Data saver previously only reflected the new state after leaving and re-entering the screen (the value was read once from the settings file instead of from observable state). The switch now flips immediately, on both the trailing switch and the row click.
+
 ## [6.4.41_DE-1.49.8-nightly] - 2026-09-02
 
 ### Fixed
