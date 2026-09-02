@@ -1985,6 +1985,7 @@ fun WindowScope.App(
                             sliderStyle = s
                             DesktopSettings.update { it.copy(sliderStyle = s) }
                         },
+                        onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
                         onOpenEqualizer = { navigate(Screen.SettingsEqualizer) },
                         streamCacheMinutes = streamCacheMinutes,
                         onStreamCacheMinutesChange = { m ->

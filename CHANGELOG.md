@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.5-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **"Player design" entry in Settings → Player & audio now opens the design screen**: the row was rendered in the player section but its navigation callback was never wired, so clicking it did nothing (the identical entry under Appearance worked). The settings screen now passes `onOpenPlayerDesign` to navigate to the player design sub-screen, matching the mobile behavior.
+
 ## [6.4.41_DE-1.49.4-nightly] - 2026-09-02
 
 ### Changed
