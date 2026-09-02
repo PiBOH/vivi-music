@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.50.1-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **Listen Together: creating a room no longer hangs on the spinner**: the client stored the create/join request in a closure that captured the socket variable *before* connecting — when the WebSocket was still offline the captured value was `null`, so `create_room` was silently dropped and the UI stayed stuck on the loading indicator (the connection badge said "connected" but no room was ever created). Pending messages are now queued as text and flushed from `onOpen` on the actual open socket; a dropped connection while a create/join is in flight also releases the spinner so the user can retry, and a failed connection no longer leaves the button disabled.
+
 ## [6.4.41_DE-1.50.0-nightly] - 2026-09-02
 
 ### Added

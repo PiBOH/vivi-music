@@ -26,6 +26,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
@@ -378,7 +379,10 @@ class ListenTogetherClient(
 
     private var socket: WebSocket? = null
     private var username = ""
-    private var pendingAction: (() -> Unit)? = null
+    // Messages queued while the socket was offline/connecting. They are flushed
+    // from onOpen using the *actual* open socket; capturing the socket value in
+    // a closure before connect() would capture null and silently drop them.
+    private val pendingMessages = ConcurrentLinkedQueue<String>()
     private var reconnectAttempts = 0
     private var manualClose = false
     private var reconnectJob: Job? = null
@@ -437,8 +441,11 @@ class ListenTogetherClient(
             reconnectAttempts = 0
             _connectionState.value = LtConnectionState.CONNECTED
             startPing()
-            pendingAction?.invoke()
-            pendingAction = null
+            // Flush everything queued while we were offline/connecting.
+            while (true) {
+                val next = pendingMessages.poll() ?: break
+                webSocket.send(next)
+            }
             // If we have a valid session, try to resume the room.
             val token = sessionToken
             if (token != null && storedRoomCode != null) {
@@ -455,6 +462,9 @@ class ListenTogetherClient(
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             log("ERROR", "Connection failed", t.message)
+            // Release the create/join spinner so the user can retry instead of
+            // waiting forever on a room that was never created.
+            _busy.value = false
             scope.launch { _events.emit(LtEvent.Error(t.message ?: "Connection failed")) }
             handleDisconnect()
         }
@@ -477,6 +487,7 @@ class ListenTogetherClient(
         pingJob?.cancel()
         socket?.close(1000, "bye")
         socket = null
+        pendingMessages.clear()
         _connectionState.value = LtConnectionState.DISCONNECTED
         _roomState.value = null
         _userId.value = null
@@ -491,6 +502,10 @@ class ListenTogetherClient(
     private fun handleDisconnect() {
         if (_connectionState.value != LtConnectionState.CONNECTED) return
         _connectionState.value = LtConnectionState.DISCONNECTED
+        // A create/join in flight has no room yet: release the spinner so the
+        // user can retry once the connection comes back, instead of waiting
+        // forever on a room that never materialized.
+        if (_roomState.value == null) _busy.value = false
         scope.launch { _events.emit(LtEvent.Disconnected) }
         pingJob?.cancel()
         if (manualClose) return
@@ -648,11 +663,12 @@ class ListenTogetherClient(
     }
 
     private fun send(msg: LtMessage) {
+        val text = json.encodeToString(LtMessage.serializer(), msg)
         val ws = socket
         if (ws != null && _connectionState.value == LtConnectionState.CONNECTED) {
-            ws.send(json.encodeToString(LtMessage.serializer(), msg))
+            ws.send(text)
         } else {
-            pendingAction = { ws?.send(json.encodeToString(LtMessage.serializer(), msg)) }
+            pendingMessages.add(text)
             connect()
         }
     }
