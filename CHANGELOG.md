@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.7-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **Sign-in now requires `DATASYNC_ID` and `VISITOR_DATA`** (they were treated as optional, which made the account validation answer as a guest — the cryptic NPE / 5xx some users hit after the embedded window closed). The embedded sign-in window now reads both values directly from the loaded page's `ytcfg` and hands them over with the cookies; the manual method fetches them from the music.youtube.com shell (with a www.youtube.com fallback). If both sources miss them, the login fails fast with a readable **E1030** (see ERRORS.md) instead of a confusing backend error.
+- [DE] Login labels/hint updated from "optional" to "required" wording in all 47 languages.
+
 ## [6.4.41_DE-1.49.6-nightly] - 2026-09-02
 
 ### Added

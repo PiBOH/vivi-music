@@ -149,14 +149,18 @@ fun LoginContent(language: String, onLoggedIn: () -> Unit) {
                         waitingForWindow = true
                         val opened = LoginWebView.openEmbedded(language) { captured ->
                             waitingForWindow = false
-                            if (captured != null) {
+                            if (captured?.cookie != null) {
                                 // Auto-captured session: validate + persist exactly
                                 // like the manual flow, then hand back to the app.
                                 scope.launch {
                                     savingCookie = true
                                     try {
                                         val account = withContext(Dispatchers.IO) {
-                                            LoginManager.login(cookie = captured)
+                                            LoginManager.login(
+                                                cookie = captured.cookie,
+                                                dataSyncIdOverride = captured.dataSyncId,
+                                                visitorDataOverride = captured.visitorData,
+                                            )
                                         }
                                         status = "${Localization.get(language, "logged_in_as")}: ${account.name}"
                                         refreshAccount()
@@ -164,7 +168,9 @@ fun LoginContent(language: String, onLoggedIn: () -> Unit) {
                                     } catch (e: Exception) {
                                         // Keep the captured cookies in the manual field
                                         // so a retry is a single click.
-                                        cookie = captured
+                                        cookie = captured.cookie
+                                        dataSyncId = captured.dataSyncId.orEmpty()
+                                        visitorData = captured.visitorData.orEmpty()
                                         manualOpen = true
                                         error = e.message ?: (e::class.simpleName ?: "error")
                                     } finally {

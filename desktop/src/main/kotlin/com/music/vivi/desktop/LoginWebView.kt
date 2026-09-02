@@ -56,10 +56,17 @@ object LoginWebView {
         val hasFullSession: Boolean,
     )
 
+    /** What the window hands back after a sign-in attempt. */
+    data class Capture(
+        val cookie: String?,
+        val dataSyncId: String?,
+        val visitorData: String?,
+    )
+
     fun isWindowOpen(): Boolean = windowOpen
 
     /** Starts JavaFX once, then creates the embedded login Stage. */
-    fun openEmbedded(language: String, onCaptured: (String?) -> Unit): Boolean {
+    fun openEmbedded(language: String, onCaptured: (Capture?) -> Unit): Boolean {
         if (unavailable || windowOpen) return !unavailable
         return try {
             if (CookieHandler.getDefault() !is CookieManager) {
@@ -73,7 +80,7 @@ object LoginWebView {
         } catch (_: Throwable) {
             windowOpen = false
             unavailable = true
-            deliver(null, onCaptured)
+            deliver(null, null, null, onCaptured)
             false
         }
     }
@@ -124,13 +131,13 @@ object LoginWebView {
         }
     }
 
-    private fun deliver(cookie: String?, callback: (String?) -> Unit) {
+    private fun deliver(cookie: String?, dataSyncId: String?, visitorData: String?, callback: (Capture?) -> Unit) {
         if (delivered) return
         delivered = true
-        runCatching { callback(cookie) }
+        runCatching { callback(Capture(cookie, dataSyncId, visitorData)) }
     }
 
-    private fun createWindow(language: String, callback: (String?) -> Unit) {
+    private fun createWindow(language: String, callback: (Capture?) -> Unit) {
         try {
             val stage = Stage()
             val status = Label(Localization.get(language, "login_waiting"))
@@ -169,7 +176,7 @@ object LoginWebView {
             stage.scene = Scene(root, 1000.0, 720.0)
             stage.setOnCloseRequest {
                 windowOpen = false
-                deliver(capture().header, callback)
+                deliver(capture().header, null, null, callback)
             }
             stage.show()
 
@@ -201,12 +208,18 @@ object LoginWebView {
                         }
                         // Reload music.youtube.com WITH the session cookie so
                         // every youtube.com session cookie is set, then settle
-                        // and re-capture the full header before closing.
+                        // and re-capture the full header before closing. The ids
+                        // come from the page itself (ytcfg), right there.
                         FxPlatform.runLater { browser.engine.load("https://music.youtube.com/") }
                         Thread.sleep(4500)
+                        val ids = extractPageIds(browser)
                         val finalCap = capture()
-                        logDebug("delivering full session: ${finalCap.names.size} cookies, missing=${finalCap.missing}")
-                        deliver(finalCap.header ?: cap.header, callback)
+                        logDebug(
+                            "delivering full session: ${finalCap.names.size} cookies, missing=" +
+                                "${finalCap.missing}, dataSyncId=${if (ids.first != null) "ok" else "MISSING"}, " +
+                                "visitorData=${if (ids.second != null) "ok" else "MISSING"}"
+                        )
+                        deliver(finalCap.header ?: cap.header, ids.first, ids.second, callback)
                         FxPlatform.runLater { stage.close() }
                         break
                     }
@@ -220,7 +233,7 @@ object LoginWebView {
                             spinner.isVisible = false
                             status.text = Localization.get(language, "login_saving")
                         }
-                        deliver(cap.header, callback)
+                        deliver(cap.header, null, null, callback)
                         FxPlatform.runLater { stage.close() }
                         break
                     }
@@ -234,8 +247,38 @@ object LoginWebView {
         } catch (t: Throwable) {
             windowOpen = false
             unavailable = true
-            deliver(null, callback)
+            deliver(null, null, null, callback)
         }
+    }
+
+    /**
+     * Reads `DATASYNC_ID` and `VISITOR_DATA` straight from the loaded page's
+     * ytcfg while the WebView is sitting on music.youtube.com with the session
+     * — the same values that appear in the page source. These two are
+     * mandatory (without them the account validation answers as guest), so
+     * this is the authoritative source; the shell-fetch fallback in
+     * [LoginManager] only runs when this capture comes back empty.
+     */
+    private fun extractPageIds(browser: WebView): Pair<String?, String?> {
+        val result = arrayOfNulls<String>(2)
+        val latch = CountDownLatch(1)
+        FxPlatform.runLater {
+            try {
+                val getter = "(function(k){ try { if (window.ytcfg && window.ytcfg.get) { return window.ytcfg.get(k) || ''; } if (window.ytcfg && window.ytcfg.data_) { return window.ytcfg.data_[k] || ''; } return ''; } catch (e) { return ''; } })"
+                result[0] = (browser.engine.executeScript("$getter('DATASYNC_ID')") as? String)
+                    ?.takeIf { it.isNotBlank() }
+                result[1] = (browser.engine.executeScript("$getter('VISITOR_DATA')") as? String)
+                    ?.takeIf { it.isNotBlank() }
+                if (result[0] == null || result[1] == null) {
+                    logDebug("ytcfg ids incomplete: dataSyncId=${result[0] != null}, visitorData=${result[1] != null}")
+                }
+            } catch (t: Throwable) {
+                logDebug("ytcfg extraction failed: $t")
+            }
+            latch.countDown()
+        }
+        runCatching { latch.await(5, TimeUnit.SECONDS) }
+        return result[0] to result[1]
     }
 
     /**

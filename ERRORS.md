@@ -81,6 +81,7 @@ table below to understand what happened and how to try to fix it.
 | E1027 | COMMITS_LOAD_FAILED | Loading the commit list failed. | Check your connection and reopen the Commit screen. |
 | E1028 | STREAM_RESOLUTION_FAILED | VIVI could not resolve a playable stream for the track. | Skip the track and come back (forces a fresh URL), or try a different audio quality. |
 | E1029 | LOGIN_SERVER_ERROR | YouTube Music answered with a server error (HTTP 5xx, e.g. 500 "Internal error encountered") while validating the session — the credentials may be fine, Google's backend just failed (can happen on any OS, with both the embedded sign-in and the manual cookie method). | Wait a few minutes and try again; if it keeps failing, check https://status.google.com or wait for YouTube to recover, then retry the sign-in. |
+| E1030 | LOGIN_IDS_MISSING | `DATASYNC_ID` and/or `VISITOR_DATA` could not be extracted — they are **mandatory**: innertube puts them in the API context (`visitorData` + `onBehalfOfUser`) and the account validation answers as a guest (cryptic NPE or 5xx) without them. | Retry the sign-in so the extraction runs again (the embedded window reads them from the page; the manual method fetches the music.youtube.com shell), or paste them manually in the manual cookie section. |
 
 ---
 
