@@ -3,117 +3,177 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>About — VIVI Music DE</title>
-  <meta name="description" content="About VIVI Music DE." />
-  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <meta name="description" content="What VIVI Music DE is, who makes it, what it's built on, the license, and the questions people actually ask." />
+  <link rel="icon" type="image/png" href="images/logo_vmde.png" />
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <nav class="nav">
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
-        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        <img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">
         VIVI Music <em>DE</em>
       </a>
-      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <button class="nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
         <a href="index.html">Home</a>
         <a href="downloads.html">Downloads</a>
         <a href="install-guide.html">Guide</a>
+        <a href="sync.html">Sync</a>
         <a href="changelog.html">Changelog</a>
         <a href="errors.html">Errors</a>
-        <a href="sync.html">Sync</a>
-        <a href="about.html">About</a>
+        <a href="about.html" class="active">About</a>
+        <a class="nav-gh" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github ↗</a>
+        <button class="theme-toggle" data-theme-toggle type="button" aria-label="Toggle dark/light theme"></button>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
-  <main class="page">
-    <h1>VIVI Music DE, at a glance</h1>
-    <p class="lede">
-      VIVI Music DE brings
-      <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a> to
-      <strong>Windows, Linux and macOS</strong>. Built with Kotlin and Compose
-      Multiplatform, it keeps the same Material 3 interface, with a collapsible
-      sidebar in place of the mobile bottom bar and a dedicated device-sync
-      screen.
-    </p>
+  <main>
+    <header class="phead">
+      <div class="wrap">
+        <p class="kicker">about</p>
+        <h1>The project,<br>at a glance.</h1>
+        <p class="lead">VIVI Music DE brings VIVI Music to Windows, Linux and macOS — same Material 3 interface, a collapsible sidebar instead of the mobile bottom bar, and a dedicated device-sync screen.</p>
+      </div>
+    </header>
 
-    <h2>Developer</h2>
-    <ul>
-      <li><a href="https://github.com/PiBOH">PiBOH</a> — lead developer.</li>
-    </ul>
+    <div class="wrap pbody">
+      <div class="about-grid">
 
-    <h2>Community</h2>
-    <ul>
-      <li>Source code: <a href="https://github.com/PiBOH/vivi-music">github.com/PiBOH/vivi-music</a></li>
-      <li>Releases: <a href="https://github.com/PiBOH/vivi-music/releases">github.com/PiBOH/vivi-music/releases</a></li>
-      <li>Telegram: <a href="https://t.me/vivimusicde">t.me/vivimusicde</a></li>
-    </ul>
+        <aside class="glance reveal" aria-label="At a glance">
+          <h3>At a glance</h3>
+          <div class="row"><span class="k">Developer</span><span class="v"><a href="https://github.com/PiBOH" target="_blank" rel="noopener">PiBOH</a></span></div>
+          <div class="row"><span class="k">What</span><span class="v">desktop port of VIVI Music</span></div>
+          <div class="row"><span class="k">Stack</span><span class="v">Kotlin · Compose Multiplatform</span></div>
+          <div class="row"><span class="k">UI</span><span class="v">Material 3</span></div>
+          <div class="row"><span class="k">Runtime</span><span class="v">JDK 21 (bundled)</span></div>
+          <div class="row"><span class="k">License</span><span class="v">modified GPL-3.0</span></div>
+          <div class="row"><span class="k">Source</span><span class="v"><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github.com/PiBOH/vivi-music</a></span></div>
+          <div class="row"><span class="k">Talk</span><span class="v"><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">t.me/vivimusicde</a></span></div>
+        </aside>
 
-    <h2>Credits</h2>
-    <p class="lede">
-      VIVI Music DE is a desktop port of
-      <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a>, created
-      and maintained by
-      <a href="https://github.com/vivizzz007">VIVIDH P ASHOKAN</a>. Visit the
-      <a href="https://vivimusic.mkmdevilmi.workers.dev/">official VIVI Music site</a>.
-    </p>
+        <div>
+          <h2 style="margin-top:0">What it is</h2>
+          <p class="prose">VIVI Music is a modern music player that streams from YouTube Music. The Android version is the original — created and maintained by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>. VIVI Music DE is the desktop port: it reuses the same screens and the same pure-JVM network modules (innerTube, Spotify, Last.fm, Kizzy, ShazamKit, JioSaavn, lyrics) on top of Compose Multiplatform, and re-lays them out for a resizable window with a collapsible sidebar.</p>
+          <p class="prose">The part people actually come for is cross-device sync: pair it with the app on your phone and playback, seek position, settings and library follow you from one device to the other — over the same Wi-Fi, or anywhere, through a cloud relay. Details on the <a href="sync.html">sync page</a>.</p>
 
-    <h2>License</h2>
-    <p class="lede">
-      Released under a
-      <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE">modified GNU General Public License v3.0</a>.
-      Free software — you can use, study, share and improve it.
-    </p>
+          <h2>Built on</h2>
+          <div class="chiprow">
+            <span class="chip">Kotlin</span>
+            <span class="chip">Compose Multiplatform</span>
+            <span class="chip">JDK 21</span>
+            <span class="chip">Material 3</span>
+            <span class="chip">in-JVM AAC decoder</span>
+            <span class="chip">innerTube</span>
+            <span class="chip">WebSocket sync</span>
+          </div>
 
-    <h2>FAQ</h2>
-    <div class="faq reveal">
-      <details>
-        <summary>Is VIVI Music DE free?</summary>
-        <div><p>Yes — free and open source under a modified GPL-3.0 license. No ads, no tracking.</p></div>
-      </details>
-      <details>
-        <summary>Do I need a Google account?</summary>
-        <div><p>Not to browse and play music. Signing in (Google or cookies) unlocks your YouTube Music history, library and playlists.</p></div>
-      </details>
-      <details>
-        <summary>Which systems are supported?</summary>
-        <div><p>Windows 10+, Linux (x86_64) and macOS 10.15+. See the <a href="install-guide.html">install guide</a> for details.</p></div>
-      </details>
-      <details>
-        <summary>Can I sync with my phone?</summary>
-        <div><p>Yes — pair the Android app over LAN (same Wi-Fi) or the cloud relay. Queue, playback, volume, playlists and settings stay in sync. See <a href="sync.html">Sync</a>.</p></div>
-      </details>
-      <details>
-        <summary>Is it a fork of VIVI Music?</summary>
-        <div><p>It's a desktop port of <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a>, created and maintained by <a href="https://github.com/vivizzz007">VIVIDH P ASHOKAN</a>. VIVI Music DE keeps the same Material 3 interface and adds desktop features plus device sync.</p></div>
-      </details>
-      <details>
-        <summary>How do I report a bug?</summary>
-        <div><p>Open an issue on <a href="https://github.com/PiBOH/vivi-music/issues">GitHub</a> or ask in the <a href="https://t.me/vivimusicde">Telegram channel</a>. Include the version and, if possible, the error log from <code>~/.vivimusic/</code>.</p></div>
-      </details>
+          <h2>Credits</h2>
+          <p class="prose">VIVI Music DE stands on the shoulders of a few very good projects:</p>
+          <ul class="prose">
+            <li><a href="https://github.com/vivizzz007/vivi-music" target="_blank" rel="noopener"><b>VIVI Music</b></a> by VIVIDH P ASHOKAN — the original Android app that this whole project ports to the desktop.</li>
+            <li><a href="https://github.com/better-lyrics/better-lyrics" target="_blank" rel="noopener"><b>Better Lyrics</b></a> — synced lyrics and YouTube Music integration.</li>
+            <li><a href="https://github.com/maxrave-dev/SimpMusic" target="_blank" rel="noopener"><b>SimpMusic</b></a> — lyrics functionality and integration logic.</li>
+            <li><a href="https://github.com/monochrome-music/monochrome" target="_blank" rel="noopener"><b>Monochrome</b></a> — the premium Apple Music–style visualizer canvas.</li>
+            <li><a href="https://github.com/ZemerTeam/zemer-cipher" target="_blank" rel="noopener"><b>Zemer</b></a> — for the new playback method, which changed what the app could do.</li>
+            <li><a href="https://github.com/mostafaalagamy" target="_blank" rel="noopener"><b>Mostafa Alagamy</b></a> — inspiration and contributions to the community.</li>
+          </ul>
+
+          <h2>License</h2>
+          <p class="prose">Released under a <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE" target="_blank" rel="noopener">modified GNU General Public License v3.0</a>. Free software — you can use it, study it, share it and improve it. The modifications to the standard GPL-3.0 text are written out in the LICENSE file, read it if you plan to build on this.</p>
+
+          <h2>The questions people actually ask</h2>
+          <p class="hnote" style="margin-bottom:12px"><button class="copy-btn" type="button" id="faqAll" style="position:static">expand all / collapse all</button></p>
+
+          <details class="qa">
+            <summary>Is VIVI Music DE free?</summary>
+            <div class="a">Yes — free and open source under a modified GPL-3.0 license. No ads, no tracking, no premium tier.</div>
+          </details>
+          <details class="qa">
+            <summary>Do I need a Google account?</summary>
+            <div class="a">Not to browse and play music. Signing in (Google or cookies) unlocks your YouTube Music history, library and playlists.</div>
+          </details>
+          <details class="qa">
+            <summary>Which systems are supported?</summary>
+            <div class="a">Windows 10+, Linux (x86-64) and macOS 10.15+. The <a href="install-guide.html">install guide</a> has the package for every one of them.</div>
+          </details>
+          <details class="qa">
+            <summary>Can I sync with my phone?</summary>
+            <div class="a">Yes — pair the Android app over LAN (same Wi-Fi) or the cloud relay. Queue, playback, volume, playlists and settings stay in sync. See <a href="sync.html">Sync</a>.</div>
+          </details>
+          <details class="qa">
+            <summary>Is it a fork of VIVI Music?</summary>
+            <div class="a">It's a desktop port of VIVI Music, created and maintained by VIVIDH P ASHOKAN. VIVI Music DE keeps the same Material 3 interface and adds desktop features plus device sync.</div>
+          </details>
+          <details class="qa">
+            <summary>How do I report a bug?</summary>
+            <div class="a">Open an issue on <a href="https://github.com/PiBOH/vivi-music/issues" target="_blank" rel="noopener">GitHub</a> or ask in the <a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel</a>. Include the version and, if you can, the error log from <code>~/.vivimusic/</code> — the <a href="errors.html">error codes page</a> will help you decode it.</div>
+          </details>
+
+          <p class="muted" style="font-size:13px;margin-top:26px">VIVI Music DE is not affiliated with, funded, authorized or endorsed by YouTube or Google LLC. Any trademark used here belongs to its owner; this is an independent project for personal and educational use.</p>
+        </div>
+      </div>
     </div>
   </main>
 
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>VIVI Music DE</span>
-      <div class="links">
-        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
-        <a href="errors.html">Error codes</a>
-        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
-        <a href="https://t.me/vivimusicde">Telegram</a>
-        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div>
+        <a class="brand" href="index.html"><img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">VIVI Music <em>DE</em></a>
+        <p class="foot-blurb">A free, open-source desktop port of VIVI Music. Streams from YouTube Music, stays in step with your phone.</p>
+        <p class="foot-meta">site v3.0 · merged from recreate-vivi-music-website · plain html / css / js · no framework, no build step</p>
       </div>
+      <div>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="install-guide.html">Install guide</a></li>
+          <li><a href="sync.html">Phone ↔ desktop sync</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="errors.html">Error codes</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub repo ↗</a></li>
+          <li><a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Releases ↗</a></li>
+          <li><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel ↗</a></li>
+          <li><a href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">VIVI Music (mobile) ↗</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Fine print</h4>
+        <p class="foot-note">Not affiliated with, funded or endorsed by YouTube or Google. Released under a modified GPL-3.0. The original mobile app is created by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>.</p>
+      </div>
+    </div>
+    <div class="wrap foot-bar">
+      <span>© <span data-year>2025</span> PiBOH — made for people who queue songs on two screens</span>
+      <span>~/.vivimusic — your data stays on your machine</span>
     </div>
   </footer>
 
-  <script src="assets/app.js"></script>
+  <script src="main.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var btn = document.getElementById("faqAll");
+    if (!btn) return;
+    var qas = document.querySelectorAll("details.qa");
+    btn.addEventListener("click", function () {
+      var allOpen = Array.prototype.every.call(qas, function (q) { return q.open; });
+      Array.prototype.forEach.call(qas, function (q) { q.open = !allOpen; });
+      btn.textContent = allOpen ? "expand all" : "collapse all";
+    });
+  })();
+  </script>
 </body>
 </html>

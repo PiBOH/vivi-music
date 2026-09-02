@@ -3,133 +3,219 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
-  <title>Sync — VIVI Music DE</title>
-  <meta name="description" content="Pair your phone with VIVI Music DE over LAN or the cloud relay and keep everything in sync." />
-  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <title>Phone ↔ desktop sync — VIVI Music DE</title>
+  <meta name="description" content="How VIVI Music DE pairs with the VIVI Music Android app: LAN pairing over the same Wi-Fi, or the cloud relay. 6-digit code, QR, WebSocket." />
+  <link rel="icon" type="image/png" href="images/logo_vmde.png" />
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <nav class="nav">
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
-        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        <img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">
         VIVI Music <em>DE</em>
       </a>
-      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <button class="nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
         <a href="index.html">Home</a>
         <a href="downloads.html">Downloads</a>
         <a href="install-guide.html">Guide</a>
+        <a href="sync.html" class="active">Sync</a>
         <a href="changelog.html">Changelog</a>
         <a href="errors.html">Errors</a>
-        <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
+        <a class="nav-gh" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github ↗</a>
+        <button class="theme-toggle" data-theme-toggle type="button" aria-label="Toggle dark/light theme"></button>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
-  <main class="page">
-    <h1>Phone ↔ Desktop sync</h1>
-    <p class="lede">
-      Pair the Android app with VIVI Music DE and they stay in sync in real
-      time: queue, playback position, volume, playlists, theme, accent color
-      and settings.
-    </p>
+  <main>
+    <header class="phead">
+      <div class="wrap">
+        <p class="kicker">sync</p>
+        <h1>Phone ↔ desktop,<br>in real time.</h1>
+        <p class="lead">Pair the Android app with VIVI Music DE and they stay in lockstep: queue, playback position, volume, playlists, theme, accent colour and settings. One pair, both directions.</p>
+      </div>
+    </header>
 
-    <div class="sync-diagram reveal" aria-label="Sync diagram: phone and desktop connected">
-      <div class="sync-node" tabindex="0" data-tip="Your Android phone runs VIVI Music. Every change you make here is mirrored on the desktop: queue, play/pause, volume, playlists and settings.">
-        <div class="emoji">📱</div>
-        <div class="name">Phone</div>
-        <div class="sub">VIVI Music (Android)</div>
-        <div class="node-eq" aria-hidden="true"><i></i><i></i><i></i></div>
-      </div>
-      <div class="sync-link" aria-hidden="true">
-        <div class="sync-flow">
-          <span class="flow-line"></span>
-          <i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i>
+    <div class="wrap pbody">
+
+      <div class="duo reveal">
+        <div class="device" tabindex="0">
+          <span class="ico" aria-hidden="true">📱</span>
+          <h3>Phone</h3>
+          <span class="sub2">VIVI Music (Android)</span>
+          <span class="tip" role="tooltip">Your phone runs the original VIVI Music. Anything you do here — play, seek, volume, playlists — is mirrored on the desktop in real time.</span>
         </div>
-        <span>WebSocket · real-time</span>
+        <div class="duo-mid" aria-hidden="true"><span class="pd"></span><span class="pd back"></span></div>
+        <div class="device" tabindex="0">
+          <span class="ico" aria-hidden="true">💻</span>
+          <h3>Desktop</h3>
+          <span class="sub2">VIVI Music DE</span>
+          <span class="tip" role="tooltip">Your computer runs VIVI Music DE — the remote station of the pair. Search a song on the phone and it plays here; skip here and the phone follows.</span>
+        </div>
       </div>
-      <div class="sync-node" tabindex="0" data-tip="Your computer runs VIVI Music DE — the remote station of the pair. Search a song on the phone and it plays here instantly, or control the desktop from the phone.">
-        <div class="emoji">💻</div>
-        <div class="name">Desktop</div>
-        <div class="sub">VIVI Music DE</div>
-        <div class="node-eq" aria-hidden="true"><i></i><i></i><i></i></div>
-      </div>
-      <div class="sync-relay" tabindex="0" data-tip="Same Wi-Fi: the connection is direct (LAN relay hosted by the desktop). Different networks: the pair routes through the cloud relay (WebSocket). Both speak the same protocol.">
-        <span class="ping"></span> LAN relay · or cloud relay <code>wss://vivimusic-device-sync.onrender.com</code>
+      <p class="hnote">hover or tap a device card to see its side of the deal</p>
+      <span class="relay-chip reveal">cloud relay <code>wss://vivimusic-device-sync.onrender.com</code><button class="copy-btn" type="button" data-copy="wss://vivimusic-device-sync.onrender.com">copy</button></span>
+
+      <div class="prose" style="max-width:none">
+        <h2>Pairing over LAN (same Wi-Fi)</h2>
+        <ol class="steps">
+          <li>Open <b>Settings → Devices</b> in VIVI Music DE and press <b>Start LAN server</b>. A relay address and a 6-digit pairing code appear on screen, next to a QR.</li>
+          <li>On the phone, open <b>Settings → Devices</b> in VIVI Music — or just scan the QR code shown on the desktop.</li>
+          <li>Enter the relay address and the 6-digit code, then tap <b>Pair</b>.</li>
+          <li>Done. The two devices are connected and keep syncing from here on — until one of the apps is closed.</li>
+        </ol>
+
+        <h2>Pairing over the cloud relay</h2>
+        <p>If the phone and desktop sit on different networks, point the relay URL at the cloud server (default <code>wss://vivimusic-device-sync.onrender.com</code>) and pair with the same 6-digit code. It's the same protocol, just running over WebSocket through a middleman.</p>
+        <div class="callout">
+          <span aria-hidden="true">📡</span>
+          <span>The relay runs on a free cloud tier, which means it occasionally sleeps. If pairing times out for no obvious reason, wait a minute and poke it again — it wakes up.</span>
+        </div>
+
+        <h2>What the pairing screen looks like</h2>
+        <div class="pair-demo reveal">
+          <div>
+            <span class="plabel">settings → devices · live demo</span>
+            <h3>Start the LAN server</h3>
+            <p class="pstat" id="pairStat">idle — press the button to generate a pairing code</p>
+            <p class="pair-code" id="pairCode" aria-live="polite">&nbsp;</p>
+            <div class="pair-ctl">
+              <button class="btn sm" id="pairBtn" type="button">Start LAN server</button>
+            </div>
+          </div>
+          <div>
+            <div class="qrbox" id="qrBox" aria-hidden="true"></div>
+            <p class="qrnote">demo only — the real QR + code live in the app</p>
+          </div>
+        </div>
+
+        <h2>Notes, so you're not surprised later</h2>
+        <ul>
+          <li>Closing either app un-pairs both. A short grace period absorbs brief network blips, but "the app was closed" is a hard stop.</li>
+          <li>Volume syncs on two channels: the in-app VIVI volume <em>and</em> the native OS volume (Android ↔ Windows / Linux / macOS).</li>
+          <li>Queue and playlists use last-write-wins — whichever side was edited most recently takes it. No merge dialog, no drama.</li>
+          <li>Stuck on pairing? The sync-family error codes (E1004–E1006 are the usual suspects) live on the <a href="errors.html">error codes page</a>.</li>
+        </ul>
       </div>
     </div>
-    <div class="sync-tip" id="sync-tip"><strong>Hover or tap a device</strong> to see what it does.</div>
-
-    <h2>Pairing over LAN (same Wi-Fi)</h2>
-    <ol class="steps">
-      <li>Open <b>Settings → Devices</b> in VIVI Music DE and tap <b>Start LAN server</b>. A relay address and a 6-digit pairing code appear.</li>
-      <li>Open <b>Settings → Devices</b> in the Android app (or scan the QR code on the desktop).</li>
-      <li>Enter the relay address and the 6-digit code, then tap <b>Pair</b>.</li>
-      <li>Done — the two devices are connected and sync continuously.</li>
-    </ol>
-
-    <h2>Pairing over the cloud relay</h2>
-    <p class="lede">
-      If the phone and desktop are on different networks, set the relay URL to
-      the cloud server (default <code>wss://vivimusic-device-sync.onrender.com</code>)
-      and pair with the same 6-digit code. The same protocol runs over WebSocket.
-    </p>
-
-    <h2>Notes</h2>
-    <ul>
-      <li>Closing either app un-pairs both (a short grace period tolerates brief network blips).</li>
-      <li>Volume syncs on two channels: the in-app VIVI volume and the native OS volume (Android ↔ Windows/Linux/macOS).</li>
-      <li>Playlists and the queue use last-write-wins: the most recently edited side wins.</li>
-    </ul>
   </main>
 
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>VIVI Music DE</span>
-      <div class="links">
-        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
-        <a href="errors.html">Error codes</a>
-        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
-        <a href="https://t.me/vivimusicde">Telegram</a>
-        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div>
+        <a class="brand" href="index.html"><img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">VIVI Music <em>DE</em></a>
+        <p class="foot-blurb">A free, open-source desktop port of VIVI Music. Streams from YouTube Music, stays in step with your phone.</p>
+        <p class="foot-meta">site v3.0 · merged from recreate-vivi-music-website · plain html / css / js · no framework, no build step</p>
       </div>
+      <div>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="install-guide.html">Install guide</a></li>
+          <li><a href="sync.html">Phone ↔ desktop sync</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="errors.html">Error codes</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub repo ↗</a></li>
+          <li><a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Releases ↗</a></li>
+          <li><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel ↗</a></li>
+          <li><a href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">VIVI Music (mobile) ↗</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Fine print</h4>
+        <p class="foot-note">Not affiliated with, funded or endorsed by YouTube or Google. Released under a modified GPL-3.0. The original mobile app is created by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>.</p>
+      </div>
+    </div>
+    <div class="wrap foot-bar">
+      <span>© <span data-year>2025</span> PiBOH — made for people who queue songs on two screens</span>
+      <span>~/.vivimusic — your data stays on your machine</span>
     </div>
   </footer>
 
+  <script src="main.js"></script>
   <script>
-    /* Sync diagram: hover/focus/click on a node explains it in the tip panel. */
-    (function () {
-      "use strict";
-      var tip = document.getElementById("sync-tip");
-      var placeholder = "<strong>Hover or tap a device</strong> to see what it does.";
-      var current = null;
-      function show(node) {
-        tip.innerHTML = node.getAttribute("data-tip");
-        node.style.borderColor = "var(--accent)";
-      }
-      function hide(node) {
-        tip.innerHTML = placeholder;
-        if (node) node.style.borderColor = "";
-      }
-      document.querySelectorAll("[data-tip]").forEach(function (n) {
-        n.addEventListener("mouseenter", function () { current = n; show(n); });
-        n.addEventListener("mouseleave", function () { hide(n); current = null; });
-        n.addEventListener("focus", function () { current = n; show(n); });
-        n.addEventListener("blur", function () { hide(n); current = null; });
-        n.addEventListener("click", function () {
-          if (current === n) { hide(n); current = null; }
-          else { current = n; show(n); }
-        });
+  (function () {
+    "use strict";
+    var $ = window.VM.$, $$ = window.VM.$$;
+    var RM = window.VM.RM;
+
+    /* tap-to-pin tooltips (hover does the job on desktop) */
+    var devs = document.querySelectorAll(".device");
+    devs.forEach(function (d) {
+      d.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var was = d.classList.contains("tapped");
+        devs.forEach(function (x) { x.classList.remove("tapped"); });
+        if (!was) d.classList.add("tapped");
       });
-    })();
+    });
+    document.addEventListener("click", function () {
+      devs.forEach(function (x) { x.classList.remove("tapped"); });
+    });
+
+    /* the pairing demo: fake LAN server, real-feeling code + QR */
+    var stat = document.getElementById("pairStat"),
+        code = document.getElementById("pairCode"),
+        btn = document.getElementById("pairBtn"),
+        box = document.getElementById("qrBox");
+    if (!btn || !box) return;
+
+    function hash(s) {
+      var h = 2166136261;
+      for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return h >>> 0;
+    }
+    function buildQR(seed) {
+      var h = hash(seed || "vmde"), cells = "";
+      var rnd = function () { h = (Math.imul(h, 1103515245) + 12345) >>> 0; return h / 4294967296; };
+      for (var r = 0; r < 9; r++) {
+        for (var c = 0; c < 9; c++) {
+          var finder = (r < 3 && c < 3) || (r < 3 && c > 5) || (r > 5 && c < 3);
+          var on = finder ? true : rnd() < 0.44;
+          cells += '<span class="m' + (on ? " on" : "") + '"></span>';
+        }
+      }
+      box.innerHTML = cells;
+    }
+    function revealDigits(str) {
+      code.innerHTML = str.split("").map(function (ch) { return '<span class="c">' + ch + "</span>"; }).join("");
+      code.querySelectorAll(".c").forEach(function (el, i) {
+        setTimeout(function () { el.classList.add("on"); }, RM ? 0 : 200 + i * 130);
+      });
+    }
+    var running = false;
+    btn.addEventListener("click", function () {
+      running = !running;
+      if (running) {
+        var ip = "192.168." + (1 + Math.floor(Math.random() * 4)) + "." + (10 + Math.floor(Math.random() * 240));
+        var codeStr = String(100000 + Math.floor(Math.random() * 900000));
+        btn.textContent = "Stop server";
+        stat.textContent = "listening on " + ip + ":8247 — waiting for a phone…";
+        stat.classList.add("live");
+        revealDigits(codeStr);
+        buildQR(codeStr + ip);
+      } else {
+        btn.textContent = "Start LAN server";
+        stat.textContent = "server stopped — that pairing code is now expired";
+        stat.classList.remove("live");
+      }
+    });
+    buildQR("vmde");
+  })();
   </script>
-  <script src="assets/app.js"></script>
 </body>
 </html>

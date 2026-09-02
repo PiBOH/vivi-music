@@ -3,146 +3,298 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>Downloads — VIVI Music DE</title>
-  <meta name="description" content="Download VIVI Music DE for Windows, Linux and macOS." />
-  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <meta name="description" content="Installers for VIVI Music DE: Windows (.exe, .msi), Linux (.deb, AppImage, PKGBUILD), macOS (.dmg, .pkg) — stable and nightly channels, from GitHub Releases." />
+  <link rel="icon" type="image/png" href="images/logo_vmde.png" />
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <nav class="nav">
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
-        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        <img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">
         VIVI Music <em>DE</em>
       </a>
-      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <button class="nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
         <a href="index.html">Home</a>
-        <a href="downloads.html">Downloads</a>
+        <a href="downloads.html" class="active">Downloads</a>
         <a href="install-guide.html">Guide</a>
+        <a href="sync.html">Sync</a>
         <a href="changelog.html">Changelog</a>
         <a href="errors.html">Errors</a>
-        <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
+        <a class="nav-gh" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github ↗</a>
+        <button class="theme-toggle" data-theme-toggle type="button" aria-label="Toggle dark/light theme"></button>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
-  <main class="page">
-    <h1>Downloads</h1>
-    <p class="lede">
-      Pick a channel, then grab the installer for your system. Greyed-out
-      buttons mean that format isn't shipped in that release yet. New here?
-      Read the <a href="install-guide.html">install guide</a>.
-    </p>
+  <main>
+    <header class="phead">
+      <div class="wrap">
+        <p class="kicker">downloads</p>
+        <h1>Grab a build.</h1>
+        <p class="lead">Pick a channel, then grab the installer for your system. Greyed-out buttons mean that format isn't shipped in that release yet. New here? Read the <a href="install-guide.html">install guide</a> first — it takes two minutes.</p>
+      </div>
+    </header>
 
-    <div class="os-note" data-os-note role="button" tabindex="0" aria-label="Jump to the installer for your system">
-      You're on <span class="badge" data-os-name>…</span> — tap here to jump to your installer ↓
+    <div class="wrap pbody">
+
+      <button class="os-banner" id="osBanner" type="button">
+        <span class="oi" id="osIcon">❔</span>
+        <span>You look like you're on <b data-os-name>…</b> — tap here to jump to your installer</span>
+        <span class="arrow">↓</span>
+      </button>
+
+      <div class="tabs" role="tablist" aria-label="Release channel">
+        <button class="tab active" data-channel-tab="stable" type="button" role="tab">Stable</button>
+        <button class="tab" data-channel-tab="nightly" type="button" role="tab">Nightly builds</button>
+      </div>
+      <p class="hnote">nightly = bleeding edge. breakage included, reporting it is a feature.</p>
+
+      <div class="rel-head" id="relHead" aria-live="polite">
+        <div>
+          <span class="lbl" id="relLabel">latest stable</span>
+          <div class="ver-big" id="relVer">checking GitHub…</div>
+          <span class="dt" id="relDate">…</span>
+        </div>
+        <div class="rhs">
+          <a class="btn ghost sm" id="relNotes" href="changelog.html">release notes</a>
+          <a class="btn ghost sm" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">all releases ↗</a>
+        </div>
+      </div>
+
+      <section class="os-sec" id="dl-windows">
+        <h2><span class="oi" aria-hidden="true">🪟</span> Windows 10+</h2>
+        <div class="dl-grid">
+          <div class="dl">
+            <span class="t">.exe installer</span>
+            <span class="d">Inno Setup installer — the recommended one.</span>
+            <a class="btn sm" data-dl=".exe" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .exe</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+          <div class="dl">
+            <span class="t">.msi package</span>
+            <span class="d">For silent / enterprise deployments.</span>
+            <a class="btn sm" data-dl=".msi" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .msi</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="os-sec" id="dl-linux">
+        <h2><span class="oi" aria-hidden="true">🐧</span> Linux (x86-64)</h2>
+        <div class="dl-grid">
+          <div class="dl">
+            <span class="t">Debian / Ubuntu</span>
+            <span class="d">Works on Debian, Ubuntu and derivatives.</span>
+            <a class="btn sm" data-dl=".deb" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .deb</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+          <div class="dl">
+            <span class="t">AppImage</span>
+            <span class="d">Portable, any distro. Run it, it runs.</span>
+            <a class="btn sm" data-dl=".AppImage" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .AppImage</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+          <div class="dl">
+            <span class="t">Arch (AUR-style)</span>
+            <span class="d">Build a proper system package with <code>makepkg -si</code>.</span>
+            <a class="btn sm ghost" href="install-guide.html#option-c">See the guide</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">PKGBUILD is attached to every release</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="os-sec" id="dl-macos">
+        <h2><span class="oi" aria-hidden="true">🍎</span> macOS 10.15+</h2>
+        <div class="dl-grid">
+          <div class="dl">
+            <span class="t">Disk image</span>
+            <span class="d">Intel and Apple Silicon builds are published separately.</span>
+            <a class="btn sm" data-dl=".dmg" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .dmg</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+          <div class="dl">
+            <span class="t">Installer package</span>
+            <span class="d">Double-click, follow the wizard, done.</span>
+            <a class="btn sm" data-dl=".pkg" href="https://github.com/PiBOH/vivi-music/releases/latest" target="_blank" rel="noopener">Download .pkg</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="os-sec" id="dl-android">
+        <h2><span class="oi" aria-hidden="true"></span> Android</h2>
+        <div class="dl-grid">
+          <div class="dl">
+            <span class="t">VIVI Music (mobile)</span>
+            <span class="d">The original Android app, maintained upstream by VIVIDH P ASHOKAN. It's the side of the pair that talks to this one.</span>
+            <a class="btn sm ghost" href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">Official site</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">not part of this project — just the partner</span>
+          </div>
+        </div>
+      </section>
+
+      <p class="muted" style="font-size:14px">All installers live on the <a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">GitHub Releases</a> page — check there for older versions, checksums and release notes.</p>
     </div>
-
-    <div class="tabs" style="justify-content: flex-start">
-      <button class="tab active" data-channel="stable" type="button">Stable</button>
-      <button class="tab" data-channel="nightly" type="button">Nightly builds</button>
-    </div>
-    <p class="lede"><span class="mono" style="color:var(--accent-2)">●</span>&nbsp; Latest <span data-version>…</span></p>
-
-    <section class="reveal">
-      <h2 data-os-section="windows">Windows</h2>
-      <div class="dl-row">
-        <div>
-          <div class="name">Installer</div>
-          <div class="desc">Lightweight wizard — recommended.</div>
-        </div>
-        <a class="btn primary" data-download="winExe" href="https://github.com/PiBOH/vivi-music/releases/latest">Download .exe</a>
-      </div>
-      <div class="dl-row">
-        <div>
-          <div class="name">MSI package</div>
-          <div class="desc">For silent / enterprise deployment.</div>
-        </div>
-        <a class="btn" data-download="winMsi" href="https://github.com/PiBOH/vivi-music/releases/latest">Download .msi</a>
-      </div>
-    </section>
-
-    <section class="reveal">
-      <h2 data-os-section="linux">Linux</h2>
-      <div class="dl-row">
-        <div>
-          <div class="name">Debian / Ubuntu</div>
-          <div class="desc">Works on Debian, Ubuntu and derivatives.</div>
-        </div>
-        <a class="btn" data-download="deb" href="https://github.com/PiBOH/vivi-music/releases/latest">Download .deb</a>
-      </div>
-      <div class="dl-row">
-        <div>
-          <div class="name">AppImage</div>
-          <div class="desc">Portable — runs on most distros, including Arch.</div>
-        </div>
-        <a class="btn" data-download="appimage" href="https://github.com/PiBOH/vivi-music/releases/latest">Download AppImage</a>
-      </div>
-      <div class="dl-row">
-        <div>
-          <div class="name">Arch (AUR-style PKGBUILD)</div>
-          <div class="desc">Build a proper system package with <code>makepkg -si</code>.</div>
-        </div>
-        <a class="btn" href="install-guide.html#option-c">See the guide</a>
-      </div>
-    </section>
-
-    <section class="reveal">
-      <h2 data-os-section="macos">macOS 10.15+</h2>
-      <div class="dl-row">
-        <div>
-          <div class="name">Disk image</div>
-          <div class="desc">Intel and Apple Silicon builds are published separately.</div>
-        </div>
-        <a class="btn" data-download="dmg" href="https://github.com/PiBOH/vivi-music/releases/latest">Download .dmg</a>
-      </div>
-      <div class="dl-row">
-        <div>
-          <div class="name">Installer package</div>
-          <div class="desc">Alternative .pkg installer.</div>
-        </div>
-        <a class="btn" data-download="pkg" href="https://github.com/PiBOH/vivi-music/releases/latest">Download .pkg</a>
-      </div>
-    </section>
-
-    <section class="reveal">
-      <h2>Android</h2>
-      <div class="dl-row">
-        <div>
-          <div class="name">VIVI Music (mobile)</div>
-          <div class="desc">The original Android app, maintained upstream by VIVIDH P ASHOKAN.</div>
-        </div>
-        <a class="btn" href="https://vivimusic.mkmdevilmi.workers.dev/">Official site</a>
-      </div>
-    </section>
-
-    <p class="lede" style="margin-top:30px">
-      All installers live on the
-      <a href="https://github.com/PiBOH/vivi-music/releases">GitHub Releases</a>
-      page — check there for older versions.
-    </p>
   </main>
 
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>VIVI Music DE</span>
-      <div class="links">
-        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
-        <a href="errors.html">Error codes</a>
-        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
-        <a href="https://t.me/vivimusicde">Telegram</a>
-        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div>
+        <a class="brand" href="index.html"><img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">VIVI Music <em>DE</em></a>
+        <p class="foot-blurb">A free, open-source desktop port of VIVI Music. Streams from YouTube Music, stays in step with your phone.</p>
+        <p class="foot-meta">site v3.0 · merged from recreate-vivi-music-website · plain html / css / js · no framework, no build step</p>
       </div>
+      <div>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="install-guide.html">Install guide</a></li>
+          <li><a href="sync.html">Phone ↔ desktop sync</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="errors.html">Error codes</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub repo ↗</a></li>
+          <li><a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Releases ↗</a></li>
+          <li><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel ↗</a></li>
+          <li><a href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">VIVI Music (mobile) ↗</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Fine print</h4>
+        <p class="foot-note">Not affiliated with, funded or endorsed by YouTube or Google. Released under a modified GPL-3.0. The original mobile app is created by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>.</p>
+      </div>
+    </div>
+    <div class="wrap foot-bar">
+      <span>© <span data-year>2025</span> PiBOH — made for people who queue songs on two screens</span>
+      <span>~/.vivimusic — your data stays on your machine</span>
     </div>
   </footer>
 
-  <script src="assets/app.js"></script>
+  <script src="main.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var $ = window.VM.$, $$ = window.VM.$$;
+    var RM = window.VM.RM;
+    var REL_URL = "https://github.com/PiBOH/vivi-music/releases";
+
+    /* ---- "you're on …" banner ---- */
+    var os = window.vmDetectOS();
+    var nameEl = document.querySelector("[data-os-name]");
+    var iconEl = document.getElementById("osIcon");
+    var banner = document.getElementById("osBanner");
+    if (nameEl) nameEl.textContent = os.name;
+    if (iconEl) iconEl.textContent = os.icon;
+    if (banner) {
+      banner.addEventListener("click", function () {
+        var map = { windows: "dl-windows", linux: "dl-linux", macos: "dl-macos", android: "dl-android", ios: "dl-android" };
+        var id = map[os.id];
+        if (id) {
+          var sec = document.getElementById(id);
+          if (!sec) return;
+          sec.scrollIntoView({ behavior: RM ? "auto" : "smooth", block: "start" });
+          sec.classList.remove("flash");
+          void sec.offsetWidth;
+          sec.classList.add("flash");
+        } else {
+          window.open(REL_URL + "/latest", "_blank", "noopener");
+        }
+      });
+    }
+
+    /* ---- channels ---- */
+    var current = "stable";
+    var data = { stable: null, nightly: null };
+    var failed = false;
+    var want = [
+      { fmt: ".exe", re: /\.exe$/i },
+      { fmt: ".msi", re: /\.msi$/i },
+      { fmt: ".deb", re: /\.deb$/i },
+      { fmt: ".AppImage", re: /\.appimage$/i },
+      { fmt: ".dmg", re: /\.dmg$/i },
+      { fmt: ".pkg", re: /\.pkg$/i }
+    ];
+
+    function render() {
+      var rel = data[current];
+      var lbl = document.getElementById("relLabel");
+      var ver = document.getElementById("relVer");
+      var dt = document.getElementById("relDate");
+      lbl.textContent = current === "stable" ? "latest stable" : "latest nightly";
+      if (failed) {
+        ver.textContent = "GitHub API unreachable";
+        dt.textContent = "buttons below point at the releases page instead";
+      } else if (!rel) {
+        ver.textContent = current === "nightly" ? "no nightly published right now" : "no release found";
+        dt.textContent = current === "nightly" ? "the stable tab is your friend" : "…";
+      } else {
+        ver.textContent = rel.tag_name || "release";
+        dt.textContent = window.vmFmtDate(rel.published_at) + (rel.prerelease ? " · pre-release" : "");
+      }
+      want.forEach(function (w) {
+        var b = document.querySelector('[data-dl="' + w.fmt + '"]');
+        if (!b) return;
+        var dl = b.closest(".dl");
+        var miss = dl && dl.querySelector(".miss");
+        if (rel) {
+          var a = window.vmFindAsset(rel, w.re);
+          if (a) {
+            b.href = a.browser_download_url;
+            b.target = "_blank";
+            b.rel = "noopener";
+            b.classList.remove("off");
+            if (dl) dl.classList.remove("off");
+            if (miss) miss.textContent = a.size ? (Math.round(a.size / 1048576) + " mb · " + a.name) : a.name;
+          } else {
+            b.classList.add("off");
+            if (dl) dl.classList.add("off");
+            if (miss) miss.textContent = current === "nightly" ? "not in this release" : "not shipped yet";
+          }
+        } else {
+          b.classList.remove("off");
+          b.href = REL_URL + "/latest";
+          b.target = "_blank";
+          b.rel = "noopener";
+          if (dl) dl.classList.remove("off");
+          if (miss) miss.textContent = failed ? "via the releases page" : "no release found";
+        }
+      });
+    }
+
+    $$(".tabs [data-channel-tab]").forEach(function (t) {
+      t.addEventListener("click", function () {
+        current = t.dataset.channelTab;
+        $$(".tabs [data-channel-tab]").forEach(function (x) { x.classList.toggle("active", x === t); });
+        render();
+      });
+    });
+
+    window.vmReleases(15).then(function (list) {
+      list.forEach(function (r) {
+        if (r.prerelease) { if (!data.nightly) data.nightly = r; }
+        else if (!data.stable) data.stable = r;
+      });
+      if (!data.stable && !data.nightly) throw new Error("empty");
+      render();
+    })["catch"](function () {
+      failed = true;
+      render();
+    });
+  })();
+  </script>
 </body>
 </html>

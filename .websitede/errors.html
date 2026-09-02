@@ -3,81 +3,189 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>Error codes — VIVI Music DE</title>
-  <meta name="description" content="Look up any VIVI Music DE error code: what it means and how to try to fix it." />
-  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <meta name="description" content="Every error code VIVI Music can show: playback codes (1000–5999, from ExoPlayer) and VIVI codes (E1000+), with what they mean and how to try to fix them." />
+  <link rel="icon" type="image/png" href="images/logo_vmde.png" />
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <nav class="nav">
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
-        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        <img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">
         VIVI Music <em>DE</em>
       </a>
-      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <button class="nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
         <a href="index.html">Home</a>
         <a href="downloads.html">Downloads</a>
         <a href="install-guide.html">Guide</a>
-        <a href="changelog.html">Changelog</a>
-        <a href="errors.html">Errors</a>
         <a href="sync.html">Sync</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="errors.html" class="active">Errors</a>
         <a href="about.html">About</a>
+        <a class="nav-gh" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github ↗</a>
+        <button class="theme-toggle" data-theme-toggle type="button" aria-label="Toggle dark/light theme"></button>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
-  <main class="page">
-    <h1>Error codes</h1>
-    <p class="lede">
-      Every error that can appear in VIVI Music carries a code. If you hit one,
-      find it below — the list is loaded live from
-      <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/ERRORS.md">ERRORS.md</a>
-      in the repository. <strong data-errors-total></strong>
-    </p>
-
-    <div class="errors-controls reveal">
-      <input
-        type="search"
-        id="errors-search"
-        placeholder="Search code, name or hint… e.g. 1009 or login"
-        aria-label="Search error codes"
-      />
-      <div class="errors-tabs" role="tablist" aria-label="Error category">
-        <button class="tab active" type="button" role="tab" aria-selected="true" data-cat="all">All</button>
-        <button class="tab" type="button" role="tab" aria-selected="false" data-cat="playback">Playback</button>
-        <button class="tab" type="button" role="tab" aria-selected="false" data-cat="vivi">VIVI</button>
+  <main>
+    <header class="phead">
+      <div class="wrap">
+        <p class="kicker">error codes</p>
+        <h1>Every error<br>has a name.</h1>
+        <p class="lead">Playback codes (<b>1000–5999</b>) come from ExoPlayer / media3 and show up on screen or in the playback logs; <b>VIVI codes (E1000+)</b> are our own — login, sync, backup, updates. Searched in the app's error dialog, they should find you here.</p>
       </div>
-      <span class="errors-count mono" data-errors-count aria-live="polite"></span>
-    </div>
+    </header>
 
-    <div class="errors reveal">
-      <div id="errors-body" class="errors-body">
-        <p class="errors-loading">Loading error codes…</p>
+    <div class="wrap pbody">
+      <div class="err-tools">
+        <input class="err-search" id="errSearch" type="search" placeholder="type a code or a word… e.g. 1009, DRM, pairing" aria-label="Search error codes" />
+        <span class="err-legend">
+          <span class="chip"><span class="sw" style="background:var(--accent2)"></span>playback</span>
+          <span class="chip"><span class="sw" style="background:var(--accent)"></span>vivi</span>
+        </span>
       </div>
+      <p class="err-count" id="errCount" aria-live="polite">loading the list…</p>
+      <div class="err-grid" id="errGrid" style="margin-top:18px"></div>
+      <div class="err-empty" id="errEmpty">no code matches that — it might be newer than this list.<br>the live version is ERRORS.md in the <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/ERRORS.md" target="_blank" rel="noopener">repository</a>.</div>
     </div>
   </main>
 
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>VIVI Music DE</span>
-      <div class="links">
-        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
-        <a href="errors.html">Error codes</a>
-        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
-        <a href="https://t.me/vivimusicde">Telegram</a>
-        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div>
+        <a class="brand" href="index.html"><img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">VIVI Music <em>DE</em></a>
+        <p class="foot-blurb">A free, open-source desktop port of VIVI Music. Streams from YouTube Music, stays in step with your phone.</p>
+        <p class="foot-meta">site v3.0 · merged from recreate-vivi-music-website · plain html / css / js · no framework, no build step</p>
       </div>
+      <div>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="install-guide.html">Install guide</a></li>
+          <li><a href="sync.html">Phone ↔ desktop sync</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="errors.html">Error codes</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub repo ↗</a></li>
+          <li><a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Releases ↗</a></li>
+          <li><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel ↗</a></li>
+          <li><a href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">VIVI Music (mobile) ↗</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Fine print</h4>
+        <p class="foot-note">Not affiliated with, funded or endorsed by YouTube or Google. Released under a modified GPL-3.0. The original mobile app is created by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>.</p>
+      </div>
+    </div>
+    <div class="wrap foot-bar">
+      <span>© <span data-year>2025</span> PiBOH — made for people who queue songs on two screens</span>
+      <span>~/.vivimusic — your data stays on your machine</span>
     </div>
   </footer>
 
-  <script src="assets/app.js"></script>
-  <script src="assets/errors.js"></script>
+  <script src="main.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var grid = document.getElementById("errGrid");
+    var count = document.getElementById("errCount");
+    var empty = document.getElementById("errEmpty");
+    var input = document.getElementById("errSearch");
+    if (!grid) return;
+
+    /* offline fallback — a subset of ERRORS.md, kept here so the page
+       still works when raw.githubusercontent is slow (or offline) */
+    var FALLBACK = [
+      { c: "1000", n: "UNSPECIFIED", m: "An unknown playback error occurred.", f: "Retry the track. If it keeps failing, check your connection and try a different audio quality." },
+      { c: "1001", n: "IO_NETWORK_CONNECTION_FAILED", m: "The network connection failed while loading the stream.", f: "Check your internet connection (and VPN/proxy settings). Retry the track." },
+      { c: "1002", n: "IO_NETWORK_CONNECTION_TIMEOUT", m: "The connection timed out while loading the stream.", f: "Your connection is slow or the server didn't answer. Retry, or wait and try again." },
+      { c: "1003", n: "IO_INVALID_HTTP_CONTENT_TYPE", m: "The server answered with an unexpected content type.", f: "The stream URL is stale or the CDN rejected it. Skip away and come back, or clear the stream cache." },
+      { c: "1004", n: "IO_BAD_HTTP_STATUS", m: "The server answered with an HTTP error status (e.g. 403/404).", f: "The stream URL is stale, restricted or blocked. Skip to the next track and back to re-resolve." },
+      { c: "1009", n: "IO_UNSPECIFIED", m: "Typically the YouTube Music CDN flagging the request (bot protection) or a stale stream URL.", f: "Skip to the next track and back, disable the animated canvas, or try again later. Updating VIVI helps." },
+      { c: "2000", n: "IO_UNSPECIFIED (video)", m: "Same as 1009, shown as “Video non disponibile” / “Source error” when the stream cannot be played.", f: "Skip the track and come back (forces a fresh URL), or lower the audio quality." },
+      { c: "3000", n: "PARSING_CONTAINER_MALFORMED", m: "The media container is malformed.", f: "The stream data is corrupt — skip the track and retry." },
+      { c: "4000", n: "DECODER_INIT_FAILED", m: "The audio/video decoder could not be initialized.", f: "Update your audio drivers (Windows) or restart VIVI." },
+      { c: "4003", n: "DECODING_FORMAT_EXCEEDS_CAPABILITIES", m: "The format exceeds what your device can decode.", f: "Lower the audio quality (Settings → Player & audio → Audio quality)." },
+      { c: "5000", n: "AUDIO_TRACK_INIT_FAILED", m: "The audio output track could not be initialized.", f: "Check your audio output device and restart VIVI." },
+      { c: "6001", n: "DRM_SCHEME_UNSUPPORTED", m: "The track is DRM-protected with an unsupported scheme.", f: "Nothing to do on your end — the track simply can't play here." },
+      { c: "E1000", n: "LOGIN_VALIDATION_FAILED", m: "The saved session could not be validated (missing/invalid cookies, e.g. expired SAPISIDHASH).", f: "Sign in again: Settings → Account → “Sign in with Google”, or paste fresh cookies manually." },
+      { c: "E1003", n: "LOGIN_UNAUTHORIZED", m: "YouTube Music answered 401 — the request is missing a valid credential.", f: "Your cookies/session are stale. Sign in again." },
+      { c: "E1004", n: "SYNC_PAIR_CODE_INVALID", m: "The pairing code is invalid or expired.", f: "Generate a new pairing code on the desktop and retry." },
+      { c: "E1005", n: "SYNC_CONNECTION_FAILED", m: "Could not connect to the sync relay/LAN server.", f: "Check both devices are on the same network (LAN), or that the relay is reachable; verify the server URL in Device sync." },
+      { c: "E1006", n: "SYNC_PEER_DISCONNECTED", m: "The paired device went offline.", f: "Wake the device / check the connection — it will reconnect automatically." },
+      { c: "E1009", n: "UPDATE_DOWNLOAD_FAILED", m: "Downloading the update failed.", f: "Check your connection and retry; the download resumes from where it stopped." },
+      { c: "E1013", n: "UPDATE_CHECK_FAILED", m: "Checking for updates failed (network, GitHub API error or no desktop release found).", f: "Check your connection and retry; the check runs again automatically on the next start." }
+    ];
+
+    function card(e) {
+      var vivi = /^E/i.test(e.c);
+      return '<article class="err' + (vivi ? " vivi" : "") + '" data-search="' +
+        window.vmEsc((e.c + " " + e.n + " " + e.m + " " + e.f).toLowerCase()) + '">' +
+        '<div class="top"><span class="code">' + window.vmEsc(e.c) + '</span><span class="scope">' + (vivi ? "vivi" : "playback") + "</span></div>" +
+        "<h4>" + window.vmEsc(e.n) + "</h4>" +
+        "<p>" + window.vmEsc(e.m) + "</p>" +
+        '<p class="fix"><b>FIX →</b> ' + window.vmEsc(e.f) + "</p></article>";
+    }
+
+    function paint(list, source) {
+      grid.innerHTML = list.map(card).join("");
+      count.textContent = list.length + " codes · " + source;
+      applyFilter(input ? input.value : "");
+    }
+
+    function applyFilter(q) {
+      q = (q || "").trim().toLowerCase();
+      var cards = grid.querySelectorAll(".err");
+      var shown = 0;
+      cards.forEach(function (c) {
+        var hit = !q || c.dataset.search.indexOf(q) !== -1;
+        c.classList.toggle("hide", !hit);
+        if (hit) shown++;
+      });
+      if (input) input.closest(".err-tools").style.display = "";
+      empty.style.display = shown === 0 ? "block" : "none";
+      if (q) count.textContent = shown + " of " + cards.length + " codes match “" + q + "”";
+    }
+
+    if (input) input.addEventListener("input", function () { applyFilter(input.value); });
+
+    /* parse the markdown tables in ERRORS.md into cards */
+    function parseErrMd(md) {
+      var out = [], scope = "playback";
+      md.split(/\r?\n/).forEach(function (line) {
+        var t = line.trim();
+        if (/^##\s/.test(t)) { scope = /vivi/i.test(t) ? "vivi" : "playback"; return; }
+        if (t.indexOf("|") !== 0) return;
+        var cells = t.split("|").slice(1, -1).map(function (c) { return c.trim(); });
+        if (cells.length < 4) return;
+        if (/^code$/i.test(cells[0]) || /^[-: ]+$/.test(cells[0])) return;
+        out.push({ c: cells[0], n: cells[1], m: cells[2], f: cells[3], s: scope });
+      });
+      return out;
+    }
+
+    var mdUrl = "https://raw.githubusercontent.com/PiBOH/vivi-music/vivi-music-de/ERRORS.md";
+    window.vmGH.raw(mdUrl).then(function (md) {
+      var list = parseErrMd(md);
+      if (!list.length) throw new Error("parse failed");
+      paint(list, "loaded live from ERRORS.md");
+    })["catch"](function () {
+      paint(FALLBACK, "offline fallback — the live list is on GitHub");
+    });
+  })();
+  </script>
 </body>
 </html>

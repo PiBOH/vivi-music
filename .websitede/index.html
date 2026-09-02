@@ -3,150 +3,305 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
   <title>VIVI Music DE — the player that follows you</title>
-  <meta name="description" content="VIVI Music DE: a free, open-source music player for Windows, Linux and macOS that stays in sync with your phone." />
-  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
+  <meta name="description" content="VIVI Music DE: a free, open-source YouTube Music player for Windows, Linux and macOS that stays in sync with your phone." />
+  <link rel="icon" type="image/png" href="images/logo_vmde.png" />
+  <script>document.documentElement.classList.add("js");try{if(localStorage.getItem("vmde-theme")==="light"){document.documentElement.setAttribute("data-theme","light");}}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- nav: same markup on every page, hand-copied. yes, really. -->
   <nav class="nav">
     <div class="wrap nav-inner">
       <a class="brand" href="index.html">
-        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
+        <img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">
         VIVI Music <em>DE</em>
       </a>
-      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+      <button class="nav-toggle" data-nav-toggle type="button" aria-label="Menu" aria-expanded="false">☰</button>
       <div class="nav-links">
-        <a href="index.html">Home</a>
+        <a href="index.html" class="active">Home</a>
         <a href="downloads.html">Downloads</a>
         <a href="install-guide.html">Guide</a>
+        <a href="sync.html">Sync</a>
         <a href="changelog.html">Changelog</a>
         <a href="errors.html">Errors</a>
-        <a href="sync.html">Sync</a>
         <a href="about.html">About</a>
+        <a class="nav-gh" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github ↗</a>
+        <button class="theme-toggle" data-theme-toggle type="button" aria-label="Toggle dark/light theme"></button>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
     </div>
   </nav>
 
-  <header class="hero">
-    <div class="wrap reveal">
-      <span class="hero-eyebrow"><span class="dot"></span> Free &amp; open source · Desktop edition</span>
-      <h1>The player<br />that <span class="gr">follows you.</span></h1>
-      <p class="tagline">
-        VIVI Music DE streams high-fidelity audio from YouTube Music and stays
-        in lockstep with your phone — queue, playback, volume and playlists,
-        synced in real time. One player, two devices.
-      </p>
+  <main>
+    <!-- ============ hero ============ -->
+    <header class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-left">
+          <span class="hero-eyebrow reveal"><span class="dot" aria-hidden="true"></span> Free &amp; open source · desktop edition</span>
+          <h1 class="reveal" data-d="60">The player<br>that <span class="hl">follows you.</span></h1>
+          <p class="tagline reveal" data-d="120">Streams high-fidelity audio from YouTube Music on your desktop — and stays in lockstep with your phone. Queue, playback, volume, playlists: change it on one side, the other side follows.</p>
+          <div class="hero-ctas reveal" data-d="180">
+            <a class="btn" href="downloads.html">Get the latest build</a>
+            <a class="btn ghost" href="install-guide.html">Read the install guide</a>
+          </div>
+          <p class="hero-meta reveal" data-d="240"><b>win 10+</b> · <b>linux x86-64</b> · <b>macos 10.15+</b> · jdk bundled · ~350 mb ram</p>
+        </div>
 
-      <div class="tabs">
-        <button class="tab active" data-channel="stable" type="button">Stable</button>
-        <button class="tab" data-channel="nightly" type="button">Nightly builds</button>
+        <div class="hero-right reveal" data-d="140">
+          <div class="mock mock-static" role="img" aria-label="Mock of the VIVI Music DE app window">
+            <div class="mock-bar">
+              <span class="d d1"></span><span class="d d2"></span><span class="d d3"></span>
+              <span class="mock-title">VIVI Music DE — <span data-hero-ver>1.41.14</span></span>
+              <span class="mono" style="font-size:10px;color:var(--faint)">DE</span>
+            </div>
+            <div class="mock-app">
+              <div class="mock-side">
+                <span class="mock-logo" aria-hidden="true"></span>
+                <i></i><i></i><i></i><i></i>
+              </div>
+              <div class="mock-main">
+                <div class="mock-card" style="width:38%"></div>
+                <div class="mock-row"><i></i><i></i><i></i><i></i></div>
+                <div class="mock-row"><i></i><i></i><i></i><i></i></div>
+                <div class="mock-card" style="width:56%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+    </header>
 
-      <div class="platforms">
-        <a class="platform" data-download="winExe" href="https://github.com/PiBOH/vivi-music/releases/latest">
-          <span class="os">🪟</span>
-          <span><span class="pl-name">Windows</span><br /><span class="pl-fmt">.exe installer</span></span>
-        </a>
-        <a class="platform" data-download="deb" href="https://github.com/PiBOH/vivi-music/releases/latest">
-          <span class="os">🐧</span>
-          <span><span class="pl-name">Linux</span><br /><span class="pl-fmt">.deb · AppImage</span></span>
-        </a>
-        <a class="platform" data-download="dmg" href="https://github.com/PiBOH/vivi-music/releases/latest">
-          <span class="os">🍎</span>
-          <span><span class="pl-name">macOS</span><br /><span class="pl-fmt">.dmg · .pkg</span></span>
-        </a>
-        <a class="platform" href="https://vivimusic.mkmdevilmi.workers.dev/">
-          <span class="os">🤖</span>
-          <span><span class="pl-name">VIVI Music</span><br /><span class="pl-fmt">Android — original app</span></span>
-        </a>
-      </div>
-
-      <p class="hint">New here? Read the <a href="install-guide.html">install guide</a>.</p>
-    </div>
-  </header>
-
-  <section class="section reveal">
-    <div class="wrap">
-      <h2>Why VIVI Music DE</h2>
-      <p class="sub">Everything you like from the Android app, rebuilt for your desktop.</p>
-      <div class="cards">
-        <div class="card">
-          <div class="emoji">📱💻</div>
-          <h3>Phone sync</h3>
-          <p>Pair on LAN or the cloud relay. Queue, playlists, volume and settings stay in sync in real time.</p>
-        </div>
-        <div class="card">
-          <div class="emoji">🎵</div>
-          <h3>Full player</h3>
-          <p>Material 3 player with synced lyrics, a mini-player and an animated canvas background.</p>
-        </div>
-        <div class="card">
-          <div class="emoji">🔓</div>
-          <h3>Open source</h3>
-          <p>Free and open source under a modified GPL-3.0 license. No ads, no tracking.</p>
-        </div>
+    <!-- ============ ticker ============ -->
+    <div class="ticker" aria-hidden="true">
+      <div class="ticker-track">
+        <span>SYNCED LYRICS</span><span>QUEUE MIRRORS</span><span>MINI-PLAYER</span><span>CLOUD RELAY</span><span>NO ADS</span><span>45+ LANGUAGES</span><span>IN-JVM AAC DECODER</span><span>LAST-WRITE-WINS</span><span>ZERO TELEMETRY</span><span>OPEN SOURCE</span>
       </div>
     </div>
-  </section>
 
-  <section class="section tinted reveal">
-    <div class="wrap syncband">
-      <div class="phones" aria-hidden="true">
-        <span>📱</span><span>⇄</span><span>💻</span>
+    <!-- ============ why (bento) ============ -->
+    <section class="section">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <p class="kicker">01 · why desktop</p>
+          <h2>Everything the Android app does, plus a keyboard</h2>
+          <p class="sub">The same Material 3 screens, re-laid-out for a big window. Nothing got cut — a few things got a second act.</p>
+        </div>
+        <div class="bento">
+          <article class="bcard b1 reveal">
+            <h3>Phone ↔ desktop, in step</h3>
+            <p>Pair over your Wi-Fi or the cloud relay. Queue, playlists, volume and settings stay in sync in real time — change either side and the other follows within a couple of frames.</p>
+            <div class="linkline" aria-hidden="true">
+              <span class="dev-chip"><span class="di">📱</span>PHONE</span>
+              <span class="wires"><span class="pd"></span><span class="pd back"></span></span>
+              <span class="dev-chip"><span class="di">💻</span>DESKTOP</span>
+            </div>
+            <a class="link" href="sync.html">How pairing works →</a>
+          </article>
+          <article class="bcard b2 reveal" data-d="80">
+            <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+            <h3 style="margin-top:14px">Full player</h3>
+            <p>Material 3 player with synced lyrics, a mini-player and an animated canvas behind the artwork. 45+ languages.</p>
+          </article>
+          <article class="bcard b3 reveal" data-d="140">
+            <h3>Open source</h3>
+            <p>Free under a modified GPL-3.0. Source, issues and releases all live on GitHub — nothing behind a paywall or a "pro" tier.</p>
+            <a class="link" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github.com/PiBOH/vivi-music ↗</a>
+          </article>
+          <article class="bcard b4 reveal" data-d="80">
+            <span class="sticker" aria-hidden="true">ZERO TELEMETRY</span>
+            <h3>No ads, no analytics, no crash pings</h3>
+            <p>If the app talks to the internet, it's for music — and, only if you pair, the sync relay. Your library, cache and login live in one folder and nowhere else.</p>
+            <p class="paths"><code>~/.vivimusic/</code> · <code>playlists.json</code> · <code>cache/</code> · <code>backups/</code> · <code>updates/</code></p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ sync band ============ -->
+    <section class="band">
+      <div class="wrap band-grid">
+        <div class="reveal">
+          <h2>Two devices, one playback.</h2>
+          <p>Search a song on the phone and it starts on the desktop. Skip on the computer, the phone follows. Volume, playlists and theme stay in step — over Wi-Fi, or anywhere, through the cloud relay.</p>
+          <p style="margin-top:24px"><a class="btn" href="sync.html">See how pairing works</a></p>
+        </div>
+        <div class="reveal" data-d="120" style="justify-self:center;width:100%;max-width:430px">
+          <div class="linkline" style="margin-top:0" aria-hidden="true">
+            <span class="dev-chip" style="width:98px"><span class="di">📱</span>VIVI MUSIC</span>
+            <span class="wires"><span class="pd"></span><span class="pd back"></span></span>
+            <span class="dev-chip" style="width:98px"><span class="di">💻</span>VIVI MUSIC DE</span>
+          </div>
+          <p class="mono" style="text-align:center;font-size:11.5px;color:var(--faint);margin-top:16px">lan relay · or cloud relay — your pick</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ screenshots (css-drawn, no image files allowed) ============ -->
+    <section class="section">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <p class="kicker">02 · the screens</p>
+          <h2>Have a look before you install</h2>
+          <p class="sub">These are drawn in CSS — no image files in this repo, so the screenshots are built out of divs. Same layouts, more or less pixel-for-pixel.</p>
+        </div>
+        <div class="shots">
+          <figure class="shot reveal" style="--r:-1.2deg">
+            <div class="frame" aria-hidden="true">
+              <div class="ui-side"><i class="on"></i><i></i><i></i><i></i></div>
+              <div class="ui-main">
+                <div class="ui-search"></div>
+                <div class="ui-row"><span class="ui-art"></span><span class="ui-lines"><i></i><i></i></span></div>
+                <div class="ui-row"><span class="ui-art"></span><span class="ui-lines"><i></i><i></i></span></div>
+                <div class="ui-row"><span class="ui-art"></span><span class="ui-lines"><i></i><i></i></span></div>
+                <div class="ui-row"><span class="ui-art"></span><span class="ui-lines"><i></i><i></i></span></div>
+                <div class="ui-row"><span class="ui-art"></span><span class="ui-lines"><i></i><i></i></span></div>
+              </div>
+            </div>
+            <figcaption>01 · library — search, queue and playlists on one screen</figcaption>
+          </figure>
+          <figure class="shot reveal" data-d="90" style="--r:0.9deg">
+            <div class="frame center" aria-hidden="true">
+              <span class="s-disc"></span>
+              <span class="s-title"></span><span class="s-sub"></span>
+              <span class="s-ly"><i></i><i class="on"></i><i></i></span>
+            </div>
+            <figcaption>02 · full player — synced lyrics under the artwork</figcaption>
+          </figure>
+          <figure class="shot reveal" data-d="180" style="--r:-0.7deg">
+            <div class="frame sync" aria-hidden="true">
+              <svg class="qr-mini" viewBox="0 0 29 29" shape-rendering="crispEdges">
+                <rect width="29" height="29" fill="#f4f1ee" />
+                <g fill="#221b28">
+                  <rect x="1" y="1" width="7" height="7" /><rect x="3" y="3" width="3" height="3" fill="#f4f1ee" />
+                  <rect x="21" y="1" width="7" height="7" /><rect x="23" y="3" width="3" height="3" fill="#f4f1ee" />
+                  <rect x="1" y="21" width="7" height="7" /><rect x="3" y="23" width="3" height="3" fill="#f4f1ee" />
+                  <rect x="10" y="1" width="1.6" height="1.6" /><rect x="13" y="3" width="1.6" height="1.6" /><rect x="16" y="1" width="1.6" height="1.6" />
+                  <rect x="10" y="6" width="1.6" height="1.6" /><rect x="15" y="5" width="1.6" height="1.6" />
+                  <rect x="1" y="10" width="1.6" height="1.6" /><rect x="4" y="12" width="1.6" height="1.6" /><rect x="6" y="15" width="1.6" height="1.6" />
+                  <rect x="10" y="10" width="1.6" height="1.6" /><rect x="12" y="13" width="1.6" height="1.6" /><rect x="15" y="11" width="1.6" height="1.6" /><rect x="18" y="14" width="1.6" height="1.6" />
+                  <rect x="21" y="10" width="1.6" height="1.6" /><rect x="24" y="12" width="1.6" height="1.6" /><rect x="27" y="11" width="1.6" height="1.6" />
+                  <rect x="10" y="18" width="1.6" height="1.6" /><rect x="13" y="20" width="1.6" height="1.6" /><rect x="16" y="17" width="1.6" height="1.6" /><rect x="19" y="21" width="1.6" height="1.6" />
+                  <rect x="22" y="18" width="1.6" height="1.6" /><rect x="25" y="22" width="1.6" height="1.6" /><rect x="27" y="19" width="1.6" height="1.6" />
+                  <rect x="10" y="24" width="1.6" height="1.6" /><rect x="14" y="26" width="1.6" height="1.6" /><rect x="18" y="24" width="1.6" height="1.6" /><rect x="22" y="26" width="1.6" height="1.6" /><rect x="26" y="24" width="1.6" height="1.6" />
+                </g>
+              </svg>
+              <span class="s-code">824-317</span>
+              <span class="s-btns"><i></i><i></i></span>
+            </div>
+            <figcaption>03 · device sync — the pairing screen your phone talks to</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ what's new ============ -->
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <p class="kicker">03 · what's new</p>
+          <h2>Fresh from the releases feed</h2>
+          <p class="sub">Pulled live from GitHub. If the feed stays quiet, the API is being slow — the releases page is always there as a backup.</p>
+        </div>
+        <div class="news" id="newsGrid" aria-live="polite">
+          <div class="news-item"><span class="ver">…</span><span class="dt">loading</span><p>fetching the three most recent releases…</p></div>
+          <div class="news-item"><span class="ver">…</span><span class="dt">loading</span><p>&nbsp;</p></div>
+          <div class="news-item"><span class="ver">…</span><span class="dt">loading</span><p>&nbsp;</p></div>
+        </div>
+        <p class="news-more reveal"><a href="changelog.html">Full changelog →</a></p>
+      </div>
+    </section>
+
+    <!-- ============ cta ============ -->
+    <section class="cta">
+      <div class="wrap">
+        <h2 class="reveal">Go install it.</h2>
+        <p class="reveal" data-d="80">Two minutes on Windows, less if you like AppImages. The guide covers everything, including the boring bits.</p>
+        <div class="hero-ctas reveal" data-d="160">
+          <a class="btn" href="downloads.html">Downloads</a>
+          <a class="btn ghost" href="install-guide.html">Install guide</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div>
+        <a class="brand" href="index.html"><img class="brand-logo" src="images/logo_vmde.png" alt="" aria-hidden="true">VIVI Music <em>DE</em></a>
+        <p class="foot-blurb">A free, open-source desktop port of VIVI Music. Streams from YouTube Music, stays in step with your phone.</p>
+        <p class="foot-meta">site v3.0 · merged from recreate-vivi-music-website · plain html / css / js · no framework, no build step</p>
       </div>
       <div>
-        <h2>Two devices, one playback.</h2>
-        <p class="sub" style="margin-bottom:12px">
-          Search a song on your phone and it plays on the desktop. Skip on the
-          computer and the phone follows. Volume, playlists and settings stay
-          in step — over Wi-Fi or anywhere with the cloud relay.
-        </p>
-        <a class="btn" href="sync.html">See how pairing works</a>
+        <h4>Pages</h4>
+        <ul>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="install-guide.html">Install guide</a></li>
+          <li><a href="sync.html">Phone ↔ desktop sync</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+          <li><a href="errors.html">Error codes</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub repo ↗</a></li>
+          <li><a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Releases ↗</a></li>
+          <li><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel ↗</a></li>
+          <li><a href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">VIVI Music (mobile) ↗</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Fine print</h4>
+        <p class="foot-note">Not affiliated with, funded or endorsed by YouTube or Google. Released under a modified GPL-3.0. The original mobile app is created by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>.</p>
       </div>
     </div>
-  </section>
-
-  <section class="section reveal" data-gallery>
-    <div class="wrap">
-      <h2>Screenshots</h2>
-      <p class="sub">Take a look at the player before you install.</p>
-      <div class="gallery">
-        <div class="gallery-track"></div>
-        <div class="gallery-dots"></div>
-        <p class="gallery-empty" style="display:none">Screenshots coming soon — drop PNG files into
-          <code>.websitede/images/screenshots/</code> named <code>player.png</code>, <code>library.png</code>,
-          <code>lyrics.png</code> and <code>sync.png</code> and they will appear here automatically.</p>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>VIVI Music DE</span>
-      <div class="links">
-        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
-        <a href="errors.html">Error codes</a>
-        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
-        <a href="https://t.me/vivimusicde">Telegram</a>
-        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
-      </div>
+    <div class="wrap foot-bar">
+      <span>© <span data-year>2025</span> PiBOH — made for people who queue songs on two screens</span>
+      <span>~/.vivimusic — your data stays on your machine</span>
     </div>
   </footer>
 
+  <script src="main.js"></script>
   <script>
-    window.VMDE_SCREENSHOTS = [
-      "images/screenshots/player.png",
-      "images/screenshots/library.png",
-      "images/screenshots/lyrics.png",
-      "images/screenshots/sync.png"
-    ];
+  (function () {
+    "use strict";
+    var $ = window.VM.$, $$ = window.VM.$$;
+    var RM = window.VM.RM;
+
+    /* hero mock: static window — nothing to animate */
+
+    /* "what's new": top 3 releases, polite fallback if the API is grumpy */
+    var grid = document.getElementById("newsGrid");
+    var hv = document.querySelector("[data-hero-ver]");
+    if (grid && window.vmReleases) {
+      window.vmReleases(3).then(function (list) {
+        if (hv && list[0]) hv.textContent = String(list[0].tag_name || "").replace(/^v/i, "") || "1.41.14";
+        var top = list.slice(0, 3);
+        if (!top.length) throw new Error("empty feed");
+        grid.innerHTML = top.map(function (r, i) {
+          var body = String(r.body || "").replace(/\r?\n+/g, " ").trim();
+          if (body.length > 160) body = body.slice(0, 160).replace(/\s+\S*$/, "") + "…";
+          return '<div class="news-item" style="transition-delay:' + (i * 70) + 'ms">' +
+            "<span class=\"ver\">" + window.vmEsc(r.tag_name || "release") + "</span>" +
+            '<span class="dt">' + window.vmFmtDate(r.published_at) + "</span>" +
+            "<p>" + (window.vmEsc(body) || "No notes this time — code moved, nothing to say.") + "</p></div>";
+        }).join("");
+      })["catch"](function () {
+        var fb = [
+          { v: "1.41.14", t: "Broken OpenGL stacks on Linux are now detected: the app drops to software rendering once and remembers the choice." },
+          { v: "1.41.13", t: "Modern Google cookie sets authenticate again — the 401 UNAUTHENTICATED login wall is gone." }
+        ];
+        grid.innerHTML = fb.map(function (x) {
+          return '<div class="news-item"><span class="ver">' + x.v + '</span><span class="dt">from the install guide</span><p>' + x.t + "</p></div>";
+        }).join("") + '<div class="news-item"><span class="ver">feed</span><span class="dt">offline</span><p>The GitHub API didn\u2019t answer. The <a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">releases page</a> is always up.</p></div>';
+      });
+    }
+  })();
   </script>
-  <script src="assets/app.js"></script>
 </body>
 </html>
