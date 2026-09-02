@@ -1394,7 +1394,7 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
-                Tooltip("Queue options") {
+                Tooltip(Localization.get(language, "tooltip_queue_options")) {
                     IconButton(
                         onClick = { },
                         modifier = Modifier.size(32.dp),
@@ -1408,7 +1408,7 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
-                Tooltip("Autoplay") {
+                Tooltip(Localization.get(language, "tooltip_autoplay")) {
                     IconButton(
                         onClick = { isAutoplayEnabled = !isAutoplayEnabled },
                         modifier = Modifier.size(32.dp),
@@ -1505,7 +1505,7 @@ fun AppleUpNextQueueScreen(
                                     Spacer(Modifier.height(2.dp))
 
                                     Text(
-                                        text = "${item.artist} - ${item.artist}",
+                                        text = "${item.title} - ${item.artist}",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -2621,7 +2621,7 @@ fun ClassicDesktopMiniPlayer(
                             )
                         }
                         Spacer(Modifier.width(4.dp))
-                        Tooltip("Right panel") {
+                        Tooltip(Localization.get(language, "right_panel")) {
                             IconButton(onClick = onToggleRightSidebar) {
                                 Icon(
                                     Icons.Filled.VerticalSplit,
@@ -2631,7 +2631,7 @@ fun ClassicDesktopMiniPlayer(
                                 )
                             }
                         }
-                        Tooltip("Open full player") {
+                        Tooltip(Localization.get(language, "tooltip_open_full_player")) {
                             IconButton(onClick = onOpenPlayer) {
                                 Icon(
                                     Icons.Filled.Fullscreen,
@@ -2773,7 +2773,7 @@ fun NewDesktopMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Tooltip("Output device") {
+                Tooltip(Localization.get(language, "tooltip_output_device")) {
                     IconButton(onClick = { onVolume((volume + 0.1f) % 1.05f) }) {
                         Icon(
                             Icons.Filled.SpeakerGroup,
@@ -2783,7 +2783,7 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip("Favorite") {
+                Tooltip(Localization.get(language, "tooltip_favorite")) {
                     IconButton(onClick = { isFavorite = !isFavorite }) {
                         Icon(
                             if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
@@ -2833,11 +2833,11 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip("Open full player") {
+                Tooltip(Localization.get(language, "tooltip_open_full_player")) {
                     IconButton(onClick = onOpenPlayer) {
                         Icon(
                             Icons.Filled.Fullscreen,
-                            contentDescription = "Open full player",
+                            contentDescription = Localization.get(language, "tooltip_open_full_player"),
                             tint = contentColor,
                             modifier = Modifier.size(22.dp),
                         )
@@ -3015,11 +3015,11 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip("Open full player") {
+                Tooltip(Localization.get(language, "tooltip_open_full_player")) {
                     IconButton(onClick = onOpenPlayer) {
                         Icon(
                             Icons.Filled.Fullscreen,
-                            contentDescription = "Open full player",
+                            contentDescription = Localization.get(language, "tooltip_open_full_player"),
                             tint = contentColor,
                             modifier = Modifier.size(22.dp),
                         )

@@ -582,7 +582,13 @@ class AudioPlayer {
             val out = AudioSystem.getSourceDataLine(format)
                 ?: throw IOException("No audio output device supports $format")
             line = out
-            out.open(format, 8192)
+            // A larger output buffer smooths over scheduler/GC hiccups — the
+            // old 8 KB buffer underran easily on macOS (audible glitches),
+            // especially while the animated canvas competes for CPU. Fall back
+            // to the small buffer only if the line rejects the bigger one.
+            runCatching { out.open(format, 16384) }.getOrElse {
+                out.open(format, 8192)
+            }
             out.start()
 
             val bigEndian = buffer.isBigEndian

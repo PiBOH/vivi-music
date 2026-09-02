@@ -197,6 +197,24 @@ MAPPING = {
     "download_mobile_apk": "Download VIVI for Android (APK)",
     "opening_download": "Opening download…",
     "native_title_bar": "Native system title bar",
+    "home_greeting_morning": "Good morning",
+    "home_greeting_afternoon": "Good afternoon",
+    "home_greeting_evening": "Good evening",
+    "your_artists_feed": "Your Artists Feed",
+    "made_for_you": "Made For You",
+    "see_all": "See all",
+    "view_section": "View section",
+    "tooltip_menu": "Menu",
+    "tooltip_collapse_sidebar": "Collapse sidebar",
+    "tooltip_toggle_sidebar": "Toggle sidebar",
+    "tooltip_clear": "Clear",
+    "tooltip_output_device": "Output device",
+    "tooltip_minimize": "Minimize",
+    "tooltip_forward": "Forward",
+    "tooltip_queue_options": "Queue options",
+    "tooltip_autoplay": "Autoplay",
+    "tooltip_open_full_player": "Open full player",
+    "tooltip_favorite": "Favorite",
     "native_title_bar_desc": "Use the operating system's title bar instead of VIVI's custom one; VIVI's bar then hides its own window buttons. Applies after a restart.",
     "native_title_bar_desc_hint": "Turn it on if you have compatibility issues (window/rendering problems).",
     "dev_logs_export": "Export logs (.zip)",
@@ -1378,12 +1396,13 @@ from desktop_extra_translations_52 import EXTRA_TRANSLATIONS as _EXTRA_52
 from desktop_extra_translations_53 import EXTRA_TRANSLATIONS as _EXTRA_53
 from desktop_extra_translations_54 import EXTRA_TRANSLATIONS as _EXTRA_54
 from desktop_extra_translations_55 import EXTRA_TRANSLATIONS as _EXTRA_55
+from desktop_extra_translations_56 import EXTRA_TRANSLATIONS as _EXTRA_56
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

@@ -83,6 +83,11 @@ dependencies {
     // Native OS system-volume access (WinMM wave output on Windows) so the
     // Android system volume can be mirrored on the desktop and vice versa.
     implementation("net.java.dev.jna:jna:5.14.0")
+    // Cross-platform global key hook (macOS/Linux media keys). The Windows
+    // path keeps its own low-level hook (see MediaKeys.kt); JNativeHook is
+    // only used on the other OSes, where it needs macOS Accessibility
+    // permission (fails gracefully when not granted).
+    implementation("com.github.kwhat:jnativehook:2.2.2")
 
     // JavaFX WebView for the embedded YouTube sign-in window. The platform
     // classifier is picked from the BUILDING machine: each OS CI job builds its

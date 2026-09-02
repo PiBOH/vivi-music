@@ -113,12 +113,12 @@ fun HomeScreen(
         )
     }
 
-    val greetingText = remember {
+    val greetingText = remember(language) {
         val hour = LocalTime.now().hour
         when {
-            hour < 12 -> "Good morning"
-            hour < 17 -> "Good afternoon"
-            else -> "Good evening"
+            hour < 12 -> Localization.get(language, "home_greeting_morning")
+            hour < 17 -> Localization.get(language, "home_greeting_afternoon")
+            else -> Localization.get(language, "home_greeting_evening")
         }
     }
 
@@ -163,7 +163,7 @@ fun HomeScreen(
                         )
                     }
 
-                    Tooltip("Notifications") {
+                    Tooltip(Localization.get(language, "notifications")) {
                         IconButton(
                             onClick = { /* Home hub / notifications */ },
                             colors = IconButtonDefaults.iconButtonColors(
@@ -353,7 +353,7 @@ fun HomeScreen(
                         ) {
                             val endpoint = section.endpoint
                             if (endpoint != null) {
-                                Tooltip("See all") {
+                                Tooltip(Localization.get(language, "see_all")) {
                                     IconButton(
                                         onClick = { onOpenBrowse(endpoint.browseId, endpoint.params) },
                                         colors = IconButtonDefaults.iconButtonColors(
@@ -364,7 +364,7 @@ fun HomeScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                            contentDescription = "View section",
+                                            contentDescription = Localization.get(language, "view_section"),
                                             modifier = Modifier.size(18.dp),
                                         )
                                     }
@@ -379,9 +379,24 @@ fun HomeScreen(
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(songs.distinctBy { it.id }, key = { it.id }) { song ->
+                            val sectionSongs = songs.distinctBy { it.id }
+                            items(sectionSongs, key = { it.id }) { song ->
                                 Box(Modifier.width(300.dp)) {
-                                    SongRow(song = song, language = language, onClick = { onPlaySong(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                                    SongRow(
+                                        song = song,
+                                        language = language,
+                                        // Like the Android app: tapping a song in a Home
+                                        // recommendation section plays the WHOLE section as a
+                                        // queue, starting from the tapped track (next/prev move
+                                        // through the rest of the section).
+                                        onClick = {
+                                            val start = sectionSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                            val rotated = sectionSongs.slice(start until sectionSongs.size) +
+                                                sectionSongs.slice(0 until start)
+                                            onPlayAll(rotated)
+                                        },
+                                        onAddToPlaylist = { onAddToPlaylist(song) },
+                                    )
                                 }
                             }
                         }
@@ -410,7 +425,7 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Your Artists Feed",
+                        text = Localization.get(language, "your_artists_feed"),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -425,7 +440,7 @@ fun HomeScreen(
             // 5. Made For You Section (Dynamic Gradient Cards)
             item(key = "made_for_you_header") {
                 Text(
-                    text = "Made For You",
+                    text = Localization.get(language, "made_for_you"),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )

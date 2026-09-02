@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.41_DE-1.49.8-nightly] - 2026-09-02
+
+### Fixed
+- [DE+APK] **Volume sync now fully obeys the "Sync VIVI volume" toggle**: the native OS system-volume channel used to sync unconditionally (changing the system volume on one device moved it on both even with every toggle off). Both the in-app and the system-volume channel are now read, pushed and applied only while the toggle is on, on both editions.
+- [DE] **Tray menu toggle applies live**: disabling "Tray menu" now removes the tray icon immediately (no restart needed); re-enabling recreates it. Notifications still work on every OS (WinRT toasts / osascript / temporary tray balloon).
+- [DE] **Home section songs now play as a queue like Android**: tapping a song in a Home recommendation section (Quick Picks, Last Listen, …) enqueues the whole section starting from the tapped track, instead of playing a single song. Fixed a `artist - artist` text bug on the mini-player card (now `title - artist`).
+- [DE] **Mac/Linux physical media keys work (with permission)**: global Play/Pause, Next, Previous and Stop now work on macOS and Linux through JNativeHook (the Windows low-level hook is unchanged). On macOS the OS asks for Accessibility permission once; until granted, VIVI logs a hint instead of failing silently.
+- [DE] **Audio glitches** (especially macOS): the output line buffer was doubled (16 KB with fallback to the old 8 KB) so scheduler/GC hiccups no longer underrun as easily.
+- [DE] **Log export moved to Settings → System** (it was under Developer options): same .zip export (logs + redacted system info), now in the System sub-menu.
+- [DE] **Remaining raw UI strings localized in all 47 languages**: Home greeting (Good morning/afternoon/evening), "Your Artists Feed", "Made For You", "See all"/"View section", and every button tooltip (Menu, Collapse/Toggle sidebar, Clear, Output device, Minimize, Forward, Queue options, Autoplay, Open full player, Favorite, …). Localization grew from 582 to 600 keys.
+
 ## [6.4.41_DE-1.49.7-nightly] - 2026-09-02
 
 ### Fixed

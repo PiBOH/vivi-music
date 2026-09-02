@@ -8,14 +8,18 @@ import com.sun.jna.Pointer
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Global media-key capture (Cider-style): a `WH_KEYBOARD_LL` low-level
- * keyboard hook that intercepts the Play/Pause, Next, Previous and Stop keys
- * even when the app has no focus, exactly like a native media player.
+ * Global media-key capture (Cider-style): intercepts the Play/Pause, Next,
+ * Previous and Stop keys even when the app has no focus, exactly like a
+ * native media player.
  *
- * Windows-only (the low-level hook API is Windows-specific); on other OSes
- * [start] no-ops. The hook is delivered through a native message pump, so it
- * runs on its own daemon thread with a `GetMessageW` loop. Every failure is
- * swallowed — a broken hook must never crash or block the app.
+ * - Windows: a `WH_KEYBOARD_LL` low-level hook delivered through a native
+ *   message pump on its own daemon thread (`GetMessageW` loop).
+ * - macOS/Linux: [JNativeHook]'s cross-platform global hook (its API is the
+ *   same JNA-style approach). On macOS the OS asks for **Accessibility**
+ *   permission the first time (System Settings → Privacy & Security); until
+ *   it is granted the hook fails gracefully and media keys stay inert.
+ *
+ * Every failure is swallowed — a broken hook must never crash or block the app.
  */
 object MediaKeys {
 
@@ -40,6 +44,10 @@ object MediaKeys {
     private var onStop: (() -> Unit)? = null
 
     private val started = AtomicBoolean(false)
+
+    // JNativeHook (macOS/Linux) state.
+    private val jnativeStarted = AtomicBoolean(false)
+    private var jnativeListener: com.github.kwhat.jnativehook.keyboard.NativeKeyListener? = null
 
     /** Minimal user32 surface (explicit `W` names, no jna-platform needed). */
     private interface User32LL : Library {
@@ -79,7 +87,10 @@ object MediaKeys {
         this.onNext = onNext
         this.onPrevious = onPrevious
         this.onStop = onStop
-        if (!isWindows) return
+        if (!isWindows) {
+            startJNativeHook()
+            return
+        }
         if (!started.compareAndSet(false, true)) return
         val api = user32 ?: run { started.set(false); return }
 
@@ -131,11 +142,65 @@ object MediaKeys {
         }
     }
 
-    /** Removes the hook (used on shutdown; the daemon thread exits on its own). */
+    /**
+     * Cross-platform global hook via JNativeHook (macOS/Linux). Best-effort:
+     * without macOS Accessibility permission the native hook cannot register
+     * and nothing happens — the app must not crash because of it.
+     */
+    private fun startJNativeHook() {
+        if (!jnativeStarted.compareAndSet(false, true)) return
+        try {
+            // JNativeHook logs loudly through java.util.logging by default;
+            // quiet it so the console stays clean.
+            runCatching {
+                java.util.logging.Logger.getLogger("com.github.kwhat.jnativehook")
+                    .level = java.util.logging.Level.OFF
+            }
+            com.github.kwhat.jnativehook.GlobalScreen.registerNativeHook()
+        } catch (t: Throwable) {
+            println(
+                "[media-keys] global hook unavailable on ${System.getProperty("os.name")}: $t" +
+                    (if (isMac) " — grant VIVI Accessibility permission in System Settings → Privacy & Security" else "")
+            )
+            jnativeStarted.set(false)
+            return
+        }
+        val listener = object : com.github.kwhat.jnativehook.keyboard.NativeKeyListener {
+            override fun nativeKeyPressed(e: com.github.kwhat.jnativehook.keyboard.NativeKeyEvent) {
+                try {
+                    when (e.keyCode) {
+                        com.github.kwhat.jnativehook.keyboard.NativeKeyEvent.VC_MEDIA_PLAY -> onPlayPause?.invoke()
+                        com.github.kwhat.jnativehook.keyboard.NativeKeyEvent.VC_MEDIA_NEXT -> onNext?.invoke()
+                        com.github.kwhat.jnativehook.keyboard.NativeKeyEvent.VC_MEDIA_PREVIOUS -> onPrevious?.invoke()
+                        com.github.kwhat.jnativehook.keyboard.NativeKeyEvent.VC_MEDIA_STOP -> onStop?.invoke()
+                    }
+                } catch (_: Throwable) {
+                    // Never let a callback failure escape into native code.
+                }
+            }
+
+            override fun nativeKeyReleased(e: com.github.kwhat.jnativehook.keyboard.NativeKeyEvent) {}
+            override fun nativeKeyTyped(e: com.github.kwhat.jnativehook.keyboard.NativeKeyEvent) {}
+        }
+        jnativeListener = listener
+        com.github.kwhat.jnativehook.GlobalScreen.addNativeKeyListener(listener)
+    }
+
+    private val isMac: Boolean
+        get() = System.getProperty("os.name", "").lowercase().contains("mac")
+
+    /** Removes the hooks (used on shutdown; the daemon thread exits on its own). */
     fun stop() {
         onPlayPause = null
         onNext = null
         onPrevious = null
         onStop = null
+        runCatching {
+            if (jnativeStarted.compareAndSet(true, false)) {
+                jnativeListener?.let { com.github.kwhat.jnativehook.GlobalScreen.removeNativeKeyListener(it) }
+                jnativeListener = null
+                com.github.kwhat.jnativehook.GlobalScreen.unregisterNativeHook()
+            }
+        }
     }
 }

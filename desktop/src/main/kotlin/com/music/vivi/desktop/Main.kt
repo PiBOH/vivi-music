@@ -751,7 +751,7 @@ fun WindowScope.App(
     // tray right-click menu and tray tooltip with the current track.
     val isWindows = System.getProperty("os.name", "").lowercase().contains("win")
     LaunchedEffect(mediaKeysEnabled) {
-        if (mediaKeysEnabled && isWindows) {
+        if (mediaKeysEnabled) {
             MediaKeys.start(
                 onPlayPause = { player.toggle() },
                 onNext = { player.next() },
@@ -1355,9 +1355,11 @@ fun WindowScope.App(
     // Poll the OS system volume and push changes to the peer (so changing the
     // Windows/Linux/mac volume controls the phone's system volume, and vice
     // versa). Echo-suppressed so a locally-applied remote value isn't bounced.
+    // Both the system-volume and in-app channels share the "Sync VIVI volume"
+    // toggle: with it off, no volume leaves this device and none is applied.
     LaunchedEffect(syncManager) {
         while (true) {
-            val sv = SystemVolume.get()
+            val sv = if (DesktopSettings.load().syncViviVolume) SystemVolume.get() else null
             if (sv != null) {
                 val isEcho = System.currentTimeMillis() < systemVolumeGuard.echoUntil &&
                     abs(sv - systemVolumeGuard.echoValue) < 0.02f
@@ -1408,11 +1410,16 @@ fun WindowScope.App(
                 }
             }
             // Native OS system volume sync: mirror the peer's system volume.
-            pb.systemVolume?.let { v ->
-                systemVolumeGuard.echoUntil = System.currentTimeMillis() + 1500L
-                systemVolumeGuard.echoValue = v
-                systemVolumeGuard.lastPushed = v
-                SystemVolume.set(v)
+            // Gated by the same toggle as the in-app channel, so turning
+            // "Sync VIVI volume" off on either device stops the OS volume
+            // from changing both systems (it used to sync unconditionally).
+            if (DesktopSettings.load().syncViviVolume) {
+                pb.systemVolume?.let { v ->
+                    systemVolumeGuard.echoUntil = System.currentTimeMillis() + 1500L
+                    systemVolumeGuard.echoValue = v
+                    systemVolumeGuard.lastPushed = v
+                    SystemVolume.set(v)
+                }
             }
             // Repeat mode + shuffle sync (independent of the queue/position).
             pb.repeatMode?.let { mode ->
@@ -2652,6 +2659,7 @@ fun WindowScope.App(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp),
             ) {
                 WindowControls(
+                    language = language,
                     isMaximized = isMaximized,
                     onMinimize = onMinimize,
                     onMaximize = onMaximize,
@@ -2800,7 +2808,7 @@ fun Sidebar(
             // Collapsed: menu button to expand the rail (works in both the
             // Spotify layout and the classic layout).
             if (collapsed) {
-                Tooltip("Menu") {
+                Tooltip(Localization.get(language, "tooltip_menu")) {
                     IconButton(
                         onClick = onToggleCollapsed,
                         modifier = Modifier.padding(bottom = 8.dp),
@@ -2826,7 +2834,7 @@ fun Sidebar(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.weight(1f))
-                    Tooltip("Collapse sidebar") {
+                    Tooltip(Localization.get(language, "tooltip_collapse_sidebar")) {
                         IconButton(onClick = onToggleCollapsed) {
                             Icon(
                                 Icons.AutoMirrored.Filled.MenuOpen,
@@ -3317,7 +3325,7 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Tooltip("Menu") {
+                Tooltip(Localization.get(language, "tooltip_menu")) {
                     IconButton(
                         onClick = { /* overflow menu */ },
                         modifier = Modifier.size(32.dp),
@@ -3344,7 +3352,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip("Forward") {
+                Tooltip(Localization.get(language, "tooltip_forward")) {
                     IconButton(
                         onClick = { /* forward */ },
                         enabled = false,
@@ -3358,7 +3366,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip("Toggle sidebar") {
+                Tooltip(Localization.get(language, "tooltip_toggle_sidebar")) {
                     IconButton(
                         onClick = onToggleSidebar,
                         modifier = Modifier.size(32.dp),
@@ -3445,7 +3453,7 @@ fun WindowScope.SpotifyTopHeader(
                             )
                         }
                         if (searchQuery.isNotEmpty()) {
-                            Tooltip("Clear") {
+                            Tooltip(Localization.get(language, "tooltip_clear")) {
                                 IconButton(
                                     onClick = { onSearchQueryChange("") },
                                     modifier = Modifier.size(24.dp),
@@ -3585,7 +3593,7 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Tooltip("Output device") {
+                Tooltip(Localization.get(language, "tooltip_output_device")) {
                     IconButton(
                         onClick = { /* output device */ },
                         modifier = Modifier.size(32.dp),
@@ -3679,6 +3687,7 @@ fun WindowScope.SpotifyTopHeader(
                 Spacer(Modifier.width(4.dp))
                 if (showWindowControls) {
                     WindowControls(
+                        language = language,
                         isMaximized = isMaximized,
                         onMinimize = onMinimize,
                         onMaximize = onMaximize,
@@ -3696,6 +3705,7 @@ fun WindowScope.SpotifyTopHeader(
  * Spotify header when it is visible and overlaid at the top-right otherwise. */
 @Composable
 private fun WindowControls(
+    language: String,
     isMaximized: Boolean,
     onMinimize: () -> Unit,
     onMaximize: () -> Unit,
@@ -3706,7 +3716,7 @@ private fun WindowControls(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Tooltip("Minimize") {
+        Tooltip(Localization.get(language, "tooltip_minimize")) {
             IconButton(
                 onClick = onMinimize,
                 modifier = Modifier.size(32.dp),
@@ -3732,7 +3742,7 @@ private fun WindowControls(
                 )
             }
         }
-        Tooltip("Close") {
+        Tooltip(Localization.get(language, "close")) {
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.size(32.dp),
@@ -3751,6 +3761,7 @@ private fun WindowControls(
 
 @Composable
 fun MiniPlayer(
+    language: String,
     nowPlaying: NowPlaying?,
     isPlaying: Boolean,
     isLoading: Boolean,
@@ -3874,7 +3885,7 @@ fun MiniPlayer(
                             }
                         }
                     }
-                    Tooltip("Next") {
+                    Tooltip(Localization.get(language, "next")) {
                         IconButton(onClick = onNext) {
                             Icon(
                                 Icons.Filled.SkipNext,
@@ -3884,7 +3895,7 @@ fun MiniPlayer(
                             )
                         }
                     }
-                    Tooltip("Queue") {
+                    Tooltip(Localization.get(language, "queue")) {
                         IconButton(onClick = onOpenQueue) {
                             Icon(
                                 Icons.AutoMirrored.Filled.QueueMusic,
@@ -4210,6 +4221,13 @@ fun SettingsSystemScreen(
     onOpenIntro: () -> Unit,
 ) {
     val devEnabled by DeveloperOptions.enabled.collectAsState()
+
+    // Log export (moved here from Developer options: it belongs under System).
+    var logExporting by remember { mutableStateOf(false) }
+    var logExportDone by remember { mutableStateOf(false) }
+    var logExportPath by remember { mutableStateOf<String?>(null) }
+    val logScope = rememberCoroutineScope()
+
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "system"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
         M3SettingsGroup(
@@ -4234,6 +4252,69 @@ fun SettingsSystemScreen(
                 ),
             ),
         )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Export logs (for support requests)
+        M3SettingsGroup(
+            title = Localization.get(language, "dev_logs_export"),
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Download,
+                    title = { Text(Localization.get(language, "dev_logs_export_desc")) },
+                    trailing = {
+                        Button(
+                            onClick = {
+                                logExporting = true
+                                logExportDone = false
+                                logExportPath = null
+                                logScope.launch {
+                                    val target = withContext(Dispatchers.IO) {
+                                        val dialog = java.awt.FileDialog(
+                                            null as java.awt.Frame?,
+                                            Localization.get(language, "dev_logs_export"),
+                                            java.awt.FileDialog.SAVE,
+                                        )
+                                        dialog.file = LogExporter.defaultFileName()
+                                        dialog.isVisible = true
+                                        val dir = dialog.directory
+                                        val name = dialog.file
+                                        dialog.dispose()
+                                        if (dir != null && name != null) java.io.File(dir, name) else null
+                                    }
+                                    if (target != null) {
+                                        val ok = withContext(Dispatchers.IO) {
+                                            runCatching { LogExporter.export(target); true }.getOrDefault(false)
+                                        }
+                                        if (ok) {
+                                            logExportDone = true
+                                            logExportPath = target.absolutePath
+                                        }
+                                    }
+                                    logExporting = false
+                                }
+                            },
+                            enabled = !logExporting,
+                        ) {
+                            Text(
+                                if (logExporting) Localization.get(language, "dev_logs_exporting")
+                                else Localization.get(language, "dev_logs_export")
+                            )
+                        }
+                    },
+                    onClick = {},
+                ),
+            ),
+        )
+        logExportPath?.let { path ->
+            Text(
+                if (logExportDone) "${Localization.get(language, "dev_logs_exported")}: $path"
+                else Localization.get(language, "dev_logs_export_failed"),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (logExportDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 16.dp, top = 6.dp),
+            )
+        }
     }
 }
 
@@ -5475,7 +5556,9 @@ private fun PlayerController.toPlaybackSnapshot(): PlaybackSnapshot? {
         isResolving = s.isResolving,
         isPlaying = s.isPlaying,
         volume = if (DesktopSettings.load().syncViviVolume) s.volume else null,
-        systemVolume = SystemVolume.get(),
+        // Same toggle as the in-app channel: the OS volume must not leave this
+        // device when volume sync is disabled.
+        systemVolume = if (DesktopSettings.load().syncViviVolume) SystemVolume.get() else null,
         repeatMode = s.repeatMode.name,
         isShuffle = s.isShuffle,
         queue = s.queue.map { np ->

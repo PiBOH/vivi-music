@@ -168,10 +168,21 @@ object NativeNotifier {
         runCatching { trayIcon?.toolTip = text }
     }
 
-    /** Removes the right-click menu from the tray icon (toggle off). */
+    /**
+     * Removes the right-click menu AND the tray icon itself (toggle off),
+     * so the setting applies live without a restart. The icon is recreated
+     * lazily by [ensureIcon] when a notification needs it or the menu is
+     * turned back on.
+     */
     fun clearTrayMenu() {
         trayActions = null
-        runCatching { trayIcon?.popupMenu = null }
+        runCatching {
+            val icon = trayIcon
+            if (icon != null && SystemTray.isSupported()) {
+                SystemTray.getSystemTray().remove(icon)
+                trayIcon = null
+            }
+        }
     }
 
     private fun buildMenu(icon: TrayIcon, a: TrayActions) {
