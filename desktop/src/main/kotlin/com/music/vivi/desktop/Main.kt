@@ -1278,9 +1278,11 @@ fun WindowScope.App(
 
     // Look-ahead prefetch: cache the tracks around the current one in the
     // background so they start instantly when skipped to. Runs regardless of
-    // play/pause, so pausing still fills the cache. Order: the 3 next + 3
-    // previous tracks first, then the rest of the queue, one download at a
-    // time, so with "cache forever" the whole queue ends up on disk.
+    // play/pause, so pausing still fills the cache. Order: the current track
+    // first (a restored queue has nothing loaded, so it must be ready the
+    // moment the user presses play), then the 3 next + 3 previous tracks,
+    // then the rest of the queue, one download at a time, so with "cache
+    // forever" the whole queue ends up on disk.
     LaunchedEffect(player) {
         var prefetchJob: kotlinx.coroutines.Job? = null
         player.state
@@ -1294,6 +1296,11 @@ fun WindowScope.App(
                     queue.take(index).takeLast(3).asReversed())
                     .distinctBy { it.videoId }
                 val restOfQueue = upcoming.drop(3)
+                // The current track goes FIRST: at startup (queue restored
+                // from the persistent queue) it is not playing yet, so by the
+                // time the user presses play it is already on disk and starts
+                // instantly instead of resolving + downloading.
+                val currentTrack = queue.getOrNull(index)
 
                 // Lyrics for the three upcoming tracks: fetch + keep in the
                 // persistent cache (best-effort, independent of the audio pass).
@@ -1310,7 +1317,7 @@ fun WindowScope.App(
                 // (an old pass must not keep downloading stale tracks).
                 prefetchJob?.cancel()
                 prefetchJob = launch(Dispatchers.IO) {
-                    val order = (nearestFirst + restOfQueue).distinctBy { it.videoId }
+                    val order = (listOfNotNull(currentTrack) + nearestFirst + restOfQueue).distinctBy { it.videoId }
                     for (track in order) {
                         if (player.isCached(track.videoId)) continue
                         val streams = StreamResolver.resolveAacStream(

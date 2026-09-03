@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.8-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Classic mini player seeking**: the seek slider now seeks once when the drag ends, like the full player. Previously every drag tick restarted the whole decode thread, so the slider fought the live position reports and felt dead (could not scrub forward/backward reliably).
+- [DE] **Instant start on the restored queue**: the startup prefetch now downloads the current track first. With a persistent queue the current track had no cache file (only the 3 next + 3 previous + the rest were prefetched), so pressing play had to resolve and download before the first sound; now it is already on disk when the app opens and starts immediately.
+
 ## [6.4.45_DE-1.50.7-nightly] - 2026-09-03
 
 ### Fixed

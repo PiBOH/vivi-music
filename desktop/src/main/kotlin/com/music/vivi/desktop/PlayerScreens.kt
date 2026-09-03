@@ -2576,20 +2576,41 @@ fun ClassicDesktopMiniPlayer(
 
                         Spacer(Modifier.height(4.dp))
 
+                        // Seek happens once when the drag ends (like the full
+                        // player): seeking on every drag tick restarted the
+                        // whole decode thread per tick, which made the slider
+                        // fight the live position reports and feel dead.
+                        var isSeeking by remember(nowPlaying.videoId) { mutableStateOf(false) }
+                        var seekValue by remember(nowPlaying.videoId) { mutableStateOf(0f) }
+                        val sliderMax = durationMs.coerceAtLeast(1L)
+                        val displayPosition = if (isSeeking) {
+                            seekValue
+                        } else {
+                            positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                        }
+
                         Row(
                             Modifier.fillMaxWidth(0.9f),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                formatTime(positionMs),
+                                formatTime(displayPosition.toLong()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = mutedColor,
                             )
                             Spacer(Modifier.width(8.dp))
                             ViviSlider(
-                                value = positionMs.toFloat().coerceIn(0f, durationMs.coerceAtLeast(1L).toFloat()),
-                                onValueChange = { onSeek(it.toLong()) },
-                                valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+                                value = displayPosition.coerceIn(0f, sliderMax.toFloat()),
+                                onValueChange = {
+                                    seekValue = it.coerceIn(0f, sliderMax.toFloat())
+                                    isSeeking = true
+                                },
+                                onValueChangeFinished = {
+                                    if (durationMs > 0) onSeek(seekValue.toLong())
+                                    isSeeking = false
+                                },
+                                enabled = durationMs > 0,
+                                valueRange = 0f..sliderMax.toFloat(),
                                 style = ViviSliderStyle.SLIM,
                                 modifier = Modifier.weight(1f),
                             )
