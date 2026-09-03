@@ -61,18 +61,17 @@ fun M3SettingsGroup(
     items: List<M3SettingsItem>,
     itemMinHeight: Dp? = null,
 ) {
-    Column(Modifier.fillMaxWidth()) {
-        title?.let {
+    Column(Modifier.fillMaxWidth()) {                title?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp, top = 8.dp),
+                modifier = Modifier.padding(bottom = 6.dp, top = 6.dp),
             )
         }
         Column(
             Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             items.forEachIndexed { index, item ->
                 val shape = when {
@@ -102,6 +101,7 @@ internal fun SettingsChevron() {
         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
         contentDescription = null,
         tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(20.dp),
     )
 }
 
@@ -120,14 +120,14 @@ private fun M3SettingsItemRow(
             .let {
                 if (minHeight != null) it.heightIn(min = minHeight) else it
             }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 17.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (item.icon != null) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(
                         MaterialTheme.colorScheme.primary.copy(alpha = if (item.enabled) 0.1f else 0.05f),
                     ),
@@ -141,10 +141,10 @@ private fun M3SettingsItemRow(
                     } else {
                         MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
                     },
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(13.dp))
         }
 
         Column(Modifier.weight(1f)) {
@@ -176,7 +176,7 @@ private fun M3SettingsItemRow(
         }
 
         item.trailing?.let { trailing ->
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(7.dp))
             trailing()
         }
     }

@@ -294,7 +294,7 @@ fun SettingsSubScreen(language: String, onBack: () -> Unit, content: @Composable
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(14.dp),
     ) {
         BackButton(language, onBack)
         content()

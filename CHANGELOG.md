@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.44_DE-1.50.6-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Settings lists are ~15% more compact** across the main Settings screen and every sub-screen: entry rows use tighter padding (20/16 dp → 17/14 dp), the tinted icon tiles shrank from 40 dp to 34 dp with 24 dp → 20 dp glyphs inside, the gap between rows went from 4 dp to 3 dp, the chevron is 20 dp instead of 24 dp, and the sub-screen content margin went from 16 dp to 14 dp — the Material 3 settings rows now match the density of the rest of the interface.
+
 ## [6.4.44_DE-1.50.5-nightly] - 2026-09-03
 
 ### Fixed
