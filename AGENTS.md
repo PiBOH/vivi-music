@@ -54,21 +54,31 @@ dependencies there, or you break the desktop build.
 
 ## 3. Code conventions and development guidelines
 
-- **Branch**: `vivi-music-de`.
-- **Branch policy for mobile changes (mandatory)**:
-  - The desktop edition work is maintained on `vivi-music-de`; DE-only changes
-    are committed and pushed **only** there.
-  - Mobile/APK changes must be applied and committed on **both** `vivi-music-de`
-    (the branch used to build the APK for the DE release) and `main` (the
-    canonical mobile branch). Keep the mobile diff equivalent on both branches.
-  - For combined DE + mobile changes, commit the DE-specific part only on
-    `vivi-music-de`, and apply the mobile part to both branches. Never merge the
-    whole DE branch into `main`, because DE-only code and release metadata must
-    not enter the mobile branch.
+- **Branch policy (mandatory) — three roles, never mix them**:
+  - `vivi-music-de` — home of the desktop edition AND of the mobile code used to
+    build the APK for the DE release. **DE-only** changes are committed and
+    pushed **only** here.
+  - `vivi-music-de-apk` — mobile/APK counterpart of `vivi-music-de`. **Every
+    mobile/APK change** must be applied and committed on **both**
+    `vivi-music-de` and `vivi-music-de-apk`; the two branches keep equivalent
+    mobile behavior (their commits may have different hashes). `vivi-music-de-apk`
+    also carries the pure-mobile history that used to live on `main` (kept
+    reachable via the merge commit `16743769`).
+  - `main` — **mirror of the upstream repository
+    `https://github.com/vivizzz007/vivi-music`** (branch `main`). It is NOT a
+    development branch: no mobile commit, no DE commit and no PiBOH-only code
+    may ever be pushed to it. Keep it synchronized with `upstream/main` (fetch
+    and fast-forward / reset when upstream moves); never rewrite it with local
+    work.
+  - Mobile changes are therefore committed on **`vivi-music-de` +
+    `vivi-music-de-apk`** (never `main`); DE-only changes only on
+    `vivi-music-de`. For combined DE + mobile changes, commit the DE-specific
+    part only on `vivi-music-de` and apply the mobile part to both
+    `vivi-music-de` and `vivi-music-de-apk`. Never merge the whole DE branch
+    into `main`.
   - Before committing mobile work, verify the affected mobile files on both
-    branches, compile the relevant target, and push both branch commits. The
-    commits may have different hashes because the branches have different
-    histories, but they must contain the same mobile behavior.
+    `vivi-music-de` and `vivi-music-de-apk`, compile the relevant target, and
+    push both branch commits.
 - **Commit style**: Conventional Commits (`feat:`, `fix:`, `ci:`, `refactor:`,
   `docs:`, `chore:`, `perf:`, …) with an optional scope, e.g.
   `feat(sync): …`.
