@@ -5555,8 +5555,33 @@ private data class ContributorEntry(
     val url: String? = null,
 )
 
-/** Reads `contributorsde.json` bundled as a classpath resource (may be empty). */
-private fun loadContributors(): List<ContributorEntry> = runCatching {
+/**
+ * Reads the contributor list from `~/.vivimusic/contributorsde.json`.
+ *
+ * The app ships a default copy of the file as a classpath resource; on the
+ * first launch it is materialized into the user data folder. From then on the
+ * file on disk is the single source of truth, so the user can add/edit
+ * contributors (and reorder them) without rebuilding — the About screen picks
+ * the new list up on the next launch. If the file is missing or unreadable,
+ * the bundled copy is used as a fallback.
+ */
+private fun loadContributors(): List<ContributorEntry> {
+    val userFile = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
+    if (!userFile.exists()) {
+        runCatching {
+            userFile.parentFile?.mkdirs()
+            val bundled = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return@runCatching
+            bundled.use { input -> userFile.writeBytes(input.readBytes()) }
+        }
+    }
+    val parsed = runCatching {
+        contributorsJson.decodeFromString<ContributorsFile>(userFile.readText()).contributors
+    }.getOrNull().orEmpty()
+    return if (parsed.isNotEmpty()) parsed else loadBundledContributors()
+}
+
+/** Fallback: read the contributor list bundled as a classpath resource. */
+private fun loadBundledContributors(): List<ContributorEntry> = runCatching {
     val stream = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return emptyList()
     stream.use {
         contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors

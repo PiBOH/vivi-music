@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.10-nightly] - 2026-09-03
+
+### Changed
+- [DE] The contributor list is now read from `~/.vivimusic/contributorsde.json` (the bundled default is copied there on the first launch), so contributors can be added, edited and reordered without rebuilding the app — the About screen picks the changes up at the next launch. `contributorsde.json` in the repo root stays the shipped default, with a clearer multi-line `_guide` (one line per row) explaining the format, the user-data location and optional fields. vivizzz007 moved first in the default order.
+
 ## [6.4.45_DE-1.50.9-nightly] - 2026-09-03
 
 ### Added

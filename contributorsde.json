@@ -1,6 +1,34 @@
 {
-  "_guide": "How to add a contributor. Copy one of the entries inside \"contributors\", change its values and save. The app reads this file at startup, so just add the entry and rebuild. Fields: \"username\" is required (GitHub profile handle; the avatar is fetched automatically from https://github.com/<username>.png); \"name\" is optional and overrides the displayed name (defaults to the username); \"description\" is a short neutral text in English (it is intentionally not translated, so it reads the same in every language); \"url\" is optional and defaults to https://github.com/<username>. Example entry: { \"username\": \"octocat\", \"name\": \"Octo Cat\", \"description\": \"Helps triage issues and answers questions in the community.\" }",
+  "_guide": [
+    "HOW TO ADD / EDIT A CONTRIBUTOR",
+    "",
+    "This file is copied to your user data folder on first launch:",
+    "  Windows:   %USERPROFILE%\\.vivimusic\\contributorsde.json",
+    "  Linux/mac: ~/.vivimusic/contributorsde.json",
+    "From then on the app reads THAT copy, so edit it there — no rebuild needed.",
+    "The copy in the repository root is only the default shipped with the app.",
+    "",
+    "Each entry inside \"contributors\" looks like this:",
+    "",
+    "  {",
+    "    \"username\": \"octocat\",              <- GitHub handle (required)",
+    "    \"description\": \"Helps with...\",     <- short text, keep it in English",
+    "    \"name\": \"Octo Cat\",                 <- optional, shown instead of username",
+    "    \"url\": \"https://github.com/octocat\" <- optional, defaults to the profile",
+    "  }",
+    "",
+    "Notes:",
+    "- The order in the file is the order shown in the About screen.",
+    "- The avatar is fetched automatically from GitHub by username.",
+    "- The description is intentionally neutral English (not translated).",
+    "- \"name\" and \"url\" can be removed if you do not need them.",
+    "- Delete the file in the user data folder to restore the default list."
+  ],
   "contributors": [
+    {
+      "username": "vivizzz007",
+      "description": "Created the Android app that VIVI Music DE is based on, and keeps the project — and its developer — in line."
+    },
     {
       "username": "bogdan-developer",
       "description": "Contributes massively by testing VIVI Music DE on macOS (Apple Silicon) and providing feedback — including technical feedback — across every area of the app."
@@ -8,10 +36,6 @@
     {
       "username": "Ansu216",
       "description": "Always available to help those in need in the Telegram channel, even without a PC."
-    },
-    {
-      "username": "vivizzz007",
-      "description": "Created the Android app that VIVI Music DE is based on, and keeps the project — and its developer — in line."
     },
     {
       "username": "dumbshrn",
