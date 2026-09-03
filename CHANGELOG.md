@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.9-nightly] - 2026-09-03
+
+### Added
+- [DE] About screen: new CONTRIBUTORS section below the developer card, listing the people behind the project (bogdan-developer, Ansu216, vivizzz007, dumbshrn) with their role, a link to their GitHub profile and their avatar fetched automatically from GitHub. The list is data-driven from `contributorsde.json` (repo root, bundled into the app), so new contributors can be added without touching code; the file carries an inline `_guide` explaining the format. Section header localized in all 47 languages; the contributor blurbs are intentionally neutral English.
+
 ## [6.4.45_DE-1.50.8-nightly] - 2026-09-03
 
 ### Fixed

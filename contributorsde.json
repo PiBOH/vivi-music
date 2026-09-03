@@ -1,0 +1,21 @@
+{
+  "_guide": "How to add a contributor. Copy one of the entries inside \"contributors\", change its values and save. The app reads this file at startup, so just add the entry and rebuild. Fields: \"username\" is required (GitHub profile handle; the avatar is fetched automatically from https://github.com/<username>.png); \"name\" is optional and overrides the displayed name (defaults to the username); \"description\" is a short neutral text in English (it is intentionally not translated, so it reads the same in every language); \"url\" is optional and defaults to https://github.com/<username>. Example entry: { \"username\": \"octocat\", \"name\": \"Octo Cat\", \"description\": \"Helps triage issues and answers questions in the community.\" }",
+  "contributors": [
+    {
+      "username": "bogdan-developer",
+      "description": "Contributes massively by testing VIVI Music DE on macOS (Apple Silicon) and providing feedback — including technical feedback — across every area of the app."
+    },
+    {
+      "username": "Ansu216",
+      "description": "Always available to help those in need in the Telegram channel, even without a PC."
+    },
+    {
+      "username": "vivizzz007",
+      "description": "Created the Android app that VIVI Music DE is based on, and keeps the project — and its developer — in line."
+    },
+    {
+      "username": "dumbshrn",
+      "description": "Created the foundation of the new UX — without him, this would not exist."
+    }
+  ]
+}

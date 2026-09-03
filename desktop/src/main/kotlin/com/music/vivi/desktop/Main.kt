@@ -224,6 +224,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import coil3.compose.AsyncImage
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -5421,6 +5423,14 @@ fun AboutSection(language: String) {
         onClick = { openUrl("https://piboh.github.io/vivi-music/") },
     )
 
+    val contributors = remember { loadContributors() }
+    if (contributors.isNotEmpty()) {
+        AboutSectionHeader(Localization.get(language, "contributors_section"))
+        contributors.forEach { contributor ->
+            ContributorRow(contributor)
+        }
+    }
+
     AboutSectionHeader(Localization.get(language, "community_section"))
     AboutInfoRow(
         icon = GithubIcon,
@@ -5524,6 +5534,104 @@ private fun AboutInfoRow(
             )
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Contributors (About → Contributors) — loaded dynamically from
+// `contributorsde.json` (repo root, bundled as a classpath resource) so new
+// people can be added without touching code. Descriptions are intentionally
+// neutral English (not localized). The GitHub avatar is fetched from
+// https://github.com/<username>.png (GitHub's public avatar redirect).
+// ---------------------------------------------------------------------------
+
+@Serializable
+private data class ContributorsFile(val contributors: List<ContributorEntry> = emptyList())
+
+@Serializable
+private data class ContributorEntry(
+    val username: String = "",
+    val description: String = "",
+    val name: String? = null,
+    val url: String? = null,
+)
+
+/** Reads `contributorsde.json` bundled as a classpath resource (may be empty). */
+private fun loadContributors(): List<ContributorEntry> = runCatching {
+    val stream = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return emptyList()
+    stream.use {
+        contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors
+    }.filter { it.username.isNotBlank() }
+}.getOrDefault(emptyList())
+
+@Composable
+private fun ContributorRow(contributor: ContributorEntry) {
+    val username = contributor.username
+    val displayName = contributor.name?.takeIf { it.isNotBlank() } ?: username
+    val profileUrl = contributor.url?.takeIf { it.isNotBlank() } ?: "https://github.com/$username"
+    Row(
+        Modifier.fillMaxWidth()
+            .clickable(onClick = { openUrl(profileUrl) })
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Circular GitHub avatar with an initials-colored fallback underneath:
+        // while the image streams in (or offline) the colored disc + initial
+        // show; once loaded, AsyncImage paints over it (Crop inside the circle).
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(contributorAvatarColor(username)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    displayName.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+            AsyncImage(
+                model = "https://github.com/$username.png?size=96",
+                contentDescription = displayName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            if (contributor.description.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    contributor.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Stable per-username avatar disc color (deterministic, theme-independent). */
+private fun contributorAvatarColor(username: String): Color {
+    val palette = listOf(
+        Color(0xFF6750A4), Color(0xFF00696D), Color(0xFF006D3A), Color(0xFF7D5260),
+        Color(0xFF9A6700), Color(0xFF00639B), Color(0xFF704214), Color(0xFFB3261E),
+    )
+    val hash = username.fold(0) { acc, c -> (acc * 31 + c.code) and 0x7fffffff }
+    return palette[hash % palette.size]
 }
 
 /** Loads a bundled classpath image from `desktop/src/main/resources/images`. */
@@ -5719,6 +5827,9 @@ fun StorageSection(language: String) {
 
 /** JSON codec for persisting the queue between sessions. */
 private val queueJson = Json { ignoreUnknownKeys = true }
+
+/** JSON codec for the bundled `contributorsde.json` (ignores `_guide` etc.). */
+private val contributorsJson = Json { ignoreUnknownKeys = true }
 
 /** Key used to detect discrete playback changes worth syncing (no per-frame pushes). */
 private data class PlaybackSyncKey(
