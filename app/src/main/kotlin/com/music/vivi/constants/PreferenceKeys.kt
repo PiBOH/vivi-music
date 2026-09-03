@@ -87,6 +87,11 @@ enum class SliderStyle {
 
 const val SYSTEM_DEFAULT = "SYSTEM_DEFAULT"
 val AppLanguageKey = stringPreferencesKey("appLanguage")
+/** Per-device counter bumped on every manual app-language change (sync marker). */
+val AppLanguageSeqKey = longPreferencesKey("appLanguageSeq")
+/** (deviceId, seq) of the last language change accepted from the desktop peer. */
+val AppLanguagePeerDeviceKey = stringPreferencesKey("appLanguagePeerDevice")
+val AppLanguagePeerSeqKey = longPreferencesKey("appLanguagePeerSeq")
 val ContentLanguageKey = stringPreferencesKey("contentLanguage")
 val ContentCountryKey = stringPreferencesKey("contentCountry")
 val SuggestionRegionKey = stringPreferencesKey("suggestionRegion")

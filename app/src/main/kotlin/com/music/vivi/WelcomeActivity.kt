@@ -149,6 +149,7 @@ import androidx.compose.material.icons.rounded.AccessibilityNew
 import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Info
 import com.music.vivi.constants.AppLanguageKey
+import com.music.vivi.constants.AppLanguageSeqKey
 import com.music.vivi.constants.SYSTEM_DEFAULT
 import com.music.vivi.constants.LanguageCodeToName
 import com.music.vivi.ui.component.EnumDialog
@@ -830,7 +831,12 @@ fun WelcomePagerScreen(onFinished: () -> Unit) {
             onDismiss = { showAppLanguageDialog = false },
             onSelect = { selectedLang ->
                 scope.launch {
-                    context.dataStore.edit { it[AppLanguageKey] = selectedLang }
+                    context.dataStore.edit {
+                        it[AppLanguageKey] = selectedLang
+                        // Sync marker: this manual change must propagate to the
+                        // desktop peer (it only applies when the sequence grows).
+                        it[AppLanguageSeqKey] = (it[AppLanguageSeqKey] ?: 0L) + 1
+                    }
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                         val locale = if (selectedLang == SYSTEM_DEFAULT) java.util.Locale.getDefault() else java.util.Locale.forLanguageTag(selectedLang)
                         com.music.vivi.utils.setAppLocale(context, locale)
