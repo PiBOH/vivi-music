@@ -88,6 +88,11 @@ class AudioPlayer {
 
         /** Poll interval while waiting for the download to catch up (ms). */
         const val DOWNLOAD_POLL_MS = 30L
+
+        /** Interval between buffered-fraction reports to the UI (ms). Also used
+         *  as the paused-state poll so the download keeps filling the cache and
+         *  the secondary buffer bar keeps advancing while audio is paused. */
+        const val BUFFERED_POLL_MS = 250L
     }
 
     @Volatile private var line: SourceDataLine? = null
@@ -114,8 +119,18 @@ class AudioPlayer {
     @Volatile
     var onLevel: ((Float) -> Unit)? = null
 
-    private var currentStreams: List<StreamResolver.ResolvedStream>? = null
-    private var currentCacheKey: String? = null
+    @Volatile private var currentStreams: List<StreamResolver.ResolvedStream>? = null
+    @Volatile private var currentCacheKey: String? = null
+
+    /**
+     * Called with the buffered fraction (0..1) of the current track: how much
+     * of the stream has been downloaded/decoded so far, reported while playing
+     * AND while paused (the cache keeps filling). 1f means the whole track is
+     * on disk (fully cached or download finished) — callers then hide the
+     * secondary "buffered" segment, mirroring a fully buffered YouTube video.
+     */
+    @Volatile
+    var onBufferedFraction: ((Float) -> Unit)? = null
 
     init {
         // Sweep stale partial downloads left behind by a crash: a `.part` is
@@ -238,6 +253,12 @@ class AudioPlayer {
             start()
         }
     }
+
+    /** True while a stream has been loaded (even if paused/ended) — i.e. a
+     *  [seekTo] would restart a real decode instead of being a no-op. Before
+     *  the first play of a restored track there is no loaded stream, so seeks
+     *  only move the UI position and are applied when playback starts. */
+    fun hasLoadedStream(): Boolean = currentStreams != null
 
     /** True when [cacheKey] already has a valid, non-truncated local cache file. */
     fun isCached(cacheKey: String): Boolean {
@@ -644,6 +665,28 @@ class AudioPlayer {
                 }
             }
 
+            // Throttled buffered-fraction reports: decoded time available (samples
+            // scanned so far x per-frame duration) over the track duration. A fully
+            // cached file or a finished download reports 1f, so the UI hides the
+            // secondary buffer segment (nothing is "still buffering").
+            var lastBufferedReportAt = -BUFFERED_POLL_MS
+            fun reportBuffered() {
+                if (gen != generation) return
+                val frac = if (handle.complete) {
+                    1f
+                } else if (durationMs > 0 && frameSeconds > 0.0) {
+                    val decodedMs = samples.size * frameSeconds * 1000
+                    (decodedMs / durationMs.toDouble()).toFloat().coerceIn(0f, 1f)
+                } else {
+                    1f // unknown duration: nothing meaningful to show
+                }
+                val now = System.currentTimeMillis()
+                if (now - lastBufferedReportAt >= BUFFERED_POLL_MS) {
+                    lastBufferedReportAt = now
+                    onBufferedFraction?.invoke(frac)
+                }
+            }
+
             fun emit() {
                 // Write the current frame to the output line (skipped while
                 // paused) and report the decoded position.
@@ -677,15 +720,25 @@ class AudioPlayer {
                 elapsedSeconds += buffer.length
             }
             emit()
+            reportBuffered()
 
             while (true) {
                 synchronized(lock) {
-                    while (paused && !stopped) lock.wait()
+                    while (paused && !stopped) {
+                        // While paused the download keeps filling the cache:
+                        // wait in short slices so newly arrived fragments are
+                        // scanned and the buffered fraction refreshed, instead
+                        // of sleeping until resume.
+                        lock.wait(BUFFERED_POLL_MS)
+                        scanMore()
+                        reportBuffered()
+                    }
                 }
                 if (stopped || gen != generation) break
 
                 // Grow the sample table as new fragments arrive.
                 scanMore()
+                reportBuffered()
                 if (index + 1 >= samples.size) {
                     if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
                     if (!handle.complete) {

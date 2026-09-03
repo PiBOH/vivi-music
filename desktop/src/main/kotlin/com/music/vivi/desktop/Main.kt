@@ -1662,6 +1662,7 @@ fun WindowScope.App(
             videoId = nowPlaying?.videoId,
             isPlaying = isPlaying,
             audioLevel = player.audioLevel,
+            bufferedFraction = player.bufferedFraction,
         )
     ) {
     Row(
@@ -5423,7 +5424,21 @@ fun AboutSection(language: String) {
         onClick = { openUrl("https://piboh.github.io/vivi-music/") },
     )
 
-    val contributors = remember { loadContributors() }
+    // The contributor list is read live from GitHub (branch `vivi-music-de`) so
+    // it stays current without an app update; the local copy is only a cache
+    // and offline fallback. Refresh silently every time this screen opens.
+    var contributors by remember { mutableStateOf(loadContributors()) }
+    LaunchedEffect(Unit) {
+        val fresh = withContext(Dispatchers.IO) { fetchContributorsFromGitHub() }
+        if (fresh.isNotEmpty()) {
+            contributors = fresh
+            runCatching {
+                val userFile = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
+                userFile.parentFile?.mkdirs()
+                userFile.writeText(contributorsJson.encodeToString(ContributorsFile(fresh)))
+            }
+        }
+    }
     if (contributors.isNotEmpty()) {
         AboutSectionHeader(Localization.get(language, "contributors_section"))
         contributors.forEach { contributor ->
@@ -5560,10 +5575,10 @@ private data class ContributorEntry(
  *
  * The app ships a default copy of the file as a classpath resource; on the
  * first launch it is materialized into the user data folder. From then on the
- * file on disk is the single source of truth, so the user can add/edit
- * contributors (and reorder them) without rebuilding — the About screen picks
- * the new list up on the next launch. If the file is missing or unreadable,
- * the bundled copy is used as a fallback.
+ * cached file on disk is used as an offline fallback, and every time the About
+ * screen opens the list is refreshed live from GitHub (see
+ * [fetchContributorsFromGitHub]). If the file is missing or unreadable, the
+ * bundled copy is used as a last resort.
  */
 private fun loadContributors(): List<ContributorEntry> {
     val userFile = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
@@ -5586,6 +5601,34 @@ private fun loadBundledContributors(): List<ContributorEntry> = runCatching {
     stream.use {
         contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors
     }.filter { it.username.isNotBlank() }
+}.getOrDefault(emptyList())
+
+/**
+ * Fetches the live contributor list from the repository
+ * (`contributorsde.json` on branch `vivi-music-de`, raw.githubusercontent.com).
+ * Returns an empty list when offline/unreachable — the caller then keeps the
+ * locally cached/bundled list, so the About screen degrades gracefully.
+ */
+private fun fetchContributorsFromGitHub(): List<ContributorEntry> = runCatching {
+    val url = URI("https://raw.githubusercontent.com/PiBOH/vivi-music/vivi-music-de/contributorsde.json").toURL()
+    val conn = url.openConnection() as java.net.HttpURLConnection
+    try {
+        conn.connectTimeout = 8000
+        conn.readTimeout = 8000
+        conn.setRequestProperty("User-Agent", "VIVI-Music-DE/${AppInfo.FULL_VERSION}")
+        conn.setRequestProperty("Accept", "application/json")
+        if (conn.responseCode == 200) {
+            conn.inputStream.use { input ->
+                val text = input.readBytes().decodeToString()
+                contributorsJson.decodeFromString<ContributorsFile>(text).contributors
+                    .filter { it.username.isNotBlank() }
+            }
+        } else {
+            emptyList()
+        }
+    } finally {
+        conn.disconnect()
+    }
 }.getOrDefault(emptyList())
 
 @Composable

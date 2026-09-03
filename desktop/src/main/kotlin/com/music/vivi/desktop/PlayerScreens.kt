@@ -470,6 +470,7 @@ private fun M3EPlayerContent(
                             enabled = durationMs > 0,
                             valueRange = 0f..sliderMax.toFloat(),
                             style = ViviSliderStyle.EXPRESSIVE,
+                            bufferedFraction = playbackBufferedFraction(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Row(Modifier.fillMaxWidth()) {
@@ -1144,6 +1145,7 @@ private fun PlayerControlPanel(
         enabled = durationMs > 0,
         valueRange = 0f..sliderMax.toFloat(),
         style = sliderStyle,
+        bufferedFraction = playbackBufferedFraction(),
         modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth()) {
@@ -2612,6 +2614,7 @@ fun ClassicDesktopMiniPlayer(
                                 enabled = durationMs > 0,
                                 valueRange = 0f..sliderMax.toFloat(),
                                 style = ViviSliderStyle.SLIM,
+                                bufferedFraction = playbackBufferedFraction(),
                                 modifier = Modifier.weight(1f),
                             )
                             Spacer(Modifier.width(8.dp))
@@ -2745,6 +2748,8 @@ fun NewDesktopMiniPlayer(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Circular Artwork Thumbnail with Song Progress Arc & Play/Pause Button Inside Cover
+            // (a fainter buffered arc sits behind the played arc while streaming)
+            val bufferedFraction = playbackBufferedFraction()
             Box(
                 Modifier
                     .size(46.dp)
@@ -2760,6 +2765,15 @@ fun NewDesktopMiniPlayer(
                         useCenter = false,
                         style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                     )
+                    if (bufferedFraction < 0.999f && bufferedFraction > progress + 0.002f) {
+                        drawArc(
+                            color = primaryColor.copy(alpha = 0.4f),
+                            startAngle = -90f,
+                            sweepAngle = 360f * bufferedFraction,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
                     drawArc(
                         color = primaryColor,
                         startAngle = -90f,
@@ -2935,7 +2949,8 @@ fun AppleDesktopMiniPlayer(
             thumbnailUrl = nowPlaying.thumbnail,
         )
 
-        // Bottom 3dp Progress Bar
+        // Bottom 3dp Progress Bar (with a fainter buffered portion while streaming)
+        val bufferedFraction = playbackBufferedFraction()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2944,6 +2959,9 @@ fun AppleDesktopMiniPlayer(
                 .drawBehind {
                     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
                     drawRect(mutedColor.copy(alpha = 0.2f))
+                    if (bufferedFraction < 0.999f && bufferedFraction > progress + 0.002f) {
+                        drawRect(primaryColor.copy(alpha = 0.35f), size = Size(size.width * bufferedFraction, size.height))
+                    }
                     drawRect(primaryColor, size = Size(size.width * progress, size.height))
                 }
         )

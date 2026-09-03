@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.11-nightly] - 2026-09-03
+
+### Added
+- [DE] **YouTube-style buffered progress on the seek bars of every player**: while a track is still streaming/downloading, a fainter secondary segment shows how much of the audio is already available (full player - M3 Expressive and Classic designs, the Classic mini player slider, the Apple mini player bottom bar and the New mini player progress ring). Fully cached or finished downloads show no extra segment, and the buffer keeps advancing while the track is paused.
+- [DE] **Seek bars can now be scrubbed before playback starts**: dragging the slider on a loaded-but-not-yet-started track (restored persistent queue, or a track that already ended) remembers the chosen position, and pressing play starts from there instead of ignoring the drag.
+
+### Changed
+- [DE] The About -> Contributors list is now fetched live from GitHub (`contributorsde.json` on the `vivi-music-de` branch) every time the screen opens, so new contributors appear without an app update; the local copy (`~/.vivimusic/contributorsde.json`) is kept only as an offline cache/fallback and is refreshed silently.
+
 ## [6.4.45_DE-1.50.10-nightly] - 2026-09-03
 
 ### Changed

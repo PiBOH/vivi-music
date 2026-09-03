@@ -82,6 +82,16 @@ class PlayerController {
     private val _audioLevel = MutableStateFlow(0f)
     val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
 
+    /**
+     * Buffered fraction (0..1) of the current track: how much of the stream has
+     * been downloaded/decoded so far, driven by [AudioPlayer.onBufferedFraction].
+     * 1f when fully cached / not streaming (the UI then hides the secondary
+     * "buffered" segment on the seek bars). Reset to 1f whenever no stream is
+     * loaded and to 0f while a fresh download starts.
+     */
+    private val _bufferedFraction = MutableStateFlow(1f)
+    val bufferedFraction: StateFlow<Float> = _bufferedFraction.asStateFlow()
+
     init {
         // Restore the saved shuffle/repeat state when "remember" is enabled.
         val s = DesktopSettings.load()
@@ -99,6 +109,8 @@ class PlayerController {
         }
         // Feed the audio-reactive visualizer from the decoded PCM stream.
         player.onLevel = { level -> _audioLevel.value = level }
+        // Feed the secondary "buffered" segment of the seek bars (YouTube-style).
+        player.onBufferedFraction = { frac -> _bufferedFraction.value = frac }
     }
 
     /** Resets the visualizer level to silence (e.g. on pause/stop). */
@@ -257,6 +269,7 @@ class PlayerController {
                 playToken++
                 player.stop()
                 loadedVideoId = null
+                _bufferedFraction.value = 1f
                 _state.value = PlayerState(volume = s.volume, isShuffle = s.isShuffle, repeatMode = s.repeatMode)
             }
             index < s.index -> _state.update { it.copy(queue = newQueue, index = it.index - 1) }
@@ -270,6 +283,7 @@ class PlayerController {
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
         _state.value = PlayerState(volume = s.volume, isShuffle = s.isShuffle, repeatMode = s.repeatMode)
     }
 
@@ -320,6 +334,7 @@ class PlayerController {
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
         _state.update { it.copy(isPlaying = false, positionMs = 0L) }
     }
 
@@ -369,7 +384,14 @@ class PlayerController {
         val s = _state.value
         if (s.current == null) return null
         val target = ms.coerceIn(0L, if (s.durationMs > 0) s.durationMs else ms)
-        player.seekTo(target)
+        // Only restart the decode when a stream is actually loaded. For a track
+        // that is loaded but never started (restored queue), already ended, or
+        // still resolving, the target is just remembered in the state — the
+        // next [startCurrent]/[playAtAttempt] starts playback from it, so the
+        // seek bar can be scrubbed before pressing play.
+        if (loadedVideoId == s.current?.videoId && player.hasLoadedStream()) {
+            player.seekTo(target)
+        }
         _state.update { it.copy(positionMs = target) }
         return target
     }
@@ -456,6 +478,7 @@ class PlayerController {
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
         val idx = index.coerceIn(0, tracks.lastIndex)
         _state.update {
             it.copy(
@@ -557,6 +580,7 @@ class PlayerController {
                     playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                 } else {
                     loadedVideoId = null
+                    _bufferedFraction.value = 1f
                     _state.update { it.copy(isPlaying = false, errorKey = "stream_error", errorDetail = null, loadPhase = LoadPhase.NONE, isResolving = false) }
                 }
                 return@launch
@@ -573,10 +597,22 @@ class PlayerController {
                 )
             }
 
+            // If the seek bar was scrubbed while this track was still being
+            // resolved/downloaded (no stream loaded yet), honor that position
+            // instead of the original startAtMs — otherwise the seek is lost
+            // the moment the stream starts from its planned offset.
+            val st = _state.value
+            val effectiveStartAt = if (st.index == index && st.current?.videoId == track.videoId) {
+                st.positionMs.coerceAtLeast(0L)
+            } else {
+                startAtMs
+            }
+            _bufferedFraction.value = if (alreadyCached) 1f else 0f
+
             player.play(
                 streams = streams,
                 cacheKey = track.videoId,
-                startAtMs = startAtMs,
+                startAtMs = effectiveStartAt,
                 startPaused = startPaused,
                 onError = { msg ->
                     // Evict the cached resolution: a stale, single-use
@@ -596,6 +632,7 @@ class PlayerController {
                         }
                     } else {
                         loadedVideoId = null
+                        _bufferedFraction.value = 1f
                         _state.update { s ->
                             if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
                                 s.copy(isPlaying = false, errorDetail = msg, loadPhase = LoadPhase.NONE, isResolving = false)
