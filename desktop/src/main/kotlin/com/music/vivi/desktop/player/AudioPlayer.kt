@@ -230,6 +230,11 @@ class AudioPlayer {
         }.apply {
             isDaemon = true
             name = "vivimusic-audio"
+            // The decode thread refills the sound buffer on a deadline; if the
+            // scheduler preempts it too long the output line underruns (the
+            // audible micro-pause/skip reported on macOS). Keep it at the
+            // highest priority so UI/GC work can't starve it.
+            priority = Thread.MAX_PRIORITY
             start()
         }
     }
@@ -599,6 +604,12 @@ class AudioPlayer {
             // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
             // the slider smooth and draggable while staying accurate to ~100 ms.
             var lastReportMs = -POSITION_REPORT_INTERVAL_MS
+            // Level callbacks are decimated (every other decoded frame, ~20/s)
+            // so the audio-reactive visualizer drives about half the UI
+            // recompositions of before: the frame-rate UI load was starving the
+            // audio scheduler on macOS, causing micro pauses/skips that
+            // coincided with small UI hitches.
+            var levelTick = false
 
             fun reportPosition() {
                 if (gen != generation) return
@@ -636,7 +647,8 @@ class AudioPlayer {
                             written += n
                         }
                         if (bitsPerSample == 16) {
-                            onLevel?.invoke(rms16(outData, bigEndian))
+                            levelTick = !levelTick
+                            if (levelTick) onLevel?.invoke(rms16(outData, bigEndian))
                         }
                     }
                 }

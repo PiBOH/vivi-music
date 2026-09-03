@@ -49,6 +49,10 @@ object MediaKeys {
     private val jnativeStarted = AtomicBoolean(false)
     private var jnativeListener: com.github.kwhat.jnativehook.keyboard.NativeKeyListener? = null
 
+    /** False once [stop] is called; the macOS trust watcher exits on it. */
+    @Volatile
+    private var nonWindowsEnabled = false
+
     /** Minimal user32 surface (explicit `W` names, no jna-platform needed). */
     private interface User32LL : Library {
         fun SetWindowsHookExW(idHook: Int, lpfn: HookProc, hMod: Pointer?, dwThreadId: Int): Pointer?
@@ -146,9 +150,44 @@ object MediaKeys {
      * Cross-platform global hook via JNativeHook (macOS/Linux). Best-effort:
      * without macOS Accessibility permission the native hook cannot register
      * and nothing happens — the app must not crash because of it.
+     *
+     * On macOS the registration is gated behind [isAccessibilityTrusted]:
+     * attempting the hook while untrusted makes the OS re-show its system
+     * permission prompt on EVERY app launch. Instead we poll quietly and
+     * register the moment the user grants access (no restart needed).
      */
     private fun startJNativeHook() {
+        nonWindowsEnabled = true
         if (!jnativeStarted.compareAndSet(false, true)) return
+        if (isMac && !isAccessibilityTrusted()) {
+            Thread {
+                try {
+                    while (nonWindowsEnabled) {
+                        if (isAccessibilityTrusted()) {
+                            registerJNativeHook()
+                            return@Thread
+                        }
+                        Thread.sleep(1500L)
+                    }
+                } catch (_: InterruptedException) {
+                    // Shutdown while waiting.
+                } finally {
+                    // Aborted by [stop] before registering: release the claim so
+                    // a later start() can retry.
+                    if (jnativeListener == null) jnativeStarted.set(false)
+                }
+            }.apply {
+                isDaemon = true
+                name = "VIVI-MediaKeys-Trust"
+                start()
+            }
+            return
+        }
+        registerJNativeHook()
+    }
+
+    /** Registers the JNativeHook keyboard listener (trust already granted). */
+    private fun registerJNativeHook() {
         try {
             // JNativeHook logs loudly through java.util.logging by default;
             // quiet it so the console stays clean.
@@ -186,6 +225,41 @@ object MediaKeys {
         com.github.kwhat.jnativehook.GlobalScreen.addNativeKeyListener(listener)
     }
 
+    // macOS ApplicationServices surface for the Accessibility trust check.
+    // AXIsProcessTrusted() (no options) never shows a prompt.
+    private interface AccessibilityLib : Library {
+        fun AXIsProcessTrusted(): Boolean
+    }
+
+    @Volatile
+    private var accessibilityApi: AccessibilityLib? = null
+
+    /**
+     * True when the global hook is allowed to register: always on Windows and
+     * Linux; on macOS only when the user granted Accessibility permission
+     * (System Settings → Privacy & Security → Accessibility).
+     */
+    fun isAccessibilityTrusted(): Boolean {
+        if (!isMac) return true
+        var api = accessibilityApi
+        if (api == null) {
+            api = runCatching { Native.load("ApplicationServices", AccessibilityLib::class.java) }.getOrNull()
+            accessibilityApi = api
+        }
+        // If the native API is unavailable, fall back to attempting the hook
+        // (the historical behaviour) instead of silently disabling media keys.
+        return api?.AXIsProcessTrusted() ?: true
+    }
+
+    /** Opens the macOS Accessibility pane so the user can grant permission. */
+    fun openAccessibilitySettings() {
+        if (!isMac) return
+        runCatching {
+            ProcessBuilder("open", "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+                .start()
+        }
+    }
+
     private val isMac: Boolean
         get() = System.getProperty("os.name", "").lowercase().contains("mac")
 
@@ -195,6 +269,7 @@ object MediaKeys {
         onNext = null
         onPrevious = null
         onStop = null
+        nonWindowsEnabled = false
         runCatching {
             if (jnativeStarted.compareAndSet(true, false)) {
                 jnativeListener?.let { com.github.kwhat.jnativehook.GlobalScreen.removeNativeKeyListener(it) }

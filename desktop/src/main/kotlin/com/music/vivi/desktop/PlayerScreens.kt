@@ -216,8 +216,35 @@ fun PlayerScreen(
                 isPlaying = isPlaying,
             )
             if (track == null) {
-                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(Localization.get(language, "nothing_playing"), style = MaterialTheme.typography.titleLarge)
+                // Nothing is playing (e.g. the queue was just cleared from the
+                // player): still offer the collapse control, otherwise the full
+                // player screen has no way back and the user must relaunch.
+                Box(Modifier.fillMaxSize()) {
+                    Text(
+                        Localization.get(language, "nothing_playing"),
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                    )
+                    onBack?.let { back ->
+                        Surface(
+                            onClick = back,
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(24.dp)
+                                .size(40.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = Localization.get(language, "back"),
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            }
+                        }
+                    }
                 }
             } else if (design == PlayerDesign.EXPRESSIVE) {
                 M3EPlayerContent(

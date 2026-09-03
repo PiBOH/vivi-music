@@ -751,6 +751,20 @@ fun WindowScope.App(
     // Cider-style desktop integrations: global media keys (Windows hook),
     // tray right-click menu and tray tooltip with the current track.
     val isWindows = System.getProperty("os.name", "").lowercase().contains("win")
+    val isMac = System.getProperty("os.name", "").lowercase().contains("mac")
+    // macOS: JNativeHook only registers once the Accessibility permission is
+    // granted (MediaKeys polls and activates on its own). This state drives
+    // the truthful switch/hint on the Desktop features screen.
+    var macAccessibilityTrusted by remember {
+        mutableStateOf(isMac && MediaKeys.isAccessibilityTrusted())
+    }
+    LaunchedEffect(Unit) {
+        if (!isMac) return@LaunchedEffect
+        while (true) {
+            macAccessibilityTrusted = MediaKeys.isAccessibilityTrusted()
+            delay(1500)
+        }
+    }
     LaunchedEffect(mediaKeysEnabled) {
         if (mediaKeysEnabled) {
             MediaKeys.start(
@@ -2145,6 +2159,9 @@ fun WindowScope.App(
                         language = language,
                         onBack = goBack,
                         isWindows = isWindows,
+                        isMac = isMac,
+                        macAccessibilityTrusted = macAccessibilityTrusted,
+                        onOpenAccessibilitySettings = { MediaKeys.openAccessibilitySettings() },
                         showWidget = showWidget,
                         onShowWidgetChange = { v ->
                             showWidget = v
@@ -4461,23 +4478,47 @@ fun DeviceSyncSection(
     val relayConnected = connectionState == SyncConnectionState.CONNECTED && !lanRunning
 
     if (relayMode) {
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = serverUrl,
-                onValueChange = { serverUrl = it },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                label = { Text(Localization.get(language, "relay_server")) },
-            )
+        OutlinedTextField(
+            value = serverUrl,
+            onValueChange = { serverUrl = it },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            singleLine = true,
+            label = { Text(Localization.get(language, "relay_server")) },
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             when {
-                connecting -> Tooltip(Localization.get(language, "lt_connecting")) {
-                    Button(onClick = {}, enabled = false) { Text(Localization.get(language, "lt_connecting")) }
+                connecting -> Button(onClick = {}, enabled = false) {
+                    Text(Localization.get(language, "lt_connecting"))
                 }
-                relayConnected -> Tooltip(Localization.get(language, "disconnect")) {
-                    Button(onClick = { syncManager.disconnect() }) { Text(Localization.get(language, "disconnect")) }
+                // Already on the relay: the same button now just re-issues the
+                // pairing code (pair another phone, or replace an expired one).
+                relayConnected -> {
+                    Button(onClick = { syncManager.requestPairingCode() }) {
+                        Text(Localization.get(language, "regenerate_pair_code"))
+                    }
+                    OutlinedButton(onClick = { syncManager.disconnect() }) {
+                        Text(Localization.get(language, "disconnect"))
+                    }
                 }
-                else -> Tooltip(Localization.get(language, "connect")) {
-                    Button(onClick = { syncManager.connect(serverUrl) }) { Text(Localization.get(language, "connect")) }
+                else -> Button(onClick = {
+                    syncManager.connect(serverUrl)
+                    // A pairing code can only be issued once the socket is up:
+                    // connect, then request it as soon as the relay reports
+                    // CONNECTED (same retry pattern as the LAN server start).
+                    syncScope.launch {
+                        repeat(8) {
+                            if (syncManager.pairCode.value.isNotEmpty()) return@launch
+                            if (syncManager.connectionState.value == SyncConnectionState.CONNECTED) {
+                                syncManager.requestPairingCode()
+                            }
+                            delay(1_000L)
+                        }
+                    }
+                }) {
+                    Text(Localization.get(language, "connect_and_generate_code"))
                 }
             }
         }
@@ -4490,6 +4531,13 @@ fun DeviceSyncSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp),
             )
+        }
+        // Auto-issue the pairing code whenever the relay is up, unpaired and no
+        // code is pending, so pairing never stalls behind a hidden button.
+        LaunchedEffect(relayMode, relayConnected, paired, pairCode) {
+            if (relayMode && relayConnected && !paired && pairCode.isEmpty()) {
+                syncManager.requestPairingCode()
+            }
         }
     } else {
         Text(Localization.get(language, "lan_sync"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
@@ -4509,7 +4557,11 @@ fun DeviceSyncSection(
         }
     }
 
-    if (pairCode.isNotEmpty() && qrAddr.isNotEmpty()) {
+    // Relay mode: code generation lives in the single action button above, so
+    // the panel here only shows the code + expiry (no duplicate button). LAN
+    // mode keeps its own Generate button as before.
+    val showQr = pairCode.isNotEmpty() && qrAddr.isNotEmpty()
+    if (showQr) {
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -4540,15 +4592,17 @@ fun DeviceSyncSection(
                 pairCode = pairCode,
                 remainingMs = remainingMs,
                 onGenerate = { syncManager.requestPairingCode() },
+                showGenerate = !relayMode,
                 modifier = Modifier.weight(1f),
             )
         }
-    } else {
+    } else if (!relayMode || pairCode.isNotEmpty()) {
         PairingCodePanel(
             language = language,
             pairCode = pairCode,
             remainingMs = remainingMs,
             onGenerate = { syncManager.requestPairingCode() },
+            showGenerate = !relayMode,
             modifier = Modifier.padding(top = 8.dp),
         )
     }
@@ -4640,11 +4694,16 @@ private fun PairingCodePanel(
     remainingMs: Long,
     onGenerate: () -> Unit,
     modifier: Modifier = Modifier,
+    showGenerate: Boolean = true,
 ) {
     Column(modifier) {
         // The desktop is the code generator: the phone only enters this code.
-        Button(onClick = onGenerate) {
-            Text(Localization.get(language, if (pairCode.isNotEmpty()) "generate_new_code" else "generate_code"))
+        // In relay mode the action button above already covers generation, so
+        // the panel hides its own to avoid two identical buttons.
+        if (showGenerate) {
+            Button(onClick = onGenerate) {
+                Text(Localization.get(language, if (pairCode.isNotEmpty()) "generate_new_code" else "generate_code"))
+            }
         }
         if (pairCode.isNotEmpty()) {
             // Selectable so the user can copy the code if the QR scan fails.

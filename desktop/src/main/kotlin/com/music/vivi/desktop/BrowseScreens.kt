@@ -490,7 +490,14 @@ fun HomeScreen(
                 }
             }
 
-            val moodItems = moodAndGenres?.flatMap { it.items }
+            // The API can repeat the same mood/genre (identical browseId+title)
+            // across category sections; the LazyRow below is keyed by
+            // `browseId + title`, so duplicates must be removed or Compose
+            // crashes with "key ... was already used" as soon as the row
+            // scrolls into view.
+            val moodItems = moodAndGenres
+                ?.flatMap { it.items }
+                ?.distinctBy { it.endpoint.browseId + it.title }
             if (!moodItems.isNullOrEmpty()) {
                 item(key = "mood_header") {
                     SectionHeader(title = Localization.get(language, "mood_and_genres"), language = language)

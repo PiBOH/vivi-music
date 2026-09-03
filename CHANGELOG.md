@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.44_DE-1.50.4-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **"Mood & genres" no longer crashes when it scrolls into view on the Home page** (or on the dedicated screen): the API can return the same mood/genre (identical `browseId` + title) more than once across category sections, and the lists were keyed by `browseId + title` — two identical keys in a LazyColumn/Row throw "key … was already used". Both lists now deduplicate before rendering.
+- [DE] **macOS: the Accessibility permission prompt no longer reappears on every launch** (reported on 1.50.1–1.50.3): the global media-key hook (JNativeHook) was registered unconditionally at startup, and macOS re-asks for the permission every time the hook is attempted while untrusted. Registration is now gated behind `AXIsProcessTrusted()` — while untrusted the app never attempts the hook (so no prompt) and quietly activates the moment the permission is granted; the Desktop features screen shows an honest switch plus an "Open System Settings…" button when the permission is missing on macOS.
+- [DE] **Expressive player: clearing the queue no longer strands the user on the full-player screen**: a clear stops playback and empties the queue, and that "Nothing playing" state had no collapse control — the only way out was relaunching. The collapse (down-chevron) button is now always available, even when nothing is playing.
+- [DE] **Device sync (relay): the pairing code is now generated automatically when connecting** — the Connect button moved below the relay-server field and merged with code generation into one "Connect & Generate Pair Code" action; once connected the same spot becomes "Regenerate Pair Code" (with a separate Disconnect button), and a code is also issued automatically whenever the relay is connected, unpaired and no code is pending, so the pairing QR is always ready.
+- [DE] **Audio micro-pauses/skips on macOS** (reported alongside small UI hitches): the audio decode thread now runs at maximum priority so UI/GC work cannot starve the sound-buffer refill, and the audio-reactive visualizer level is decimated to every other decoded frame (~20 Hz) to halve the UI recomposition load competing with the audio scheduler. Best-effort mitigation pending confirmation from the affected Mac.
+
 ## [6.4.44_DE-1.50.3-nightly] - 2026-09-03
 
 ### Fixed

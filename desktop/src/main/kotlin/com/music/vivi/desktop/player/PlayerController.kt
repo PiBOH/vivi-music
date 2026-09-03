@@ -75,7 +75,9 @@ class PlayerController {
     /**
      * Instantaneous audio level (0..1) of the decoded PCM stream, driven by
      * [AudioPlayer.onLevel]. Used by the "Visualizer" player background.
-     * Updated ~43x/s; callers smooth it when drawing.
+     * Updated ~20x/s (every other decoded frame); callers smooth it when
+     * drawing. The decimation halves the UI recomposition load that could
+     * otherwise starve the audio scheduler (macOS micro pauses/skips).
      */
     private val _audioLevel = MutableStateFlow(0f)
     val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()

@@ -204,13 +204,16 @@ fun MoodGenresScreen(
                         )
                     }
                     item(key = "grid-${section.title}") {
+                        // A grid item keyed by `browseId + title` crashes when a
+                        // section repeats the same entry, so dedupe per section.
+                        val distinctItems = section.items.distinctBy { it.endpoint.browseId + it.title }
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(180.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             userScrollEnabled = false,
                         ) {
-                            gridItems(section.items, key = { it.endpoint.browseId + it.title }) { item ->
+                            gridItems(distinctItems, key = { it.endpoint.browseId + it.title }) { item ->
                                 MoodAndGenresButton(
                                     title = item.title,
                                     onClick = { onOpenBrowse(item.endpoint.browseId, item.endpoint.params) },
