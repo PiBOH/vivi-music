@@ -569,13 +569,17 @@ fun main(args: Array<String>) {
                     )
                     language.isBlank() -> LanguageSelectionScreen { selected ->
                         language = selected
-                        DesktopSettings.update { it.copy(language = selected) }
+                        DesktopSettings.update {
+                            it.copy(language = selected, languageSeq = it.languageSeq + 1)
+                        }
                     }
                     else -> App(
                         language = language,
                         onLanguageChange = { selected ->
                             language = selected
-                            DesktopSettings.update { it.copy(language = selected) }
+                            DesktopSettings.update {
+                                it.copy(language = selected, languageSeq = it.languageSeq + 1)
+                            }
                         },
                         font = selectedFont,
                         onFontChange = { f ->
@@ -1582,7 +1586,29 @@ fun WindowScope.App(
             settings["appLanguage"]?.let { lang ->
                 val normalized = Languages.fromMobileCode(lang)
                 if (lang != "SYSTEM_DEFAULT" && Languages.all.any { it.code == normalized }) {
-                    onLanguageChange(normalized)
+                    // Bidirectional language sync, pair-hijack-proof: the peer's
+                    // snapshot only carries a language that *its user* changed,
+                    // identified by (deviceId, per-device sequence). Stale or
+                    // echoed values (our own deviceId, an older sequence, or a
+                    // legacy peer that sends no sequence at all) never override
+                    // the desktop's own choice — that is what kept forcing
+                    // English back on every fresh pair.
+                    val peerId = settings["languageDeviceId"].orEmpty()
+                    val peerSeq = settings["languageSeq"]?.toLongOrNull() ?: 0L
+                    if (peerId.isNotBlank() && peerSeq > 0L) {
+                        val s = DesktopSettings.load()
+                        val staleEcho = peerId == s.deviceId ||
+                            (peerId == s.languagePeerId && peerSeq <= s.languagePeerSeq)
+                        if (!staleEcho) {
+                            // Remember which peer change we accepted (so a repeat
+                            // push of the same change is ignored), then adopt the
+                            // language through the normal change path.
+                            DesktopSettings.update {
+                                it.copy(languagePeerId = peerId, languagePeerSeq = peerSeq)
+                            }
+                            onLanguageChange(normalized)
+                        }
+                    }
                 }
             }
             settings["selectedThemeColor"]?.toIntOrNull()?.let { argb ->
@@ -5215,16 +5241,18 @@ fun UpdateSection(
                 }
             }
         }
-        is UpdateStatus.Failed -> Text(
-            "${Localization.get(language, "update_failed")}: ${status.message}",
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+        is UpdateStatus.Failed -> SelectionContainer {
+            Text(
+                "${Localization.get(language, "update_failed")}: ${status.message}",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
         is UpdateStatus.Idle -> Unit
     }
 
     openError?.let {
-        Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+        SelectionContainer { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
     }
 
     // Downloaded installer management.
@@ -5739,8 +5767,16 @@ private fun desktopSettingsMap(
     themeMode: ThemeMode,
     accent: Color,
     syncViviVolume: Boolean,
-): Map<String, String> = mapOf(
+): Map<String, String> {
+    val s = DesktopSettings.load()
+    return mapOf(
     "appLanguage" to Languages.toMobileCode(language).ifBlank { "SYSTEM_DEFAULT" },
+    // Source markers for bidirectional language sync: (deviceId, seq) where
+    // seq grows on every manual language change on THIS device. The peer only
+    // applies the language when the markers prove it is a newer manual change
+    // (never an echo or a stale stored value pushed at pair time).
+    "languageDeviceId" to s.deviceId,
+    "languageSeq" to s.languageSeq.toString(),
     "darkMode" to when (themeMode) {
         ThemeMode.SYSTEM -> "AUTO"
         ThemeMode.LIGHT -> "OFF"
@@ -5750,4 +5786,5 @@ private fun desktopSettingsMap(
     "pureBlack" to "false",
     "dynamicTheme" to "false",
     "syncViviVolume" to syncViviVolume.toString(),
-)
+    )
+}

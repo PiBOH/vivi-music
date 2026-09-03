@@ -234,8 +234,11 @@ fun M3SettingsDropdownItem(
                 .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
                 .padding(vertical = 4.dp),
         ) {
+            // Highlight the option whose translated label matches the currently
+            // shown value. (Comparing `key == value` never matched: callers pass
+            // the *translated* value, so the checked row was never highlighted.)
             options.forEach { (key, label) ->
-                val selected = key == value
+                val selected = label == value
                 DropdownMenuItem(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {

@@ -572,6 +572,8 @@ ENGLISH = {
     "lan_hint": "On your phone, open Settings → Devices, set the relay server to the address above, then enter the code.",
     "waiting_for_pairing": "Waiting for a device to pair…",
     "connect_hint": "This can take a few seconds — up to 2 minutes if the relay server needs to wake up.",
+    "retry": "Retry",
+    "charts_empty": "Nothing to show here yet.",
     "connect_and_generate_code": "Connect & Generate Pair Code",
     "regenerate_pair_code": "Regenerate Pair Code",
     "requires_accessibility": "Requires Accessibility permission",
@@ -1431,12 +1433,13 @@ from desktop_extra_translations_57 import EXTRA_TRANSLATIONS as _EXTRA_57
 from desktop_extra_translations_58 import EXTRA_TRANSLATIONS as _EXTRA_58
 from desktop_extra_translations_59 import EXTRA_TRANSLATIONS as _EXTRA_59
 from desktop_extra_translations_60 import EXTRA_TRANSLATIONS as _EXTRA_60
+from desktop_extra_translations_61 import EXTRA_TRANSLATIONS as _EXTRA_61
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
@@ -1638,8 +1641,19 @@ def main():
     for i, (lang, _entries) in enumerate(ordered):
         parts.append('        "%s" to strings_%d(),' % (lang, i))
     parts.append("    )")
-    parts.append("    fun get(language: String, key: String): String =")
-    parts.append('        strings[language]?.get(key) ?: strings["en"]?.get(key) ?: key')
+    parts.append("    fun get(language: String, key: String): String {")
+    parts.append("        val direct = strings[language]?.get(key)")
+    parts.append("        if (direct != null) return direct")
+    parts.append('        strings["en"]?.get(key)?.let { return it }')
+    parts.append("        // Safety net: a missing translation must never surface as a raw snake-")
+    parts.append("        // case key on screen. Fall back to the first dictionary that has a real")
+    parts.append("        // (non-key) translation, so even a gap in every map shows something")
+    parts.append("        // readable instead of \"player_background_visualizer\".")
+    parts.append("        for (map in strings.values) {")
+    parts.append("            map[key]?.takeIf { it != key }?.let { return it }")
+    parts.append("        }")
+    parts.append("        return key")
+    parts.append("    }")
     parts.append("}\n")
 
     with open(OUT, "w", encoding="utf-8") as f:

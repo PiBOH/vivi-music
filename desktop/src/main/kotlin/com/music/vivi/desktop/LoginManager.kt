@@ -76,7 +76,7 @@ object LoginManager {
             try {
                 YouTube.cookie = trimmed
                 val (extractedDataSyncId, extractedVisitorData) = extractAccountIds(trimmed)
-                val dataSyncId = dataSyncIdOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedDataSyncId
+                val dataSyncId = sanitizeDataSyncId(dataSyncIdOverride) ?: sanitizeDataSyncId(extractedDataSyncId)
                 val visitorData = visitorDataOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedVisitorData
                 val missingIds = listOfNotNull(
                     if (dataSyncId.isNullOrBlank()) "DATASYNC_ID" else null,
@@ -188,7 +188,21 @@ object LoginManager {
                     .find(body)?.groupValues?.get(1)
                 val visitorData = Regex("\"VISITOR_DATA\"\\s*:\\s*\"([^\"]+)\"")
                     .find(body)?.groupValues?.get(1)
-                dataSyncId to visitorData
+                sanitizeDataSyncId(dataSyncId) to visitorData
             }
         }.getOrElse { null to null }
+}
+
+/**
+ * The account delegated id that YouTube embeds in `ytcfg.DATASYNC_ID` is the
+ * plain numeric account id, but the raw page value can carry a trailing
+ * `||…` suffix (a stale/partially-set delegation token). Sent verbatim as
+ * `onBehalfOfUser` that suffix breaks the innertube calls (401/500, "Login
+ * validation failed") — the manual tests confirmed that removing the `||`
+ * (keeping only the numbers) makes the session validate. Keeps anything
+ * before the first `|` and trims whitespace; null when nothing is left.
+ */
+internal fun sanitizeDataSyncId(raw: String?): String? {
+    val clean = raw?.substringBefore('|')?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return clean
 }

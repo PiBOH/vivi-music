@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.7-nightly] - 2026-09-03
+
+### Fixed
+- [DE+APK] **Bidirectional language sync that can never be hijacked at pair time**: every manual language change now travels with a (deviceId, per-device sequence) marker. The peer only applies a language when the markers prove it is a newer manual change made on the other side — echoes and the stale stored value a phone pushes on every fresh pair are ignored, so pairing no longer flips the desktop back to English. The newest manual change wins on either device (change it on the DE and the APK follows, change it on the APK and the DE follows). Old peers without markers keep the previous behavior (desktop → phone mirroring only).
+- [DE] **Radio/Charts screen can never be silently blank**: the charts parser now walks every section-list the response can use (any single-column tab, a top-level section list, the two-column tabs) instead of only the first tab, auto-issues the continuation once when the shell is empty, and the UI shows a localized empty state with a Retry button (plus one automatic retry) instead of an empty page.
+- [DE] **Single density selector**: the duplicate "Density & grid" info row inside the Density sub-screen was folded into the one dropdown (its description), so the screen offers exactly one density option plus the separate grid-item-size picker.
+- [DE] **Every error is selectable**: the shared error box, the login error/status lines, the update-failed / open-error texts and the Listen Together error lines are wrapped in `SelectionContainer`, so any in-app error can be copied for a report.
+- [DE] **Sign-in now strips the `||…` suffix from `DATASYNC_ID`**: the delegated account id YouTube embeds in `ytcfg` can carry a trailing pipe-suffixed token; sent verbatim as `onBehalfOfUser` it made validation fail (401/500). The extracted value (WebView ytcfg capture and the shell fetch) keeps only the part before the first `|` — matching the manual test where removing the `||` made the login work.
+- [DE] Player-design dropdowns now highlight the selected option (the check compares the translated labels, not a raw key against the label) and `Localization.get` gained a last-resort fallback that can never surface a raw snake-case key on screen.
+- Translations: 2 new keys (`retry`, `charts_empty`) for the Charts empty state, translated across all 47 languages (translations assisted by AI — thanks to @codebuffai).
+
 ## [6.4.44_DE-1.50.6-nightly] - 2026-09-03
 
 ### Fixed

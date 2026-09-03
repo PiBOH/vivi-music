@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import com.music.innertube.models.SongItem
 import com.music.innertube.models.YTItem
 import com.music.innertube.pages.ChartsPage
 import com.music.innertube.pages.MoodAndGenres
+import kotlinx.coroutines.delay
 
 /** New Release albums screen (grid of the latest albums). */
 @Composable
@@ -97,12 +99,28 @@ fun ChartsScreen(
 ) {
     var page by remember { mutableStateOf<ChartsPage?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Retry support: bump [loadRequest] to refetch (also used once automatically
+    // when the page loads but has no sections, so a layout change on YouTube's
+    // side can never leave the Radio/Charts screen silently blank).
+    var loadRequest by remember { mutableStateOf(0) }
+    var autoRetried by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(loadRequest) {
+        error = null
+        page = null
         YouTube.getChartsPage().fold(
             onSuccess = { page = it },
             onFailure = { error = it.message },
         )
+    }
+    // One automatic retry when the response is empty (rare YouTube layout
+    // changes return an empty shell for the first request).
+    LaunchedEffect(page) {
+        if (page != null && page!!.sections.isEmpty() && !autoRetried) {
+            autoRetried = true
+            delay(1200)
+            loadRequest++
+        }
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -112,6 +130,18 @@ fun ChartsScreen(
         when {
             error != null -> ErrorBox(language, error)
             page == null -> LoadingBox(language)
+            page!!.sections.isEmpty() -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(48.dp))
+                Text(
+                    Localization.get(language, "charts_empty"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { autoRetried = true; loadRequest++ }) {
+                    Text(Localization.get(language, "retry"))
+                }
+            }
             else -> LazyColumn(Modifier.fillMaxSize()) {
                 page!!.sections.filter { it.title != "Top music videos" }.forEach { section ->
                     item(key = "header-${section.title}") {

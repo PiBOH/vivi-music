@@ -47,9 +47,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.music.vivi.utils.dataStore
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.datastore.preferences.core.edit
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -60,6 +63,7 @@ import androidx.navigation.NavController
 import com.music.vivi.LocalPlayerAwareWindowInsets
 import com.music.vivi.R
 import com.music.vivi.constants.AppLanguageKey
+import com.music.vivi.constants.AppLanguageSeqKey
 import com.music.vivi.constants.ContentCountryKey
 import com.music.vivi.constants.ContentLanguageKey
 import com.music.vivi.constants.SuggestionRegionKey
@@ -343,8 +347,15 @@ fun ContentSettings(
     if (showAppLanguageDialog) {
         EnumDialog(
             onDismiss = { showAppLanguageDialog = false },
-            onSelect = {
-                onAppLanguageChange(it)
+            onSelect = { selected ->
+                onAppLanguageChange(selected)
+                // Sync marker: this manual change must propagate to the desktop
+                // peer (the peer applies it only when its sequence grows).
+                scope.launch {
+                    context.dataStore.edit { prefs ->
+                        prefs[AppLanguageSeqKey] = (prefs[AppLanguageSeqKey] ?: 0L) + 1
+                    }
+                }
                 showAppLanguageDialog = false
             },
             title = stringResource(R.string.app_language),

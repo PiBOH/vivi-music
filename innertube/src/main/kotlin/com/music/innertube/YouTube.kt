@@ -944,10 +944,22 @@ object YouTube {
         ).body<BrowseResponse>()
 
         val sections = mutableListOf<ChartsPage.ChartSection>()
-    
-        response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
-            ?.tabRenderer?.content?.sectionListRenderer?.contents?.forEach { content ->
-            
+
+        // Walk every place the carousels can live so a layout change on
+        // YouTube's side can never silently blank the Charts/Radio screen:
+        // inside any single-column tab, a top-level section list, or the
+        // two-column variant's tabs — not just the first tab.
+        val sectionLists = mutableListOf<SectionListRenderer>()
+        response.contents?.singleColumnBrowseResultsRenderer?.tabs?.forEach { tab ->
+            tab.tabRenderer.content?.sectionListRenderer?.let { sectionLists += it }
+        }
+        response.contents?.sectionListRenderer?.let { sectionLists += it }
+        response.contents?.twoColumnBrowseResultsRenderer?.tabs?.forEach { tab ->
+            tab?.tabRenderer?.content?.sectionListRenderer?.let { sectionLists += it }
+        }
+
+        for (sectionList in sectionLists) {
+            sectionList.contents?.forEach { content ->
                 content.musicCarouselShelfRenderer?.let { renderer ->
                     val title = renderer.header?.musicCarouselShelfBasicHeaderRenderer?.title?.runs?.firstOrNull()?.text
                         ?: return@forEach
@@ -994,6 +1006,21 @@ object YouTube {
                     }
                 }
             }
+        }
+
+        // Some charts pages only resolve after the first continuation (YouTube
+        // may return an empty shell for the initial FEmusic_charts request and
+        // stream the real carousels in the follow-up), so when the shell is
+        // empty but a continuation exists, issue it once and parse that too.
+        if (sections.isEmpty() && continuation == null) {
+            val cont = response.continuationContents?.sectionListContinuation?.continuations?.getContinuation()
+            if (cont != null) {
+                val followUp = getChartsPage(cont).getOrElse { ChartsPage(emptyList(), null) }
+                if (followUp.sections.isNotEmpty()) {
+                    return Result.success(followUp)
+                }
+            }
+        }
 
         ChartsPage(
             sections = sections,

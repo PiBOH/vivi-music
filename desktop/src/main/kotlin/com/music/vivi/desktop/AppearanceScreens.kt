@@ -943,20 +943,13 @@ fun DensityScreen(
     Column(Modifier.fillMaxWidth()) {
         Text(Localization.get(language, "density_and_grid"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
         Spacer(Modifier.height(4.dp))
-        M3SettingsGroup(
-            items = listOf(
-                M3SettingsItem(
-                    icon = Icons.Filled.Brightness1,
-                    title = { Text(Localization.get(language, "density_and_grid")) },
-                    description = { Text(Localization.get(language, "density_desc")) },
-                    onClick = null,
-                ),
-            ),
-        )
-        Spacer(Modifier.height(8.dp))
+        // Single selector for the UI density: the duplicate info row was folded
+        // into this dropdown's description so the screen offers exactly one
+        // "Density & grid" option (plus the separate grid-item-size picker).
         M3SettingsDropdownItem(
             icon = Icons.Filled.SettingsBrightness,
             title = Localization.get(language, "density_and_grid"),
+            description = Localization.get(language, "density_desc"),
             value = densityLabel(densityScale),
             options = DENSITY_PRESETS.map { it.toString() to densityLabel(it) },
             onSelect = { s -> onDensityScaleChange(s.toFloatOrNull() ?: densityScale) },

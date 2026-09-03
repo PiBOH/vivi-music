@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -360,7 +361,10 @@ fun LoadingBox(language: String) {
 @Composable
 fun ErrorBox(language: String, message: String?) {
     Box(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("${Localization.get(language, "error")}: $message", color = MaterialTheme.colorScheme.error)
+        // Selectable so every network/load error can be copied for a bug report.
+        SelectionContainer {
+            Text("${Localization.get(language, "error")}: $message", color = MaterialTheme.colorScheme.error)
+        }
     }
 }
 

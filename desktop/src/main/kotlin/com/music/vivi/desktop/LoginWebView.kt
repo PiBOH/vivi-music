@@ -265,8 +265,9 @@ object LoginWebView {
         FxPlatform.runLater {
             try {
                 val getter = "(function(k){ try { if (window.ytcfg && window.ytcfg.get) { return window.ytcfg.get(k) || ''; } if (window.ytcfg && window.ytcfg.data_) { return window.ytcfg.data_[k] || ''; } return ''; } catch (e) { return ''; } })"
-                result[0] = (browser.engine.executeScript("$getter('DATASYNC_ID')") as? String)
-                    ?.takeIf { it.isNotBlank() }
+                result[0] = sanitizeDataSyncId(
+                    (browser.engine.executeScript("$getter('DATASYNC_ID')") as? String)
+                )
                 result[1] = (browser.engine.executeScript("$getter('VISITOR_DATA')") as? String)
                     ?.takeIf { it.isNotBlank() }
                 if (result[0] == null || result[1] == null) {

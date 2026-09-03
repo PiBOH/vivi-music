@@ -19,6 +19,20 @@ data class DesktopSyncState(
     val serverUrl: String = "",
     val settings: Map<String, String> = emptyMap(),
     val language: String = "",
+    /**
+     * Bidirectional language-sync bookkeeping (no wall clocks involved).
+     *
+     * [languageSeq] grows by one on every MANUAL language change made on this
+     * device. Settings snapshots carry (deviceId, languageSeq); the peer only
+     * applies the value when those markers prove it is a newer manual change
+     * from the other side — never an echo (same deviceId) and never a stale
+     * value a peer pushes at pair time with an old/absent sequence. The last
+     * applied peer change is remembered in [languagePeerId]/[languagePeerSeq]
+     * so re-pushes of the same peer change are ignored across restarts.
+     */
+    val languageSeq: Long = 0L,
+    val languagePeerId: String = "",
+    val languagePeerSeq: Long = 0L,
     val includePreReleases: Boolean = false,
     val darkMode: String = "system",
     val accentColor: Int = 0xFFED5564.toInt(),
