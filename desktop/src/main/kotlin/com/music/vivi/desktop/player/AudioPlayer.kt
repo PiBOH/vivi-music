@@ -599,7 +599,6 @@ class AudioPlayer {
             val bigEndian = buffer.isBigEndian
             val bitsPerSample = buffer.bitsPerSample
             val targetSeconds = startAtMs / 1000.0
-            var elapsedSeconds = 0.0
             // Position reports are throttled so the UI (seek slider, lyrics) does
             // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
             // the slider smooth and draggable while staying accurate to ~100 ms.
@@ -610,6 +609,27 @@ class AudioPlayer {
             // audio scheduler on macOS, causing micro pauses/skips that
             // coincided with small UI hitches.
             var levelTick = false
+
+            // Jump straight to the AAC frame that contains the requested
+            // position instead of decoding (and discarding) every frame from
+            // the start: seeking into a long track used to visibly re-scan the
+            // whole seek bar from zero and could only land once the download
+            // reached the target, so it never felt precise. AAC-LC frames are
+            // independent and ~constant-size, so frame N begins at
+            // N × frameDuration.
+            val frameSeconds = buffer.length.coerceAtLeast(0.0)
+            val skipIndex = if (frameSeconds > 0.0 && startAtMs > 0L) {
+                (startAtMs / 1000.0 / frameSeconds).toInt()
+                    .coerceIn(0, (samples.size - 1).coerceAtLeast(0))
+            } else 0
+            var index = skipIndex
+            var elapsedSeconds = index * frameSeconds
+            // When jumping forward, replace the calibration frame (0) that is
+            // already in the buffer with the frame at the seek target.
+            if (index > 0) {
+                awaitSample(index)
+                decodeAt(index)
+            }
 
             fun reportPosition() {
                 if (gen != generation) return
@@ -625,7 +645,8 @@ class AudioPlayer {
             }
 
             fun emit() {
-                // Decode-and-discard frames until the seek target is reached.
+                // Write the current frame to the output line (skipped while
+                // paused) and report the decoded position.
                 if (elapsedSeconds + buffer.length >= targetSeconds) {
                     if (!paused) {
                         val data = if (volume < 0.999f && bitsPerSample == 16) {
@@ -657,7 +678,6 @@ class AudioPlayer {
             }
             emit()
 
-            var index = 0
             while (true) {
                 synchronized(lock) {
                     while (paused && !stopped) lock.wait()

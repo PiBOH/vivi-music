@@ -1272,30 +1272,55 @@ fun WindowScope.App(
         }
     }
 
-    // Look-ahead prefetch: cache the next few tracks' audio and lyrics in the
+    // Look-ahead prefetch: cache the tracks around the current one in the
     // background so they start instantly when skipped to. Runs regardless of
-    // play/pause, so pausing still fills the cache for the upcoming tracks.
+    // play/pause, so pausing still fills the cache. Order: the 3 next + 3
+    // previous tracks first, then the rest of the queue, one download at a
+    // time, so with "cache forever" the whole queue ends up on disk.
     LaunchedEffect(player) {
+        var prefetchJob: kotlinx.coroutines.Job? = null
         player.state
             .map { it.queue to it.index }
             .distinctUntilChanged()
             .collect { (queue, index) ->
-                for (track in queue.drop(index + 1).take(3)) {
-                    // Audio: resolve + download to the on-disk cache (no play).
-                    if (!player.isCached(track.videoId)) {
-                        launch(Dispatchers.IO) {
-                            val streams = StreamResolver.resolveAacStream(
-                                track.videoId,
-                                StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
-                            )
-                            if (streams.isNotEmpty()) player.prefetch(streams, track.videoId)
-                        }
-                    }
-                    // Lyrics: fetch + keep in the persistent cache.
+                if (queue.isEmpty() || index !in queue.indices) return@collect
+
+                val upcoming = queue.drop(index + 1)
+                val nearestFirst = (upcoming.take(3) +
+                    queue.take(index).takeLast(3).asReversed())
+                    .distinctBy { it.videoId }
+                val restOfQueue = upcoming.drop(3)
+
+                // Lyrics for the three upcoming tracks: fetch + keep in the
+                // persistent cache (best-effort, independent of the audio pass).
+                upcoming.take(3).forEach { track ->
                     if (LyricsCache.get(track.videoId) == null) {
                         launch(Dispatchers.IO) {
                             LrcLib.getLyrics(title = track.title, artist = track.artist, duration = -1)
                                 .onSuccess { LyricsCache.put(track.videoId, it) }
+                        }
+                    }
+                }
+
+                // A queue/index change restarts the pass on the new window
+                // (an old pass must not keep downloading stale tracks).
+                prefetchJob?.cancel()
+                prefetchJob = launch(Dispatchers.IO) {
+                    val order = (nearestFirst + restOfQueue).distinctBy { it.videoId }
+                    for (track in order) {
+                        if (player.isCached(track.videoId)) continue
+                        val streams = StreamResolver.resolveAacStream(
+                            track.videoId,
+                            StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                        )
+                        if (streams.isEmpty()) continue
+                        player.prefetch(streams, track.videoId)
+                        // Wait for the `.part` to be promoted to the final
+                        // cache name before moving on (best-effort: failures
+                        // time out and are skipped).
+                        val deadline = System.currentTimeMillis() + 120_000L
+                        while (!player.isCached(track.videoId) && System.currentTimeMillis() < deadline) {
+                            delay(750)
                         }
                     }
                 }

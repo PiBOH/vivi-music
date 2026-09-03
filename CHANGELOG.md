@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.44_DE-1.50.5-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Seeking now lands precisely on the clicked position instead of re-scanning the whole seek bar**: the player used to seek by decoding (and discarding) every frame from the start of the track until the target, which made the slider visibly reload from zero and — for tracks still downloading — could only land once the download had reached the target. Seeking now jumps straight to the AAC frame containing the requested time (AAC-LC frames are independent and ~constant-size), so it is instant on cached tracks and accurate to within one frame (~23 ms).
+- [DE] **A fully cached track is played straight from disk without being "resolved" again**: play always resolved a fresh stream URL before checking the cache, so every restart (and every return to a song) showed the resolving phase even with "cache forever" and a complete file on disk. Playback now checks the on-disk audio cache first and skips network resolution entirely for cached tracks — no spinner, no re-download, works offline.
+- [DE] **Look-ahead prefetch now covers the whole queue**: previously only the 3 upcoming tracks were prefetched. Now the 3 next + 3 previous tracks are cached first, and once they are on disk the rest of the queue is downloaded one track at a time in the background, so with "cache forever" the entire queue ends up cached across restarts.
+- [DE] **The in-app (VIVI) volume no longer resets to 100% on every launch**: the volume slider was never persisted. It is now saved (including when changed by device sync) and restored at startup.
+
 ## [6.4.44_DE-1.50.4-nightly] - 2026-09-03
 
 ### Fixed

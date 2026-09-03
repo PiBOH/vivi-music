@@ -105,6 +105,8 @@ data class DesktopSyncState(
     val syncedLyrics: Boolean = true,
     val pureBlack: Boolean = false,
     val audioQuality: String = "auto",
+    /** In-app (VIVI) player volume (0..1), restored at startup. */
+    val playerVolume: Float = 1f,
     val rememberShuffleRepeat: Boolean = false,
     val isShuffle: Boolean = false,
     val repeatModeKey: String = "OFF",

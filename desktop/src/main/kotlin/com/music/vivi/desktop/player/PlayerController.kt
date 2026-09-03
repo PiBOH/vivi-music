@@ -91,6 +91,12 @@ class PlayerController {
                 repeatMode = repeatModeFromKey(s.repeatModeKey),
             )
         }
+        // Restore the in-app (VIVI) volume: it used to reset to 100% on every
+        // launch because the volume was never persisted.
+        if (s.playerVolume in 0f..1f) {
+            player.setVolume(s.playerVolume)
+            _state.value = _state.value.copy(volume = s.playerVolume)
+        }
         // Feed the audio-reactive visualizer from the decoded PCM stream.
         player.onLevel = { level -> _audioLevel.value = level }
     }
@@ -380,8 +386,12 @@ class PlayerController {
     }
 
     fun setVolume(v: Float) {
-        player.setVolume(v)
-        _state.update { it.copy(volume = v.coerceIn(0f, 1f)) }
+        val clamped = v.coerceIn(0f, 1f)
+        player.setVolume(clamped)
+        _state.update { it.copy(volume = clamped) }
+        // Persist the volume so it survives restarts instead of resetting to
+        // the default maximum (also covers volumes applied by device sync).
+        runCatching { DesktopSettings.update { it.copy(playerVolume = clamped) } }
     }
 
     /**
@@ -525,11 +535,21 @@ class PlayerController {
                 isResolving = true,
             )
 
-            val streams = StreamResolver.resolveAacStream(
-                track.videoId,
-                StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
-            )
-            if (streams.isEmpty()) {
+            // A track that was already downloaded in full (audio cache) plays
+            // straight from disk — no network resolution, no "resolving"
+            // spinner, and no re-download on every restart with "cache
+            // forever". Only tracks without a valid cache file need a stream
+            // URL to fetch.
+            val alreadyCached = player.isCached(track.videoId)
+            val streams = if (alreadyCached) {
+                emptyList()
+            } else {
+                StreamResolver.resolveAacStream(
+                    track.videoId,
+                    StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                )
+            }
+            if (streams.isEmpty() && !alreadyCached) {
                 if (attempt + 1 < MAX_PLAY_ATTEMPTS) {
                     // Bot detection / transient resolution failure: rotate the
                     // guest identity and try a fresh resolution.
@@ -541,7 +561,17 @@ class PlayerController {
                 }
                 return@launch
             }
-            _state.update { it.copy(errorKey = null, errorDetail = null, loadPhase = LoadPhase.DOWNLOADING) }
+            _state.update {
+                it.copy(
+                    errorKey = null,
+                    errorDetail = null,
+                    // Cached tracks keep the RESOLVING phase only until the
+                    // first position report flips it (the resumeWhenReady
+                    // logic relies on that transition), so no spinner is
+                    // actually shown for them.
+                    loadPhase = if (alreadyCached) it.loadPhase else LoadPhase.DOWNLOADING,
+                )
+            }
 
             player.play(
                 streams = streams,
