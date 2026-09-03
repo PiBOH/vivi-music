@@ -143,6 +143,14 @@ class PlayerController {
     /** Back-navigation history used by "previous" in shuffle mode. */
     private val previousStack = ArrayDeque<Int>()
 
+    /**
+     * Start position chosen while the track's duration was still unknown (a
+     * 0..1 fraction of the track). A loaded-but-never-played track can be
+     * scrubbed before its length is known; the fraction is applied to the real
+     * duration the moment playback starts. Consumed by the next [playAtAttempt].
+     */
+    private var pendingStartFraction: Float? = null
+
     fun play(track: NowPlaying) {
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(listOf(track), 0)
@@ -383,7 +391,20 @@ class PlayerController {
     private fun seekInternal(ms: Long): Long? {
         val s = _state.value
         if (s.current == null) return null
-        val target = ms.coerceIn(0L, if (s.durationMs > 0) s.durationMs else ms)
+        // Duration unknown (track loaded but never resolved): the seek bar has
+        // no real time range, so the value is a 0..1000 encoding of the desired
+        // START FRACTION. It is remembered and applied to the stream duration
+        // when playback actually begins — pressing play then starts from the
+        // scrubbed point.
+        // The fraction encoding is only produced by the local seek bars (whose
+        // range is 0..1000 while the duration is unknown); a remote seek in real
+        // milliseconds is much larger and must not be reinterpreted.
+        if (s.durationMs <= 0L && ms in 0..1000L) {
+            pendingStartFraction = (ms / 1000f).coerceIn(0f, 1f)
+            _state.update { it.copy(positionMs = 0L) }
+            return null
+        }
+        val target = ms.coerceIn(0L, s.durationMs)
         // Only restart the decode when a stream is actually loaded. For a track
         // that is loaded but never started (restored queue), already ended, or
         // still resolving, the target is just remembered in the state — the
@@ -600,12 +621,28 @@ class PlayerController {
             // If the seek bar was scrubbed while this track was still being
             // resolved/downloaded (no stream loaded yet), honor that position
             // instead of the original startAtMs — otherwise the seek is lost
-            // the moment the stream starts from its planned offset.
+            // the moment the stream starts from its planned offset. A scrub
+            // done while the duration was still unknown is a fraction: apply it
+            // to the metadata duration when available, otherwise forward it to
+            // the player which resolves it against the stream duration.
             val st = _state.value
-            val effectiveStartAt = if (st.index == index && st.current?.videoId == track.videoId) {
-                st.positionMs.coerceAtLeast(0L)
-            } else {
-                startAtMs
+            val pendingFraction = pendingStartFraction
+            pendingStartFraction = null
+            val sameTrack = st.index == index && st.current?.videoId == track.videoId
+            var startFraction: Float? = null
+            val effectiveStartAt = when {
+                pendingFraction != null && pendingFraction > 0f && sameTrack -> {
+                    val knownDur = track.durationMs.takeIf { it > 0 }
+                        ?: st.durationMs.takeIf { it > 0 } ?: 0L
+                    if (knownDur > 0) {
+                        (pendingFraction * knownDur).toLong()
+                    } else {
+                        startFraction = pendingFraction
+                        0L
+                    }
+                }
+                sameTrack && st.positionMs > 0L -> st.positionMs.coerceAtLeast(0L)
+                else -> startAtMs
             }
             _bufferedFraction.value = if (alreadyCached) 1f else 0f
 
@@ -613,6 +650,7 @@ class PlayerController {
                 streams = streams,
                 cacheKey = track.videoId,
                 startAtMs = effectiveStartAt,
+                startAtFraction = startFraction,
                 startPaused = startPaused,
                 onError = { msg ->
                     // Evict the cached resolution: a stale, single-use

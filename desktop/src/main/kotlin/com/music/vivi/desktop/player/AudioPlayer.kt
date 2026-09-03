@@ -151,6 +151,11 @@ class AudioPlayer {
         cacheKey: String,
         startAtMs: Long = 0L,
         startPaused: Boolean = false,
+        /** Desired start as a 0..1 fraction of the track, used only when the
+         *  total duration is not known yet (a track loaded from the queue whose
+         *  metadata carried no length). Resolved against the stream duration
+         *  inside the decode thread, where it becomes available. */
+        startAtFraction: Float? = null,
         onPosition: (Long) -> Unit,
         onDuration: (Long) -> Unit,
         onError: (String) -> Unit,
@@ -160,7 +165,7 @@ class AudioPlayer {
         this.onDuration = onDuration
         this.onError = onError
         this.onComplete = onComplete
-        startDecode(streams, cacheKey, startAtMs, startPaused)
+        startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction)
     }
 
     /** Seeks to [ms] by restarting decode from the cached file, preserving the
@@ -196,7 +201,13 @@ class AudioPlayer {
         line = null
     }
 
-    private fun startDecode(streams: List<StreamResolver.ResolvedStream>, cacheKey: String, startAtMs: Long, startPaused: Boolean) {
+    private fun startDecode(
+        streams: List<StreamResolver.ResolvedStream>,
+        cacheKey: String,
+        startAtMs: Long,
+        startPaused: Boolean,
+        startAtFraction: Float? = null,
+    ) {
         // Invalidate any running thread and reset the play flags.
         val gen = ++generation
         stopped = true
@@ -229,7 +240,7 @@ class AudioPlayer {
                 } else {
                     beginDownload(streams, cacheKey)
                 }
-                decodeAndPlay(handle, gen, startAtMs, knownDurationMs)
+                decodeAndPlay(handle, gen, startAtMs, knownDurationMs, startAtFraction)
             } catch (e: Exception) {
                 failed = true
                 if (gen == generation) {
@@ -497,7 +508,13 @@ class AudioPlayer {
         return true
     }
 
-    private fun decodeAndPlay(handle: DownloadHandle, gen: Int, startAtMs: Long, knownDurationMs: Long = 0L) {
+    private fun decodeAndPlay(
+        handle: DownloadHandle,
+        gen: Int,
+        startAtMs: Long,
+        knownDurationMs: Long = 0L,
+        startAtFraction: Float? = null,
+    ) {
         NIOUtils.readableChannel(handle.file).use { channel ->
             // The download may still be in flight: wait until the head of the
             // file (`ftyp` + `moov`) is on disk before parsing the container.
@@ -619,7 +636,14 @@ class AudioPlayer {
 
             val bigEndian = buffer.isBigEndian
             val bitsPerSample = buffer.bitsPerSample
-            val targetSeconds = startAtMs / 1000.0
+            // A fraction-based start (duration unknown when the user scrubbed)
+            // is resolved against the stream duration here, where it is known.
+            val effectiveStartMs = if (startAtFraction != null && knownDurationMs > 0) {
+                (startAtFraction * knownDurationMs).toLong()
+            } else {
+                startAtMs
+            }
+            val targetSeconds = effectiveStartMs / 1000.0
             // Position reports are throttled so the UI (seek slider, lyrics) does
             // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
             // the slider smooth and draggable while staying accurate to ~100 ms.
@@ -639,8 +663,8 @@ class AudioPlayer {
             // independent and ~constant-size, so frame N begins at
             // N × frameDuration.
             val frameSeconds = buffer.length.coerceAtLeast(0.0)
-            val skipIndex = if (frameSeconds > 0.0 && startAtMs > 0L) {
-                (startAtMs / 1000.0 / frameSeconds).toInt()
+            val skipIndex = if (frameSeconds > 0.0 && effectiveStartMs > 0L) {
+                (effectiveStartMs / 1000.0 / frameSeconds).toInt()
                     .coerceIn(0, (samples.size - 1).coerceAtLeast(0))
             } else 0
             var index = skipIndex

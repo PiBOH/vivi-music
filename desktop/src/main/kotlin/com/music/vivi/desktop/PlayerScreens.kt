@@ -464,10 +464,14 @@ private fun M3EPlayerContent(
                                 isSeeking = true
                             },
                             onValueChangeFinished = {
+                                // Duration unknown (loaded but never played): the
+                                // value encodes the start fraction (0..1000) and
+                                // playback starts from it once the length is known.
                                 if (durationMs > 0) onSeek(seekValue.toLong())
+                                else onSeek((seekValue * 1000).toLong())
                                 isSeeking = false
                             },
-                            enabled = durationMs > 0,
+                            enabled = true,
                             valueRange = 0f..sliderMax.toFloat(),
                             style = ViviSliderStyle.EXPRESSIVE,
                             bufferedFraction = playbackBufferedFraction(),
@@ -1139,10 +1143,14 @@ private fun PlayerControlPanel(
             isSeeking = true
         },
         onValueChangeFinished = {
+            // Duration unknown (loaded but never played): the value encodes the
+            // start fraction (0..1000) and playback starts from it once the
+            // length is known.
             if (durationMs > 0) onSeek(seekValue.toLong())
+            else onSeek((seekValue * 1000).toLong())
             isSeeking = false
         },
-        enabled = durationMs > 0,
+        enabled = true,
         valueRange = 0f..sliderMax.toFloat(),
         style = sliderStyle,
         bufferedFraction = playbackBufferedFraction(),
@@ -2608,10 +2616,15 @@ fun ClassicDesktopMiniPlayer(
                                     isSeeking = true
                                 },
                                 onValueChangeFinished = {
+                                    // Duration unknown (loaded but never played):
+                                    // the value encodes the start fraction
+                                    // (0..1000) and playback starts from it once
+                                    // the length is known.
                                     if (durationMs > 0) onSeek(seekValue.toLong())
+                                    else onSeek((seekValue * 1000).toLong())
                                     isSeeking = false
                                 },
-                                enabled = durationMs > 0,
+                                enabled = true,
                                 valueRange = 0f..sliderMax.toFloat(),
                                 style = ViviSliderStyle.SLIM,
                                 bufferedFraction = playbackBufferedFraction(),

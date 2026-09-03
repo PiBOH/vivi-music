@@ -2372,6 +2372,11 @@ fun WindowScope.App(
                     is Screen.SettingsAbout -> SettingsAboutScreen(
                         language = language,
                         onBack = goBack,
+                        onOpenContributors = { navigate(Screen.SettingsContributors) },
+                    )
+                    is Screen.SettingsContributors -> SettingsContributorsScreen(
+                        language = language,
+                        onBack = goBack,
                     )
                     is Screen.SettingsDeveloper -> SettingsDeveloperScreen(
                         language = language,
@@ -5382,7 +5387,7 @@ private const val GITHUB_MARK_PATH =
     "M12,2A10,10 0,0 0,2 12c0,4.42 2.87,8.17 6.84,9.5c0.5,0.08 0.66,-0.23 0.66,-0.5c0,-0.23 0,-0.86 0,-1.69c-2.77,0.6 -3.36,-1.34 -3.36,-1.34c-0.46,-1.16 -1.11,-1.47 -1.11,-1.47c-0.91,-0.62 0.07,-0.6 0.07,-0.6c1,0.07 1.53,1.03 1.53,1.03c0.87,1.52 2.34,1.07 2.91,0.83c0.09,-0.65 0.35,-1.09 0.63,-1.34c-2.22,-0.25 -4.55,-1.11 -4.55,-4.92c0,-1.11 0.38,-2 1.03,-2.71c-0.1,-0.25 -0.45,-1.29 0.1,-2.64c0,0 0.84,-0.27 2.75,1.02c0.79,-0.22 1.65,-0.33 2.5,-0.33c0.85,0 1.71,0.11 2.5,0.33c1.91,-1.29 2.75,-1.02 2.75,-1.02c0.55,1.35 0.2,2.39 0.1,2.64c0.65,0.71 1.03,1.6 1.03,2.71c0,3.82 -2.34,4.66 -4.57,4.91c0.36,0.31 0.69,0.92 0.69,1.85c0,1.34 0,2.42 0,2.74c0,0.27 0.16,0.59 0.67,0.5C19.14,20.16 22,16.42 22,12A10,10 0,0 0,12 2Z"
 
 @Composable
-fun AboutSection(language: String) {
+fun AboutSection(language: String, onOpenContributors: () -> Unit) {
     val firstLaunchDate = remember { DesktopSettings.load().firstLaunchDate }
     var versionCodeTaps by remember { mutableStateOf(0) }
     val devEnabled by DeveloperOptions.enabled.collectAsState()
@@ -5418,33 +5423,18 @@ fun AboutSection(language: String) {
         description = Localization.get(language, "app_developer") + " (DE)",
         onClick = { openUrl("https://github.com/PiBOH") },
     )
+    // Contributors live on their own dedicated sub-screen (the list would
+    // crowd this page once it grows past a handful of people).
+    AboutInfoRow(
+        icon = Icons.Filled.Group,
+        title = Localization.get(language, "contributors_section"),
+        onClick = onOpenContributors,
+    )
     AboutInfoRow(
         icon = Icons.Filled.Public,
         title = Localization.get(language, "website"),
         onClick = { openUrl("https://piboh.github.io/vivi-music/") },
     )
-
-    // The contributor list is read live from GitHub (branch `vivi-music-de`) so
-    // it stays current without an app update; the local copy is only a cache
-    // and offline fallback. Refresh silently every time this screen opens.
-    var contributors by remember { mutableStateOf(loadContributors()) }
-    LaunchedEffect(Unit) {
-        val fresh = withContext(Dispatchers.IO) { fetchContributorsFromGitHub() }
-        if (fresh.isNotEmpty()) {
-            contributors = fresh
-            runCatching {
-                val userFile = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
-                userFile.parentFile?.mkdirs()
-                userFile.writeText(contributorsJson.encodeToString(ContributorsFile(fresh)))
-            }
-        }
-    }
-    if (contributors.isNotEmpty()) {
-        AboutSectionHeader(Localization.get(language, "contributors_section"))
-        contributors.forEach { contributor ->
-            ContributorRow(contributor)
-        }
-    }
 
     AboutSectionHeader(Localization.get(language, "community_section"))
     AboutInfoRow(
@@ -5495,6 +5485,28 @@ fun AboutSection(language: String) {
         title = Localization.get(language, "license"),
         onClick = { openUrl("https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE") },
     )
+}
+
+/**
+ * Dedicated Contributors sub-screen (Settings → About → Contributors). The list
+ * is always read live from the repository when the screen opens, so it stays
+ * current without an app update; the bundled copy is only the offline fallback.
+ */
+@Composable
+fun ContributorsSection(language: String) {
+    // Refresh silently on every open; never falls back to a local user file —
+    // the only sources are the repository (online) and the bundled copy (offline).
+    var contributors by remember { mutableStateOf(loadContributors()) }
+    LaunchedEffect(Unit) {
+        val fresh = withContext(Dispatchers.IO) { fetchContributorsFromGitHub() }
+        if (fresh.isNotEmpty()) {
+            contributors = fresh
+        }
+    }
+    AboutSectionHeader(Localization.get(language, "contributors_section"))
+    contributors.forEach { contributor ->
+        ContributorRow(contributor)
+    }
 }
 
 @Composable
@@ -5552,10 +5564,12 @@ private fun AboutInfoRow(
 }
 
 // ---------------------------------------------------------------------------
-// Contributors (About → Contributors) — loaded dynamically from
-// `contributorsde.json` (repo root, bundled as a classpath resource) so new
-// people can be added without touching code. Descriptions are intentionally
-// neutral English (not localized). The GitHub avatar is fetched from
+// Contributors (About → Contributors) — the list is read LIVE from the
+// repository (`contributorsde.json` on the `vivi-music-de` branch) every time
+// the screen opens, so people can be added/edited in the repo without an app
+// update; the bundled classpath copy is only the offline fallback. No local
+// user copy is created or read anymore. Descriptions are intentionally neutral
+// English (not localized). The GitHub avatar is fetched from
 // https://github.com/<username>.png (GitHub's public avatar redirect).
 // ---------------------------------------------------------------------------
 
@@ -5571,37 +5585,25 @@ private data class ContributorEntry(
 )
 
 /**
- * Reads the contributor list from `~/.vivimusic/contributorsde.json`.
- *
- * The app ships a default copy of the file as a classpath resource; on the
- * first launch it is materialized into the user data folder. From then on the
- * cached file on disk is used as an offline fallback, and every time the About
- * screen opens the list is refreshed live from GitHub (see
- * [fetchContributorsFromGitHub]). If the file is missing or unreadable, the
- * bundled copy is used as a last resort.
+ * Reads the contributor list bundled as a classpath resource (the shipped
+ * default). This is ONLY the offline fallback: the live list is fetched from
+ * the repository every time the Contributors screen opens (see
+ * [fetchContributorsFromGitHub]). A stale `~/.vivimusic/contributorsde.json`
+ * from older builds (when the file was user-editable) is removed best-effort,
+ * because the repository is now the single source of truth.
  */
 private fun loadContributors(): List<ContributorEntry> {
-    val userFile = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
-    if (!userFile.exists()) {
-        runCatching {
-            userFile.parentFile?.mkdirs()
-            val bundled = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return@runCatching
-            bundled.use { input -> userFile.writeBytes(input.readBytes()) }
-        }
+    runCatching {
+        val stale = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
+        if (stale.exists()) stale.delete()
     }
-    val parsed = runCatching {
-        contributorsJson.decodeFromString<ContributorsFile>(userFile.readText()).contributors
-    }.getOrNull().orEmpty()
-    return if (parsed.isNotEmpty()) parsed else loadBundledContributors()
+    return runCatching {
+        val stream = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return emptyList()
+        stream.use {
+            contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors
+        }.filter { it.username.isNotBlank() }
+    }.getOrDefault(emptyList())
 }
-
-/** Fallback: read the contributor list bundled as a classpath resource. */
-private fun loadBundledContributors(): List<ContributorEntry> = runCatching {
-    val stream = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return emptyList()
-    stream.use {
-        contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors
-    }.filter { it.username.isNotBlank() }
-}.getOrDefault(emptyList())
 
 /**
  * Fetches the live contributor list from the repository
@@ -5634,7 +5636,10 @@ private fun fetchContributorsFromGitHub(): List<ContributorEntry> = runCatching 
 @Composable
 private fun ContributorRow(contributor: ContributorEntry) {
     val username = contributor.username
-    val displayName = contributor.name?.takeIf { it.isNotBlank() } ?: username
+    // Show the person's real name first with the GitHub handle in parentheses
+    // ("Name (@username)"); without a name only the handle is shown.
+    val realName = contributor.name?.takeIf { it.isNotBlank() }
+    val displayTitle = if (realName != null) "$realName (@$username)" else "@$username"
     val profileUrl = contributor.url?.takeIf { it.isNotBlank() } ?: "https://github.com/$username"
     Row(
         Modifier.fillMaxWidth()
@@ -5657,14 +5662,14 @@ private fun ContributorRow(contributor: ContributorEntry) {
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    displayName.take(1).uppercase(),
+                    (realName ?: username).take(1).uppercase(),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
                 )
             }
             AsyncImage(
                 model = "https://github.com/$username.png?size=96",
-                contentDescription = displayName,
+                contentDescription = displayTitle,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
@@ -5673,7 +5678,7 @@ private fun ContributorRow(contributor: ContributorEntry) {
         }
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text(displayName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(displayTitle, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             if (contributor.description.isNotBlank()) {
                 Spacer(Modifier.height(2.dp))
                 Text(

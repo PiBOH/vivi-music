@@ -53,6 +53,7 @@ sealed interface Screen {
     data object SettingsUpdates : Screen
     data object SettingsCommits : Screen
     data object SettingsAbout : Screen
+    data object SettingsContributors : Screen
     data object SettingsDeveloper : Screen
     data object SettingsSystem : Screen
     data object SettingsIntro : Screen

@@ -634,8 +634,15 @@ fun SettingsUpdatesScreen(
 }
 
 @Composable
-fun SettingsAboutScreen(language: String, onBack: () -> Unit) {
-    SettingsSubScreen(language, onBack) { AboutSection(language) }
+fun SettingsAboutScreen(language: String, onBack: () -> Unit, onOpenContributors: () -> Unit) {
+    SettingsSubScreen(language, onBack) {
+        AboutSection(language = language, onOpenContributors = onOpenContributors)
+    }
+}
+
+@Composable
+fun SettingsContributorsScreen(language: String, onBack: () -> Unit) {
+    SettingsSubScreen(language, onBack) { ContributorsSection(language) }
 }
 
 @Composable
