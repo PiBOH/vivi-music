@@ -56,9 +56,12 @@ jobs:
             ARCH_FLAG="-arch x86_64"
           fi
           mkdir -p "$RES_DIR"
+          # UserNotifications is required by the native notification API
+          # (UNUserNotificationCenter) added in DE 1.50.17 for issue #7.
           xcrun -sdk macosx clang $ARCH_FLAG -O2 -fobjc-arc -dynamiclib \
             -Wl,-install_name,@rpath/libvivi_media.dylib \
             -framework Foundation -framework AppKit -framework MediaPlayer \
+            -framework UserNotifications \
             -o "$RES_DIR/libvivi_media.dylib" desktop/native/ViviMediaSession.m
           file "$RES_DIR/libvivi_media.dylib"
 

@@ -63,18 +63,23 @@ object MacMediaSession {
             null
         } else {
             runCatching {
-                val arch = System.getProperty("os.arch", "").lowercase()
-                val folder = if (arch.contains("aarch64") || arch.contains("arm")) {
-                    "macos-aarch64"
-                } else {
-                    "macos-x86_64"
-                }
-                // The CI workflow compiles the helper into the classpath
-                // resources before packaging; extract it and load from disk
+                // The CI workflow compiles the helper into
+                // `desktop/src/main/resources/native/macos-<arch>/` (folder name
+                // is the matrix arch value: `arm64` on Apple Silicon, `x64` on
+                // Intel) before packaging; extract it and load from disk
                 // (System.load cannot map a bare classpath entry).
-                val res = "/native/$folder/libvivi_media.dylib"
-                val stream = ViviMediaLib::class.java.getResourceAsStream(res)
-                    ?: error("native helper resource $res missing (built on a non-macOS host?)")
+                val arch = System.getProperty("os.arch", "").lowercase()
+                val folders = if (arch.contains("aarch64") || arch.contains("arm")) {
+                    listOf("macos-arm64", "macos-aarch64")
+                } else {
+                    listOf("macos-x64", "macos-x86_64")
+                }
+                val (stream, folder) = folders
+                    .firstNotNullOfOrNull { folder ->
+                        val path = "/native/$folder/libvivi_media.dylib"
+                        ViviMediaLib::class.java.getResourceAsStream(path)?.let { it to folder }
+                    }
+                    ?: error("native helper resource missing (tried /native/{${folders.joinToString("|")}}/libvivi_media.dylib)")
                 val cacheDir = File(System.getProperty("user.home"), ".vivimusic")
                 cacheDir.mkdirs()
                 val dylib = File(cacheDir, "libvivi_media-$folder.dylib")
