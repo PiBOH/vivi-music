@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.15-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Audio micro-pauses/skips on macOS (random brief glitches on almost every track, coinciding with small UI hitches) reduced**: the output line buffer was only ~90 ms of audio, so any decode-thread stall (moof scan after a network burst, disk read, GC pause) underran the line and caused an audible skip. The line now buffers ~250 ms (computed from the real audio format, with smaller fallbacks), atom scans are bounded to 256 KB windows so one burst can't stall the decode thread, frames are queued before scanning (so a scan overlaps with already-buffered audio), and the seek slider/lyrics now follow the real playhead instead of the decode-ahead position. Closes #4.
+
 ## [6.4.45_DE-1.50.14-nightly] - 2026-09-04
 
 ### Added

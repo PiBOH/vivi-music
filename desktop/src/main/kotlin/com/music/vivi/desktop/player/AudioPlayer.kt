@@ -93,6 +93,11 @@ class AudioPlayer {
          *  as the paused-state poll so the download keeps filling the cache and
          *  the secondary buffer bar keeps advancing while audio is paused. */
         const val BUFFERED_POLL_MS = 250L
+
+        /** Max bytes of newly arrived fragments scanned in one pass: bounding
+         *  the atom walk keeps a huge network burst from stalling the decode
+         *  thread in a single giant scan (see [decodeAndPlay]). */
+        const val SCAN_WINDOW_BYTES = 256 * 1024L
     }
 
     @Volatile private var line: SourceDataLine? = null
@@ -539,11 +544,17 @@ class AudioPlayer {
             var scannedTo = 0L
 
             /** Scans [scannedTo..downloadedBytes) for complete `moof` boxes and
-             *  appends their AAC samples; advances [scannedTo] past them. */
+             *  appends their AAC samples; advances [scannedTo] past them. The
+             *  walk is bounded to a window per call: after a big network burst
+             *  one unbounded scan over hundreds of new atoms would stall the
+             *  decode thread longer than the output buffer covers. */
             fun scanMore() {
                 val until = handle.downloadedBytes
                 if (scannedTo < until) {
-                    scannedTo = walkAtoms(channel, trackId, scannedTo, until, samples)
+                    scannedTo = walkAtoms(
+                        channel, trackId, scannedTo,
+                        minOf(until, scannedTo + SCAN_WINDOW_BYTES), samples,
+                    )
                 }
             }
 
@@ -625,13 +636,20 @@ class AudioPlayer {
             val out = AudioSystem.getSourceDataLine(format)
                 ?: throw IOException("No audio output device supports $format")
             line = out
-            // A larger output buffer smooths over scheduler/GC hiccups — the
-            // old 8 KB buffer underran easily on macOS (audible glitches),
-            // especially while the animated canvas competes for CPU. Fall back
-            // to the small buffer only if the line rejects the bigger one.
-            runCatching { out.open(format, 16384) }.getOrElse {
-                out.open(format, 8192)
+            // The output buffer is the ONLY jitter headroom between the decode
+            // thread (which also does disk scans, network waits and GC pauses)
+            // and the sound card: when the thread stalls longer than the buffer
+            // holds, the line underruns and you hear a micro-pause/skip. The old
+            // 8-16 KB buffers (~50-90 ms of audio) underran easily on macOS;
+            // ask for ~250 ms worth (computed from the real format) and only
+            // fall back to smaller sizes if the line rejects the bigger ones.
+            val outBufferBytes = (format.sampleRate * format.channels *
+                (format.sampleSizeInBits / 8) * 0.25).toInt().coerceAtLeast(16384)
+            var lineOpened = false
+            for (size in intArrayOf(outBufferBytes, 16384, 8192)) {
+                if (runCatching { out.open(format, size); lineOpened = true }.isSuccess) break
             }
+            if (!lineOpened) throw IOException("Could not open the audio output device")
             out.start()
 
             val bigEndian = buffer.isBigEndian
@@ -678,7 +696,16 @@ class AudioPlayer {
 
             fun reportPosition() {
                 if (gen != generation) return
-                var posMs = ((elapsedSeconds + buffer.length) * 1000).toLong()
+                // Report the REAL playhead (frames the line has actually output)
+                // offset by the seek start, not the decoded-ahead time: the
+                // decode thread runs ahead of the sound by the output buffer, so
+                // decoded time would make the seek slider / lyrics lead the
+                // audio by the whole buffer (worse now that it is ~250 ms).
+                val lineFrames = runCatching { out.getLongFramePosition() }.getOrDefault(0L)
+                var posMs = effectiveStartMs
+                if (format.sampleRate > 0f) {
+                    posMs += (lineFrames * 1000L / format.sampleRate.toLong())
+                }
                 // Never report past the end of the track, so the seek slider can't
                 // get stuck at the end while playing (or push a past-end position
                 // to the synced device).
@@ -760,10 +787,23 @@ class AudioPlayer {
                 }
                 if (stopped || gen != generation) break
 
-                // Grow the sample table as new fragments arrive.
-                scanMore()
-                reportBuffered()
-                if (index + 1 >= samples.size) {
+                if (index + 1 < samples.size) {
+                    // Decode + queue the next frame FIRST and scan for new
+                    // fragments only AFTER, so a scan spike (disk I/O over a
+                    // burst of newly arrived atoms) overlaps with audio that is
+                    // already queued instead of starving the output line.
+                    awaitSample(index + 1)
+                    index++
+                    decodeAt(index)
+                    emit()
+                    scanMore()
+                    reportBuffered()
+                } else {
+                    // No next sample yet: grow the sample table as fragments
+                    // arrive, then poll until the download catches up.
+                    scanMore()
+                    reportBuffered()
+                    if (index + 1 < samples.size) continue
                     if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
                     if (!handle.complete) {
                         Thread.sleep(DOWNLOAD_POLL_MS)
@@ -771,10 +811,6 @@ class AudioPlayer {
                     }
                     break // download complete and samples exhausted → end of track
                 }
-                awaitSample(index + 1)
-                index++
-                decodeAt(index)
-                emit()
             }
 
             // End-of-track truncation guard: a download that "completed" but only
