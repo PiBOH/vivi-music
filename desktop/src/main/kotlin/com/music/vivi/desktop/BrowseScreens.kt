@@ -32,6 +32,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -58,6 +59,7 @@ import com.music.innertube.pages.BrowseResult
 import com.music.innertube.pages.HomePage
 import com.music.innertube.pages.MoodAndGenres
 import com.music.innertube.pages.SearchResult
+import kotlinx.coroutines.delay
 import com.music.innertube.pages.SearchSummary
 import com.music.innertube.pages.SearchSummaryPage
 
@@ -97,13 +99,30 @@ fun HomeScreen(
     var moodAndGenres by remember { mutableStateOf<List<MoodAndGenres>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedChip by remember { mutableStateOf<HomePage.Chip?>(null) }
+    // Retry support: bump [loadRequest] to refetch. Also retries once when the
+    // response is an empty shell (YouTube sometimes returns the shell before
+    // streaming the real carousels), so the Home can't be left permanently empty.
+    var loadRequest by remember { mutableStateOf(0) }
+    var autoRetried by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selectedChip) {
+    LaunchedEffect(loadRequest, selectedChip) {
         val params = selectedChip?.endpoint?.params
+        error = null
+        home = null
         YouTube.home(params = params).fold(
             onSuccess = { home = it; error = null },
             onFailure = { error = it.message },
         )
+    }
+
+    // One automatic retry when the response is empty (rare YouTube layout
+    // changes return an empty shell for the first request).
+    LaunchedEffect(home) {
+        if (home != null && home!!.sections.isEmpty() && !autoRetried) {
+            autoRetried = true
+            delay(1200)
+            loadRequest++
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -138,6 +157,23 @@ fun HomeScreen(
     when {
         error != null && home == null -> ErrorBox(language, error)
         home == null -> LoadingBox(language)
+        // Empty response (even after the automatic retry): show a clear state
+        // with a manual Retry instead of a silently blank Home.
+        home!!.sections.isEmpty() -> Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                Localization.get(language, "home_empty"),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = { autoRetried = true; loadRequest++ }) {
+                Text(Localization.get(language, "retry"))
+            }
+        }
         else -> LazyColumn(
             modifier = Modifier
                 .fillMaxSize()

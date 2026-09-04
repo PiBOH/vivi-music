@@ -54,6 +54,8 @@ object MacMediaSession {
             durationMs: Double, positionMs: Double, playing: Int, artworkPath: String?,
         )
         fun viviEndSession()
+        fun viviRequestNotificationPermission()
+        fun viviNotify(title: String?, message: String?)
     }
 
     private val native: ViviMediaLib? by lazy {
@@ -185,6 +187,41 @@ object MacMediaSession {
         onPrevious = null
         onSeek = null
         callbacks = null
+    }
+
+    // ------------------------------------------------------------------
+    // Native macOS notifications (UNUserNotificationCenter)
+    // ------------------------------------------------------------------
+
+    @Volatile
+    private var permissionRequested = AtomicBoolean(false)
+
+    /**
+     * Asks macOS for notification permission exactly once per run. Safe to
+     * call before posting a notification; the system shows the prompt only
+     * the first time.
+     */
+    fun requestNotificationPermissionOnce() {
+        if (!isMac) return
+        val api = nativeApi ?: return
+        if (permissionRequested.compareAndSet(false, true)) {
+            runCatching { api.viviRequestNotificationPermission() }
+        }
+    }
+
+    /**
+     * Posts a native macOS Notification Center banner. Returns true when the
+     * helper is loaded and the request was handed to the system (delivery may
+     * still be gated by the permission). Returns false on non-macOS or when
+     * the helper is unavailable, so callers can fall back (e.g. osascript).
+     */
+    fun notify(title: String, message: String): Boolean {
+        if (!isMac) return false
+        val api = nativeApi ?: return false
+        return runCatching {
+            api.viviNotify(title, message)
+            true
+        }.getOrDefault(false)
     }
 
     /**

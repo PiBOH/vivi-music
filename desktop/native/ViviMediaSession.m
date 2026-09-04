@@ -15,6 +15,7 @@
 #import <MediaPlayer/MediaPlayer.h>
 #import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
+#import <UserNotifications/UserNotifications.h>
 
 // ---------------------------------------------------------------------------
 // JNA callbacks (registered by Kotlin before the session starts).
@@ -42,6 +43,25 @@ static BOOL g_playing = NO;
 static NSTimeInterval g_duration = 0.0;
 static NSTimeInterval g_position = 0.0;
 static NSString *g_artworkPath = nil; // local file already downloaded by Kotlin
+
+// ---------------------------------------------------------------------------
+// Notification delegate: shows banners even while the app is in the foreground.
+// Kept strongly referenced for the app's lifetime.
+// ---------------------------------------------------------------------------
+@interface ViviNotificationDelegate : NSObject <UNUserNotificationCenterDelegate>
+@end
+
+@implementation ViviNotificationDelegate
+- (void)userNotificationCenter:(UNUserNotificationCenter *)center
+       willPresentNotification:(UNNotification *)notification
+         withCompletionHandler:(void (^)(UNNotificationPresentationOptions))completionHandler {
+    completionHandler(UNNotificationPresentationOptionBanner |
+                      UNNotificationPresentationOptionList |
+                      UNNotificationPresentationOptionSound);
+}
+@end
+
+static ViviNotificationDelegate *g_notificationDelegate = nil;
 
 static NSImage *LoadImageSafely(NSString *path) {
     if (path.length == 0) return nil;
@@ -184,6 +204,50 @@ void viviSetNowPlaying(const char *titleUtf8, const char *artistUtf8, const char
 void viviEndSession(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
+    });
+}
+
+// Requests macOS notification permission (shown once by the system). Safe to
+// call repeatedly; the OS ignores repeated prompts.
+void viviRequestNotificationPermission(void) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!g_notificationDelegate) {
+            g_notificationDelegate = [[ViviNotificationDelegate alloc] init];
+        }
+        [UNUserNotificationCenter currentNotificationCenter].delegate = g_notificationDelegate;
+        [[UNUserNotificationCenter currentNotificationCenter]
+            requestAuthorizationWithOptions:(UNAuthorizationOptionAlert |
+                                             UNAuthorizationOptionSound |
+                                             UNAuthorizationOptionBadge)
+                          completionHandler:^(BOOL granted, NSError *error) {
+            // Best-effort: macOS only shows the prompt once, so a denial is
+            // permanent unless the user enables it in System Settings.
+        }];
+    });
+}
+
+// Posts a native Notification Center banner attributed to the app. Returns
+// immediately; delivery depends on the permission granted earlier.
+void viviNotify(const char *titleUtf8, const char *messageUtf8) {
+    NSString *title = titleUtf8 ? [NSString stringWithUTF8String:titleUtf8] : @"";
+    NSString *message = messageUtf8 ? [NSString stringWithUTF8String:messageUtf8] : @"";
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (!g_notificationDelegate) {
+            g_notificationDelegate = [[ViviNotificationDelegate alloc] init];
+            [UNUserNotificationCenter currentNotificationCenter].delegate = g_notificationDelegate;
+        }
+        UNMutableNotificationContent *content = [[UNMutableNotificationContent alloc] init];
+        content.title = title;
+        content.body = message;
+        content.sound = [UNNotificationSound defaultSound];
+        UNTimeIntervalNotificationTrigger *trigger =
+            [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:0.1 repeats:NO];
+        UNNotificationRequest *request =
+            [UNNotificationRequest requestWithIdentifier:[NSUUID UUID].UUIDString
+                                                withContent:content
+                                                withTrigger:trigger];
+        [[UNUserNotificationCenter currentNotificationCenter]
+            addNotificationRequest:request withCompletionHandler:nil];
     });
 }
 

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -148,6 +152,52 @@ object ChangelogLoader {
 /** Strips inline markdown (backticks / emphasis) so bullets read cleanly. */
 private fun cleanInline(text: String): String =
     text.replace("`", "").replace("**", "")
+
+/**
+ * Builds an annotated string for a changelog bullet, turning every "#N"
+ * reference into a clickable link to the GitHub issue
+ * (https://github.com/PiBOH/vivi-music/issues/N). The link URL always points
+ * at the user's configured update source repo when it is the fork, otherwise
+ * the original repo — so "Closes #3" stays clickable regardless of source.
+ */
+internal fun issueLinks(
+    text: String,
+    color: Color,
+    onOpenUrl: (String) -> Unit,
+): Pair<androidx.compose.ui.text.AnnotatedString, (Int) -> Unit> {
+    val base = "https://github.com/${UpdateSource.repo()}/issues/"
+    val pattern = Regex("(^|[^\\w#])#(\\d+)")
+    val matches = pattern.findAll(text).toList()
+
+    val sb = buildAnnotatedString {
+        var pos = 0
+        for (m in matches) {
+            append(text.substring(pos, m.range.first))
+            val prefix = m.groupValues[1]
+            val number = m.groupValues[2]
+            append(prefix)
+            val start = length
+            withStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold)) {
+                append("#$number")
+            }
+            addStringAnnotation(
+                tag = "LINK",
+                annotation = base + number,
+                start = start,
+                end = length,
+            )
+            pos = m.range.last + 1
+        }
+        if (pos < text.length) append(text.substring(pos))
+    }
+
+    val onClick: (Int) -> Unit = { offset ->
+        sb.getStringAnnotations(tag = "LINK", start = offset, end = offset)
+            .firstOrNull()
+            ?.let { onOpenUrl(it.item) }
+    }
+    return sb to onClick
+}
 
 /**
  * About → Changelog: renders the repository `CHANGELOG.md` like the mobile app
@@ -289,11 +339,27 @@ private fun ReleaseSection(release: ChangelogRelease) {
                         .size(6.dp)
                         .background(MaterialTheme.colorScheme.primary, CircleShape),
                 )
-                Text(
-                    cleanInline(item),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                val clean = cleanInline(item)
+                if (Regex("(^|[^\\w#])#(\\d+)").containsMatchIn(clean)) {
+                    val (annotated, onClick) = issueLinks(
+                        clean,
+                        color = MaterialTheme.colorScheme.primary,
+                        onOpenUrl = { openUrl(it) },
+                    )
+                    ClickableText(
+                        text = annotated,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                        onClick = onClick,
+                    )
+                } else {
+                    Text(
+                        clean,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
     }

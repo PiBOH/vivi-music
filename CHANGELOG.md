@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.17-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Radio/Charts discovery screen no longer stays empty**: the chart parser now converts every item type YouTube returns (songs, video-chart playlists, top artists, albums) instead of dropping everything that is not a song — the "Nothing to show here yet" screen with the endless refresh loop is gone. Closes #6.
+- [DE] **Native macOS notifications actually delivered**: the bundled native helper now posts through `UNUserNotificationCenter`, so notifications land in the macOS Notification Center and are attributed to the app (the old `osascript` path was unreliable/blocked on modern macOS). Permission is requested once; the helper falls back to `osascript` only when it cannot be loaded. Closes #7.
+- [DE] **Home screen can no longer be silently blank**: an empty response auto-retries once and, if it still comes back empty, shows a clear "Nothing to show here yet" state with a Retry button instead of an endless spinner with no content. Closes #8.
+- [DE] **Changelog issue references are now clickable**: every `#N` mention (e.g. "Closes #3") across the whole changelog — past and future entries — renders as a link that opens the GitHub issue. Closes #9.
+
+
 ## [6.4.45_DE-1.50.16-nightly] - 2026-09-04
 
 ### Added

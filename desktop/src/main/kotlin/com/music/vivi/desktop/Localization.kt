@@ -285,6 +285,7 @@ private fun strings_0(): Map<String, String> =
         "home" to "Home",
         "home_greeting_afternoon" to "Good afternoon",
         "home_greeting_evening" to "Good evening",
+        "home_empty" to "Nothing to show here yet. Check your connection and try again.",
         "home_greeting_morning" to "Good morning",
         "how_to_connect" to "How to connect your phone",
         "how_to_relay_step1" to "Press Connect to reach the relay server — the default (wss://vivimusic-device-sync.onrender.com) works from any network.",
