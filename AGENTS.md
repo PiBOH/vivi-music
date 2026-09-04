@@ -479,3 +479,15 @@ footer.
   other languages through the localization system (section 6).
 - **GitHub issues** (title + body) are always written in **English**.
 - The CHANGELOG is always written in English.
+
+## 8. Ask before assuming — MANDATORY
+
+Whenever there is **any doubt — even a minimal one** (intent, scope, versioning
+type, branch to touch, wording of a string, which platform is affected, …),
+the assistant MUST ask the user instead of assuming. Guessing is a bug. The
+user explicitly requires being asked about every uncertainty, no matter how
+small ("OBBLIGO DI CHIEDERE PER QUALSIASI DUBBIO, ANCHE MINIMO").
+
+This applies before and during changes, and also to claims made in replies:
+never state that something "is" a certain way unless it has been verified in
+the code/configuration or confirmed by the user.

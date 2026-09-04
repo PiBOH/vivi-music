@@ -11,6 +11,8 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+- [APK] **Debug APK About screen now shows NIGHTLY for non-stable builds**: the CI built the APK without `-Pnightly=true`, so `BuildConfig.IS_NIGHTLY` was false and the About badge read "STABLE". The flag is now derived from the mobile channel in `version.txt` (line 3). (Closes #17)
+
 ## [6.4.45_DE-1.50.22-alpha] - 2026-09-04
 
 ### Changed

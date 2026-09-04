@@ -59,7 +59,17 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
         run: |
-          ./gradlew assembleUniversalGmsDebug --no-configuration-cache --console=plain --warning-mode summary
+          # The About screen shows NIGHTLY/STABLE from BuildConfig.IS_NIGHTLY,
+          # which is set via -Pnightly=true. Drive it from the mobile channel
+          # in version.txt (line 3): every non-stable build (nightly/alpha/...)
+          # is labelled NIGHTLY in the About screen instead of STABLE.
+          MOBILE_CHANNEL="$(sed -n '3p' version.txt | tr -d '
+' | xargs | tr '[:upper:]' '[:lower:]')"
+          NIGHTLY_FLAG=""
+          if [[ -n "$MOBILE_CHANNEL" && "$MOBILE_CHANNEL" != "stable" ]]; then
+            NIGHTLY_FLAG="-Pnightly=true"
+          fi
+          ./gradlew assembleUniversalGmsDebug $NIGHTLY_FLAG --no-configuration-cache --console=plain --warning-mode summary
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
