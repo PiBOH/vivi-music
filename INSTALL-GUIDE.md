@@ -72,6 +72,12 @@ Open **Settings → Apps → Installed apps**, find **VIVI Music**, and choose
 
 > Installed updates are cached under `~/.vivimusic/updates/` and cleaned up
 > automatically after 7 days.
+>
+> **On uninstall, the app keeps exactly one final backup** of your settings,
+> playlists and imported fonts at `%USERPROFILE%\.vivimusic\backups\uninstall-…`
+> and deletes **everything else** in `~/.vivimusic` — downloaded updates, audio,
+> video/canvas and lyrics caches, logs and any other leftover. Only that last
+> backup remains on disk.
 
 ---
 
@@ -111,9 +117,23 @@ If your system blocks AppImages (no FUSE), extract and run it instead:
 ./squashfs-root/AppRun
 ```
 
+### Uninstall (Linux)
+
+- **.deb**: uninstall normally with `sudo apt remove vivimusic` / `sudo dpkg -r`.
+  The package's `postrm` hook keeps exactly one final backup of your settings,
+  playlists and fonts at `~/.vivimusic/backups/uninstall-…` and deletes every
+  cache (`~/.vivimusic/updates`, audio, video/canvas, lyrics, logs) — only that
+  last backup remains.
+- **AppImage**: delete the file. To clean your user data the same way, run:
+  `sh scripts/uninstall-cleanup.sh` from this repo (or the script shipped in
+  the release).
+- **AUR**: `pacman -R vivi-music-de` runs the same cleanup automatically via
+  the package's `post_remove` hook.
+
 ### Option C — Arch Linux (AUR-style PKGBUILD)
 
-Every release also ships a **`PKGBUILD`** (plus `SRCINFO`) as a release asset.
+Every release also ships a **`PKGBUILD`** (plus `SRCINFO` and an uninstall
+hook `vivi-music-de.install`) as release assets.
 To build and install a proper system package:
 
 ```bash
@@ -157,7 +177,16 @@ Two formats are published (Intel and Apple Silicon builds separately).
 
 ### Uninstall
 
-Drag `VIVI Music.app` from **Applications** to the Trash.
+Drag `VIVI Music.app` from **Applications** to the Trash, then clean your user
+data the same way Windows/Linux do — keep exactly one final backup of settings,
+playlists and fonts and delete every cache:
+
+```bash
+sh scripts/uninstall-cleanup.sh        # from this repo (or the release assets)
+```
+
+The backup is kept at `~/.vivimusic/backups/uninstall-…`; everything else
+(updates, audio, video/canvas, lyrics caches, logs) is removed.
 
 ---
 

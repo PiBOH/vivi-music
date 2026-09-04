@@ -10,6 +10,13 @@ version `<mobile>_DE-<desktop>` (e.g. `6.0.5_DE-1.0.0`), where the desktop part 
 the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
+## [6.4.45_DE-1.50.19-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Windows installer no longer fails to compile** (issue #10): the details/log box is now created at runtime with `TNewMemo` — Inno Setup 6 removed the built-in `DetailsMemo`/`DetailsButton` that the previous version referenced. The box is always visible below the progress bar on both the Installing page and the uninstall page, showing the files being extracted while installing and the cleanup steps while uninstalling.
+
+### Added
+- [DE] **Uninstall now keeps exactly one final backup and wipes every cache** (issue #11): on Windows the Inno Setup uninstaller copies `device-sync.json`, `playlists.json` and imported fonts into `~/.vivimusic/backups/uninstall-<timestamp>/` right before finishing, then deletes everything else in `~/.vivimusic` (downloaded updates, audio/video/canvas/lyrics caches, logs, helper libraries, artwork) — only that last backup remains. Linux mirrors it: the `.deb` ships a `postrm` hook (plus the shared `scripts/uninstall-cleanup.sh` embedded in `/opt` and copied to `/usr/share`), the AUR PKGBUILD gets a `post_remove` hook via `vivi-music-de.install`, and macOS/AppImage users can run the same script manually. INSTALL-GUIDE updated for every OS.
 
 ## [6.4.45_DE-1.50.18-nightly] - 2026-09-04
 

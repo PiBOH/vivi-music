@@ -83,6 +83,11 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 Filename: "{app}\{#AppExe}"; Description: "Start {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+var
+  InstallDetailsMemo: TNewMemo;
+  UninstallDetailsMemo: TNewMemo;
+  LastInstallLine: String;
+
 // Uninstall any previously-installed jpackage MSI of this app. The MSI and this
 // Inno Setup installer are two different installer technologies, so each
 // registers its own entry under "Apps & features". Removing the MSI here keeps
@@ -117,42 +122,208 @@ begin
   end;
 end;
 
+// ---------------------------------------------------------------------------
+// Details/log box helpers
+// ---------------------------------------------------------------------------
+// Inno Setup 6 removed the built-in "Show details" memo/button that existed in
+// Inno Setup 5 (there is no WizardForm.Memo / DetailsMemo / DetailsButton), so
+// the log box is created at runtime below the progress gauge and filled with
+// the files being extracted (install) and the cleanup steps (uninstall).
+
+procedure AddInstallLine(const Line: String);
+begin
+  if InstallDetailsMemo = nil then Exit;
+  if Line = '' then Exit;
+  if InstallDetailsMemo.Lines.Count > 2000 then
+    InstallDetailsMemo.Lines.Clear;
+  InstallDetailsMemo.Lines.Add(Line);
+end;
+
+procedure AddUninstallLine(const Line: String);
+begin
+  if UninstallDetailsMemo = nil then Exit;
+  if Line = '' then Exit;
+  if UninstallDetailsMemo.Lines.Count > 2000 then
+    UninstallDetailsMemo.Lines.Clear;
+  UninstallDetailsMemo.Lines.Add(Line);
+end;
+
+procedure CreateInstallDetailsMemo();
+begin
+  if InstallDetailsMemo <> nil then Exit;
+  InstallDetailsMemo := TNewMemo.Create(WizardForm);
+  InstallDetailsMemo.Parent := WizardForm.InstallingPage;
+  InstallDetailsMemo.Left := 0;
+  InstallDetailsMemo.Top := WizardForm.ProgressGauge.Top + WizardForm.ProgressGauge.Height + ScaleY(8);
+  InstallDetailsMemo.Width := WizardForm.InstallingPage.ClientWidth;
+  InstallDetailsMemo.Height := WizardForm.InstallingPage.ClientHeight - InstallDetailsMemo.Top - ScaleY(8);
+  InstallDetailsMemo.ReadOnly := True;
+  InstallDetailsMemo.ScrollBars := ssVertical;
+  InstallDetailsMemo.WordWrap := False;
+  InstallDetailsMemo.Font.Name := 'Consolas';
+  InstallDetailsMemo.Font.Size := 8;
+  LastInstallLine := '';
+end;
+
+procedure CreateUninstallDetailsMemo();
+begin
+  if UninstallDetailsMemo <> nil then Exit;
+  UninstallDetailsMemo := TNewMemo.Create(UninstallProgressForm);
+  UninstallDetailsMemo.Parent := UninstallProgressForm.InstallingPage;
+  UninstallDetailsMemo.Left := 0;
+  UninstallDetailsMemo.Top := UninstallProgressForm.ProgressBar.Top + UninstallProgressForm.ProgressBar.Height + ScaleY(8);
+  UninstallDetailsMemo.Width := UninstallProgressForm.InstallingPage.ClientWidth;
+  UninstallDetailsMemo.Height := UninstallProgressForm.InstallingPage.ClientHeight - UninstallDetailsMemo.Top - ScaleY(8);
+  UninstallDetailsMemo.ReadOnly := True;
+  UninstallDetailsMemo.ScrollBars := ssVertical;
+  UninstallDetailsMemo.WordWrap := False;
+  UninstallDetailsMemo.Font.Name := 'Consolas';
+  UninstallDetailsMemo.Font.Size := 8;
+end;
+
+// ---------------------------------------------------------------------------
+// Uninstall cleanup: keep exactly ONE final backup, delete everything else
+// ---------------------------------------------------------------------------
+// The app keeps its user data under `%USERPROFILE%\.vivimusic` (settings,
+// playlists, imported fonts, plus all the caches: downloaded updates, audio,
+// video/canvas, lyrics, logs, extracted helper libraries and artwork). On
+// uninstall we copy the real user data (device-sync.json, playlists.json,
+// fonts) into `backups\uninstall-<timestamp>\` and then delete EVERYTHING
+// else, including old backups — only the last backup remains on disk.
+
+procedure BackupAndCleanUserData();
+var
+  ViviDir, BackupsDir, BackupDir, Ts, Entry, ItemPath, FontSrc, FontDst: String;
+  FindRec: TFindRec;
+begin
+  ViviDir := GetEnv('USERPROFILE') + '\.vivimusic';
+  if not DirExists(ViviDir) then begin
+    AddUninstallLine('No user data found at ' + ViviDir + ' — nothing to clean.');
+    Exit;
+  end;
+
+  Ts := GetDateTimeString('yyyymmdd_hhnnss', '', '');
+  BackupsDir := ViviDir + '\backups';
+  BackupDir := BackupsDir + '\uninstall-' + Ts;
+  if not DirExists(BackupsDir) then
+    CreateDir(BackupsDir);
+  CreateDir(BackupDir);
+  AddUninstallLine('Creating final backup: ' + BackupDir);
+
+  if FileExists(ViviDir + '\device-sync.json') then
+    FileCopy(ViviDir + '\device-sync.json', BackupDir + '\device-sync.json', False);
+  if FileExists(ViviDir + '\playlists.json') then
+    FileCopy(ViviDir + '\playlists.json', BackupDir + '\playlists.json', False);
+
+  if DirExists(ViviDir + '\fonts') then begin
+    CreateDir(BackupDir + '\fonts');
+    if FindFirst(ViviDir + '\fonts\*', FindRec) then begin
+      try
+        repeat
+          if (FindRec.Attributes and faDirectory) = 0 then begin
+            FontSrc := ViviDir + '\fonts\' + FindRec.Name;
+            FontDst := BackupDir + '\fonts\' + FindRec.Name;
+            FileCopy(FontSrc, FontDst, False);
+          end;
+        until not FindNext(FindRec);
+      finally
+        FindClose(FindRec);
+      end;
+    end;
+  end;
+  AddUninstallLine('Backup done.');
+
+  // Delete everything under ~/.vivimusic except the "backups" folder.
+  if FindFirst(ViviDir + '\*', FindRec) then begin
+    try
+      repeat
+        Entry := FindRec.Name;
+        if (Entry = '.') or (Entry = '..') then Continue;
+        ItemPath := ViviDir + '\' + Entry;
+        if (FindRec.Attributes and faDirectory) <> 0 then begin
+          if CompareText(Entry, 'backups') <> 0 then begin
+            DelTree(ItemPath, True, True, True);
+            AddUninstallLine('Removed cache: ' + Entry);
+          end;
+        end else begin
+          DeleteFile(ItemPath);
+          AddUninstallLine('Removed file: ' + Entry);
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+
+  // Inside backups/, keep only the backup we just created.
+  if FindFirst(BackupsDir + '\*', FindRec) then begin
+    try
+      repeat
+        Entry := FindRec.Name;
+        if (Entry = '.') or (Entry = '..') then Continue;
+        if CompareText(Entry, 'uninstall-' + Ts) <> 0 then
+          DelTree(BackupsDir + '\' + Entry, True, True, True);
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+  AddUninstallLine('Uninstall cleanup complete. Only the final backup remains.');
+end;
+
+// ---------------------------------------------------------------------------
+// Installer events
+// ---------------------------------------------------------------------------
+
+procedure InitializeWizard();
+begin
+  CreateInstallDetailsMemo();
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssInstall then
     UninstallExistingMsi();
 end;
 
-// Always show the installation details box (the extraction log) below the
-// progress bar on the "Installing" page. Inno Setup keeps this log hidden by
-// default behind the "Show details" toggle; we reveal it and remove the toggle
-// so the details are always visible while installing.
 procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpInstalling then
-  begin
-    WizardForm.DetailsMemo.Visible := True;
-    WizardForm.DetailsButton.Visible := False;
-    // Position the log right under the status line and size it to fill the
-    // page down to where the (now hidden) details button used to sit.
-    WizardForm.DetailsMemo.Top := WizardForm.StatusLabel.Top + WizardForm.StatusLabel.Height + ScaleY(8);
-    WizardForm.DetailsMemo.Height := WizardForm.DetailsButton.Top - WizardForm.DetailsMemo.Top - ScaleY(8);
+    CreateInstallDetailsMemo();
+end;
+
+// Mirror the file currently being extracted into the details box so the user
+// sees a live log of what is being written (the IS5 "Show details" behavior).
+procedure CurInstallProgressChanged(Current, Total: Integer);
+var
+  Line: String;
+begin
+  Line := Trim(WizardForm.FilenameLabel.Caption);
+  if (Line <> '') and (Line <> LastInstallLine) then begin
+    LastInstallLine := Line;
+    AddInstallLine(Line);
   end;
 end;
 
-// Same for the uninstaller: show the details (log) box below the progress bar
-// on the uninstall progress page, with no toggle to collapse it.
+// ---------------------------------------------------------------------------
+// Uninstaller events
+// ---------------------------------------------------------------------------
+
 procedure InitializeUninstallProgressForm();
 begin
-  UninstallProgressForm.DetailsMemo.Visible := True;
-  UninstallProgressForm.DetailsButton.Visible := False;
-  UninstallProgressForm.DetailsMemo.Top := UninstallProgressForm.StatusLabel.Top + UninstallProgressForm.StatusLabel.Height + ScaleY(8);
-  UninstallProgressForm.DetailsMemo.Height := UninstallProgressForm.DetailsButton.Top - UninstallProgressForm.DetailsMemo.Top - ScaleY(8);
+  CreateUninstallDetailsMemo();
 end;
 
-// Show a confirmation once the uninstaller has finished removing the app.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if CurUninstallStep = usPostUninstall then
-    MsgBox('{#AppName} was successfully uninstalled.', mbInformation, MB_OK);
-end;
+  if CurUninstallStep = usUninstall then
+    AddUninstallLine('Removing application files…')
+  else if CurUninstallStep = usPostUninstall then begin
+    BackupAndCleanUserData();
+    MsgBox(
+      '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
+      'A final backup of your settings, playlists and fonts was kept at:' + #13#10 +
+      GetEnv('USERPROFILE') + '\.vivimusic\backups',
+      mbInformation, MB_OK);
+  end;
+end;
