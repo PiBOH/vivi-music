@@ -176,6 +176,13 @@ Prefer the smallest change that satisfies the request. Do not "clean up" or
 "improve" unrelated code while you work. When a change could break existing
 behavior, state the risk before editing and, when in doubt, ask.
 
+#### Do-not-touch areas (verified working — never change unless the user
+**explicitly** asks)
+
+- **Embedded WebView sign-in (Google login)**: it works now (sign-in window,
+cookie extraction, auto-close and session save). Do not modify the WebView
+login flow in any way.
+
 ## 5. Versioning and CHANGELOG — MANDATORY
 
 ### Semantic Versioning (SemVer)
