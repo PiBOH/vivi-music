@@ -539,17 +539,19 @@ fun ViviSlider(
     style: ViviSliderStyle = ViviSliderStyle.SLIM,
     enabled: Boolean = true,
     /** Optional buffered fraction (0..1) drawn as a fainter secondary segment
-     *  behind the played portion (YouTube-style). Null (or >= 1) hides it. */
+     *  behind the played portion (YouTube-style). Null hides it entirely;
+     *  a full buffer (1f) draws it full-width behind the played fill, like a
+     *  fully loaded YouTube video. */
     bufferedFraction: Float? = null,
     modifier: Modifier = Modifier,
 ) {
     val range = valueRange.endInclusive - valueRange.start
     val fraction = if (range == 0f) 0f else ((value - valueRange.start) / range).coerceIn(0f, 1f)
-    // The buffer is only meaningful while a stream is actually still
-    // downloading: once fully buffered (fraction reaches 1) the segment would
-    // cover the whole track and just add visual noise.
+    // The buffer segment stays visible like on YouTube: it grows while the
+    // stream downloads and remains full-width once fully loaded/cached (it is
+    // only hidden when the buffered fraction is null, i.e. no stream info).
     val buffer = (bufferedFraction ?: 1f).coerceIn(0f, 1f)
-    val showBuffer = buffer < 0.999f && buffer > fraction + 0.002f
+    val showBuffer = bufferedFraction != null && buffer > fraction + 0.002f
     val bufferColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
     val primary = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant

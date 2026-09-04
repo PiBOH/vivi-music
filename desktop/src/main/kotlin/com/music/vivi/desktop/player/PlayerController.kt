@@ -360,7 +360,7 @@ class PlayerController {
     }
 
     fun seekTo(ms: Long) {
-        seekInternal(ms)?.let { _seekEvents.tryEmit(it) }
+        seekInternal(ms, startStream = true)?.let { _seekEvents.tryEmit(it) }
     }
 
     /**
@@ -401,7 +401,14 @@ class PlayerController {
         setPlaying(isPlaying)
     }
 
-    private fun seekInternal(ms: Long): Long? {
+    /**
+     * Applies a seek. [startStream] is true only for local user scrubs: when
+     * the track's stream isn't loaded yet, the scrub itself kicks off the
+     * resolution/load (YouTube behavior — scrubbing an unloaded video starts
+     * buffering it) and playback begins from the scrubbed position. Remote
+     * seeks keep the old remember-only path and let [setPlaying] decide.
+     */
+    private fun seekInternal(ms: Long, startStream: Boolean = false): Long? {
         val s = _state.value
         if (s.current == null) return null
         // Duration unknown (track loaded but never resolved): the seek bar has
@@ -417,19 +424,29 @@ class PlayerController {
             pendingStartFraction = fraction
             _pendingSeekFraction.value = fraction
             _state.update { it.copy(positionMs = 0L) }
+            // Scrubbing a never-resolved track starts its stream right away;
+            // [playAtAttempt] applies the pending fraction to the real duration
+            // the moment it becomes known.
+            if (startStream && !s.isResolving && loadedVideoId != s.current?.videoId) {
+                playAt(s.queue, s.index, startAtMs = 0L, startPaused = false)
+            }
             return null
         }
         // A real (time-based) seek means the duration is known: drop any
         // pending fraction so a stale thumb can't linger on a later track.
         _pendingSeekFraction.value = null
         val target = ms.coerceIn(0L, s.durationMs)
-        // Only restart the decode when a stream is actually loaded. For a track
-        // that is loaded but never started (restored queue), already ended, or
-        // still resolving, the target is just remembered in the state — the
-        // next [startCurrent]/[playAtAttempt] starts playback from it, so the
-        // seek bar can be scrubbed before pressing play.
         if (loadedVideoId == s.current?.videoId && player.hasLoadedStream()) {
             player.seekTo(target)
+        } else if (startStream && !s.isResolving) {
+            // Stream not loaded yet (restored queue / never started): the scrub
+            // kicks off the resolution so the position becomes real and playback
+            // starts from it. While a resolution is already in flight the target
+            // is just remembered — [playAtAttempt] honors it (`st.positionMs`)
+            // when the stream is ready, so dragging during resolution works too.
+            _state.update { it.copy(positionMs = target) }
+            playAt(s.queue, s.index, startAtMs = target, startPaused = false)
+            return null
         }
         _state.update { it.copy(positionMs = target) }
         return target

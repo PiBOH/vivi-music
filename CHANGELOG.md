@@ -10,6 +10,12 @@ version `<mobile>_DE-<desktop>` (e.g. `6.0.5_DE-1.0.0`), where the desktop part 
 the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
+## [6.4.45_DE-1.50.20-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Scrubbing the seek bar now starts the stream of an unresolved track** (issue #12): dragging the seek bar on a track restored from the queue but never resolved now kicks off the stream resolution and playback starts from the scrubbed position (YouTube-style), instead of only remembering the position until play is pressed. Closes #12.
+- [DE] **The YouTube-style buffered bar is now always visible** (issue #13): the fainter secondary segment behind the played portion previously vanished as soon as the download finished or the track was already cached, so it was practically never seen. It now stays full-width once the track is fully loaded/cached, exactly like a fully buffered YouTube video. Closes #13.
+
 ## [6.4.45_DE-1.50.19-nightly] - 2026-09-04
 
 ### Fixed
