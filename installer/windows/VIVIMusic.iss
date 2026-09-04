@@ -131,13 +131,23 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpInstalling then
   begin
-    WizardForm.Memo.Visible := True;
+    WizardForm.DetailsMemo.Visible := True;
     WizardForm.DetailsButton.Visible := False;
     // Position the log right under the status line and size it to fill the
     // page down to where the (now hidden) details button used to sit.
-    WizardForm.Memo.Top := WizardForm.StatusLabel.Top + WizardForm.StatusLabel.Height + ScaleY(8);
-    WizardForm.Memo.Height := WizardForm.DetailsButton.Top - WizardForm.Memo.Top - ScaleY(8);
+    WizardForm.DetailsMemo.Top := WizardForm.StatusLabel.Top + WizardForm.StatusLabel.Height + ScaleY(8);
+    WizardForm.DetailsMemo.Height := WizardForm.DetailsButton.Top - WizardForm.DetailsMemo.Top - ScaleY(8);
   end;
+end;
+
+// Same for the uninstaller: show the details (log) box below the progress bar
+// on the uninstall progress page, with no toggle to collapse it.
+procedure InitializeUninstallProgressForm();
+begin
+  UninstallProgressForm.DetailsMemo.Visible := True;
+  UninstallProgressForm.DetailsButton.Visible := False;
+  UninstallProgressForm.DetailsMemo.Top := UninstallProgressForm.StatusLabel.Top + UninstallProgressForm.StatusLabel.Height + ScaleY(8);
+  UninstallProgressForm.DetailsMemo.Height := UninstallProgressForm.DetailsButton.Top - UninstallProgressForm.DetailsMemo.Top - ScaleY(8);
 end;
 
 // Show a confirmation once the uninstaller has finished removing the app.
