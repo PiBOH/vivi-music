@@ -85,6 +85,10 @@
             <p>Then launch from the Start menu.</p>
             <h3 id="win-uninstall">Uninstall</h3>
             <p>Open <b>Settings → Apps → Installed apps</b>, find <b>VIVI Music</b> and choose <em>Uninstall</em> — or run the uninstaller from <code>C:\Program Files\VIVIMusic</code>. Downloaded updates are cached under <code>~/.vivimusic/updates/</code> and cleaned up automatically after 7 days.</p>
+            <div class="callout">
+              <span aria-hidden="true">💾</span>
+              <span><b>On uninstall, the app keeps exactly one final backup</b> of your settings, playlists and imported fonts at <code>%USERPROFILE%\.vivimusic\backups\uninstall-…</code> and deletes <b>everything else</b> in <code>~/.vivimusic</code> — downloaded updates, audio, video/canvas and lyrics caches, logs and any other leftover. Only that last backup remains on disk.</span>
+            </div>
           </section>
 
           <!-- linux -->
@@ -104,7 +108,7 @@
             <pre class="code"><code>./VIVIMusic-….AppImage --appimage-extract
 ./squashfs-root/AppRun</code></pre>
             <h3 id="option-c">Option C — Arch Linux (AUR-style PKGBUILD)</h3>
-            <p>Every release also ships a <code>PKGBUILD</code> (plus <code>SRCINFO</code>) as a release asset. To build and install a proper system package:</p>
+            <p>Every release also ships a <code>PKGBUILD</code> (plus <code>SRCINFO</code> and an uninstall hook <code>vivi-music-de.install</code>) as release assets. To build and install a proper system package:</p>
             <pre class="code"><code>mkdir vivi-music-de &amp;&amp; cd vivi-music-de
 # copy the PKGBUILD file from the release assets into this folder
 makepkg -si</code></pre>
@@ -113,6 +117,12 @@ makepkg -si</code></pre>
               <span aria-hidden="true">🎨</span>
               <span><b>Graphics note:</b> if OpenGL isn't available on your system, the app switches to the software renderer by itself. It just works — no configuration needed.</span>
             </div>
+            <h3 id="linux-uninstall">Uninstall (Linux)</h3>
+            <ul>
+              <li><b>.deb</b>: uninstall normally with <code>sudo apt remove vivimusic</code> / <code>sudo dpkg -r</code>. The package's <code>postrm</code> hook keeps exactly one final backup of your settings, playlists and fonts at <code>~/.vivimusic/backups/uninstall-…</code> and deletes every cache (<code>~/.vivimusic/updates</code>, audio, video/canvas, lyrics, logs) — only that last backup remains.</li>
+              <li><b>AppImage</b>: delete the file. To clean your user data the same way, run <code>sh scripts/uninstall-cleanup.sh</code> from this repo (or the script shipped in the release).</li>
+              <li><b>AUR</b>: <code>pacman -R vivi-music-de</code> runs the same cleanup automatically via the package's <code>post_remove</code> hook.</li>
+            </ul>
           </section>
 
           <!-- macos -->
@@ -131,7 +141,9 @@ makepkg -si</code></pre>
               <li>Follow the installer steps; the app lands in <b>Applications</b>.</li>
             </ol>
             <h3 id="mac-uninstall">Uninstall</h3>
-            <p>Drag <code>VIVI Music.app</code> from <b>Applications</b> to the Trash. That's the whole ceremony.</p>
+            <p>Drag <code>VIVI Music.app</code> from <b>Applications</b> to the Trash, then clean your user data the same way Windows/Linux do — keep exactly one final backup of settings, playlists and fonts and delete every cache:</p>
+            <pre class="code"><code>sh scripts/uninstall-cleanup.sh   # from this repo (or the release assets)</code></pre>
+            <p>The backup is kept at <code>~/.vivimusic/backups/uninstall-…</code>; everything else (updates, audio, video/canvas, lyrics caches, logs) is removed.</p>
           </section>
 
           <h2 id="requirements">System requirements</h2>
