@@ -431,3 +431,69 @@ locale tag):
 | 简体中文 | `zh-rCN` |
 | 繁體中文 | `zh-rTW` |
 | 日本語 | `ja` |
+
+## 7. GitHub Issues workflow — MANDATORY
+
+Every user-reported problem or feature request MUST first become a GitHub
+issue on `PiBOH/vivi-music` **before any code is changed**:
+
+1. **Check for duplicates first**:
+   `gh issue list --repo PiBOH/vivi-music --state all --search "<keywords>"`
+   — only open a new issue when no equivalent open/closed issue exists.
+
+2. **Open the issue first** (via the `gh` CLI; on this machine it is not on
+   the bash PATH, use the full path `/c/Program Files/GitHub CLI/gh.exe`,
+   or plain `gh` elsewhere). Follow the repo's issue templates in
+   `.github/ISSUE_TEMPLATE/`:
+   - Desktop (Windows/Linux/macOS) bug → `bug_report_de.yml`
+     (`title: "[Bug][DE]: "`, labels `bug`, `triage`, `desktop`).
+   - Desktop feature → `feature_request_de.yml`
+     (`title: "[Feat][DE]: "`, labels `enhancement`, `triage`, `desktop`).
+   - Mobile (Android) bug → `bug_report.yml` (`title: "[Bug][APK]: "`).
+   - Mobile feature → `feature_request.yml` (`title: "[Feat][APK]: "`).
+   Fill in every required field of the template (category, frequency, steps
+   to reproduce, …); use `N/A` when a field does not apply.
+   **Issue bodies and titles are written in English.**
+
+3. **Fix the problem**, then reference the issue in the CHANGELOG entry and in
+   the commit message (e.g. `Closes #NN` / `Fixes #NN`).
+
+4. **Close the issue** after the fix is committed and pushed:
+   `gh issue close <NN> --repo PiBOH/vivi-music`.
+
+Existing commit rules still apply: never add a "Co-Authored-By: Codebuff"
+footer, and always reply to the user in Italian in chat (only issue
+bodies/titles stay in English).
+
+## 7. GitHub Issues workflow — MANDATORY
+
+Every user-reported problem or feature request MUST first become a GitHub
+issue on `PiBOH/vivi-music` **before any code is changed**:
+
+1. **Check for duplicates first**:
+   `gh issue list --repo PiBOH/vivi-music --state all --search "<keywords>"`
+   — only open a new issue when no equivalent open/closed issue exists.
+
+2. **Open the issue first** (via the `gh` CLI; on this machine it is not on
+   the bash PATH, use the full path `/c/Program Files/GitHub CLI/gh.exe`,
+   or plain `gh` elsewhere). Follow the repo's issue templates in
+   `.github/ISSUE_TEMPLATE/`:
+   - Desktop (Windows/Linux/macOS) bug → `bug_report_de.yml`
+     (`title: "[Bug][DE]: "`, labels `bug`, `triage`, `desktop`).
+   - Desktop feature → `feature_request_de.yml`
+     (`title: "[Feat][DE]: "`, labels `enhancement`, `triage`, `desktop`).
+   - Mobile (Android) bug → `bug_report.yml` (`title: "[Bug][APK]: "`).
+   - Mobile feature → `feature_request.yml` (`title: "[Feat][APK]: "`).
+   Fill in every required field of the template (category, frequency, steps
+   to reproduce, …); use `N/A` when a field does not apply.
+   **Issue bodies and titles are written in English.**
+
+3. **Fix the problem**, then reference the issue in the CHANGELOG entry and in
+   the commit message (e.g. `Closes #NN` / `Fixes #NN`).
+
+4. **Close the issue** after the fix is committed and pushed:
+   `gh issue close <NN> --repo PiBOH/vivi-music`.
+
+Existing commit rules still apply: never add a "Co-Authored-By: Codebuff"
+footer, and always reply to the user in Italian in chat (only issue
+bodies/titles stay in English).
