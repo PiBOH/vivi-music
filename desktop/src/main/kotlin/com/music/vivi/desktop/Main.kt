@@ -8,7 +8,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -2075,14 +2074,13 @@ fun WindowScope.App(
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
                         customAccents = customAccents,
-                        onAddCustomAccent = { argb ->
-                            val updated = (customAccents + argb).distinct()
-                            DesktopSettings.update { it.copy(customAccents = updated) }
-                        },
-                        onRemoveCustomAccent = { argb ->
-                            val updated = customAccents - argb
-                            DesktopSettings.update { it.copy(customAccents = updated) }
-                        },
+                        // Forward the stateful callbacks from the window level
+                        // (they update the live list AND persist it); duplicating
+                        // them here with DesktopSettings.update only persisted
+                        // the change, so new swatches appeared only after
+                        // leaving and re-entering the screen.
+                        onAddCustomAccent = onAddCustomAccent,
+                        onRemoveCustomAccent = onRemoveCustomAccent,
                     )
                     is Screen.SettingsPlayer -> SettingsPlayerScreen(
                         language = language,
@@ -2931,7 +2929,7 @@ fun Sidebar(
 
     Surface(
         color = if (spotify) {
-            if (isSystemInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
+            if (isAppInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }

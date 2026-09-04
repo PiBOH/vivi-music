@@ -13,7 +13,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -2312,7 +2311,7 @@ fun BoxScope.DesktopMiniPlayerBackgroundLayer(
     thumbnailUrl: String?,
     modifier: Modifier = Modifier,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = isAppInDarkTheme()
     val baseSurface = if (pureBlack && dark) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
     var extractedColors by remember(thumbnailUrl) { mutableStateOf<List<Color>>(emptyList()) }
 
@@ -2468,8 +2467,8 @@ fun ClassicDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -2762,8 +2761,8 @@ fun NewDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
     var isFavorite by remember { mutableStateOf(false) }
@@ -2972,8 +2971,8 @@ fun AppleDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
     Box(

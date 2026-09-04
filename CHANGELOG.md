@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.22-alpha] - 2026-09-04
+
+### Changed
+- [DE] Desktop releases now publish on the **alpha** channel instead of nightly (release channel in `version.txt`).
+
+### Fixed
+- [DE] **Players, mini players and the sidebar now follow the app theme in light mode**: they decided dark/light from the OS theme (`isSystemInDarkTheme()`) instead of the app's own mode, so with a dark OS + light app they stayed dark (and could get light text on light surfaces). A new `LocalAppIsDark` (provided by `AppTheme`) drives those surfaces so the app-selected Light/Dark/System mode applies consistently. (Closes #15)
+- [DE] **Custom colors now appear in the palette live**: the Theme screen only persisted new/removed custom accents to disk without updating the list it displays, so swatches appeared only after re-entering the screen. It now forwards the stateful window-level callbacks, which update and persist in one step. (Closes #16)
+
 ## [6.4.45_DE-1.50.21-nightly] - 2026-09-04
 
 ### Fixed

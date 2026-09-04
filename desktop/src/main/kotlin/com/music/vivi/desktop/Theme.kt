@@ -14,6 +14,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
@@ -403,6 +404,23 @@ private val spotifyShapes = Shapes(
 )
 
 /**
+ * The resolved "is the app UI dark?" flag, matching the color scheme that
+ * [AppTheme] computed from the selected [ThemeMode]. Provided by [AppTheme];
+ * outside of it (isolated windows, previews) this falls back to the OS
+ * setting so those surfaces keep following the system.
+ */
+val LocalAppIsDark = compositionLocalOf<Boolean?> { null }
+
+/**
+ * Whether the app currently renders the dark scheme. Inside [AppTheme] this
+ * returns the mode resolved from [ThemeMode] (LIGHT -> false even when the OS
+ * is dark, DARK -> true even when the OS is light); outside [AppTheme] it
+ * falls back to the OS setting.
+ */
+@Composable
+fun isAppInDarkTheme(): Boolean = LocalAppIsDark.current ?: isSystemInDarkTheme()
+
+/**
  * Applies the selected light/dark mode (resolving "system" against the OS)
  * and accent color to the whole app via [MaterialTheme]. When [spotify] is
  * true the app uses the flat Spotify palette (fixed green accent, 8dp shapes,
@@ -498,8 +516,13 @@ fun AppTheme(
         // never adapt to the theme. Provide it explicitly so text follows the
         // onBackground color, then paint the whole window with the theme
         // background (otherwise the native light window shows through in dark
-        // mode).
-        CompositionLocalProvider(LocalContentColor provides effective.onBackground) {
+        // mode). LocalAppIsDark lets surfaces that used to read the OS theme
+        // (players, mini players, sidebar) follow the app-selected mode
+        // instead of the OS one.
+        CompositionLocalProvider(
+            LocalAppIsDark provides useDark,
+            LocalContentColor provides effective.onBackground,
+        ) {
             Box(Modifier.fillMaxSize().background(effective.background)) {
                 content()
             }
