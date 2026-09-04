@@ -220,7 +220,7 @@ begin
     if FindFirst(ViviDir + '\fonts\*', FindRec) then begin
       try
         repeat
-          if (FindRec.Attributes and faDirectory) = 0 then begin
+          if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0 then begin
             FontSrc := ViviDir + '\fonts\' + FindRec.Name;
             FontDst := BackupDir + '\fonts\' + FindRec.Name;
             FileCopy(FontSrc, FontDst, False);
@@ -240,7 +240,7 @@ begin
         Entry := FindRec.Name;
         if (Entry = '.') or (Entry = '..') then Continue;
         ItemPath := ViviDir + '\' + Entry;
-        if (FindRec.Attributes and faDirectory) <> 0 then begin
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then begin
           if CompareText(Entry, 'backups') <> 0 then begin
             DelTree(ItemPath, True, True, True);
             AddUninstallLine('Removed cache: ' + Entry);
