@@ -324,6 +324,14 @@ class AudioPlayer {
      * arrives instead of after the whole track is on disk.
      */
     private fun beginDownload(streams: List<StreamResolver.ResolvedStream>, cacheKey: String): DownloadHandle {
+        // The audio cache folder can disappear at runtime: the in-app "clear
+        // cache" (Settings → Storage / Privacy) deletes every subfolder of
+        // ~/.vivimusic/cache, including audio/, and AudioPlayer only created it
+        // once at construction. Without recreating it here every download
+        // started after the cleanup fails with "path not found", which showed
+        // up as tracks resolving over and over and never starting (the player
+        // retried, rotated the guest identity, and failed instantly each time).
+        runCatching { cacheDir.mkdirs() }
         activeDownloads[cacheKey]?.let { return it }
         val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val file = File(cacheDir, "$safe.m4a")

@@ -10,6 +10,12 @@ version `<mobile>_DE-<desktop>` (e.g. `6.0.5_DE-1.0.0`), where the desktop part 
 the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
+
+## [6.4.45_DE-1.50.21-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Tracks stuck in a resolve loop after clearing the cache**: the in-app "Clear cache" buttons (Settings → Storage / Privacy) delete every subfolder of `~/.vivimusic/cache`, including `audio/`, which `AudioPlayer` only created once at startup. Every download started afterwards failed with "path not found", so tracks resolved, reset the seek bar to zero and resolved again forever. The audio cache folder is now recreated automatically before each download, so playback works right after a cache cleanup. (Closes #14)
+
 ## [6.4.45_DE-1.50.20-nightly] - 2026-09-04
 
 ### Fixed
