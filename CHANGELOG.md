@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.16-nightly] - 2026-09-04
+
+### Added
+- [DE] **Native system playback controls and "Now Playing" on macOS**: the app now registers with the system media session (Control Center and Lock Screen tile) through a small native helper (MediaPlayer.framework), so the current track is recognised system-wide and the physical media keys — keyboard, Touch Bar, headset buttons — control VIVI directly without needing Accessibility permission. Play/Pause, Next, Previous and scrubbing from the Lock Screen slider are wired to the player, and the tile shows the track title, artist and cover art (artwork is downloaded and cached locally). On Windows and Linux the existing global key hooks are unchanged. Closes #5.
+
+
 ## [6.4.45_DE-1.50.15-nightly] - 2026-09-04
 
 ### Fixed

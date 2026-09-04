@@ -773,11 +773,56 @@ fun WindowScope.App(
     }
     LaunchedEffect(mediaKeysEnabled) {
         if (mediaKeysEnabled) {
-            MediaKeys.start(
-                onPlayPause = { player.toggle() },
-                onNext = { player.next() },
-                onPrevious = { player.previous() },
-            )
+            if (isMac) {
+                // macOS: the native MediaPlayer session (issue #5) answers the
+                // physical media keys AND registers the app as the system
+                // "Now Playing" source — no Accessibility permission needed.
+                MacMediaSession.start(
+                    appName = "VIVI Music",
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                    onSeek = { ms -> player.seekTo(ms) },
+                )
+            } else {
+                MediaKeys.start(
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                )
+            }
+        } else if (isMac) {
+            MacMediaSession.stop()
+        }
+    }
+
+    // macOS only: keep the system "Now Playing" tile in sync with the current
+    // track. Gated by the same "Media keys" toggle as the session above (so
+    // disabling it clears the tile; re-enabling re-pushes the current state).
+    // Runs once per track (and again when playback pauses) and pushes a
+    // position update every 500 ms while playing. Artwork is downloaded in the
+    // background by MacMediaSession itself.
+    if (isMac && mediaKeysEnabled) {
+        LaunchedEffect(nowPlaying?.videoId, isPlaying) {
+            val np = nowPlaying
+            if (np == null) {
+                MacMediaSession.endSession()
+                return@LaunchedEffect
+            }
+            while (true) {
+                MacMediaSession.setNowPlaying(
+                    title = np.title,
+                    artist = np.artist,
+                    durationMs = playerState.durationMs,
+                    positionMs = playerState.positionMs,
+                    playing = playerState.isPlaying,
+                    artworkUrl = np.thumbnail?.takeIf {
+                        it.startsWith("http://") || it.startsWith("https://")
+                    },
+                )
+                if (!playerState.isPlaying) break
+                delay(500)
+            }
         }
     }
     LaunchedEffect(language, trayMenuEnabled) {
