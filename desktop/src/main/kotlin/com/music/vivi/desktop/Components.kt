@@ -165,6 +165,11 @@ data class PlaybackContext(
     /** Buffered fraction (0..1) of the current track (1f = fully cached / not
      *  streaming). Powers the YouTube-style secondary segment on seek bars. */
     val bufferedFraction: StateFlow<Float>? = null,
+    /** Fraction (0..1) of the current track scrubbed while its duration was
+     *  still unknown (loaded from the restored queue but never played); null
+     *  when the duration is known or nothing was scrubbed. Keeps the seek bar
+     *  thumb at the scrubbed point until playback actually begins. */
+    val pendingSeekFraction: StateFlow<Float?>? = null,
 )
 
 /** Composition local exposing the current playback to list rows (SongRow etc.). */
@@ -180,6 +185,16 @@ val LocalPlayback = compositionLocalOf { PlaybackContext() }
 fun playbackBufferedFraction(): Float {
     val flow = LocalPlayback.current.bufferedFraction ?: return 1f
     return flow.collectAsState().value
+}
+
+/**
+ * Current pending scrub fraction (0..1) for the seek bars, collected from
+ * [LocalPlayback]. Returns null when the duration is known (real seek range)
+ * or nothing was scrubbed yet.
+ */
+@Composable
+fun playbackPendingSeekFraction(): Float? {
+    return LocalPlayback.current.pendingSeekFraction?.collectAsState()?.value
 }
 
 /** Square-ish artwork with a neutral placeholder behind it while loading. */

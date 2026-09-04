@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.13-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Mini player seek bar now works on tracks restored from the persistent queue without opening the full player**: restored tracks used to lose their duration, so the seek bar fell back to a 0..1 range and the thumb snapped back to the start after a scrub, making the seek look dead. The scrubbed position now stays visible (shown as a percentage until the real duration is known) and playback starts from it; once a track is actually played its real duration is written back into the persistent queue, so on the next launch the seek bar has the correct range immediately.
+
 ## [6.4.45_DE-1.50.12-nightly] - 2026-09-03
 
 ### Added

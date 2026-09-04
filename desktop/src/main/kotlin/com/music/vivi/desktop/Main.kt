@@ -1663,6 +1663,7 @@ fun WindowScope.App(
             isPlaying = isPlaying,
             audioLevel = player.audioLevel,
             bufferedFraction = player.bufferedFraction,
+            pendingSeekFraction = player.pendingSeekFraction,
         )
     ) {
     Row(
