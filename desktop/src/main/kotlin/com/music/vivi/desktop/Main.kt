@@ -3099,12 +3099,14 @@ fun Sidebar(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Playlists Section Header (Collapsible)
+                // Playlists Section Header: clicking the label opens the full
+                // playlist list screen; only the chevron arrow expands/collapses
+                // the inline playlist list in the sidebar.
                 if (!collapsed) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { playlistsExpanded = !playlistsExpanded }
+                            .clickable { onSelect(Screen.LocalPlaylists) }
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -3114,14 +3116,25 @@ fun Sidebar(
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Expand Playlists",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // Larger invisible touch target so the arrow is easy to
+                        // hit; the nested clickable consumes the tap, so it never
+                        // triggers the row's navigation.
+                        Box(
                             modifier = Modifier
-                                .size(18.dp)
-                                .rotate(playlistsChevronRotation),
-                        )
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable { playlistsExpanded = !playlistsExpanded },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Expand Playlists",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .rotate(playlistsChevronRotation),
+                            )
+                        }
                     }
                 }
 

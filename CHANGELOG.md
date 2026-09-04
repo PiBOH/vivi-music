@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.14-nightly] - 2026-09-04
+
+### Added
+- [DE] Sidebar "Playlists" entry now opens the full playlist list screen (all local playlists with create/rename/delete); the chevron arrow is the only control that expands/collapses the inline playlist list in the sidebar. Closes #3.
+
 ## [6.4.45_DE-1.50.13-nightly] - 2026-09-04
 
 ### Fixed
