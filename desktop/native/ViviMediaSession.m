@@ -244,8 +244,8 @@ void viviNotify(const char *titleUtf8, const char *messageUtf8) {
             [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:0.1 repeats:NO];
         UNNotificationRequest *request =
             [UNNotificationRequest requestWithIdentifier:[NSUUID UUID].UUIDString
-                                                withContent:content
-                                                withTrigger:trigger];
+                                                 content:content
+                                                 trigger:trigger];
         [[UNUserNotificationCenter currentNotificationCenter]
             addNotificationRequest:request withCompletionHandler:nil];
     });
