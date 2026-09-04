@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.18-nightly] - 2026-09-04
+
+### Changed
+- [DE] The Inno Setup installer now always shows the installation details box (the extraction log) below the progress bar on the Installing page, instead of hiding it behind the "Show details" toggle.
+
+
 ## [6.4.45_DE-1.50.17-nightly] - 2026-09-04
 
 ### Fixed

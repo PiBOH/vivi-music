@@ -123,6 +123,23 @@ begin
     UninstallExistingMsi();
 end;
 
+// Always show the installation details box (the extraction log) below the
+// progress bar on the "Installing" page. Inno Setup keeps this log hidden by
+// default behind the "Show details" toggle; we reveal it and remove the toggle
+// so the details are always visible while installing.
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpInstalling then
+  begin
+    WizardForm.Memo.Visible := True;
+    WizardForm.DetailsButton.Visible := False;
+    // Position the log right under the status line and size it to fill the
+    // page down to where the (now hidden) details button used to sit.
+    WizardForm.Memo.Top := WizardForm.StatusLabel.Top + WizardForm.StatusLabel.Height + ScaleY(8);
+    WizardForm.Memo.Height := WizardForm.DetailsButton.Top - WizardForm.Memo.Top - ScaleY(8);
+  end;
+end;
+
 // Show a confirmation once the uninstaller has finished removing the app.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
