@@ -79,6 +79,11 @@ dependencies there, or you break the desktop build.
   - Before committing mobile work, verify the affected mobile files on both
     `vivi-music-de` and `vivi-music-de-apk`, compile the relevant target, and
     push both branch commits.
+  - **Docs changes go on BOTH development branches**: any documentation
+    change (README.md, AGENTS.md, INSTALL-GUIDE.md, docs/**, ERRORS.md, and
+    similar docs material) must be applied and pushed on **both**
+    `vivi-music-de` and `vivi-music-de-apk`, with equivalent content (their
+    hashes may differ). `main` stays excluded (upstream mirror).
 - **Commit style**: Conventional Commits (`feat:`, `fix:`, `ci:`, `refactor:`,
   `docs:`, `chore:`, `perf:`, …) with an optional scope, e.g.
   `feat(sync): …`.
