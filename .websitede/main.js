@@ -223,10 +223,6 @@
     return html;
   };
 
-  /* ---------- footer year + ticker loop ---------- */
+  /* ---------- footer year ---------- */
   $$("[data-year]").forEach(function (el) { el.textContent = new Date().getFullYear(); });
-  (function initTicker() {
-    var tr = $(".ticker-track");
-    if (tr) tr.innerHTML += tr.innerHTML; /* duplicate for a seamless -50% loop */
-  })();
 })();
