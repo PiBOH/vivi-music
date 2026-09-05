@@ -654,7 +654,9 @@ fun getLastCheckedTime(context: Context): String {
 
 fun getBetaUpdatesSetting(context: Context): Boolean {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    return sharedPrefs.getBoolean(KEY_BETA_UPDATES, false)
+    // Default ON: our releases ship as pre-releases (alpha/nightly channels),
+    // so the prerelease switch must be enabled out of the box (issue #21).
+    return sharedPrefs.getBoolean(KEY_BETA_UPDATES, true)
 }
 
 fun saveBetaUpdatesSetting(context: Context, enabled: Boolean) {
@@ -670,7 +672,9 @@ const val REPO_FORK = "PiBOH/vivi-music"
 
 fun getUpdateSource(context: Context): String {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    return sharedPrefs.getString(KEY_UPDATE_SOURCE, UPDATE_SOURCE_ORIGINAL) ?: UPDATE_SOURCE_ORIGINAL
+    // Default to the fork repo (PiBOH/vivi-music) where our releases are published;
+    // users can still switch back to the upstream repo in Settings (issue #21).
+    return sharedPrefs.getString(KEY_UPDATE_SOURCE, UPDATE_SOURCE_FORK) ?: UPDATE_SOURCE_FORK
 }
 
 fun saveUpdateSource(context: Context, source: String) {
