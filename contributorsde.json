@@ -1,0 +1,54 @@
+{
+  "_guide": [
+    "HOW TO ADD / EDIT A CONTRIBUTOR",
+    "",
+    "This file is read LIVE from the repository (branch vivi-music-de) every time",
+    "the Contributors screen opens in the app. There is NO local copy anymore:",
+    "edit THIS file, commit and push it, and the app picks the change up on the",
+    "next launch of the Contributors screen — no rebuild of the app needed.",
+    "A stale ~/.vivimusic/contributorsde.json from old builds is ignored/deleted",
+    "by the app itself.",
+    "",
+    "Each entry inside \"contributors\" looks like this:",
+    "",
+    "  {",
+    "    \"username\": \"octocat\",",
+    "    \"name\": \"Octo Cat\",",
+    "    \"description\": \"One sentence on how this person contributes.\",",
+    "    \"url\": \"https://github.com/octocat\"",
+    "  }",
+    "",
+    "Fields:",
+    "- \"username\": GitHub handle (REQUIRED). The avatar is fetched automatically",
+    "  from GitHub by this username.",
+    "- \"name\": the person's real name (optional). When set it is shown FIRST as",
+    "  \"Octo Cat (@octocat)\"; when missing only \"@octocat\" is shown.",
+    "- \"description\": short neutral-English text (not translated by the app).",
+    "  Keep it on a single line inside the quotes.",
+    "- \"url\": optional; defaults to https://github.com/<username> when missing.",
+    "",
+    "Notes:",
+    "- The order in the file is the order shown in the Contributors screen.",
+    "- Add people by inserting a new object between the { } of the contributors",
+    "  array (mind the comma after the previous entry)."
+  ],
+  "contributors": [
+    {
+      "username": "vivizzz007",
+      "name": "VIVIDH P ASHOKAN"
+      "description": "Created the Android app that VIVI Music DE is based on, and keeps the project — and its developer — in line."
+    },
+    {
+      "username": "bogdan-developer",
+      "description": "Contributes massively by testing VIVI Music DE on macOS (Apple Silicon) and providing feedback — including technical feedback — across every area of the app."
+    },
+    {
+      "username": "Ansu216",
+      "description": "Always available to help those in need in the Telegram channel, even without a PC."
+    },
+    {
+      "username": "dumbshrn",
+      "description": "Created the foundation of the new UX — without him, this would not exist."
+    }
+  ]
+}

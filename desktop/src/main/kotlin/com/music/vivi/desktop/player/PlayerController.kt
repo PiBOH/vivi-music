@@ -68,6 +68,16 @@ class PlayerController {
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
+    /** Most recently started tracks (newest first), used as seeds for the Home
+     *  "Recommended" section (port of the mobile Daily-Discover mechanism). */
+    private val _recentTracks = MutableStateFlow<List<NowPlaying>>(emptyList())
+    val recentTracks: StateFlow<List<NowPlaying>> = _recentTracks.asStateFlow()
+
+    private fun noteTrackStarted(track: NowPlaying) {
+        _recentTracks.value =
+            (listOf(track) + _recentTracks.value).distinctBy { it.videoId }.take(12)
+    }
+
     /** User-initiated seeks (emitted so the sync layer can push them instantly). */
     private val _seekEvents = MutableSharedFlow<Long>(extraBufferCapacity = 16)
     val seekEvents: SharedFlow<Long> = _seekEvents.asSharedFlow()
@@ -81,6 +91,26 @@ class PlayerController {
      */
     private val _audioLevel = MutableStateFlow(0f)
     val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
+
+    /**
+     * Buffered fraction (0..1) of the current track: how much of the stream has
+     * been downloaded/decoded so far, driven by [AudioPlayer.onBufferedFraction].
+     * 1f when fully cached / not streaming (the UI then hides the secondary
+     * "buffered" segment on the seek bars). Reset to 1f whenever no stream is
+     * loaded and to 0f while a fresh download starts.
+     */
+    private val _bufferedFraction = MutableStateFlow(1f)
+    val bufferedFraction: StateFlow<Float> = _bufferedFraction.asStateFlow()
+
+    /**
+     * Fraction (0..1) of the current track the user scrubbed to while its
+     * duration was still unknown (track loaded from the restored queue but
+     * never played). Keeps the seek bar thumb at the scrubbed point so the
+     * seek is visible; playback starts from it via [pendingStartFraction].
+     * Cleared when playback begins, the track changes, or the queue resets.
+     */
+    private val _pendingSeekFraction = MutableStateFlow<Float?>(null)
+    val pendingSeekFraction: StateFlow<Float?> = _pendingSeekFraction.asStateFlow()
 
     init {
         // Restore the saved shuffle/repeat state when "remember" is enabled.
@@ -99,6 +129,8 @@ class PlayerController {
         }
         // Feed the audio-reactive visualizer from the decoded PCM stream.
         player.onLevel = { level -> _audioLevel.value = level }
+        // Feed the secondary "buffered" segment of the seek bars (YouTube-style).
+        player.onBufferedFraction = { frac -> _bufferedFraction.value = frac }
     }
 
     /** Resets the visualizer level to silence (e.g. on pause/stop). */
@@ -130,6 +162,14 @@ class PlayerController {
 
     /** Back-navigation history used by "previous" in shuffle mode. */
     private val previousStack = ArrayDeque<Int>()
+
+    /**
+     * Start position chosen while the track's duration was still unknown (a
+     * 0..1 fraction of the track). A loaded-but-never-played track can be
+     * scrubbed before its length is known; the fraction is applied to the real
+     * duration the moment playback starts. Consumed by the next [playAtAttempt].
+     */
+    private var pendingStartFraction: Float? = null
 
     fun play(track: NowPlaying) {
         lastLocalPlayIntentAt = System.currentTimeMillis()
@@ -257,6 +297,8 @@ class PlayerController {
                 playToken++
                 player.stop()
                 loadedVideoId = null
+                _bufferedFraction.value = 1f
+                _pendingSeekFraction.value = null
                 _state.value = PlayerState(volume = s.volume, isShuffle = s.isShuffle, repeatMode = s.repeatMode)
             }
             index < s.index -> _state.update { it.copy(queue = newQueue, index = it.index - 1) }
@@ -270,6 +312,8 @@ class PlayerController {
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
+        _pendingSeekFraction.value = null
         _state.value = PlayerState(volume = s.volume, isShuffle = s.isShuffle, repeatMode = s.repeatMode)
     }
 
@@ -320,11 +364,13 @@ class PlayerController {
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
+        _pendingSeekFraction.value = null
         _state.update { it.copy(isPlaying = false, positionMs = 0L) }
     }
 
     fun seekTo(ms: Long) {
-        seekInternal(ms)?.let { _seekEvents.tryEmit(it) }
+        seekInternal(ms, startStream = true)?.let { _seekEvents.tryEmit(it) }
     }
 
     /**
@@ -365,11 +411,53 @@ class PlayerController {
         setPlaying(isPlaying)
     }
 
-    private fun seekInternal(ms: Long): Long? {
+    /**
+     * Applies a seek. [startStream] is true only for local user scrubs: when
+     * the track's stream isn't loaded yet, the scrub itself kicks off the
+     * resolution/load (YouTube behavior — scrubbing an unloaded video starts
+     * buffering it) and playback begins from the scrubbed position. Remote
+     * seeks keep the old remember-only path and let [setPlaying] decide.
+     */
+    private fun seekInternal(ms: Long, startStream: Boolean = false): Long? {
         val s = _state.value
         if (s.current == null) return null
-        val target = ms.coerceIn(0L, if (s.durationMs > 0) s.durationMs else ms)
-        player.seekTo(target)
+        // Duration unknown (track loaded but never resolved): the seek bar has
+        // no real time range, so the value is a 0..1000 encoding of the desired
+        // START FRACTION. It is remembered and applied to the stream duration
+        // when playback actually begins — pressing play then starts from the
+        // scrubbed point.
+        // The fraction encoding is only produced by the local seek bars (whose
+        // range is 0..1000 while the duration is unknown); a remote seek in real
+        // milliseconds is much larger and must not be reinterpreted.
+        if (s.durationMs <= 0L && ms in 0..1000L) {
+            val fraction = (ms / 1000f).coerceIn(0f, 1f)
+            pendingStartFraction = fraction
+            _pendingSeekFraction.value = fraction
+            _state.update { it.copy(positionMs = 0L) }
+            // Scrubbing a never-resolved track starts its stream right away;
+            // [playAtAttempt] applies the pending fraction to the real duration
+            // the moment it becomes known.
+            if (startStream && !s.isResolving && loadedVideoId != s.current?.videoId) {
+                playAt(s.queue, s.index, startAtMs = 0L, startPaused = false)
+            }
+            return null
+        }
+        // A real (time-based) seek means the duration is known: drop any
+        // pending fraction so a stale thumb can't linger on a later track.
+        _pendingSeekFraction.value = null
+        val target = ms.coerceIn(0L, s.durationMs)
+        if (loadedVideoId == s.current?.videoId && player.hasLoadedStream()) {
+            player.seekTo(target)
+        } else if (startStream && !s.isResolving) {
+            // Stream not loaded yet (restored queue / never started): the scrub
+            // kicks off the resolution so the position becomes real and playback
+            // starts from it. While a resolution is already in flight the target
+            // is just remembered — [playAtAttempt] honors it (`st.positionMs`)
+            // when the stream is ready, so dragging during resolution works too.
+            _state.update { it.copy(positionMs = target) }
+            playAt(s.queue, s.index, startAtMs = target, startPaused = false)
+            return null
+        }
         _state.update { it.copy(positionMs = target) }
         return target
     }
@@ -456,6 +544,8 @@ class PlayerController {
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
+        _pendingSeekFraction.value = null
         val idx = index.coerceIn(0, tracks.lastIndex)
         _state.update {
             it.copy(
@@ -517,6 +607,7 @@ class PlayerController {
         val track = tracks[index]
         val token = ++playToken
         loadedVideoId = track.videoId
+        noteTrackStarted(track)
         scope.launch {
             player.stop()
             _state.value = PlayerState(
@@ -557,6 +648,7 @@ class PlayerController {
                     playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                 } else {
                     loadedVideoId = null
+                    _bufferedFraction.value = 1f
                     _state.update { it.copy(isPlaying = false, errorKey = "stream_error", errorDetail = null, loadPhase = LoadPhase.NONE, isResolving = false) }
                 }
                 return@launch
@@ -573,10 +665,42 @@ class PlayerController {
                 )
             }
 
+            // If the seek bar was scrubbed while this track was still being
+            // resolved/downloaded (no stream loaded yet), honor that position
+            // instead of the original startAtMs — otherwise the seek is lost
+            // the moment the stream starts from its planned offset. A scrub
+            // done while the duration was still unknown is a fraction: apply it
+            // to the metadata duration when available, otherwise forward it to
+            // the player which resolves it against the stream duration.
+            val st = _state.value
+            val pendingFraction = pendingStartFraction
+            pendingStartFraction = null
+            // Playback is starting: the seek bar switches to the real timeline,
+            // so the pending scrub indicator is no longer needed.
+            _pendingSeekFraction.value = null
+            val sameTrack = st.index == index && st.current?.videoId == track.videoId
+            var startFraction: Float? = null
+            val effectiveStartAt = when {
+                pendingFraction != null && pendingFraction > 0f && sameTrack -> {
+                    val knownDur = track.durationMs.takeIf { it > 0 }
+                        ?: st.durationMs.takeIf { it > 0 } ?: 0L
+                    if (knownDur > 0) {
+                        (pendingFraction * knownDur).toLong()
+                    } else {
+                        startFraction = pendingFraction
+                        0L
+                    }
+                }
+                sameTrack && st.positionMs > 0L -> st.positionMs.coerceAtLeast(0L)
+                else -> startAtMs
+            }
+            _bufferedFraction.value = if (alreadyCached) 1f else 0f
+
             player.play(
                 streams = streams,
                 cacheKey = track.videoId,
-                startAtMs = startAtMs,
+                startAtMs = effectiveStartAt,
+                startAtFraction = startFraction,
                 startPaused = startPaused,
                 onError = { msg ->
                     // Evict the cached resolution: a stale, single-use
@@ -596,6 +720,7 @@ class PlayerController {
                         }
                     } else {
                         loadedVideoId = null
+                        _bufferedFraction.value = 1f
                         _state.update { s ->
                             if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
                                 s.copy(isPlaying = false, errorDetail = msg, loadPhase = LoadPhase.NONE, isResolving = false)
@@ -628,7 +753,13 @@ class PlayerController {
                 onDuration = { dur ->
                     _state.update { s ->
                         if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
-                            s.copy(durationMs = dur, loadPhase = LoadPhase.NONE)
+                            // Backfill the real duration into the queue item too:
+                            // the persistent queue then keeps durations, so a
+                            // track restored on the next launch already has a
+                            // correct seek range (no more 0..1 "dead" bar).
+                            val queue = s.queue.toMutableList()
+                            queue[index] = queue[index].copy(durationMs = dur)
+                            s.copy(queue = queue, durationMs = dur, loadPhase = LoadPhase.NONE)
                         } else s
                     }
                 },

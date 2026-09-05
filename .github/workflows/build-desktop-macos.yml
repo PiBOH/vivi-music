@@ -40,6 +40,31 @@ jobs:
         shell: bash
         run: chmod +x gradlew
 
+      # Compile the native "Now Playing" helper (ViviMediaSession.m) into a
+      # per-architecture dylib that is bundled as a classpath resource and
+      # loaded at runtime via JNA (see MacMediaSession.kt). Each runner builds
+      # for its own architecture, so only one arch needs to be present.
+      - name: Build native media session helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCH_FLAG=""
+          RES_DIR="desktop/src/main/resources/native/macos-${{ matrix.arch }}"
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            ARCH_FLAG="-arch arm64"
+          else
+            ARCH_FLAG="-arch x86_64"
+          fi
+          mkdir -p "$RES_DIR"
+          # UserNotifications is required by the native notification API
+          # (UNUserNotificationCenter) added in DE 1.50.17 for issue #7.
+          xcrun -sdk macosx clang $ARCH_FLAG -O2 -fobjc-arc -dynamiclib \
+            -Wl,-install_name,@rpath/libvivi_media.dylib \
+            -framework Foundation -framework AppKit -framework MediaPlayer \
+            -framework UserNotifications \
+            -o "$RES_DIR/libvivi_media.dylib" desktop/native/ViviMediaSession.m
+          file "$RES_DIR/libvivi_media.dylib"
+
       - name: Package desktop distribution
         shell: bash
         run: ./gradlew :desktop:packageDmg :desktop:packagePkg --no-daemon

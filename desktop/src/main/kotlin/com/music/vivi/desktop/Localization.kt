@@ -138,7 +138,7 @@ private fun strings_0(): Map<String, String> =
         "code_hint" to "Enter this code on your phone",
         "code_placeholder" to "6-digit code",
         "color_palette" to "Color Palette",
-        "comments" to "Comments",
+        "comments" to "Chat",
         "commits" to "Commits",
         "commits_desc" to "Browse the most recent changes to VIVI Music DE.",
         "community_section" to "COMMUNITY",
@@ -153,6 +153,7 @@ private fun strings_0(): Map<String, String> =
         "content_country" to "Content region",
         "content_language" to "Content language",
         "continue" to "Continue",
+        "contributors_section" to "CONTRIBUTORS",
         "cookie_label" to "Cookie header (from music.youtube.com)",
         "copied_to_clipboard" to "Copied to clipboard",
         "cpu" to "CPU",
@@ -266,6 +267,7 @@ private fun strings_0(): Map<String, String> =
         "font_selection" to "Font Selection",
         "font_system" to "System Default",
         "font_system_desc" to "Use the default system typeface.",
+        "forgotten_favorites" to "Forgotten favorites",
         "general" to "General",
         "generate_code" to "Generate code",
         "generate_new_code" to "Generate new code",
@@ -500,6 +502,7 @@ private fun strings_0(): Map<String, String> =
         "recognition_failed" to "Recognition error",
         "recognition_history" to "Recognition History",
         "recognize" to "Recognize Music",
+        "recommended" to "Recommended",
         "redo" to "Redo",
         "regenerate_pair_code" to "Regenerate Pair Code",
         "relay_server" to "Relay server (wss://)",
@@ -541,6 +544,7 @@ private fun strings_0(): Map<String, String> =
         "show_intro_on_startup" to "Show intro on startup",
         "shuffle" to "Shuffle",
         "shuffle_all" to "Shuffle all",
+        "similar_to" to "Similar to",
         "slider_slim" to "Slim",
         "slider_squiggly" to "Squiggly",
         "slider_style" to "Slider style",
@@ -789,6 +793,7 @@ private fun strings_1(): Map<String, String> =
         "content_country" to "منطقة المحتوى",
         "content_language" to "لغة المحتوى",
         "continue" to "متابعة",
+        "contributors_section" to "المساهمون",
         "cookie_label" to "ترويسة ملف تعريف الارتباط (من music.youtube.com)",
         "copied_to_clipboard" to "تم النسخ إلى الحافظة",
         "cpu" to "CPU",
@@ -902,6 +907,7 @@ private fun strings_1(): Map<String, String> =
         "font_selection" to "اختيار الخط",
         "font_system" to "خط النظام",
         "font_system_desc" to "يستخدم خط النظام الافتراضي على جهازك.",
+        "forgotten_favorites" to "مفضلات مهملة",
         "general" to "عام",
         "generate_code" to "إنشاء رمز",
         "generate_new_code" to "إنشاء رمز جديد",
@@ -1138,6 +1144,7 @@ private fun strings_1(): Map<String, String> =
         "recognition_failed" to "فشل التعرف على الموسيقى",
         "recognition_history" to "سجل التعرف",
         "recognize" to "التعرف على الموسيقى",
+        "recommended" to "مقترحات لك",
         "redo" to "إعادة",
         "regenerate_pair_code" to "إعادة إنشاء رمز الإقران",
         "relay_server" to "خادم الترحيل (wss://)",
@@ -1179,6 +1186,7 @@ private fun strings_1(): Map<String, String> =
         "show_intro_on_startup" to "إظهار المقدمة عند بدء التشغيل",
         "shuffle" to "خلط",
         "shuffle_all" to "تشغيل عشوائي للكل",
+        "similar_to" to "تشبه",
         "slider_slim" to "رفيع",
         "slider_squiggly" to "متعرج",
         "slider_style" to "نمط شريط التمرير",
@@ -1427,6 +1435,7 @@ private fun strings_2(): Map<String, String> =
         "content_country" to "বিষয়বস্তু অঞ্চল",
         "content_language" to "বিষয়বস্তু ভাষা",
         "continue" to "অব্যাহত ৰাখক",
+        "contributors_section" to "অৱদানকাৰী",
         "cookie_label" to "কুকি হেডাৰ (music.youtube.com ৰ পৰা)",
         "copied_to_clipboard" to "ক্লিপবোৰ্ডলৈ কপি হ'ল",
         "cpu" to "CPU",
@@ -1776,6 +1785,7 @@ private fun strings_2(): Map<String, String> =
         "recognition_failed" to "সংগীত চিনাক্ত কৰাত ব্যৰ্থ",
         "recognition_history" to "চিনাক্তকৰণ ইতিহাস",
         "recognize" to "সংগীত চিনাক্ত কৰক",
+        "recommended" to "পৰামৰ্শিত",
         "redo" to "Redo",
         "regenerate_pair_code" to "পেৰিং ক'ড পুনৰ সৃষ্টি কৰক",
         "relay_server" to "ৰিলে চাৰ্ভাৰ (wss://)",
@@ -2018,7 +2028,6 @@ private fun strings_3(): Map<String, String> =
         "brightness" to "Parlaqlıq",
         "cache_cleared" to "Keş təmizləndi",
         "cache_size" to "Keş ölçüsü",
-        "cancel" to "Ləğv et",
         "canvas" to "Kətan",
         "canvas_source" to "Kənvas mənbəyi",
         "canvas_source_apple_music" to "Apple Music",
@@ -2031,7 +2040,6 @@ private fun strings_3(): Map<String, String> =
         "canvas_source_vivimusic_desc" to "Yalnız ViviMusic-in seçilmiş canvas kitabxanasından istifadə edir. Yalnız ifa olunan mahnı üçün əlavə edilibsə göstərir",
         "changelog" to "Dəyişikliklər jurnalı",
         "changelog_unavailable" to "Dəyişiklik jurnalı əlçatan deyil",
-        "charts" to "Çartlar",
         "charts_empty" to "Burada hələ göstəriləcək heç nə yoxdur.",
         "check_updates" to "Mövcud yeniləmələri yoxla",
         "checking" to "Yoxlanılır…",
@@ -2065,6 +2073,7 @@ private fun strings_3(): Map<String, String> =
         "content_country" to "Məzmun bölgəsi",
         "content_language" to "Məzmun dili",
         "continue" to "Davam et",
+        "contributors_section" to "Töhfəçilər",
         "cookie_label" to "Cookie başlığı (music.youtube.com saytından)",
         "copied_to_clipboard" to "Panoya kopyalandı",
         "cpu" to "CPU",
@@ -2414,6 +2423,7 @@ private fun strings_3(): Map<String, String> =
         "recognition_failed" to "Musiqi tanınmadı",
         "recognition_history" to "Tanıma tarixçəsi",
         "recognize" to "Musiqi tanı",
+        "recommended" to "Tövsiyə olunur",
         "redo" to "Təkrarla",
         "regenerate_pair_code" to "Cütləşmə Kodunu yenidən yaradın",
         "relay_server" to "Relay server (wss://)",
@@ -2506,7 +2516,6 @@ private fun strings_3(): Map<String, String> =
         "tooltip_output_device" to "Çıxış cihazı",
         "tooltip_queue_options" to "Növbə seçimləri",
         "tooltip_toggle_sidebar" to "Yan paneli aç/bağla",
-        "top_music_videos" to "Yüksək reytinqli kliplər",
         "top_results" to "Ən yaxşı nəticələr",
         "total_listening_time" to "Ümumi dinləmə vaxtı",
         "total_traffic" to "Ümumi trafik",
@@ -2516,7 +2525,6 @@ private fun strings_3(): Map<String, String> =
         "translation_ai_disclaimer" to "Tərcümələr süni intellekt alətləri ilə hazırlanıb və 100% dəqiq olmaya bilər. Səhv tapsanız, bildirin.",
         "tray_menu" to "Trey menyusu",
         "tray_menu_desc" to "Trey ikonuna sağ klikləyin: Play/Pause, Next, Previous, Open və Quit.",
-        "trending" to "Trenddə olanlar",
         "typography_preview" to "Şrift nümunəsi",
         "undo" to "Geri al",
         "unknown" to "Naməlum",
@@ -2703,6 +2711,7 @@ private fun strings_4(): Map<String, String> =
         "content_country" to "Рэгіён зместу",
         "content_language" to "Мова зместу",
         "continue" to "Працягнуць",
+        "contributors_section" to "Удзельнікі",
         "cookie_label" to "Загаловак cookie (з music.youtube.com)",
         "copied_to_clipboard" to "Скапіявана ў буфер абмену",
         "cpu" to "CPU",
@@ -3052,6 +3061,7 @@ private fun strings_4(): Map<String, String> =
         "recognition_failed" to "Не атрымалася распазнаць музыку",
         "recognition_history" to "Гісторыя распазнавання",
         "recognize" to "Распазнаць музыку",
+        "recommended" to "Рэкамендаванае",
         "redo" to "Паўтарыць",
         "regenerate_pair_code" to "Перастварыць код спалучэння",
         "relay_server" to "Рэлейны сервер (wss://)",
@@ -3341,6 +3351,7 @@ private fun strings_5(): Map<String, String> =
         "content_country" to "Регион на съдържанието",
         "content_language" to "Език на съдържанието",
         "continue" to "Продължи",
+        "contributors_section" to "Сътрудници",
         "cookie_label" to "Заглавка на бисквитката (от music.youtube.com)",
         "copied_to_clipboard" to "Копирано в клипборда",
         "cpu" to "CPU",
@@ -3454,6 +3465,7 @@ private fun strings_5(): Map<String, String> =
         "font_selection" to "Избор на шрифт",
         "font_system" to "Системен шрифт",
         "font_system_desc" to "Използва стандартния системен шрифт на устройството.",
+        "forgotten_favorites" to "Забравени любими",
         "general" to "Общи",
         "generate_code" to "Генериране на код",
         "generate_new_code" to "Генериране на нов код",
@@ -3690,6 +3702,7 @@ private fun strings_5(): Map<String, String> =
         "recognition_failed" to "Неуспешно разпознаване на музиката",
         "recognition_history" to "История на разпознаването",
         "recognize" to "Разпознай музиката",
+        "recommended" to "Препоръчано",
         "redo" to "Повтори",
         "regenerate_pair_code" to "Регенериране на кода за сдвояване",
         "relay_server" to "Ретранслиращ сървър (wss://)",
@@ -3731,6 +3744,7 @@ private fun strings_5(): Map<String, String> =
         "show_intro_on_startup" to "Показване на интрото при стартиране",
         "shuffle" to "Разбъркай",
         "shuffle_all" to "Разбъркване на всичко",
+        "similar_to" to "Подобно на",
         "slider_slim" to "Тънък",
         "slider_squiggly" to "Вълнообразен",
         "slider_style" to "Стил на плъзгача",
@@ -3979,6 +3993,7 @@ private fun strings_6(): Map<String, String> =
         "content_country" to "কন্টেন্ট অঞ্চল",
         "content_language" to "কন্টেন্টের ভাষা",
         "continue" to "চালিয়ে যান",
+        "contributors_section" to "অবদানকারী",
         "cookie_label" to "কুকি হেডার (music.youtube.com থেকে)",
         "copied_to_clipboard" to "ক্লিপবোর্ডে কপি হয়েছে",
         "cpu" to "CPU",
@@ -4092,6 +4107,7 @@ private fun strings_6(): Map<String, String> =
         "font_selection" to "ফন্ট নির্বাচন",
         "font_system" to "সিস্টেম ফন্ট",
         "font_system_desc" to "আপনার ডিভাইসের ডিফল্ট সিস্টেম ফন্ট ব্যবহার করে।",
+        "forgotten_favorites" to "ভুলে যাওয়া প্রিয়গুলি",
         "general" to "সাধারণ",
         "generate_code" to "কোড তৈরি করুন",
         "generate_new_code" to "নতুন কোড তৈরি করুন",
@@ -4328,6 +4344,7 @@ private fun strings_6(): Map<String, String> =
         "recognition_failed" to "গান চিনতে ব্যর্থ হয়েছে",
         "recognition_history" to "শনাক্তকরণ ইতিহাস",
         "recognize" to "গান চিনুন",
+        "recommended" to "প্রস্তাবিত",
         "redo" to "পুনরায় করুন",
         "regenerate_pair_code" to "পেয়ারিং কোড পুনরায় তৈরি করুন",
         "relay_server" to "রিলে সার্ভার (wss://)",
@@ -4369,6 +4386,7 @@ private fun strings_6(): Map<String, String> =
         "show_intro_on_startup" to "স্টার্টআপে ইন্ট্রো দেখান",
         "shuffle" to "শাফেল",
         "shuffle_all" to "সব শাফল",
+        "similar_to" to "সদৃশ",
         "slider_slim" to "স্লিম",
         "slider_squiggly" to "তরঙ্গায়িত",
         "slider_style" to "স্লাইডার স্টাইল",
@@ -4617,6 +4635,7 @@ private fun strings_7(): Map<String, String> =
         "content_country" to "Regija sadržaja",
         "content_language" to "Jezik sadržaja",
         "continue" to "Nastavi",
+        "contributors_section" to "Saradnici",
         "cookie_label" to "Cookie zaglavlje (sa music.youtube.com)",
         "copied_to_clipboard" to "Kopirano u klipbord",
         "cpu" to "CPU",
@@ -4730,6 +4749,7 @@ private fun strings_7(): Map<String, String> =
         "font_selection" to "Odabir fonta",
         "font_system" to "Sistemski font",
         "font_system_desc" to "Koristi podrazumijevani sistemski font uređaja.",
+        "forgotten_favorites" to "Zaboravljeni favoriti",
         "general" to "Generalno",
         "generate_code" to "Generiši kôd",
         "generate_new_code" to "Generiši novi kod",
@@ -4966,6 +4986,7 @@ private fun strings_7(): Map<String, String> =
         "recognition_failed" to "Prepoznavanje muzike nije uspjelo",
         "recognition_history" to "Historija prepoznavanja",
         "recognize" to "Prepoznaj muziku",
+        "recommended" to "Preporučeno",
         "redo" to "Ponovi",
         "regenerate_pair_code" to "Ponovo generiši kod za uparivanje",
         "relay_server" to "Relejni server (wss://)",
@@ -5007,6 +5028,7 @@ private fun strings_7(): Map<String, String> =
         "show_intro_on_startup" to "Prikaži uvod pri pokretanju",
         "shuffle" to "Izmješaj",
         "shuffle_all" to "Promiješaj sve",
+        "similar_to" to "Slično ko",
         "slider_slim" to "Tanko",
         "slider_squiggly" to "Ispupčen",
         "slider_style" to "Stil klizača",
@@ -5255,6 +5277,7 @@ private fun strings_8(): Map<String, String> =
         "content_country" to "Regió del contingut",
         "content_language" to "Idioma del contingut",
         "continue" to "Continua",
+        "contributors_section" to "Col·laboradors",
         "cookie_label" to "Capçalera de cookie (de music.youtube.com)",
         "copied_to_clipboard" to "Copiat al porta-retalls",
         "cpu" to "CPU",
@@ -5368,6 +5391,7 @@ private fun strings_8(): Map<String, String> =
         "font_selection" to "Selecció de tipografia",
         "font_system" to "Tipografia del sistema",
         "font_system_desc" to "Utilitza la tipografia per defecte del sistema.",
+        "forgotten_favorites" to "Preferits oblidats",
         "general" to "General",
         "generate_code" to "Genera un codi",
         "generate_new_code" to "Genera un codi nou",
@@ -5604,6 +5628,7 @@ private fun strings_8(): Map<String, String> =
         "recognition_failed" to "No s'ha pogut reconèixer la música",
         "recognition_history" to "Historial de reconeixement",
         "recognize" to "Reconeix la música",
+        "recommended" to "Recomanat",
         "redo" to "Refés",
         "regenerate_pair_code" to "Torna a generar el codi d'aparellament",
         "relay_server" to "Servidor de retransmissió (wss://)",
@@ -5645,6 +5670,7 @@ private fun strings_8(): Map<String, String> =
         "show_intro_on_startup" to "Mostra la intro en iniciar",
         "shuffle" to "Mescla",
         "shuffle_all" to "Reprodueix tot aleatòriament",
+        "similar_to" to "Similar a",
         "slider_slim" to "Prim",
         "slider_squiggly" to "Sinuós",
         "slider_style" to "Estil del control lliscant",
@@ -5893,6 +5919,7 @@ private fun strings_9(): Map<String, String> =
         "content_country" to "Oblast obsahu",
         "content_language" to "Jazyk obsahu",
         "continue" to "Pokračovat",
+        "contributors_section" to "Přispěvatelé",
         "cookie_label" to "Hlavička cookie (z music.youtube.com)",
         "copied_to_clipboard" to "Zkopírováno do schránky",
         "cpu" to "CPU",
@@ -6006,6 +6033,7 @@ private fun strings_9(): Map<String, String> =
         "font_selection" to "Výběr písma",
         "font_system" to "Systémové písmo",
         "font_system_desc" to "Používá výchozí systémové písmo zařízení.",
+        "forgotten_favorites" to "Zapomenuté oblíbené",
         "general" to "Obecné",
         "generate_code" to "Vygenerovat kód",
         "generate_new_code" to "Vygenerovat nový kód",
@@ -6242,6 +6270,7 @@ private fun strings_9(): Map<String, String> =
         "recognition_failed" to "Nepodařilo se rozpoznat hudbu",
         "recognition_history" to "Historie rozpoznávání",
         "recognize" to "Rozpoznat hudbu",
+        "recommended" to "Doporučeno",
         "redo" to "Znovu",
         "regenerate_pair_code" to "Znovu vygenerovat párovací kód",
         "relay_server" to "Přenosový server (wss://)",
@@ -6283,6 +6312,7 @@ private fun strings_9(): Map<String, String> =
         "show_intro_on_startup" to "Zobrazit intro při spuštění",
         "shuffle" to "Náhodně",
         "shuffle_all" to "Náhodně vše",
+        "similar_to" to "Podobné",
         "slider_slim" to "Tenký",
         "slider_squiggly" to "Zvlněný",
         "slider_style" to "Styl posuvníku",
@@ -6531,6 +6561,7 @@ private fun strings_10(): Map<String, String> =
         "content_country" to "Inhaltsregion",
         "content_language" to "Inhaltssprache",
         "continue" to "Weiter",
+        "contributors_section" to "Mitwirkende",
         "cookie_label" to "Cookie-Header (von music.youtube.com)",
         "copied_to_clipboard" to "In die Zwischenablage kopiert",
         "cpu" to "CPU",
@@ -6644,6 +6675,7 @@ private fun strings_10(): Map<String, String> =
         "font_selection" to "Schriftauswahl",
         "font_system" to "Systemschrift",
         "font_system_desc" to "Verwendet die Standardschrift des Systems.",
+        "forgotten_favorites" to "Vergessene Favoriten",
         "general" to "Allgemein",
         "generate_code" to "Code generieren",
         "generate_new_code" to "Neuen Code generieren",
@@ -6880,6 +6912,7 @@ private fun strings_10(): Map<String, String> =
         "recognition_failed" to "Musik konnte nicht erkannt werden",
         "recognition_history" to "Erkennungsverlauf",
         "recognize" to "Musik erkennen",
+        "recommended" to "Empfohlen",
         "redo" to "Wiederholen",
         "regenerate_pair_code" to "Pairing-Code neu generieren",
         "relay_server" to "Relay-Server (wss://)",
@@ -6921,6 +6954,7 @@ private fun strings_10(): Map<String, String> =
         "show_intro_on_startup" to "Intro beim Start anzeigen",
         "shuffle" to "Shuffle",
         "shuffle_all" to "Alles mischen",
+        "similar_to" to "Ähnlich wie",
         "slider_slim" to "Schlank",
         "slider_squiggly" to "Gewellt",
         "slider_style" to "Schieberegler-Stil",
@@ -7169,6 +7203,7 @@ private fun strings_11(): Map<String, String> =
         "content_country" to "Περιοχή περιεχομένου",
         "content_language" to "Γλώσσα περιεχομένου",
         "continue" to "Συνέχεια",
+        "contributors_section" to "Συντελεστές",
         "cookie_label" to "Κεφαλίδα cookie (από το music.youtube.com)",
         "copied_to_clipboard" to "Αντιγράφηκε στο πρόχειρο",
         "cpu" to "CPU",
@@ -7282,6 +7317,7 @@ private fun strings_11(): Map<String, String> =
         "font_selection" to "Επιλογή γραμματοσειράς",
         "font_system" to "Γραμματοσειρά συστήματος",
         "font_system_desc" to "Χρησιμοποιεί την προεπιλεγμένη γραμματοσειρά συστήματος.",
+        "forgotten_favorites" to "Ξεχασμένα αγαπημένα",
         "general" to "Γενικά",
         "generate_code" to "Δημιουργία κωδικού",
         "generate_new_code" to "Δημιουργία νέου κωδικού",
@@ -7518,6 +7554,7 @@ private fun strings_11(): Map<String, String> =
         "recognition_failed" to "Αποτυχία αναγνώρισης μουσικής",
         "recognition_history" to "Ιστορικό αναγνώρισης",
         "recognize" to "Αναγνώριση μουσικής",
+        "recommended" to "Προτεινόμενα",
         "redo" to "Επανάληψη",
         "regenerate_pair_code" to "Εκ νέου δημιουργία κωδικού σύζευξης",
         "relay_server" to "Διακομιστής αναμετάδοσης (wss://)",
@@ -7559,6 +7596,7 @@ private fun strings_11(): Map<String, String> =
         "show_intro_on_startup" to "Εμφάνιση εισαγωγής κατά την εκκίνηση",
         "shuffle" to "Ανακάτεμα",
         "shuffle_all" to "Τυχαία αναπαραγωγή όλων",
+        "similar_to" to "Παρόμοια με",
         "slider_slim" to "Λεπτό",
         "slider_squiggly" to "Κυματιστό 1",
         "slider_style" to "Στυλ ρυθμιστικού",
@@ -7807,6 +7845,7 @@ private fun strings_12(): Map<String, String> =
         "content_country" to "Región del contenido",
         "content_language" to "Idioma del contenido",
         "continue" to "Continuar",
+        "contributors_section" to "Colaboradores",
         "cookie_label" to "Cabecera de cookie (de music.youtube.com)",
         "copied_to_clipboard" to "Copiado al portapapeles",
         "cpu" to "CPU",
@@ -7920,6 +7959,7 @@ private fun strings_12(): Map<String, String> =
         "font_selection" to "Selección de tipografía",
         "font_system" to "Tipografía del sistema",
         "font_system_desc" to "Usa la tipografía predeterminada del sistema.",
+        "forgotten_favorites" to "Favoritos olvidados",
         "general" to "General",
         "generate_code" to "Generar código",
         "generate_new_code" to "Generar código nuevo",
@@ -8156,6 +8196,7 @@ private fun strings_12(): Map<String, String> =
         "recognition_failed" to "No se pudo reconocer la música",
         "recognition_history" to "Historial de reconocimiento",
         "recognize" to "Reconocer música",
+        "recommended" to "Recomendado",
         "redo" to "Rehacer",
         "regenerate_pair_code" to "Volver a generar el código de emparejamiento",
         "relay_server" to "Servidor de retransmisión (wss://)",
@@ -8197,6 +8238,7 @@ private fun strings_12(): Map<String, String> =
         "show_intro_on_startup" to "Mostrar intro al iniciar",
         "shuffle" to "Aleatorio",
         "shuffle_all" to "Reproducir todo aleatorio",
+        "similar_to" to "Similares a",
         "slider_slim" to "Fino",
         "slider_squiggly" to "Serpenteado",
         "slider_style" to "Estilo del control deslizante",
@@ -8445,6 +8487,7 @@ private fun strings_13(): Map<String, String> =
         "content_country" to "Sisu regioon",
         "content_language" to "Sisu keel",
         "continue" to "Jätka",
+        "contributors_section" to "Kaasautorid",
         "cookie_label" to "Küpsise päis (aadressilt music.youtube.com)",
         "copied_to_clipboard" to "Kopeeritud lõikelauale",
         "cpu" to "CPU",
@@ -8558,6 +8601,7 @@ private fun strings_13(): Map<String, String> =
         "font_selection" to "Fondi valik",
         "font_system" to "Süsteemi font",
         "font_system_desc" to "Kasutab seadme vaikimisi süsteemi fonti.",
+        "forgotten_favorites" to "Unustatud lemmikud",
         "general" to "Üldised",
         "generate_code" to "Loo kood",
         "generate_new_code" to "Loo uus kood",
@@ -8794,6 +8838,7 @@ private fun strings_13(): Map<String, String> =
         "recognition_failed" to "Muusika tuvastamine ebaõnnestus",
         "recognition_history" to "Tuvastamise ajalugu",
         "recognize" to "Tuvasta muusika",
+        "recommended" to "Soovitatav",
         "redo" to "Tee uuesti",
         "regenerate_pair_code" to "Genereeri sidumiskood uuesti",
         "relay_server" to "Vaheserver (wss://)",
@@ -8835,6 +8880,7 @@ private fun strings_13(): Map<String, String> =
         "show_intro_on_startup" to "Näita käivitamisel introt",
         "shuffle" to "Sega lood",
         "shuffle_all" to "Mängi kõike juhuslikult",
+        "similar_to" to "Sarnane nagu",
         "slider_slim" to "Õhuke",
         "slider_squiggly" to "Looklev",
         "slider_style" to "Liuguri stiil",
@@ -9083,6 +9129,7 @@ private fun strings_14(): Map<String, String> =
         "content_country" to "Edukiaren eskualdea",
         "content_language" to "Edukiaren hizkuntza",
         "continue" to "Jarraitu",
+        "contributors_section" to "Laguntzaileak",
         "cookie_label" to "Cookie goiburua (music.youtube.com-etik)",
         "copied_to_clipboard" to "Arbeitera kopiatuta",
         "cpu" to "CPU",
@@ -9432,6 +9479,7 @@ private fun strings_14(): Map<String, String> =
         "recognition_failed" to "Ezin izan da musika ezagutu",
         "recognition_history" to "Ezagutza-historia",
         "recognize" to "Ezagutu musika",
+        "recommended" to "Gomendatua",
         "redo" to "Berregin",
         "regenerate_pair_code" to "Berrsortu parekatzeko kodea",
         "relay_server" to "Errelebo-zerbitzaria (wss://)",
@@ -9578,6 +9626,11 @@ private fun strings_14(): Map<String, String> =
 
 private fun strings_15(): Map<String, String> =
     mapOf(
+        "recommended" to "پیشنهادی",
+    )
+
+private fun strings_16(): Map<String, String> =
+    mapOf(
         "about" to "Tietoa",
         "accent_amber" to "Meripihka",
         "accent_blue" to "Sininen",
@@ -9721,6 +9774,7 @@ private fun strings_15(): Map<String, String> =
         "content_country" to "Sisällön alue",
         "content_language" to "Sisällön kieli",
         "continue" to "Jatka",
+        "contributors_section" to "Avustajat",
         "cookie_label" to "Evästeotsikko (music.youtube.com-sivustolta)",
         "copied_to_clipboard" to "Kopioitu leikepöydälle",
         "cpu" to "CPU",
@@ -9834,6 +9888,7 @@ private fun strings_15(): Map<String, String> =
         "font_selection" to "Fontin valinta",
         "font_system" to "Järjestelmän fontti",
         "font_system_desc" to "Käyttää laitteen oletusjärjestelmän fonttia.",
+        "forgotten_favorites" to "Unohtuneet suosikit",
         "general" to "Yleinen",
         "generate_code" to "Luo koodi",
         "generate_new_code" to "Luo uusi koodi",
@@ -10070,6 +10125,7 @@ private fun strings_15(): Map<String, String> =
         "recognition_failed" to "Musiikin tunnistaminen epäonnistui",
         "recognition_history" to "Tunnistushistoria",
         "recognize" to "Tunnista musiikki",
+        "recommended" to "Suositukset",
         "redo" to "Tee uudelleen",
         "regenerate_pair_code" to "Luo pariliitoskoodi uudelleen",
         "relay_server" to "Välityspalvelin (wss://)",
@@ -10111,6 +10167,7 @@ private fun strings_15(): Map<String, String> =
         "show_intro_on_startup" to "Näytä intro käynnistyksessä",
         "shuffle" to "Sekoita",
         "shuffle_all" to "Toista kaikki satunnaisesti",
+        "similar_to" to "Samanlaisia kuin",
         "slider_slim" to "Ohut",
         "slider_squiggly" to "Aaltoileva 1",
         "slider_style" to "Liukusäätimen tyyli",
@@ -10214,7 +10271,7 @@ private fun strings_15(): Map<String, String> =
         "your_artists_feed" to "Artistisi",
     )
 
-private fun strings_16(): Map<String, String> =
+private fun strings_17(): Map<String, String> =
     mapOf(
         "about" to "Tungkol",
         "accent_amber" to "Amber",
@@ -10359,6 +10416,7 @@ private fun strings_16(): Map<String, String> =
         "content_country" to "Rehiyon ng nilalaman",
         "content_language" to "Wika ng nilalaman",
         "continue" to "Magpatuloy",
+        "contributors_section" to "Mga nag-ambag",
         "cookie_label" to "Cookie header (mula sa music.youtube.com)",
         "copied_to_clipboard" to "Na-kopya sa clipboard",
         "cpu" to "CPU",
@@ -10708,6 +10766,7 @@ private fun strings_16(): Map<String, String> =
         "recognition_failed" to "Nabigong kilalanin ang musika",
         "recognition_history" to "Kasaysayan ng pagkilala",
         "recognize" to "Kilalanin ang musika",
+        "recommended" to "Inirerekomenda",
         "redo" to "I-redo",
         "regenerate_pair_code" to "Bumuo muli ng pairing code",
         "relay_server" to "Relay server (wss://)",
@@ -10852,7 +10911,7 @@ private fun strings_16(): Map<String, String> =
         "your_artists_feed" to "Ang iyong mga artist",
     )
 
-private fun strings_17(): Map<String, String> =
+private fun strings_18(): Map<String, String> =
     mapOf(
         "about" to "À propos",
         "accent_amber" to "Ambre",
@@ -10997,6 +11056,7 @@ private fun strings_17(): Map<String, String> =
         "content_country" to "Région du contenu",
         "content_language" to "Langue du contenu",
         "continue" to "Continuer",
+        "contributors_section" to "Contributeurs",
         "cookie_label" to "En-tête de cookie (de music.youtube.com)",
         "copied_to_clipboard" to "Copié dans le presse-papiers",
         "cpu" to "CPU",
@@ -11110,6 +11170,7 @@ private fun strings_17(): Map<String, String> =
         "font_selection" to "Sélection de la police",
         "font_system" to "Police du système",
         "font_system_desc" to "Utilise la police système par défaut de l'appareil.",
+        "forgotten_favorites" to "Favoris oubliés",
         "general" to "Général",
         "generate_code" to "Générer un code",
         "generate_new_code" to "Générer un nouveau code",
@@ -11346,6 +11407,7 @@ private fun strings_17(): Map<String, String> =
         "recognition_failed" to "Impossible de reconnaître la musique",
         "recognition_history" to "Historique de reconnaissance",
         "recognize" to "Reconnaître la musique",
+        "recommended" to "Recommandé",
         "redo" to "Rétablir",
         "regenerate_pair_code" to "Régénérer le code d'appairage",
         "relay_server" to "Serveur relais (wss://)",
@@ -11387,6 +11449,7 @@ private fun strings_17(): Map<String, String> =
         "show_intro_on_startup" to "Afficher l'intro au démarrage",
         "shuffle" to "Aléatoire",
         "shuffle_all" to "Tout lire en aléatoire",
+        "similar_to" to "Similaire à",
         "slider_slim" to "Fin",
         "slider_squiggly" to "Ondulé 1",
         "slider_style" to "Style du curseur",
@@ -11490,7 +11553,7 @@ private fun strings_17(): Map<String, String> =
         "your_artists_feed" to "Vos artistes",
     )
 
-private fun strings_18(): Map<String, String> =
+private fun strings_19(): Map<String, String> =
     mapOf(
         "about" to "परिचय",
         "accent_amber" to "अंबर",
@@ -11635,6 +11698,7 @@ private fun strings_18(): Map<String, String> =
         "content_country" to "सामग्री क्षेत्र",
         "content_language" to "सामग्री भाषा",
         "continue" to "जारी रखें",
+        "contributors_section" to "योगदानकर्ता",
         "cookie_label" to "कुकी हेडर (music.youtube.com से)",
         "copied_to_clipboard" to "क्लिपबोर्ड पर कॉपी हो गया",
         "cpu" to "CPU",
@@ -11748,6 +11812,7 @@ private fun strings_18(): Map<String, String> =
         "font_selection" to "फ़ॉन्ट चयन",
         "font_system" to "सिस्टम फ़ॉन्ट",
         "font_system_desc" to "आपके डिवाइस का डिफ़ॉल्ट सिस्टम फ़ॉन्ट उपयोग करता है।",
+        "forgotten_favorites" to "भूले-बिछड़े पसंदीदा गाने",
         "general" to "सामान्य",
         "generate_code" to "कोड बनाएं",
         "generate_new_code" to "नया कोड बनाएं",
@@ -11984,6 +12049,7 @@ private fun strings_18(): Map<String, String> =
         "recognition_failed" to "संगीत पहचाना नहीं जा सका",
         "recognition_history" to "पहचान इतिहास",
         "recognize" to "संगीत पहचानें",
+        "recommended" to "अनुशंसित",
         "redo" to "फिर से करें",
         "regenerate_pair_code" to "पेयरिंग कोड फिर से बनाएं",
         "relay_server" to "रिले सर्वर (wss://)",
@@ -12025,6 +12091,7 @@ private fun strings_18(): Map<String, String> =
         "show_intro_on_startup" to "स्टार्टअप पर इंट्रो दिखाएँ",
         "shuffle" to "फेंटें",
         "shuffle_all" to "सभी शफ़ल करें",
+        "similar_to" to "इसके जैसे",
         "slider_slim" to "पतला",
         "slider_squiggly" to "लहरदार 1",
         "slider_style" to "स्लाइडर शैली",
@@ -12128,7 +12195,7 @@ private fun strings_18(): Map<String, String> =
         "your_artists_feed" to "आपके कलाकार",
     )
 
-private fun strings_19(): Map<String, String> =
+private fun strings_20(): Map<String, String> =
     mapOf(
         "about" to "Informacije",
         "accent_amber" to "Ćilibarska",
@@ -12273,6 +12340,7 @@ private fun strings_19(): Map<String, String> =
         "content_country" to "Regija sadržaja",
         "content_language" to "Jezik sadržaja",
         "continue" to "Nastavi",
+        "contributors_section" to "Suradnici",
         "cookie_label" to "Cookie zaglavlje (s music.youtube.com)",
         "copied_to_clipboard" to "Kopirano u međuspremnik",
         "cpu" to "CPU",
@@ -12386,6 +12454,7 @@ private fun strings_19(): Map<String, String> =
         "font_selection" to "Odabir fonta",
         "font_system" to "Sistemski font",
         "font_system_desc" to "Koristi zadani sistemski font uređaja.",
+        "forgotten_favorites" to "Zaboravljeni favoriti",
         "general" to "Općenito",
         "generate_code" to "Generiraj kôd",
         "generate_new_code" to "Generiraj novi kod",
@@ -12622,6 +12691,7 @@ private fun strings_19(): Map<String, String> =
         "recognition_failed" to "Prepoznavanje glazbe nije uspjelo",
         "recognition_history" to "Povijest prepoznavanja",
         "recognize" to "Prepoznaj glazbu",
+        "recommended" to "Preporučeno",
         "redo" to "Ponovi",
         "regenerate_pair_code" to "Ponovno generiraj kod za uparivanje",
         "relay_server" to "Relejni poslužitelj (wss://)",
@@ -12663,6 +12733,7 @@ private fun strings_19(): Map<String, String> =
         "show_intro_on_startup" to "Prikaži uvod pri pokretanju",
         "shuffle" to "Promiješaj",
         "shuffle_all" to "Promiješaj sve",
+        "similar_to" to "Slično kao",
         "slider_slim" to "Tanko",
         "slider_squiggly" to "Valovito",
         "slider_style" to "Stil klizača",
@@ -12766,7 +12837,7 @@ private fun strings_19(): Map<String, String> =
         "your_artists_feed" to "Vaši izvođači",
     )
 
-private fun strings_20(): Map<String, String> =
+private fun strings_21(): Map<String, String> =
     mapOf(
         "about" to "Névjegy",
         "accent_amber" to "Borostyán",
@@ -12911,6 +12982,7 @@ private fun strings_20(): Map<String, String> =
         "content_country" to "Tartalom régiója",
         "content_language" to "Tartalom nyelve",
         "continue" to "Folytatás",
+        "contributors_section" to "Közreműködők",
         "cookie_label" to "Cookie-fejléc (a music.youtube.com oldalról)",
         "copied_to_clipboard" to "Vágólapra másolva",
         "cpu" to "CPU",
@@ -13024,6 +13096,7 @@ private fun strings_20(): Map<String, String> =
         "font_selection" to "Betűtípus kiválasztása",
         "font_system" to "Rendszerbetűtípus",
         "font_system_desc" to "Az eszköz alapértelmezett rendszerbetűtípusát használja.",
+        "forgotten_favorites" to "Elfelejtett kedvencek",
         "general" to "Általános",
         "generate_code" to "Kód generálása",
         "generate_new_code" to "Új kód létrehozása",
@@ -13260,6 +13333,7 @@ private fun strings_20(): Map<String, String> =
         "recognition_failed" to "Nem sikerült felismerni a zenét",
         "recognition_history" to "Felismerési előzmények",
         "recognize" to "Zene felismerése",
+        "recommended" to "Ajánlott",
         "redo" to "Mégis",
         "regenerate_pair_code" to "Párosítási kód újragenerálása",
         "relay_server" to "Relé szerver (wss://)",
@@ -13301,6 +13375,7 @@ private fun strings_20(): Map<String, String> =
         "show_intro_on_startup" to "Intro megjelenítése indításkor",
         "shuffle" to "Keverés",
         "shuffle_all" to "Összes keverése",
+        "similar_to" to "Hasonló, mint",
         "slider_slim" to "Vékony",
         "slider_squiggly" to "Hullámos 1",
         "slider_style" to "Csúszka stílus",
@@ -13404,7 +13479,7 @@ private fun strings_20(): Map<String, String> =
         "your_artists_feed" to "A te előadóid",
     )
 
-private fun strings_21(): Map<String, String> =
+private fun strings_22(): Map<String, String> =
     mapOf(
         "about" to "Tentang",
         "accent_amber" to "Kuning tua",
@@ -13549,6 +13624,7 @@ private fun strings_21(): Map<String, String> =
         "content_country" to "Wilayah konten",
         "content_language" to "Bahasa konten",
         "continue" to "Lanjutkan",
+        "contributors_section" to "Kontributor",
         "cookie_label" to "Header cookie (dari music.youtube.com)",
         "copied_to_clipboard" to "Disalin ke clipboard",
         "cpu" to "CPU",
@@ -13662,6 +13738,7 @@ private fun strings_21(): Map<String, String> =
         "font_selection" to "Pilihan font",
         "font_system" to "Font sistem",
         "font_system_desc" to "Menggunakan font sistem bawaan perangkat.",
+        "forgotten_favorites" to "Favorit yang terlupakan",
         "general" to "Umum",
         "generate_code" to "Buat kode",
         "generate_new_code" to "Buat kode baru",
@@ -13939,6 +14016,7 @@ private fun strings_21(): Map<String, String> =
         "show_intro_on_startup" to "Tampilkan intro saat memulai",
         "shuffle" to "Acak",
         "shuffle_all" to "Acak semua",
+        "similar_to" to "Serupa dengan",
         "slider_slim" to "Tipis",
         "slider_squiggly" to "Berlekuk",
         "slider_style" to "Gaya penggeser",
@@ -14042,7 +14120,12 @@ private fun strings_21(): Map<String, String> =
         "your_artists_feed" to "Artis Anda",
     )
 
-private fun strings_22(): Map<String, String> =
+private fun strings_23(): Map<String, String> =
+    mapOf(
+        "recommended" to "Direkomendasikan",
+    )
+
+private fun strings_24(): Map<String, String> =
     mapOf(
         "about" to "Informazioni",
         "accent_amber" to "Ambra",
@@ -14187,6 +14270,7 @@ private fun strings_22(): Map<String, String> =
         "content_country" to "Area dei contenuti",
         "content_language" to "Lingua dei contenuti",
         "continue" to "Continua",
+        "contributors_section" to "Collaboratori",
         "cookie_label" to "Intestazione cookie (da music.youtube.com)",
         "copied_to_clipboard" to "Copiato negli appunti",
         "cpu" to "CPU",
@@ -14300,6 +14384,7 @@ private fun strings_22(): Map<String, String> =
         "font_selection" to "Selezione carattere",
         "font_system" to "Carattere di sistema",
         "font_system_desc" to "Usa il carattere di sistema predefinito del dispositivo.",
+        "forgotten_favorites" to "Preferiti dimenticati",
         "general" to "Generale",
         "generate_code" to "Genera codice",
         "generate_new_code" to "Genera nuovo codice",
@@ -14536,6 +14621,7 @@ private fun strings_22(): Map<String, String> =
         "recognition_failed" to "Impossibile riconoscere la musica",
         "recognition_history" to "Cronologia riconoscimenti",
         "recognize" to "Riconosci la musica",
+        "recommended" to "Consigliati",
         "redo" to "Ripeti",
         "regenerate_pair_code" to "Rigenera il codice di abbinamento",
         "relay_server" to "Server di relay (wss://)",
@@ -14577,6 +14663,7 @@ private fun strings_22(): Map<String, String> =
         "show_intro_on_startup" to "Mostra l'intro all'avvio",
         "shuffle" to "Casuale",
         "shuffle_all" to "Riproduci tutto in ordine casuale",
+        "similar_to" to "Simile a",
         "slider_slim" to "Sottile",
         "slider_squiggly" to "Ondulato 1",
         "slider_style" to "Stile del cursore",
@@ -14680,7 +14767,12 @@ private fun strings_22(): Map<String, String> =
         "your_artists_feed" to "I tuoi artisti",
     )
 
-private fun strings_23(): Map<String, String> =
+private fun strings_25(): Map<String, String> =
+    mapOf(
+        "recommended" to "מומלץ",
+    )
+
+private fun strings_26(): Map<String, String> =
     mapOf(
         "about" to "情報",
         "accent_amber" to "琥珀",
@@ -14825,6 +14917,7 @@ private fun strings_23(): Map<String, String> =
         "content_country" to "コンテンツ地域",
         "content_language" to "コンテンツ言語",
         "continue" to "続ける",
+        "contributors_section" to "コントリビューター",
         "cookie_label" to "Cookieヘッダー（music.youtube.comから）",
         "copied_to_clipboard" to "クリップボードにコピーしました",
         "cpu" to "CPU",
@@ -14938,6 +15031,7 @@ private fun strings_23(): Map<String, String> =
         "font_selection" to "フォントの選択",
         "font_system" to "システムフォント",
         "font_system_desc" to "端末のデフォルトのシステムフォントを使用します。",
+        "forgotten_favorites" to "最近聞いていないお気に入り",
         "general" to "一般",
         "generate_code" to "コードを生成",
         "generate_new_code" to "新しいコードを生成",
@@ -15174,6 +15268,7 @@ private fun strings_23(): Map<String, String> =
         "recognition_failed" to "音楽を認識できませんでした",
         "recognition_history" to "認識履歴",
         "recognize" to "音楽を認識",
+        "recommended" to "おすすめ",
         "redo" to "やり直す",
         "regenerate_pair_code" to "ペアリングコードを再生成",
         "relay_server" to "リレーサーバー (wss://)",
@@ -15215,6 +15310,7 @@ private fun strings_23(): Map<String, String> =
         "show_intro_on_startup" to "起動時にイントロを表示",
         "shuffle" to "シャッフル",
         "shuffle_all" to "すべてシャッフル",
+        "similar_to" to "似ているかも",
         "slider_slim" to "スリム",
         "slider_squiggly" to "クネクネ",
         "slider_style" to "スライダースタイル",
@@ -15318,7 +15414,7 @@ private fun strings_23(): Map<String, String> =
         "your_artists_feed" to "登録アーティスト",
     )
 
-private fun strings_24(): Map<String, String> =
+private fun strings_27(): Map<String, String> =
     mapOf(
         "about" to "អំពី",
         "accent_amber" to "ពណ៌លឿងខ្ចី",
@@ -15463,6 +15559,7 @@ private fun strings_24(): Map<String, String> =
         "content_country" to "តំបន់ខ្លឹមសារ",
         "content_language" to "ភាសាខ្លឹមសារ",
         "continue" to "បន្ត",
+        "contributors_section" to "អ្នករួមចំណែក",
         "cookie_label" to "បឋមកថា cookie (ពី music.youtube.com)",
         "copied_to_clipboard" to "បានចម្លងទៅក្តារតម្បៀតខ្ទាស់",
         "cpu" to "CPU",
@@ -15812,6 +15909,7 @@ private fun strings_24(): Map<String, String> =
         "recognition_failed" to "មិនអាចស្គាល់តន្ត្រីបានទេ",
         "recognition_history" to "ប្រវត្តិនៃការស្គាល់",
         "recognize" to "ស្គាល់តន្ត្រី",
+        "recommended" to "អនុសាសន៍",
         "redo" to "ធ្វើឡើងវិញ",
         "regenerate_pair_code" to "បង្កើតលេខកូដផ្គូផ្គងម្ដងទៀត",
         "relay_server" to "ម៉ាស៊ីនមេបញ្ជូនបន្ត (wss://)",
@@ -15956,7 +16054,7 @@ private fun strings_24(): Map<String, String> =
         "your_artists_feed" to "សិល្បកររបស់អ្នក",
     )
 
-private fun strings_25(): Map<String, String> =
+private fun strings_28(): Map<String, String> =
     mapOf(
         "about" to "정보",
         "accent_amber" to "앰버",
@@ -16101,6 +16199,7 @@ private fun strings_25(): Map<String, String> =
         "content_country" to "콘텐츠 지역",
         "content_language" to "콘텐츠 언어",
         "continue" to "계속",
+        "contributors_section" to "기여자",
         "cookie_label" to "쿠키 헤더(music.youtube.com에서)",
         "copied_to_clipboard" to "클립보드에 복사됨",
         "cpu" to "CPU",
@@ -16214,6 +16313,7 @@ private fun strings_25(): Map<String, String> =
         "font_selection" to "글꼴 선택",
         "font_system" to "시스템 글꼴",
         "font_system_desc" to "기기의 기본 시스템 글꼴을 사용합니다.",
+        "forgotten_favorites" to "잊고 있던 좋은 음악",
         "general" to "일반",
         "generate_code" to "코드 생성",
         "generate_new_code" to "새 코드 생성",
@@ -16450,6 +16550,7 @@ private fun strings_25(): Map<String, String> =
         "recognition_failed" to "음악을 인식하지 못했습니다",
         "recognition_history" to "인식 기록",
         "recognize" to "음악 인식",
+        "recommended" to "추천",
         "redo" to "다시 실행",
         "regenerate_pair_code" to "페어링 코드 다시 생성",
         "relay_server" to "릴레이 서버 (wss://)",
@@ -16491,6 +16592,7 @@ private fun strings_25(): Map<String, String> =
         "show_intro_on_startup" to "시작 시 인트로 표시",
         "shuffle" to "셔플",
         "shuffle_all" to "전체 셔플",
+        "similar_to" to "아래 아티스트와 유사한 음악 추천",
         "slider_slim" to "슬림",
         "slider_squiggly" to "구불구불",
         "slider_style" to "슬라이더 스타일",
@@ -16594,7 +16696,7 @@ private fun strings_25(): Map<String, String> =
         "your_artists_feed" to "내 아티스트",
     )
 
-private fun strings_26(): Map<String, String> =
+private fun strings_29(): Map<String, String> =
     mapOf(
         "about" to "Apie",
         "accent_amber" to "Gintarinė",
@@ -16739,6 +16841,7 @@ private fun strings_26(): Map<String, String> =
         "content_country" to "Turinio regionas",
         "content_language" to "Turinio kalba",
         "continue" to "Tęsti",
+        "contributors_section" to "Bendradarbiai",
         "cookie_label" to "Slapuko antraštė (iš music.youtube.com)",
         "copied_to_clipboard" to "Nukopijuota į iškarpinę",
         "cpu" to "CPU",
@@ -17088,6 +17191,7 @@ private fun strings_26(): Map<String, String> =
         "recognition_failed" to "Nepavyko atpažinti muzikos",
         "recognition_history" to "Atpažinimo istorija",
         "recognize" to "Atpažinti muziką",
+        "recommended" to "Rekomenduojama",
         "redo" to "Grąžinti",
         "regenerate_pair_code" to "Iš naujo sugeneruoti susiejimo kodą",
         "relay_server" to "Perdavimo serveris (wss://)",
@@ -17232,7 +17336,7 @@ private fun strings_26(): Map<String, String> =
         "your_artists_feed" to "Jūsų atlikėjai",
     )
 
-private fun strings_27(): Map<String, String> =
+private fun strings_30(): Map<String, String> =
     mapOf(
         "about" to "കുറിച്ച്",
         "accent_amber" to "ആംബർ",
@@ -17377,6 +17481,7 @@ private fun strings_27(): Map<String, String> =
         "content_country" to "ഉള്ളടക്ക പ്രദേശം",
         "content_language" to "ഉള്ളടക്ക ഭാഷ",
         "continue" to "തുടരുക",
+        "contributors_section" to "സംഭാവകർ",
         "cookie_label" to "കുക്കി ഹെഡർ (music.youtube.com-ൽ നിന്ന്)",
         "copied_to_clipboard" to "ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തി",
         "cpu" to "CPU",
@@ -17490,6 +17595,7 @@ private fun strings_27(): Map<String, String> =
         "font_selection" to "ഫോണ്ട് തിരഞ്ഞെടുക്കൽ",
         "font_system" to "സിസ്റ്റം ഫോണ്ട്",
         "font_system_desc" to "ഉപകരണത്തിന്റെ സ്ഥിര സിസ്റ്റം ഫോണ്ട് ഉപയോഗിക്കുന്നു.",
+        "forgotten_favorites" to "മറന്നുപോയ പ്രിയപ്പെട്ടവ",
         "general" to "പൊതുവായത്",
         "generate_code" to "കോഡ് സൃഷ്ടിക്കുക",
         "generate_new_code" to "പുതിയ കോഡ് സൃഷ്ടിക്കുക",
@@ -17767,6 +17873,7 @@ private fun strings_27(): Map<String, String> =
         "show_intro_on_startup" to "സ്റ്റാർട്ടപ്പിൽ ഇൻട്രോ കാണിക്കുക",
         "shuffle" to "ഷഫിൾ",
         "shuffle_all" to "എല്ലാം ഷഫിൾ ചെയ്യുക",
+        "similar_to" to "സമാനമായത്",
         "slider_slim" to "സ്ലിം",
         "slider_squiggly" to "വളഞ്ഞ",
         "slider_style" to "സ്ലൈഡർ ശൈലി",
@@ -17870,7 +17977,7 @@ private fun strings_27(): Map<String, String> =
         "your_artists_feed" to "നിങ്ങളുടെ കലാകാരന്മാർ",
     )
 
-private fun strings_28(): Map<String, String> =
+private fun strings_31(): Map<String, String> =
     mapOf(
         "about" to "Tentang",
         "accent_amber" to "Amber",
@@ -18015,6 +18122,7 @@ private fun strings_28(): Map<String, String> =
         "content_country" to "Wilayah kandungan",
         "content_language" to "Bahasa kandungan",
         "continue" to "Teruskan",
+        "contributors_section" to "Penyumbang",
         "cookie_label" to "Pengepala kuki (daripada music.youtube.com)",
         "copied_to_clipboard" to "Disalin ke papan klip",
         "cpu" to "CPU",
@@ -18364,6 +18472,7 @@ private fun strings_28(): Map<String, String> =
         "recognition_failed" to "Gagal mengecam muzik",
         "recognition_history" to "Sejarah pengecaman",
         "recognize" to "Kenal pasti muzik",
+        "recommended" to "Disyorkan",
         "redo" to "Buat semula",
         "regenerate_pair_code" to "Jana semula kod pemadanan",
         "relay_server" to "Pelayan geganti (wss://)",
@@ -18508,7 +18617,7 @@ private fun strings_28(): Map<String, String> =
         "your_artists_feed" to "Artis anda",
     )
 
-private fun strings_29(): Map<String, String> =
+private fun strings_32(): Map<String, String> =
     mapOf(
         "about" to "Om",
         "accent_amber" to "Rav",
@@ -18653,6 +18762,7 @@ private fun strings_29(): Map<String, String> =
         "content_country" to "Innholdsregion",
         "content_language" to "Innholdsspråk",
         "continue" to "Fortsett",
+        "contributors_section" to "Bidragsytere",
         "cookie_label" to "Cookie-header (fra music.youtube.com)",
         "copied_to_clipboard" to "Kopiert til utklippstavlen",
         "cpu" to "CPU",
@@ -18766,6 +18876,7 @@ private fun strings_29(): Map<String, String> =
         "font_selection" to "Fontvalg",
         "font_system" to "Systemfont",
         "font_system_desc" to "Bruker enhetens standard systemfont.",
+        "forgotten_favorites" to "Glemte favoritter",
         "general" to "Alminnelig",
         "generate_code" to "Generer kode",
         "generate_new_code" to "Generer ny kode",
@@ -19043,6 +19154,7 @@ private fun strings_29(): Map<String, String> =
         "show_intro_on_startup" to "Vis intro ved oppstart",
         "shuffle" to "Omstokk",
         "shuffle_all" to "Spill alt tilfeldig",
+        "similar_to" to "Ligner på",
         "slider_slim" to "Slank",
         "slider_squiggly" to "Slingrete",
         "slider_style" to "Glidebryterstil",
@@ -19146,7 +19258,12 @@ private fun strings_29(): Map<String, String> =
         "your_artists_feed" to "Dine artister",
     )
 
-private fun strings_30(): Map<String, String> =
+private fun strings_33(): Map<String, String> =
+    mapOf(
+        "recommended" to "Anbefalt",
+    )
+
+private fun strings_34(): Map<String, String> =
     mapOf(
         "about" to "Over",
         "accent_amber" to "Barnsteen",
@@ -19291,6 +19408,7 @@ private fun strings_30(): Map<String, String> =
         "content_country" to "Inhoudsregio",
         "content_language" to "Inhoudstaal",
         "continue" to "Doorgaan",
+        "contributors_section" to "Bijdragers",
         "cookie_label" to "Cookie-header (van music.youtube.com)",
         "copied_to_clipboard" to "Gekopieerd naar klembord",
         "cpu" to "CPU",
@@ -19404,6 +19522,7 @@ private fun strings_30(): Map<String, String> =
         "font_selection" to "Lettertypeselectie",
         "font_system" to "Systeemlettertype",
         "font_system_desc" to "Gebruikt het standaard systeemlettertype van het apparaat.",
+        "forgotten_favorites" to "Vergeten favorieten",
         "general" to "Algemeen",
         "generate_code" to "Code genereren",
         "generate_new_code" to "Nieuwe code genereren",
@@ -19640,6 +19759,7 @@ private fun strings_30(): Map<String, String> =
         "recognition_failed" to "Muziek herkennen mislukt",
         "recognition_history" to "Herkenninggeschiedenis",
         "recognize" to "Muziek herkennen",
+        "recommended" to "Aanbevolen",
         "redo" to "Opnieuw",
         "regenerate_pair_code" to "Koppelcode opnieuw genereren",
         "relay_server" to "Relay-server (wss://)",
@@ -19681,6 +19801,7 @@ private fun strings_30(): Map<String, String> =
         "show_intro_on_startup" to "Intro tonen bij opstarten",
         "shuffle" to "Schuifelen",
         "shuffle_all" to "Alles shufflen",
+        "similar_to" to "Vergelijkbaar met",
         "slider_slim" to "Slank",
         "slider_squiggly" to "Kronkelend",
         "slider_style" to "Schuifregelaarstijl",
@@ -19784,7 +19905,7 @@ private fun strings_30(): Map<String, String> =
         "your_artists_feed" to "Jouw artiesten",
     )
 
-private fun strings_31(): Map<String, String> =
+private fun strings_35(): Map<String, String> =
     mapOf(
         "about" to "ਐਪ ਦੇ ਬਾਰੇ",
         "accent_amber" to "ਅੰਬਰ",
@@ -19929,6 +20050,7 @@ private fun strings_31(): Map<String, String> =
         "content_country" to "ਸਮੱਗਰੀ ਖੇਤਰ",
         "content_language" to "ਸਮੱਗਰੀ ਭਾਸ਼ਾ",
         "continue" to "ਜਾਰੀ ਰੱਖੋ",
+        "contributors_section" to "ਯੋਗਦਾਨਕਰਤਾ",
         "cookie_label" to "ਕੁਕੀ ਹੈਡਰ (music.youtube.com ਤੋਂ)",
         "copied_to_clipboard" to "ਕਲਿੱਪਬੋਰਡ 'ਤੇ ਕਾਪੀ ਹੋਇਆ",
         "cpu" to "CPU",
@@ -20042,6 +20164,7 @@ private fun strings_31(): Map<String, String> =
         "font_selection" to "ਫੌਂਟ ਚੋਣ",
         "font_system" to "ਸਿਸਟਮ ਫੌਂਟ",
         "font_system_desc" to "ਡਿਵਾਈਸ ਦਾ ਡਿਫੌਲਟ ਸਿਸਟਮ ਫੌਂਟ ਵਰਤਦਾ ਹੈ।",
+        "forgotten_favorites" to "ਭੁੱਲੇ ਹੋਏ ਮਨਪਸੰਦ ਗਾਣੇ",
         "general" to "ਆਮ",
         "generate_code" to "ਕੋਡ ਬਣਾਓ",
         "generate_new_code" to "ਨਵਾਂ ਕੋਡ ਬਣਾਓ",
@@ -20278,6 +20401,7 @@ private fun strings_31(): Map<String, String> =
         "recognition_failed" to "ਸੰਗੀਤ ਪਛਾਣਨ ਵਿੱਚ ਅਸਫਲ",
         "recognition_history" to "ਪਛਾਣ ਅਤੀਤ",
         "recognize" to "ਸੰਗੀਤ ਪਛਾਣੋ",
+        "recommended" to "ਸਿਫ਼ਾਰਸ਼ ਕੀਤਾ",
         "redo" to "ਮੁੜ ਕਰੋ",
         "regenerate_pair_code" to "ਪੇਅਰਿੰਗ ਕੋਡ ਦੁਬਾਰਾ ਬਣਾਓ",
         "relay_server" to "ਰੀਲੇ ਸਰਵਰ (wss://)",
@@ -20319,6 +20443,7 @@ private fun strings_31(): Map<String, String> =
         "show_intro_on_startup" to "ਸਟਾਰਟਅੱਪ 'ਤੇ ਇੰਟਰੋ ਦਿਖਾਓ",
         "shuffle" to "ਸ਼ਫਲ ਕਰੋ",
         "shuffle_all" to "ਸਭ ਸ਼ਫਲ ਕਰੋ",
+        "similar_to" to "ਇਹਦੇ ਵਰਗੇ",
         "slider_slim" to "ਸਲਿਮ",
         "slider_squiggly" to "ਲਹਿਰਦਾਰ",
         "slider_style" to "ਸਲਾਈਡਰ ਸ਼ੈਲੀ",
@@ -20422,7 +20547,7 @@ private fun strings_31(): Map<String, String> =
         "your_artists_feed" to "ਤੁਹਾਡੇ ਕਲਾਕਾਰ",
     )
 
-private fun strings_32(): Map<String, String> =
+private fun strings_36(): Map<String, String> =
     mapOf(
         "about" to "O aplikacji",
         "accent_amber" to "Bursztynowy",
@@ -20567,6 +20692,7 @@ private fun strings_32(): Map<String, String> =
         "content_country" to "Region treści",
         "content_language" to "Język treści",
         "continue" to "Kontynuuj",
+        "contributors_section" to "Współtwórcy",
         "cookie_label" to "Nagłówek cookie (z music.youtube.com)",
         "copied_to_clipboard" to "Skopiowano do schowka",
         "cpu" to "CPU",
@@ -20680,6 +20806,7 @@ private fun strings_32(): Map<String, String> =
         "font_selection" to "Wybór czcionki",
         "font_system" to "Czcionka systemowa",
         "font_system_desc" to "Używa domyślnej czcionki systemowej urządzenia.",
+        "forgotten_favorites" to "Zapomniane ulubione",
         "general" to "Ogólne",
         "generate_code" to "Generuj kod",
         "generate_new_code" to "Wygeneruj nowy kod",
@@ -20916,6 +21043,7 @@ private fun strings_32(): Map<String, String> =
         "recognition_failed" to "Nie udało się rozpoznać muzyki",
         "recognition_history" to "Historia rozpoznawania",
         "recognize" to "Rozpoznaj muzykę",
+        "recommended" to "Polecane",
         "redo" to "Ponów",
         "regenerate_pair_code" to "Wygeneruj ponownie kod parowania",
         "relay_server" to "Serwer przekaźnikowy (wss://)",
@@ -20957,6 +21085,7 @@ private fun strings_32(): Map<String, String> =
         "show_intro_on_startup" to "Pokaż intro przy uruchamianiu",
         "shuffle" to "Losuj",
         "shuffle_all" to "Odtwarzaj wszystko losowo",
+        "similar_to" to "Podobne do",
         "slider_slim" to "Cienki",
         "slider_squiggly" to "Kręty",
         "slider_style" to "Styl suwaka",
@@ -21060,7 +21189,7 @@ private fun strings_32(): Map<String, String> =
         "your_artists_feed" to "Twoi artyści",
     )
 
-private fun strings_33(): Map<String, String> =
+private fun strings_37(): Map<String, String> =
     mapOf(
         "about" to "Sobre",
         "accent_amber" to "Âmbar",
@@ -21205,6 +21334,7 @@ private fun strings_33(): Map<String, String> =
         "content_country" to "Região do conteúdo",
         "content_language" to "Idioma do conteúdo",
         "continue" to "Continuar",
+        "contributors_section" to "Colaboradores",
         "cookie_label" to "Cabeçalho de cookie (de music.youtube.com)",
         "copied_to_clipboard" to "Copiado para a área de transferência",
         "cpu" to "CPU",
@@ -21318,6 +21448,7 @@ private fun strings_33(): Map<String, String> =
         "font_selection" to "Seleção de fonte",
         "font_system" to "Fonte do sistema",
         "font_system_desc" to "Usa a fonte de sistema padrão do dispositivo.",
+        "forgotten_favorites" to "Favoritas esquecidas",
         "general" to "Geral",
         "generate_code" to "Gerar código",
         "generate_new_code" to "Gerar novo código",
@@ -21554,6 +21685,7 @@ private fun strings_33(): Map<String, String> =
         "recognition_failed" to "Falha ao reconhecer a música",
         "recognition_history" to "Histórico de reconhecimento",
         "recognize" to "Reconhecer música",
+        "recommended" to "Recomendado",
         "redo" to "Refazer",
         "regenerate_pair_code" to "Gerar novamente o código de emparelhamento",
         "relay_server" to "Servidor de retransmissão (wss://)",
@@ -21595,6 +21727,7 @@ private fun strings_33(): Map<String, String> =
         "show_intro_on_startup" to "Mostrar intro ao iniciar",
         "shuffle" to "Misturar",
         "shuffle_all" to "Reproduzir tudo aleatório",
+        "similar_to" to "Semelhantes",
         "slider_slim" to "Fino",
         "slider_squiggly" to "Sinuoso",
         "slider_style" to "Estilo do controle deslizante",
@@ -21698,7 +21831,12 @@ private fun strings_33(): Map<String, String> =
         "your_artists_feed" to "Seus artistas",
     )
 
-private fun strings_34(): Map<String, String> =
+private fun strings_38(): Map<String, String> =
+    mapOf(
+        "recommended" to "Recomendado",
+    )
+
+private fun strings_39(): Map<String, String> =
     mapOf(
         "about" to "Despre",
         "accent_amber" to "Chihlimbar",
@@ -21843,6 +21981,7 @@ private fun strings_34(): Map<String, String> =
         "content_country" to "Regiunea conținutului",
         "content_language" to "Limba conținutului",
         "continue" to "Continuă",
+        "contributors_section" to "Contribuitori",
         "cookie_label" to "Antet cookie (de pe music.youtube.com)",
         "copied_to_clipboard" to "Copiat în clipboard",
         "cpu" to "CPU",
@@ -21956,6 +22095,7 @@ private fun strings_34(): Map<String, String> =
         "font_selection" to "Selectare font",
         "font_system" to "Font de sistem",
         "font_system_desc" to "Folosește fontul de sistem implicit al dispozitivului.",
+        "forgotten_favorites" to "Preferințe uitate",
         "general" to "General",
         "generate_code" to "Generează cod",
         "generate_new_code" to "Generează un cod nou",
@@ -22192,6 +22332,7 @@ private fun strings_34(): Map<String, String> =
         "recognition_failed" to "Nu s-a putut recunoaște muzica",
         "recognition_history" to "Istoric recunoaștere",
         "recognize" to "Recunoaște muzica",
+        "recommended" to "Recomandate",
         "redo" to "Refă",
         "regenerate_pair_code" to "Regenerează codul de împerechere",
         "relay_server" to "Server de retransmisie (wss://)",
@@ -22233,6 +22374,7 @@ private fun strings_34(): Map<String, String> =
         "show_intro_on_startup" to "Arată intro la pornire",
         "shuffle" to "Amestecă",
         "shuffle_all" to "Amestecă tot",
+        "similar_to" to "Similar cu",
         "slider_slim" to "Subțire",
         "slider_squiggly" to "Șerpuit",
         "slider_style" to "Stilul glisorului",
@@ -22336,7 +22478,7 @@ private fun strings_34(): Map<String, String> =
         "your_artists_feed" to "Artiștii tăi",
     )
 
-private fun strings_35(): Map<String, String> =
+private fun strings_40(): Map<String, String> =
     mapOf(
         "about" to "О приложении",
         "accent_amber" to "Янтарный",
@@ -22481,6 +22623,7 @@ private fun strings_35(): Map<String, String> =
         "content_country" to "Регион контента",
         "content_language" to "Язык контента",
         "continue" to "Продолжить",
+        "contributors_section" to "Участники",
         "cookie_label" to "Заголовок cookie (с music.youtube.com)",
         "copied_to_clipboard" to "Скопировано в буфер обмена",
         "cpu" to "CPU",
@@ -22594,6 +22737,7 @@ private fun strings_35(): Map<String, String> =
         "font_selection" to "Выбор шрифта",
         "font_system" to "Системный шрифт",
         "font_system_desc" to "Использует системный шрифт устройства по умолчанию.",
+        "forgotten_favorites" to "Забытые избранные",
         "general" to "Общие",
         "generate_code" to "Создать код",
         "generate_new_code" to "Создать новый код",
@@ -22830,6 +22974,7 @@ private fun strings_35(): Map<String, String> =
         "recognition_failed" to "Не удалось распознать музыку",
         "recognition_history" to "История распознавания",
         "recognize" to "Распознать музыку",
+        "recommended" to "Рекомендации",
         "redo" to "Повторить",
         "regenerate_pair_code" to "Создать код сопряжения заново",
         "relay_server" to "Сервер ретрансляции (wss://)",
@@ -22871,6 +23016,7 @@ private fun strings_35(): Map<String, String> =
         "show_intro_on_startup" to "Показывать интро при запуске",
         "shuffle" to "Перемешать",
         "shuffle_all" to "Перемешать всё",
+        "similar_to" to "Похожие на",
         "slider_slim" to "Тонкий",
         "slider_squiggly" to "Волнистый 1",
         "slider_style" to "Стиль ползунка",
@@ -22974,7 +23120,7 @@ private fun strings_35(): Map<String, String> =
         "your_artists_feed" to "Ваши исполнители",
     )
 
-private fun strings_36(): Map<String, String> =
+private fun strings_41(): Map<String, String> =
     mapOf(
         "about" to "Informácie",
         "accent_amber" to "Jantárová",
@@ -23119,6 +23265,7 @@ private fun strings_36(): Map<String, String> =
         "content_country" to "Oblasť obsahu",
         "content_language" to "Jazyk obsahu",
         "continue" to "Pokračovať",
+        "contributors_section" to "Prispievatelia",
         "cookie_label" to "Hlavička cookie (z music.youtube.com)",
         "copied_to_clipboard" to "Skopírované do schránky",
         "cpu" to "CPU",
@@ -23232,6 +23379,7 @@ private fun strings_36(): Map<String, String> =
         "font_selection" to "Výber písma",
         "font_system" to "Systémové písmo",
         "font_system_desc" to "Používa predvolené systémové písmo zariadenia.",
+        "forgotten_favorites" to "Zabudnuté obľúbené",
         "general" to "Všeobecné",
         "generate_code" to "Vygenerovať kód",
         "generate_new_code" to "Vygenerovať nový kód",
@@ -23468,6 +23616,7 @@ private fun strings_36(): Map<String, String> =
         "recognition_failed" to "Nepodarilo sa rozpoznať hudbu",
         "recognition_history" to "História rozpoznávania",
         "recognize" to "Rozpoznať hudbu",
+        "recommended" to "Odporúčané",
         "redo" to "Znova",
         "regenerate_pair_code" to "Znova vygenerovať párovací kód",
         "relay_server" to "Prenosový server (wss://)",
@@ -23509,6 +23658,7 @@ private fun strings_36(): Map<String, String> =
         "show_intro_on_startup" to "Zobraziť intro pri spustení",
         "shuffle" to "Prehrávať náhodne",
         "shuffle_all" to "Náhodne všetko",
+        "similar_to" to "Podobné ako",
         "slider_slim" to "Tenký",
         "slider_squiggly" to "Vlnitý 1",
         "slider_style" to "Štýl posúvača",
@@ -23612,7 +23762,7 @@ private fun strings_36(): Map<String, String> =
         "your_artists_feed" to "Vaši umelci",
     )
 
-private fun strings_37(): Map<String, String> =
+private fun strings_42(): Map<String, String> =
     mapOf(
         "about" to "O programu",
         "accent_amber" to "Jantarna",
@@ -23757,6 +23907,7 @@ private fun strings_37(): Map<String, String> =
         "content_country" to "Regija vsebine",
         "content_language" to "Jezik vsebine",
         "continue" to "Nadaljuj",
+        "contributors_section" to "Sodelavci",
         "cookie_label" to "Glava piškotka (z music.youtube.com)",
         "copied_to_clipboard" to "Kopirano v odložišče",
         "cpu" to "CPU",
@@ -23870,6 +24021,7 @@ private fun strings_37(): Map<String, String> =
         "font_selection" to "Izbira pisave",
         "font_system" to "Sistemska pisava",
         "font_system_desc" to "Uporablja privzeto sistemsko pisavo naprave.",
+        "forgotten_favorites" to "Pozabljene priljubljene",
         "general" to "Splošno",
         "generate_code" to "Ustvari kodo",
         "generate_new_code" to "Ustvari novo kodo",
@@ -24106,6 +24258,7 @@ private fun strings_37(): Map<String, String> =
         "recognition_failed" to "Glasbe ni bilo mogoče prepoznati",
         "recognition_history" to "Zgodovina prepoznavanja",
         "recognize" to "Prepoznaj glasbo",
+        "recommended" to "Priporočeno",
         "redo" to "Uveljavi znova",
         "regenerate_pair_code" to "Znova ustvari kodo za seznanjanje",
         "relay_server" to "Relejni strežnik (wss://)",
@@ -24147,6 +24300,7 @@ private fun strings_37(): Map<String, String> =
         "show_intro_on_startup" to "Prikaži uvod ob zagonu",
         "shuffle" to "Mešaj",
         "shuffle_all" to "Premešaj vse",
+        "similar_to" to "Podobno kot",
         "slider_slim" to "Tanko",
         "slider_squiggly" to "Valovito",
         "slider_style" to "Slog drsnika",
@@ -24250,7 +24404,7 @@ private fun strings_37(): Map<String, String> =
         "your_artists_feed" to "Vaši izvajalci",
     )
 
-private fun strings_38(): Map<String, String> =
+private fun strings_43(): Map<String, String> =
     mapOf(
         "about" to "O vivimusic-u",
         "accent_amber" to "Ћилибарна",
@@ -24395,6 +24549,7 @@ private fun strings_38(): Map<String, String> =
         "content_country" to "Region sadržaja",
         "content_language" to "Jezik sadržaja",
         "continue" to "Настави",
+        "contributors_section" to "Сарадници",
         "cookie_label" to "Cookie zaglavlje (sa music.youtube.com)",
         "copied_to_clipboard" to "Kopirano u klipbord",
         "cpu" to "CPU",
@@ -24508,6 +24663,7 @@ private fun strings_38(): Map<String, String> =
         "font_selection" to "Izbor fonta",
         "font_system" to "Sistemski font",
         "font_system_desc" to "Koristi podrazumevani sistemski font vašeg uređaja.",
+        "forgotten_favorites" to "Zaboravljeni favoriti",
         "general" to "Опште",
         "generate_code" to "Generiši kôd",
         "generate_new_code" to "Generiši novi kod",
@@ -24785,6 +24941,7 @@ private fun strings_38(): Map<String, String> =
         "show_intro_on_startup" to "Прикажи увод при покретању",
         "shuffle" to "Promešaj",
         "shuffle_all" to "Promešaj sve",
+        "similar_to" to "Slično ko",
         "slider_slim" to "Танко",
         "slider_squiggly" to "Таласасто",
         "slider_style" to "Стил клизача",
@@ -24888,7 +25045,7 @@ private fun strings_38(): Map<String, String> =
         "your_artists_feed" to "Ваши извођачи",
     )
 
-private fun strings_39(): Map<String, String> =
+private fun strings_44(): Map<String, String> =
     mapOf(
         "about" to "Om",
         "accent_amber" to "Bärnsten",
@@ -25033,6 +25190,7 @@ private fun strings_39(): Map<String, String> =
         "content_country" to "Innehållsregion",
         "content_language" to "Innehållsspråk",
         "continue" to "Fortsätt",
+        "contributors_section" to "Bidragsgivare",
         "cookie_label" to "Cookie-header (från music.youtube.com)",
         "copied_to_clipboard" to "Kopierat till urklipp",
         "cpu" to "CPU",
@@ -25382,6 +25540,7 @@ private fun strings_39(): Map<String, String> =
         "recognition_failed" to "Kunde inte känna igen musiken",
         "recognition_history" to "Igenkänningshistorik",
         "recognize" to "Känn igen musik",
+        "recommended" to "Rekommenderas",
         "redo" to "Gör om",
         "regenerate_pair_code" to "Generera parkopplingskod igen",
         "relay_server" to "Reläserver (wss://)",
@@ -25526,7 +25685,7 @@ private fun strings_39(): Map<String, String> =
         "your_artists_feed" to "Dina artister",
     )
 
-private fun strings_40(): Map<String, String> =
+private fun strings_45(): Map<String, String> =
     mapOf(
         "about" to "பற்றி",
         "accent_amber" to "அம்பர்",
@@ -25671,6 +25830,7 @@ private fun strings_40(): Map<String, String> =
         "content_country" to "உள்ளடக்க பிராந்தியம்",
         "content_language" to "உள்ளடக்க மொழி",
         "continue" to "தொடரவும்",
+        "contributors_section" to "பங்களிப்பாளர்கள்",
         "cookie_label" to "குக்கி தலைப்பு (music.youtube.com இலிருந்து)",
         "copied_to_clipboard" to "கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது",
         "cpu" to "CPU",
@@ -25784,6 +25944,7 @@ private fun strings_40(): Map<String, String> =
         "font_selection" to "எழுத்துரு தேர்வு",
         "font_system" to "கணினி எழுத்துரு",
         "font_system_desc" to "சாதனத்தின் இயல்புநிலை கணினி எழுத்துருவைப் பயன்படுத்துகிறது.",
+        "forgotten_favorites" to "மறந்துபோன பிடித்தவை",
         "general" to "பொது",
         "generate_code" to "குறியீட்டை உருவாக்கு",
         "generate_new_code" to "புதிய குறியீட்டை உருவாக்கு",
@@ -26020,6 +26181,7 @@ private fun strings_40(): Map<String, String> =
         "recognition_failed" to "இசையை அடையாளம் காண முடியவில்லை",
         "recognition_history" to "அடையாள வரலாறு",
         "recognize" to "இசையை அடையாளம் காண்",
+        "recommended" to "பரிந்துரைக்கப்பட்டவை",
         "redo" to "மீண்டும் செய்",
         "regenerate_pair_code" to "ஜோடி குறியீட்டை மீண்டும் உருவாக்கவும்",
         "relay_server" to "ரிலே சேவையகம் (wss://)",
@@ -26061,6 +26223,7 @@ private fun strings_40(): Map<String, String> =
         "show_intro_on_startup" to "தொடக்கத்தில் இன்ட்ரோ காட்டு",
         "shuffle" to "கலக்கு",
         "shuffle_all" to "அனைத்தையும் கலைத்துப் போடு",
+        "similar_to" to "ஒத்த",
         "slider_slim" to "ஸ்லிம்",
         "slider_squiggly" to "வளைந்த",
         "slider_style" to "ஸ்லைடர் பாணி",
@@ -26164,7 +26327,7 @@ private fun strings_40(): Map<String, String> =
         "your_artists_feed" to "உங்கள் கலைஞர்கள்",
     )
 
-private fun strings_41(): Map<String, String> =
+private fun strings_46(): Map<String, String> =
     mapOf(
         "about" to "గురించి",
         "accent_amber" to "ఆంబర్",
@@ -26309,6 +26472,7 @@ private fun strings_41(): Map<String, String> =
         "content_country" to "కంటెంట్ ప్రాంతం",
         "content_language" to "కంటెంట్ భాష",
         "continue" to "కొనసాగించండి",
+        "contributors_section" to "సహకారులు",
         "cookie_label" to "కుకీ హెడర్ (music.youtube.com నుండి)",
         "copied_to_clipboard" to "క్లిప్బోర్డ్కు కాపీ చేయబడింది",
         "cpu" to "CPU",
@@ -26422,6 +26586,7 @@ private fun strings_41(): Map<String, String> =
         "font_selection" to "ఫాంట్ ఎంపిక",
         "font_system" to "సిస్టమ్ ఫాంట్",
         "font_system_desc" to "పరికరం యొక్క డిఫాల్ట్ సిస్టమ్ ఫాంట్ను ఉపయోగిస్తుంది.",
+        "forgotten_favorites" to "మరచిపోయిన మదురాలు",
         "general" to "సాధారణం",
         "generate_code" to "కోడ్ను రూపొందించు",
         "generate_new_code" to "కొత్త కోడ్‌ను సృష్టించు",
@@ -26658,6 +26823,7 @@ private fun strings_41(): Map<String, String> =
         "recognition_failed" to "సంగీతాన్ని గుర్తించలేకపోయింది",
         "recognition_history" to "గుర్తింపు చరిత్ర",
         "recognize" to "సంగీతాన్ని గుర్తించండి",
+        "recommended" to "సిఫార్సు చేయబడింది",
         "redo" to "మళ్ళీ చేయి",
         "regenerate_pair_code" to "పెయిరింగ్ కోడ్‌ను మళ్లీ సృష్టించండి",
         "relay_server" to "రిలే సర్వర్ (wss://)",
@@ -26699,6 +26865,7 @@ private fun strings_41(): Map<String, String> =
         "show_intro_on_startup" to "ప్రారంభంలో ఇంట్రో చూపించు",
         "shuffle" to "కలాపటం",
         "shuffle_all" to "అన్నింటినీ షఫుల్ చేయి",
+        "similar_to" to "దీనికి సమానమైనది",
         "slider_slim" to "స్లిమ్",
         "slider_squiggly" to "ఉంగరాల",
         "slider_style" to "స్లయిడర్ శైలి",
@@ -26802,7 +26969,7 @@ private fun strings_41(): Map<String, String> =
         "your_artists_feed" to "మీ కళాకారులు",
     )
 
-private fun strings_42(): Map<String, String> =
+private fun strings_47(): Map<String, String> =
     mapOf(
         "about" to "เกี่ยวกับ",
         "accent_amber" to "เหลืองอำพัน",
@@ -26947,6 +27114,7 @@ private fun strings_42(): Map<String, String> =
         "content_country" to "ภูมิภาคเนื้อหา",
         "content_language" to "ภาษาเนื้อหา",
         "continue" to "ดำเนินการต่อ",
+        "contributors_section" to "ผู้มีส่วนร่วม",
         "cookie_label" to "ส่วนหัวคุกกี้ (จาก music.youtube.com)",
         "copied_to_clipboard" to "คัดลอกไปยังคลิปบอร์ดแล้ว",
         "cpu" to "CPU",
@@ -27296,6 +27464,7 @@ private fun strings_42(): Map<String, String> =
         "recognition_failed" to "ไม่สามารถรู้จำเพลงได้",
         "recognition_history" to "ประวัติการรู้จำ",
         "recognize" to "รู้จำเพลง",
+        "recommended" to "แนะนำ",
         "redo" to "ทำซ้ำ",
         "regenerate_pair_code" to "สร้างรหัสจับคู่อีกครั้ง",
         "relay_server" to "เซิร์ฟเวอร์รีเลย์ (wss://)",
@@ -27440,7 +27609,7 @@ private fun strings_42(): Map<String, String> =
         "your_artists_feed" to "ศิลปินของคุณ",
     )
 
-private fun strings_43(): Map<String, String> =
+private fun strings_48(): Map<String, String> =
     mapOf(
         "about" to "Hakkında",
         "accent_amber" to "Kehribar",
@@ -27585,6 +27754,7 @@ private fun strings_43(): Map<String, String> =
         "content_country" to "Varsayılan ülke içeriği",
         "content_language" to "Varsayılan içerik dili",
         "continue" to "Devam et",
+        "contributors_section" to "Katkıda Bulunanlar",
         "cookie_label" to "Çerez başlığı (music.youtube.com'dan)",
         "copied_to_clipboard" to "Panoya kopyalandı",
         "cpu" to "CPU",
@@ -27698,6 +27868,7 @@ private fun strings_43(): Map<String, String> =
         "font_selection" to "Yazı tipi seçimi",
         "font_system" to "Sistem yazı tipi",
         "font_system_desc" to "Cihazın varsayılan sistem yazı tipini kullanır.",
+        "forgotten_favorites" to "Unutulan favoriler",
         "general" to "Genel",
         "generate_code" to "Kod oluştur",
         "generate_new_code" to "Yeni kod oluştur",
@@ -27934,6 +28105,7 @@ private fun strings_43(): Map<String, String> =
         "recognition_failed" to "Tanımlama hatası",
         "recognition_history" to "Tanımlama geçmişi",
         "recognize" to "Müziği tanı",
+        "recommended" to "Önerilen",
         "redo" to "Yinele",
         "regenerate_pair_code" to "Eşleştirme Kodunu yeniden oluştur",
         "relay_server" to "Röle sunucusu (wss://)",
@@ -27975,6 +28147,7 @@ private fun strings_43(): Map<String, String> =
         "show_intro_on_startup" to "Başlangıçta girişi göster",
         "shuffle" to "Karıştır",
         "shuffle_all" to "Tümünü karıştır",
+        "similar_to" to "Benzerleri",
         "slider_slim" to "İnce",
         "slider_squiggly" to "Kıvrımlı",
         "slider_style" to "Kaydırıcı stili",
@@ -28078,7 +28251,7 @@ private fun strings_43(): Map<String, String> =
         "your_artists_feed" to "Sanatçıların",
     )
 
-private fun strings_44(): Map<String, String> =
+private fun strings_49(): Map<String, String> =
     mapOf(
         "about" to "Про програму",
         "accent_amber" to "Бурштиновий",
@@ -28223,6 +28396,7 @@ private fun strings_44(): Map<String, String> =
         "content_country" to "Регіон контенту",
         "content_language" to "Мова контенту",
         "continue" to "Продовжити",
+        "contributors_section" to "Учасники",
         "cookie_label" to "Заголовок cookie (з music.youtube.com)",
         "copied_to_clipboard" to "Скопійовано в буфер обміну",
         "cpu" to "CPU",
@@ -28336,6 +28510,7 @@ private fun strings_44(): Map<String, String> =
         "font_selection" to "Вибір шрифту",
         "font_system" to "Системний шрифт",
         "font_system_desc" to "Використовує системний шрифт пристрою за замовчуванням.",
+        "forgotten_favorites" to "Забуті улюблені",
         "general" to "Загальне",
         "generate_code" to "Створити код",
         "generate_new_code" to "Створити новий код",
@@ -28572,6 +28747,7 @@ private fun strings_44(): Map<String, String> =
         "recognition_failed" to "Не вдалося розпізнати музику",
         "recognition_history" to "Історія розпізнавання",
         "recognize" to "Розпізнати музику",
+        "recommended" to "Рекомендовані",
         "redo" to "Повторити",
         "regenerate_pair_code" to "Створити код сполучення заново",
         "relay_server" to "Сервер ретрансляції (wss://)",
@@ -28613,6 +28789,7 @@ private fun strings_44(): Map<String, String> =
         "show_intro_on_startup" to "Показувати інтро під час запуску",
         "shuffle" to "Перемішати",
         "shuffle_all" to "Перемішати все",
+        "similar_to" to "Схожі на",
         "slider_slim" to "Тонкий",
         "slider_squiggly" to "Хвилястий 1",
         "slider_style" to "Стиль повзунка",
@@ -28716,7 +28893,7 @@ private fun strings_44(): Map<String, String> =
         "your_artists_feed" to "Ваші виконавці",
     )
 
-private fun strings_45(): Map<String, String> =
+private fun strings_50(): Map<String, String> =
     mapOf(
         "about" to "Giới thiệu",
         "accent_amber" to "Hổ phách",
@@ -28861,6 +29038,7 @@ private fun strings_45(): Map<String, String> =
         "content_country" to "Khu vực nội dung",
         "content_language" to "Ngôn ngữ nội dung",
         "continue" to "Tiếp tục",
+        "contributors_section" to "Người đóng góp",
         "cookie_label" to "Tiêu đề cookie (từ music.youtube.com)",
         "copied_to_clipboard" to "Đã sao chép vào bộ nhớ tạm",
         "cpu" to "CPU",
@@ -28974,6 +29152,7 @@ private fun strings_45(): Map<String, String> =
         "font_selection" to "Chọn phông chữ",
         "font_system" to "Phông hệ thống",
         "font_system_desc" to "Sử dụng phông hệ thống mặc định của thiết bị.",
+        "forgotten_favorites" to "Những mục yêu thích bị lãng quên",
         "general" to "Nâng cao",
         "generate_code" to "Tạo mã",
         "generate_new_code" to "Tạo mã mới",
@@ -29210,6 +29389,7 @@ private fun strings_45(): Map<String, String> =
         "recognition_failed" to "Không nhận dạng được nhạc",
         "recognition_history" to "Lịch sử nhận dạng",
         "recognize" to "Nhận dạng nhạc",
+        "recommended" to "Đề xuất",
         "redo" to "Làm lại",
         "regenerate_pair_code" to "Tạo lại mã ghép cặp",
         "relay_server" to "Máy chủ chuyển tiếp (wss://)",
@@ -29251,6 +29431,7 @@ private fun strings_45(): Map<String, String> =
         "show_intro_on_startup" to "Hiện intro khi khởi động",
         "shuffle" to "Trộn bài",
         "shuffle_all" to "Phát ngẫu nhiên tất cả",
+        "similar_to" to "Tương tự",
         "slider_slim" to "Mảnh",
         "slider_squiggly" to "Lượn sóng",
         "slider_style" to "Kiểu thanh trượt",
@@ -29354,7 +29535,7 @@ private fun strings_45(): Map<String, String> =
         "your_artists_feed" to "Nghệ sĩ của bạn",
     )
 
-private fun strings_46(): Map<String, String> =
+private fun strings_51(): Map<String, String> =
     mapOf(
         "about" to "关于",
         "accent_amber" to "琥珀色",
@@ -29499,6 +29680,7 @@ private fun strings_46(): Map<String, String> =
         "content_country" to "内容地区",
         "content_language" to "内容语言",
         "continue" to "继续",
+        "contributors_section" to "贡献者",
         "cookie_label" to "Cookie 标头（来自 music.youtube.com）",
         "copied_to_clipboard" to "已复制到剪贴板",
         "cpu" to "CPU",
@@ -29612,6 +29794,7 @@ private fun strings_46(): Map<String, String> =
         "font_selection" to "字体选择",
         "font_system" to "系统字体",
         "font_system_desc" to "使用设备的默认系统字体。",
+        "forgotten_favorites" to "重温最爱",
         "general" to "常规",
         "generate_code" to "生成代码",
         "generate_new_code" to "生成新代码",
@@ -29848,6 +30031,7 @@ private fun strings_46(): Map<String, String> =
         "recognition_failed" to "音乐识别失败",
         "recognition_history" to "识别历史",
         "recognize" to "识别音乐",
+        "recommended" to "推荐",
         "redo" to "重做",
         "regenerate_pair_code" to "重新生成配对码",
         "relay_server" to "中继服务器 (wss://)",
@@ -29889,6 +30073,7 @@ private fun strings_46(): Map<String, String> =
         "show_intro_on_startup" to "启动时显示开场动画",
         "shuffle" to "随机播放",
         "shuffle_all" to "随机播放全部",
+        "similar_to" to "类似风格",
         "slider_slim" to "纤细",
         "slider_squiggly" to "波浪形",
         "slider_style" to "滑块样式",
@@ -29992,7 +30177,7 @@ private fun strings_46(): Map<String, String> =
         "your_artists_feed" to "你的音乐人",
     )
 
-private fun strings_47(): Map<String, String> =
+private fun strings_52(): Map<String, String> =
     mapOf(
         "about" to "關於",
         "accent_amber" to "琥珀色",
@@ -30137,6 +30322,7 @@ private fun strings_47(): Map<String, String> =
         "content_country" to "內容地區",
         "content_language" to "內容語言",
         "continue" to "繼續",
+        "contributors_section" to "貢獻者",
         "cookie_label" to "Cookie 標頭（來自 music.youtube.com）",
         "copied_to_clipboard" to "已複製到剪貼簿",
         "cpu" to "CPU",
@@ -30250,6 +30436,7 @@ private fun strings_47(): Map<String, String> =
         "font_selection" to "字型選擇",
         "font_system" to "系統字型",
         "font_system_desc" to "使用裝置的預設系統字型。",
+        "forgotten_favorites" to "重溫舊愛",
         "general" to "一般",
         "generate_code" to "產生代碼",
         "generate_new_code" to "產生新代碼",
@@ -30486,6 +30673,7 @@ private fun strings_47(): Map<String, String> =
         "recognition_failed" to "音樂辨識失敗",
         "recognition_history" to "辨識紀錄",
         "recognize" to "辨識音樂",
+        "recommended" to "推薦",
         "redo" to "重做",
         "regenerate_pair_code" to "重新產生配對碼",
         "relay_server" to "中繼伺服器 (wss://)",
@@ -30527,6 +30715,7 @@ private fun strings_47(): Map<String, String> =
         "show_intro_on_startup" to "啟動時顯示開場動畫",
         "shuffle" to "隨機播放",
         "shuffle_all" to "隨機播放全部",
+        "similar_to" to "風格近似",
         "slider_slim" to "纖細",
         "slider_squiggly" to "波浪形",
         "slider_style" to "滑桿樣式",
@@ -30647,39 +30836,44 @@ object Localization {
         "es" to strings_12(),
         "et" to strings_13(),
         "eu" to strings_14(),
-        "fi" to strings_15(),
-        "fil" to strings_16(),
-        "fr" to strings_17(),
-        "hi" to strings_18(),
-        "hr" to strings_19(),
-        "hu" to strings_20(),
-        "id" to strings_21(),
-        "it" to strings_22(),
-        "ja" to strings_23(),
-        "km" to strings_24(),
-        "ko" to strings_25(),
-        "lt" to strings_26(),
-        "ml" to strings_27(),
-        "ms" to strings_28(),
-        "nb" to strings_29(),
-        "nl" to strings_30(),
-        "pa" to strings_31(),
-        "pl" to strings_32(),
-        "pt" to strings_33(),
-        "ro" to strings_34(),
-        "ru" to strings_35(),
-        "sk" to strings_36(),
-        "sl" to strings_37(),
-        "sr" to strings_38(),
-        "sv" to strings_39(),
-        "ta" to strings_40(),
-        "te" to strings_41(),
-        "th" to strings_42(),
-        "tr" to strings_43(),
-        "uk" to strings_44(),
-        "vi" to strings_45(),
-        "zh-rCN" to strings_46(),
-        "zh-rTW" to strings_47(),
+        "fa" to strings_15(),
+        "fi" to strings_16(),
+        "fil" to strings_17(),
+        "fr" to strings_18(),
+        "hi" to strings_19(),
+        "hr" to strings_20(),
+        "hu" to strings_21(),
+        "id" to strings_22(),
+        "in" to strings_23(),
+        "it" to strings_24(),
+        "iw" to strings_25(),
+        "ja" to strings_26(),
+        "km" to strings_27(),
+        "ko" to strings_28(),
+        "lt" to strings_29(),
+        "ml" to strings_30(),
+        "ms" to strings_31(),
+        "nb" to strings_32(),
+        "nb-rNO" to strings_33(),
+        "nl" to strings_34(),
+        "pa" to strings_35(),
+        "pl" to strings_36(),
+        "pt" to strings_37(),
+        "pt-rBR" to strings_38(),
+        "ro" to strings_39(),
+        "ru" to strings_40(),
+        "sk" to strings_41(),
+        "sl" to strings_42(),
+        "sr" to strings_43(),
+        "sv" to strings_44(),
+        "ta" to strings_45(),
+        "te" to strings_46(),
+        "th" to strings_47(),
+        "tr" to strings_48(),
+        "uk" to strings_49(),
+        "vi" to strings_50(),
+        "zh-rCN" to strings_51(),
+        "zh-rTW" to strings_52(),
     )
     fun get(language: String, key: String): String {
         val direct = strings[language]?.get(key)

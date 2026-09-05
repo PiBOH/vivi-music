@@ -109,12 +109,15 @@ object NativeNotifier {
         runCatching {
             val osName = System.getProperty("os.name").orEmpty().lowercase()
             WindowsToast.log("NativeNotifier.notify: os=$osName title=\"$title\"")
-            // macOS: java.awt.SystemTray balloons are unreliable there (they
-            // often never show, especially on Apple Silicon), so use the native
-            // `osascript` notification center instead — it works on Intel and
-            // Apple Silicon alike. Fall back to the tray balloon if osascript
-            // is missing or fails.
+            // macOS: SystemTray balloons are unreliable there, so use the
+            // native UNUserNotificationCenter helper (bundled with the
+            // media-session dylib) when available — real Notification Center
+            // banners attributed to the app, working on Intel and Apple
+            // Silicon. Fall back to `osascript` when the helper isn't loaded.
             if (osName.startsWith("mac")) {
+                MacMediaSession.requestNotificationPermissionOnce()
+                if (MacMediaSession.notify(title, message)) return
+                WindowsToast.log("NativeNotifier: mac helper unavailable, falling back to osascript")
                 if (macOsNotify(title, message)) return
                 WindowsToast.log("NativeNotifier: osascript failed, falling back to SystemTray")
             }

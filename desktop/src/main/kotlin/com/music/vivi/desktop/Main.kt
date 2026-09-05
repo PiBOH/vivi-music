@@ -8,7 +8,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -224,6 +223,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import coil3.compose.AsyncImage
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -734,6 +735,8 @@ fun WindowScope.App(
     var backStack by remember { mutableStateOf(listOf<Screen>(Screen.Home)) }
     val player = remember { PlayerController() }
     val playerState by player.state.collectAsState()
+    // Recently started tracks, used as seeds for the Home "Recommended" section.
+    val recentSeedTracks by player.recentTracks.collectAsState()
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
     val audioLevel by player.audioLevel.collectAsState()
@@ -771,11 +774,56 @@ fun WindowScope.App(
     }
     LaunchedEffect(mediaKeysEnabled) {
         if (mediaKeysEnabled) {
-            MediaKeys.start(
-                onPlayPause = { player.toggle() },
-                onNext = { player.next() },
-                onPrevious = { player.previous() },
-            )
+            if (isMac) {
+                // macOS: the native MediaPlayer session (issue #5) answers the
+                // physical media keys AND registers the app as the system
+                // "Now Playing" source — no Accessibility permission needed.
+                MacMediaSession.start(
+                    appName = "VIVI Music",
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                    onSeek = { ms -> player.seekTo(ms) },
+                )
+            } else {
+                MediaKeys.start(
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                )
+            }
+        } else if (isMac) {
+            MacMediaSession.stop()
+        }
+    }
+
+    // macOS only: keep the system "Now Playing" tile in sync with the current
+    // track. Gated by the same "Media keys" toggle as the session above (so
+    // disabling it clears the tile; re-enabling re-pushes the current state).
+    // Runs once per track (and again when playback pauses) and pushes a
+    // position update every 500 ms while playing. Artwork is downloaded in the
+    // background by MacMediaSession itself.
+    if (isMac && mediaKeysEnabled) {
+        LaunchedEffect(nowPlaying?.videoId, isPlaying) {
+            val np = nowPlaying
+            if (np == null) {
+                MacMediaSession.endSession()
+                return@LaunchedEffect
+            }
+            while (true) {
+                MacMediaSession.setNowPlaying(
+                    title = np.title,
+                    artist = np.artist,
+                    durationMs = playerState.durationMs,
+                    positionMs = playerState.positionMs,
+                    playing = playerState.isPlaying,
+                    artworkUrl = np.thumbnail?.takeIf {
+                        it.startsWith("http://") || it.startsWith("https://")
+                    },
+                )
+                if (!playerState.isPlaying) break
+                delay(500)
+            }
         }
     }
     LaunchedEffect(language, trayMenuEnabled) {
@@ -1278,9 +1326,11 @@ fun WindowScope.App(
 
     // Look-ahead prefetch: cache the tracks around the current one in the
     // background so they start instantly when skipped to. Runs regardless of
-    // play/pause, so pausing still fills the cache. Order: the 3 next + 3
-    // previous tracks first, then the rest of the queue, one download at a
-    // time, so with "cache forever" the whole queue ends up on disk.
+    // play/pause, so pausing still fills the cache. Order: the current track
+    // first (a restored queue has nothing loaded, so it must be ready the
+    // moment the user presses play), then the 3 next + 3 previous tracks,
+    // then the rest of the queue, one download at a time, so with "cache
+    // forever" the whole queue ends up on disk.
     LaunchedEffect(player) {
         var prefetchJob: kotlinx.coroutines.Job? = null
         player.state
@@ -1294,6 +1344,11 @@ fun WindowScope.App(
                     queue.take(index).takeLast(3).asReversed())
                     .distinctBy { it.videoId }
                 val restOfQueue = upcoming.drop(3)
+                // The current track goes FIRST: at startup (queue restored
+                // from the persistent queue) it is not playing yet, so by the
+                // time the user presses play it is already on disk and starts
+                // instantly instead of resolving + downloading.
+                val currentTrack = queue.getOrNull(index)
 
                 // Lyrics for the three upcoming tracks: fetch + keep in the
                 // persistent cache (best-effort, independent of the audio pass).
@@ -1310,7 +1365,7 @@ fun WindowScope.App(
                 // (an old pass must not keep downloading stale tracks).
                 prefetchJob?.cancel()
                 prefetchJob = launch(Dispatchers.IO) {
-                    val order = (nearestFirst + restOfQueue).distinctBy { it.videoId }
+                    val order = (listOfNotNull(currentTrack) + nearestFirst + restOfQueue).distinctBy { it.videoId }
                     for (track in order) {
                         if (player.isCached(track.videoId)) continue
                         val streams = StreamResolver.resolveAacStream(
@@ -1653,6 +1708,8 @@ fun WindowScope.App(
             videoId = nowPlaying?.videoId,
             isPlaying = isPlaying,
             audioLevel = player.audioLevel,
+            bufferedFraction = player.bufferedFraction,
+            pendingSeekFraction = player.pendingSeekFraction,
         )
     ) {
     Row(
@@ -1809,6 +1866,7 @@ fun WindowScope.App(
                             topSongCount = sessionTopCount,
                         ),
                         showWrapped = showWrappedOnHome,
+                        recentSeedTracks = recentSeedTracks,
                     )
                     is Screen.Search -> SearchScreen(
                         language = language,
@@ -2019,14 +2077,13 @@ fun WindowScope.App(
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
                         customAccents = customAccents,
-                        onAddCustomAccent = { argb ->
-                            val updated = (customAccents + argb).distinct()
-                            DesktopSettings.update { it.copy(customAccents = updated) }
-                        },
-                        onRemoveCustomAccent = { argb ->
-                            val updated = customAccents - argb
-                            DesktopSettings.update { it.copy(customAccents = updated) }
-                        },
+                        // Forward the stateful callbacks from the window level
+                        // (they update the live list AND persist it); duplicating
+                        // them here with DesktopSettings.update only persisted
+                        // the change, so new swatches appeared only after
+                        // leaving and re-entering the screen.
+                        onAddCustomAccent = onAddCustomAccent,
+                        onRemoveCustomAccent = onRemoveCustomAccent,
                     )
                     is Screen.SettingsPlayer -> SettingsPlayerScreen(
                         language = language,
@@ -2360,6 +2417,11 @@ fun WindowScope.App(
                         onBack = goBack,
                     )
                     is Screen.SettingsAbout -> SettingsAboutScreen(
+                        language = language,
+                        onBack = goBack,
+                        onOpenContributors = { navigate(Screen.SettingsContributors) },
+                    )
+                    is Screen.SettingsContributors -> SettingsContributorsScreen(
                         language = language,
                         onBack = goBack,
                     )
@@ -2870,7 +2932,7 @@ fun Sidebar(
 
     Surface(
         color = if (spotify) {
-            if (isSystemInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
+            if (isAppInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }
@@ -3083,12 +3145,14 @@ fun Sidebar(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Playlists Section Header (Collapsible)
+                // Playlists Section Header: clicking the label opens the full
+                // playlist list screen; only the chevron arrow expands/collapses
+                // the inline playlist list in the sidebar.
                 if (!collapsed) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { playlistsExpanded = !playlistsExpanded }
+                            .clickable { onSelect(Screen.LocalPlaylists) }
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -3098,14 +3162,25 @@ fun Sidebar(
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Expand Playlists",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // Larger invisible touch target so the arrow is easy to
+                        // hit; the nested clickable consumes the tap, so it never
+                        // triggers the row's navigation.
+                        Box(
                             modifier = Modifier
-                                .size(18.dp)
-                                .rotate(playlistsChevronRotation),
-                        )
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable { playlistsExpanded = !playlistsExpanded },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Expand Playlists",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .rotate(playlistsChevronRotation),
+                            )
+                        }
                     }
                 }
 
@@ -5372,7 +5447,7 @@ private const val GITHUB_MARK_PATH =
     "M12,2A10,10 0,0 0,2 12c0,4.42 2.87,8.17 6.84,9.5c0.5,0.08 0.66,-0.23 0.66,-0.5c0,-0.23 0,-0.86 0,-1.69c-2.77,0.6 -3.36,-1.34 -3.36,-1.34c-0.46,-1.16 -1.11,-1.47 -1.11,-1.47c-0.91,-0.62 0.07,-0.6 0.07,-0.6c1,0.07 1.53,1.03 1.53,1.03c0.87,1.52 2.34,1.07 2.91,0.83c0.09,-0.65 0.35,-1.09 0.63,-1.34c-2.22,-0.25 -4.55,-1.11 -4.55,-4.92c0,-1.11 0.38,-2 1.03,-2.71c-0.1,-0.25 -0.45,-1.29 0.1,-2.64c0,0 0.84,-0.27 2.75,1.02c0.79,-0.22 1.65,-0.33 2.5,-0.33c0.85,0 1.71,0.11 2.5,0.33c1.91,-1.29 2.75,-1.02 2.75,-1.02c0.55,1.35 0.2,2.39 0.1,2.64c0.65,0.71 1.03,1.6 1.03,2.71c0,3.82 -2.34,4.66 -4.57,4.91c0.36,0.31 0.69,0.92 0.69,1.85c0,1.34 0,2.42 0,2.74c0,0.27 0.16,0.59 0.67,0.5C19.14,20.16 22,16.42 22,12A10,10 0,0 0,12 2Z"
 
 @Composable
-fun AboutSection(language: String) {
+fun AboutSection(language: String, onOpenContributors: () -> Unit) {
     val firstLaunchDate = remember { DesktopSettings.load().firstLaunchDate }
     var versionCodeTaps by remember { mutableStateOf(0) }
     val devEnabled by DeveloperOptions.enabled.collectAsState()
@@ -5407,6 +5482,13 @@ fun AboutSection(language: String) {
         title = "PiBOH",
         description = Localization.get(language, "app_developer") + " (DE)",
         onClick = { openUrl("https://github.com/PiBOH") },
+    )
+    // Contributors live on their own dedicated sub-screen (the list would
+    // crowd this page once it grows past a handful of people).
+    AboutInfoRow(
+        icon = Icons.Filled.Group,
+        title = Localization.get(language, "contributors_section"),
+        onClick = onOpenContributors,
     )
     AboutInfoRow(
         icon = Icons.Filled.Public,
@@ -5465,6 +5547,28 @@ fun AboutSection(language: String) {
     )
 }
 
+/**
+ * Dedicated Contributors sub-screen (Settings → About → Contributors). The list
+ * is always read live from the repository when the screen opens, so it stays
+ * current without an app update; the bundled copy is only the offline fallback.
+ */
+@Composable
+fun ContributorsSection(language: String) {
+    // Refresh silently on every open; never falls back to a local user file —
+    // the only sources are the repository (online) and the bundled copy (offline).
+    var contributors by remember { mutableStateOf(loadContributors()) }
+    LaunchedEffect(Unit) {
+        val fresh = withContext(Dispatchers.IO) { fetchContributorsFromGitHub() }
+        if (fresh.isNotEmpty()) {
+            contributors = fresh
+        }
+    }
+    AboutSectionHeader(Localization.get(language, "contributors_section"))
+    contributors.forEach { contributor ->
+        ContributorRow(contributor)
+    }
+}
+
 @Composable
 private fun AboutSectionHeader(text: String) {
     Text(
@@ -5517,6 +5621,150 @@ private fun AboutInfoRow(
             )
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Contributors (About → Contributors) — the list is read LIVE from the
+// repository (`contributorsde.json` on the `vivi-music-de` branch) every time
+// the screen opens, so people can be added/edited in the repo without an app
+// update; the bundled classpath copy is only the offline fallback. No local
+// user copy is created or read anymore. Descriptions are intentionally neutral
+// English (not localized). The GitHub avatar is fetched from
+// https://github.com/<username>.png (GitHub's public avatar redirect).
+// ---------------------------------------------------------------------------
+
+@Serializable
+private data class ContributorsFile(val contributors: List<ContributorEntry> = emptyList())
+
+@Serializable
+private data class ContributorEntry(
+    val username: String = "",
+    val description: String = "",
+    val name: String? = null,
+    val url: String? = null,
+)
+
+/**
+ * Reads the contributor list bundled as a classpath resource (the shipped
+ * default). This is ONLY the offline fallback: the live list is fetched from
+ * the repository every time the Contributors screen opens (see
+ * [fetchContributorsFromGitHub]). A stale `~/.vivimusic/contributorsde.json`
+ * from older builds (when the file was user-editable) is removed best-effort,
+ * because the repository is now the single source of truth.
+ */
+private fun loadContributors(): List<ContributorEntry> {
+    runCatching {
+        val stale = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
+        if (stale.exists()) stale.delete()
+    }
+    return runCatching {
+        val stream = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return emptyList()
+        stream.use {
+            contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors
+        }.filter { it.username.isNotBlank() }
+    }.getOrDefault(emptyList())
+}
+
+/**
+ * Fetches the live contributor list from the repository
+ * (`contributorsde.json` on branch `vivi-music-de`, raw.githubusercontent.com).
+ * Returns an empty list when offline/unreachable — the caller then keeps the
+ * locally cached/bundled list, so the About screen degrades gracefully.
+ */
+private fun fetchContributorsFromGitHub(): List<ContributorEntry> = runCatching {
+    val url = URI("https://raw.githubusercontent.com/PiBOH/vivi-music/vivi-music-de/contributorsde.json").toURL()
+    val conn = url.openConnection() as java.net.HttpURLConnection
+    try {
+        conn.connectTimeout = 8000
+        conn.readTimeout = 8000
+        conn.setRequestProperty("User-Agent", "VIVI-Music-DE/${AppInfo.FULL_VERSION}")
+        conn.setRequestProperty("Accept", "application/json")
+        if (conn.responseCode == 200) {
+            conn.inputStream.use { input ->
+                val text = input.readBytes().decodeToString()
+                contributorsJson.decodeFromString<ContributorsFile>(text).contributors
+                    .filter { it.username.isNotBlank() }
+            }
+        } else {
+            emptyList()
+        }
+    } finally {
+        conn.disconnect()
+    }
+}.getOrDefault(emptyList())
+
+@Composable
+private fun ContributorRow(contributor: ContributorEntry) {
+    val username = contributor.username
+    // Show the person's real name first with the GitHub handle in parentheses
+    // ("Name (@username)"); without a name only the handle is shown.
+    val realName = contributor.name?.takeIf { it.isNotBlank() }
+    val displayTitle = if (realName != null) "$realName (@$username)" else "@$username"
+    val profileUrl = contributor.url?.takeIf { it.isNotBlank() } ?: "https://github.com/$username"
+    Row(
+        Modifier.fillMaxWidth()
+            .clickable(onClick = { openUrl(profileUrl) })
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Circular GitHub avatar with an initials-colored fallback underneath:
+        // while the image streams in (or offline) the colored disc + initial
+        // show; once loaded, AsyncImage paints over it (Crop inside the circle).
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(contributorAvatarColor(username)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    (realName ?: username).take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+            AsyncImage(
+                model = "https://github.com/$username.png?size=96",
+                contentDescription = displayTitle,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(displayTitle, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            if (contributor.description.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    contributor.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Stable per-username avatar disc color (deterministic, theme-independent). */
+private fun contributorAvatarColor(username: String): Color {
+    val palette = listOf(
+        Color(0xFF6750A4), Color(0xFF00696D), Color(0xFF006D3A), Color(0xFF7D5260),
+        Color(0xFF9A6700), Color(0xFF00639B), Color(0xFF704214), Color(0xFFB3261E),
+    )
+    val hash = username.fold(0) { acc, c -> (acc * 31 + c.code) and 0x7fffffff }
+    return palette[hash % palette.size]
 }
 
 /** Loads a bundled classpath image from `desktop/src/main/resources/images`. */
@@ -5712,6 +5960,9 @@ fun StorageSection(language: String) {
 
 /** JSON codec for persisting the queue between sessions. */
 private val queueJson = Json { ignoreUnknownKeys = true }
+
+/** JSON codec for the bundled `contributorsde.json` (ignores `_guide` etc.). */
+private val contributorsJson = Json { ignoreUnknownKeys = true }
 
 /** Key used to detect discrete playback changes worth syncing (no per-frame pushes). */
 private data class PlaybackSyncKey(

@@ -101,6 +101,9 @@ core
 core.*
 *.so
 *.bin
+*.dylib
+# Native helper dylibs compiled by the CI workflows (see build-desktop-macos.yml)
+desktop/src/main/resources/native/
 .env
 app/src/main/java/com/vivimusic/music/listentogether/proto/*
 

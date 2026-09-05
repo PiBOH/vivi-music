@@ -33,11 +33,13 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// Ship version.txt + CHANGELOG.md as classpath resources so the About screen
-// can read build metadata and the changelog at runtime (config-cache friendly).
+// Ship version.txt + CHANGELOG.md + contributorsde.json as classpath resources
+// so the About screen can read build metadata, the changelog and the dynamic
+// contributor list at runtime (config-cache friendly).
 tasks.processResources {
     from(rootProject.file("version.txt"))
     from(rootProject.file("CHANGELOG.md"))
+    from(rootProject.file("contributorsde.json"))
 }
 
 kotlin {

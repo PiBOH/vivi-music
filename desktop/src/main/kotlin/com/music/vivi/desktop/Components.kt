@@ -162,10 +162,40 @@ data class PlaybackContext(
     val videoId: String? = null,
     val isPlaying: Boolean = false,
     val audioLevel: StateFlow<Float>? = null,
+    /** Buffered fraction (0..1) of the current track (1f = fully cached / not
+     *  streaming). Powers the YouTube-style secondary segment on seek bars. */
+    val bufferedFraction: StateFlow<Float>? = null,
+    /** Fraction (0..1) of the current track scrubbed while its duration was
+     *  still unknown (loaded from the restored queue but never played); null
+     *  when the duration is known or nothing was scrubbed. Keeps the seek bar
+     *  thumb at the scrubbed point until playback actually begins. */
+    val pendingSeekFraction: StateFlow<Float?>? = null,
 )
 
 /** Composition local exposing the current playback to list rows (SongRow etc.). */
 val LocalPlayback = compositionLocalOf { PlaybackContext() }
+
+/**
+ * Current buffered fraction for the seek bars, collected from [LocalPlayback].
+ * Returns 1f when the app root doesn't provide one (no stream loaded or the
+ * composable is rendered outside the provider): a full buffer means the
+ * secondary "buffered" segment stays hidden.
+ */
+@Composable
+fun playbackBufferedFraction(): Float {
+    val flow = LocalPlayback.current.bufferedFraction ?: return 1f
+    return flow.collectAsState().value
+}
+
+/**
+ * Current pending scrub fraction (0..1) for the seek bars, collected from
+ * [LocalPlayback]. Returns null when the duration is known (real seek range)
+ * or nothing was scrubbed yet.
+ */
+@Composable
+fun playbackPendingSeekFraction(): Float? {
+    return LocalPlayback.current.pendingSeekFraction?.collectAsState()?.value
+}
 
 /** Square-ish artwork with a neutral placeholder behind it while loading. */
 @Composable
@@ -508,10 +538,21 @@ fun ViviSlider(
     onValueChangeFinished: (() -> Unit)? = null,
     style: ViviSliderStyle = ViviSliderStyle.SLIM,
     enabled: Boolean = true,
+    /** Optional buffered fraction (0..1) drawn as a fainter secondary segment
+     *  behind the played portion (YouTube-style). Null hides it entirely;
+     *  a full buffer (1f) draws it full-width behind the played fill, like a
+     *  fully loaded YouTube video. */
+    bufferedFraction: Float? = null,
     modifier: Modifier = Modifier,
 ) {
     val range = valueRange.endInclusive - valueRange.start
     val fraction = if (range == 0f) 0f else ((value - valueRange.start) / range).coerceIn(0f, 1f)
+    // The buffer segment stays visible like on YouTube: it grows while the
+    // stream downloads and remains full-width once fully loaded/cached (it is
+    // only hidden when the buffered fraction is null, i.e. no stream info).
+    val buffer = (bufferedFraction ?: 1f).coerceIn(0f, 1f)
+    val showBuffer = bufferedFraction != null && buffer > fraction + 0.002f
+    val bufferColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
     val primary = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val thumbColor = if (enabled) primary else MaterialTheme.colorScheme.outline
@@ -583,6 +624,14 @@ fun ViviSlider(
                     size = androidx.compose.ui.geometry.Size(size.width, 3f),
                     cornerRadius = CornerRadius(1.5f, 1.5f),
                 )
+                if (showBuffer) {
+                    drawRoundRect(
+                        color = bufferColor,
+                        topLeft = Offset(0f, cy - 1.5f),
+                        size = androidx.compose.ui.geometry.Size(size.width * buffer, 3f),
+                        cornerRadius = CornerRadius(1.5f, 1.5f),
+                    )
+                }
                 drawRoundRect(
                     color = primary,
                     topLeft = Offset(0f, cy - 1.5f),
@@ -598,6 +647,15 @@ fun ViviSlider(
                     size = androidx.compose.ui.geometry.Size(size.width, h),
                     cornerRadius = CornerRadius(h / 2f, h / 2f),
                 )
+                // Buffered portion (fainter, behind the played fill)
+                if (showBuffer) {
+                    drawRoundRect(
+                        color = bufferColor,
+                        topLeft = Offset(0f, cy - h / 2f),
+                        size = androidx.compose.ui.geometry.Size(size.width * buffer, h),
+                        cornerRadius = CornerRadius(h / 2f, h / 2f),
+                    )
+                }
                 // Active track (thick capsule fill)
                 if (fraction > 0f) {
                     drawRoundRect(
@@ -610,6 +668,9 @@ fun ViviSlider(
             } else {
                 val stroke = Stroke(width = trackHeight.toPx(), cap = StrokeCap.Round)
                 drawPath(buildPath(size.width), color = trackColor, style = stroke)
+                if (showBuffer) {
+                    drawPath(buildPath(size.width * buffer), color = bufferColor, style = stroke)
+                }
                 if (fraction > 0.001f) {
                     drawPath(buildPath(size.width * fraction), color = primary, style = stroke)
                 }

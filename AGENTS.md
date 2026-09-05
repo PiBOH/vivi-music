@@ -176,6 +176,13 @@ Prefer the smallest change that satisfies the request. Do not "clean up" or
 "improve" unrelated code while you work. When a change could break existing
 behavior, state the risk before editing and, when in doubt, ask.
 
+#### Do-not-touch areas (verified working — never change unless the user
+**explicitly** asks)
+
+- **Embedded WebView sign-in (Google login)**: it works now (sign-in window,
+cookie extraction, auto-close and session save). Do not modify the WebView
+login flow in any way.
+
 ## 5. Versioning and CHANGELOG — MANDATORY
 
 ### Semantic Versioning (SemVer)
@@ -436,6 +443,51 @@ locale tag):
 
 Whenever there is **any doubt — even a minimal one** (intent, scope, versioning
 type, branch to touch, wording of a string, which platform is affected, ...),
+## 7. GitHub Issues workflow — MANDATORY
+
+Every user-reported problem or feature request MUST first become a GitHub
+issue on `PiBOH/vivi-music` **before any code is changed**:
+
+1. **Check for duplicates first**:
+   `gh issue list --repo PiBOH/vivi-music --state all --search "<keywords>"`
+   — only open a new issue when no equivalent open/closed issue exists.
+
+2. **Open the issue first** (via the `gh` CLI; on this machine it is not on
+   the bash PATH, use the full path `/c/Program Files/GitHub CLI/gh.exe`,
+   or plain `gh` elsewhere). Follow the repo's issue templates in
+   `.github/ISSUE_TEMPLATE/`:
+   - Desktop (Windows/Linux/macOS) bug → `bug_report_de.yml`
+     (`title: "[Bug][DE]: "`, labels `bug`, `triage`, `desktop`).
+   - Desktop feature → `feature_request_de.yml`
+     (`title: "[Feat][DE]: "`, labels `enhancement`, `triage`, `desktop`).
+   - Mobile (Android) bug → `bug_report.yml` (`title: "[Bug][APK]: "`).
+   - Mobile feature → `feature_request.yml` (`title: "[Feat][APK]: "`).
+   Fill in every required field of the template (category, frequency, steps
+   to reproduce, …); use `N/A` when a field does not apply.
+   **Issue bodies and titles are written in English.**
+
+3. **Fix the problem**, then reference the issue in the CHANGELOG entry and in
+   the commit message (e.g. `Closes #NN` / `Fixes #NN`).
+
+4. **Close the issue** after the fix is committed and pushed:
+   `gh issue close <NN> --repo PiBOH/vivi-music`.
+
+Existing commit rules still apply: never add a "Co-Authored-By: Codebuff"
+footer.
+
+### Language rules
+
+- **Chat replies** are always written in the **same language the user
+  wrote the message in** (never forced to English or Italian).
+- The **app/program text** is English-first and then translated into the
+  other languages through the localization system (section 6).
+- **GitHub issues** (title + body) are always written in **English**.
+- The CHANGELOG is always written in English.
+
+## 8. Ask before assuming — MANDATORY
+
+Whenever there is **any doubt — even a minimal one** (intent, scope, versioning
+type, branch to touch, wording of a string, which platform is affected, …),
 the assistant MUST ask the user instead of assuming. Guessing is a bug. The
 user explicitly requires being asked about every uncertainty, no matter how
 small ("OBBLIGO DI CHIEDERE PER QUALSIASI DUBBIO, ANCHE MINIMO").

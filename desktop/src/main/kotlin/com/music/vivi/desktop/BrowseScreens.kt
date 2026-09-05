@@ -32,6 +32,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -53,11 +54,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
+import com.music.innertube.models.WatchEndpoint
 import com.music.innertube.models.YTItem
 import com.music.innertube.pages.BrowseResult
 import com.music.innertube.pages.HomePage
 import com.music.innertube.pages.MoodAndGenres
 import com.music.innertube.pages.SearchResult
+import kotlinx.coroutines.delay
 import com.music.innertube.pages.SearchSummary
 import com.music.innertube.pages.SearchSummaryPage
 
@@ -92,18 +95,58 @@ fun HomeScreen(
     onRandomizeOrderChange: (Boolean) -> Unit = {},
     wrappedStats: WrappedStats = WrappedStats(),
     showWrapped: Boolean = false,
+    /** Recently started tracks (newest first) used as recommendation seeds. */
+    recentSeedTracks: List<NowPlaying> = emptyList(),
 ) {
     var home by remember { mutableStateOf<HomePage?>(null) }
     var moodAndGenres by remember { mutableStateOf<List<MoodAndGenres>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedChip by remember { mutableStateOf<HomePage.Chip?>(null) }
+    // Retry support: bump [loadRequest] to refetch. Also retries once when the
+    // response is an empty shell (YouTube sometimes returns the shell before
+    // streaming the real carousels), so the Home can't be left permanently empty.
+    var loadRequest by remember { mutableStateOf(0) }
+    var autoRetried by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selectedChip) {
+    // Recommended songs, ported from the mobile app's HomeViewModel:
+    // for each recent seed track ask `YouTube.next(videoId)` for its related
+    // endpoint, then `YouTube.related(endpoint)` and surface the songs.
+    var recommendations by remember { mutableStateOf<List<SongItem>?>(null) }
+    LaunchedEffect(recentSeedTracks.map { it.videoId }.take(3).joinToString(",")) {
+        val seeds = recentSeedTracks.take(3)
+        if (seeds.isEmpty()) {
+            recommendations = null
+            return@LaunchedEffect
+        }
+        val collected = mutableListOf<SongItem>()
+        for (seed in seeds) {
+            val endpoint = YouTube.next(WatchEndpoint(videoId = seed.videoId))
+                .getOrNull()?.relatedEndpoint ?: continue
+            val page = YouTube.related(endpoint).getOrNull() ?: continue
+            collected += page.songs.filter { it.id != seed.videoId }
+            if (collected.size >= 12) break
+        }
+        recommendations = collected.distinctBy { it.id }.take(12).ifEmpty { null }
+    }
+
+    LaunchedEffect(loadRequest, selectedChip) {
         val params = selectedChip?.endpoint?.params
+        error = null
+        home = null
         YouTube.home(params = params).fold(
             onSuccess = { home = it; error = null },
             onFailure = { error = it.message },
         )
+    }
+
+    // One automatic retry when the response is empty (rare YouTube layout
+    // changes return an empty shell for the first request).
+    LaunchedEffect(home) {
+        if (home != null && home!!.sections.isEmpty() && !autoRetried) {
+            autoRetried = true
+            delay(1200)
+            loadRequest++
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -138,6 +181,23 @@ fun HomeScreen(
     when {
         error != null && home == null -> ErrorBox(language, error)
         home == null -> LoadingBox(language)
+        // Empty response (even after the automatic retry): show a clear state
+        // with a manual Retry instead of a silently blank Home.
+        home!!.sections.isEmpty() -> Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                Localization.get(language, "home_empty"),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = { autoRetried = true; loadRequest++ }) {
+                Text(Localization.get(language, "retry"))
+            }
+        }
         else -> LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -408,6 +468,42 @@ fun HomeScreen(
                                 YtItemCard(
                                     item = item,
                                     onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3b. Recommended Section (ported from the mobile app):
+            // personalized related songs seeded from the tracks you listened to.
+            recommendations?.takeIf { it.isNotEmpty() }?.let { recs ->
+                item(key = "recommended_header") {
+                    Text(
+                        text = Localization.get(language, "recommended"),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                item(key = "recommended_content") {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        val recSongs = recs.distinctBy { it.id }
+                        items(recSongs, key = { "rec-${it.id}" }) { song ->
+                            Box(Modifier.width(300.dp)) {
+                                SongRow(
+                                    song = song,
+                                    language = language,
+                                    // Like the Android app: tapping a recommendation
+                                    // plays the whole recommendation list as a queue.
+                                    onClick = {
+                                        val start = recSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                        val rotated = recSongs.slice(start until recSongs.size) +
+                                            recSongs.slice(0 until start)
+                                        onPlayAll(rotated)
+                                    },
+                                    onAddToPlaylist = { onAddToPlaylist(song) },
                                 )
                             }
                         }

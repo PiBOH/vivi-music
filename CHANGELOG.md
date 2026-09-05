@@ -11,6 +11,120 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.45_DE-1.50.23-alpha] - 2026-09-05
+
+### Changed
+- [DE][APK] **Playback resolution ported from upstream vivizzz007/main (6.0.6)** to finally settle the song-resolution issues on both platforms: the desktop `StreamResolver` now uses the upstream client chain (VISIONOS → ANDROID_VR_1_65_10 → ANDROID_VR_1_43_32 → TVHTML5 → TVHTML5_SIMPLY_EMBEDDED_PLAYER → ANDROID_CREATOR → WEB_CREATOR, gated by `ContentAwareFallbackStrategy` and skipping PoToken-only clients the desktop cannot generate), and the desktop stream cache gained the upstream `StreamUrlCache` generation semantics so an in-flight resolution can no longer commit a stale URL after invalidation (fixes URL-invalidation races). (Closes #18)
+- [APK] **Rebased on upstream 6.0.6**: StreamUrlCache, ContentAwareFallbackStrategy, CipherDeobfuscator (WEB_REMIX streaming), SponsorBlock, NetworkConfig, the new lyrics providers and all upstream fixes come in via the merge; our device-sync (pairing) glue is the only feature kept on top. versionName is now **6.0.6.1** with a monotonic versionCode (129) so existing installs keep updating. (Closes #20)
+- [DE] Upstream fallback order also restored `Android VR 1.65.10` and the Chrome UA set that upstream 6.0.6 ships.
+
+### Added
+- [DE] **Home "Recommended" section** (port of the mobile Daily-Discover mechanism): the three most recent tracks you played seed `YouTube.next` → `YouTube.related`, and the related songs appear as a horizontally scrollable section; tapping one plays the whole recommendation list as a queue. Hidden until you listen to something. (Closes #19)
+
+### Fixed
+- [APK] Device-sync now persists/restores the `EnableUnisonKey` lyrics preference (renamed upstream from SimpMusic), so lyrics-provider sync keeps working after the rebase.
+
+
+## [6.4.45_DE-1.50.22-alpha] - 2026-09-04
+
+### Changed
+- [DE] Desktop releases now publish on the **alpha** channel instead of nightly (release channel in `version.txt`).
+
+### Fixed
+- [DE] **Players, mini players and the sidebar now follow the app theme in light mode**: they decided dark/light from the OS theme (`isSystemInDarkTheme()`) instead of the app's own mode, so with a dark OS + light app they stayed dark (and could get light text on light surfaces). A new `LocalAppIsDark` (provided by `AppTheme`) drives those surfaces so the app-selected Light/Dark/System mode applies consistently. (Closes #15)
+- [DE] **Custom colors now appear in the palette live**: the Theme screen only persisted new/removed custom accents to disk without updating the list it displays, so swatches appeared only after re-entering the screen. It now forwards the stateful window-level callbacks, which update and persist in one step. (Closes #16)
+- [APK] **Debug APK About screen now shows NIGHTLY for non-stable builds**: the CI built the APK without `-Pnightly=true`, so `BuildConfig.IS_NIGHTLY` was false and the About badge read "STABLE". The flag is now derived from the mobile channel in `version.txt` (line 3). (Closes #17)
+
+
+## [6.4.45_DE-1.50.21-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Tracks stuck in a resolve loop after clearing the cache**: the in-app "Clear cache" buttons (Settings → Storage / Privacy) delete every subfolder of `~/.vivimusic/cache`, including `audio/`, which `AudioPlayer` only created once at startup. Every download started afterwards failed with "path not found", so tracks resolved, reset the seek bar to zero and resolved again forever. The audio cache folder is now recreated automatically before each download, so playback works right after a cache cleanup. (Closes #14)
+
+## [6.4.45_DE-1.50.20-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Scrubbing the seek bar now starts the stream of an unresolved track** (issue #12): dragging the seek bar on a track restored from the queue but never resolved now kicks off the stream resolution and playback starts from the scrubbed position (YouTube-style), instead of only remembering the position until play is pressed. Closes #12.
+- [DE] **The YouTube-style buffered bar is now always visible** (issue #13): the fainter secondary segment behind the played portion previously vanished as soon as the download finished or the track was already cached, so it was practically never seen. It now stays full-width once the track is fully loaded/cached, exactly like a fully buffered YouTube video. Closes #13.
+
+## [6.4.45_DE-1.50.19-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Windows installer no longer fails to compile** (issue #10): the details/log box is now created at runtime with `TNewMemo` — Inno Setup 6 removed the built-in `DetailsMemo`/`DetailsButton` that the previous version referenced. The box is always visible below the progress bar on both the Installing page and the uninstall page, showing the files being extracted while installing and the cleanup steps while uninstalling.
+
+### Added
+- [DE] **Uninstall now keeps exactly one final backup and wipes every cache** (issue #11): on Windows the Inno Setup uninstaller copies `device-sync.json`, `playlists.json` and imported fonts into `~/.vivimusic/backups/uninstall-<timestamp>/` right before finishing, then deletes everything else in `~/.vivimusic` (downloaded updates, audio/video/canvas/lyrics caches, logs, helper libraries, artwork) — only that last backup remains. Linux mirrors it: the `.deb` ships a `postrm` hook (plus the shared `scripts/uninstall-cleanup.sh` embedded in `/opt` and copied to `/usr/share`), the AUR PKGBUILD gets a `post_remove` hook via `vivi-music-de.install`, and macOS/AppImage users can run the same script manually. INSTALL-GUIDE updated for every OS.
+
+## [6.4.45_DE-1.50.18-nightly] - 2026-09-04
+
+### Changed
+- [DE] The Inno Setup installer now always shows the installation details box (the extraction log) below the progress bar on the Installing page, instead of hiding it behind the "Show details" toggle.
+
+
+## [6.4.45_DE-1.50.17-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Radio/Charts discovery screen no longer stays empty**: the chart parser now converts every item type YouTube returns (songs, video-chart playlists, top artists, albums) instead of dropping everything that is not a song — the "Nothing to show here yet" screen with the endless refresh loop is gone. Closes #6.
+- [DE] **Native macOS notifications actually delivered**: the bundled native helper now posts through `UNUserNotificationCenter`, so notifications land in the macOS Notification Center and are attributed to the app (the old `osascript` path was unreliable/blocked on modern macOS). Permission is requested once; the helper falls back to `osascript` only when it cannot be loaded. Closes #7.
+- [DE] **Home screen can no longer be silently blank**: an empty response auto-retries once and, if it still comes back empty, shows a clear "Nothing to show here yet" state with a Retry button instead of an endless spinner with no content. Closes #8.
+- [DE] **Changelog issue references are now clickable**: every `#N` mention (e.g. "Closes #3") across the whole changelog — past and future entries — renders as a link that opens the GitHub issue. Closes #9.
+
+
+## [6.4.45_DE-1.50.16-nightly] - 2026-09-04
+
+### Added
+- [DE] **Native system playback controls and "Now Playing" on macOS**: the app now registers with the system media session (Control Center and Lock Screen tile) through a small native helper (MediaPlayer.framework), so the current track is recognised system-wide and the physical media keys — keyboard, Touch Bar, headset buttons — control VIVI directly without needing Accessibility permission. Play/Pause, Next, Previous and scrubbing from the Lock Screen slider are wired to the player, and the tile shows the track title, artist and cover art (artwork is downloaded and cached locally). On Windows and Linux the existing global key hooks are unchanged. Closes #5.
+
+
+## [6.4.45_DE-1.50.15-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Audio micro-pauses/skips on macOS (random brief glitches on almost every track, coinciding with small UI hitches) reduced**: the output line buffer was only ~90 ms of audio, so any decode-thread stall (moof scan after a network burst, disk read, GC pause) underran the line and caused an audible skip. The line now buffers ~250 ms (computed from the real audio format, with smaller fallbacks), atom scans are bounded to 256 KB windows so one burst can't stall the decode thread, frames are queued before scanning (so a scan overlaps with already-buffered audio), and the seek slider/lyrics now follow the real playhead instead of the decode-ahead position. Closes #4.
+
+## [6.4.45_DE-1.50.14-nightly] - 2026-09-04
+
+### Added
+- [DE] Sidebar "Playlists" entry now opens the full playlist list screen (all local playlists with create/rename/delete); the chevron arrow is the only control that expands/collapses the inline playlist list in the sidebar. Closes #3.
+
+## [6.4.45_DE-1.50.13-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Mini player seek bar now works on tracks restored from the persistent queue without opening the full player**: restored tracks used to lose their duration, so the seek bar fell back to a 0..1 range and the thumb snapped back to the start after a scrub, making the seek look dead. The scrubbed position now stays visible (shown as a percentage until the real duration is known) and playback starts from it; once a track is actually played its real duration is written back into the persistent queue, so on the next launch the seek bar has the correct range immediately.
+
+## [6.4.45_DE-1.50.12-nightly] - 2026-09-03
+
+### Added
+- [DE] **Dedicated Contributors sub-screen**: the About screen now shows a single "Contributors" row right under the lead developer card; tapping it opens a dedicated screen with the full list, so the About page no longer gets crowded as the list grows. Each entry shows the person's real name first with the GitHub handle in parentheses ("Name (@username)") when a `name` is present in `contributorsde.json`, otherwise just the handle.
+- [DE] **Seek bars usable before the duration is known**: a track loaded from the queue but never played can be scrubbed even while its length is still unknown (no more disabled slider); the chosen point is remembered as a fraction and playback starts from it the moment the duration becomes available (metadata or resolved stream).
+
+### Changed
+- [DE] `contributorsde.json` is now always read from the repository (`vivi-music-de` branch) with a silent refresh every time the Contributors screen opens — no local `~/.vivimusic/contributorsde.json` copy is created or read anymore (a stale one from older builds is deleted by the app); the bundled copy is only the offline fallback.
+
+## [6.4.45_DE-1.50.11-nightly] - 2026-09-03
+
+### Added
+- [DE] **YouTube-style buffered progress on the seek bars of every player**: while a track is still streaming/downloading, a fainter secondary segment shows how much of the audio is already available (full player - M3 Expressive and Classic designs, the Classic mini player slider, the Apple mini player bottom bar and the New mini player progress ring). Fully cached or finished downloads show no extra segment, and the buffer keeps advancing while the track is paused.
+- [DE] **Seek bars can now be scrubbed before playback starts**: dragging the slider on a loaded-but-not-yet-started track (restored persistent queue, or a track that already ended) remembers the chosen position, and pressing play starts from there instead of ignoring the drag.
+
+### Changed
+- [DE] The About -> Contributors list is now fetched live from GitHub (`contributorsde.json` on the `vivi-music-de` branch) every time the screen opens, so new contributors appear without an app update; the local copy (`~/.vivimusic/contributorsde.json`) is kept only as an offline cache/fallback and is refreshed silently.
+
+## [6.4.45_DE-1.50.10-nightly] - 2026-09-03
+
+### Changed
+- [DE] The contributor list is now read from `~/.vivimusic/contributorsde.json` (the bundled default is copied there on the first launch), so contributors can be added, edited and reordered without rebuilding the app — the About screen picks the changes up at the next launch. `contributorsde.json` in the repo root stays the shipped default, with a clearer multi-line `_guide` (one line per row) explaining the format, the user-data location and optional fields. vivizzz007 moved first in the default order.
+
+## [6.4.45_DE-1.50.9-nightly] - 2026-09-03
+
+### Added
+- [DE] About screen: new CONTRIBUTORS section below the developer card, listing the people behind the project (bogdan-developer, Ansu216, vivizzz007, dumbshrn) with their role, a link to their GitHub profile and their avatar fetched automatically from GitHub. The list is data-driven from `contributorsde.json` (repo root, bundled into the app), so new contributors can be added without touching code; the file carries an inline `_guide` explaining the format. Section header localized in all 47 languages; the contributor blurbs are intentionally neutral English.
+
+## [6.4.45_DE-1.50.8-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Classic mini player seeking**: the seek slider now seeks once when the drag ends, like the full player. Previously every drag tick restarted the whole decode thread, so the slider fought the live position reports and felt dead (could not scrub forward/backward reliably).
+- [DE] **Instant start on the restored queue**: the startup prefetch now downloads the current track first. With a persistent queue the current track had no cache file (only the 3 next + 3 previous + the rest were prefetched), so pressing play had to resolve and download before the first sound; now it is already on disk when the app opens and starts immediately.
+
 ## [6.4.45_DE-1.50.7-nightly] - 2026-09-03
 
 ### Fixed

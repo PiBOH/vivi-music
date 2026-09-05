@@ -13,7 +13,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -140,6 +139,7 @@ import com.music.vivi.canvas.CanvasArtwork
 import com.music.vivi.desktop.player.LoadPhase
 import com.music.vivi.desktop.player.RepeatMode
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 private enum class M3ETab { NONE, QUEUE, LYRICS, HISTORY }
 
@@ -450,7 +450,15 @@ private fun M3EPlayerContent(
                     var isSeeking by remember(np.videoId) { mutableStateOf(false) }
                     var seekValue by remember(np.videoId) { mutableStateOf(0f) }
                     val sliderMax = durationMs.coerceAtLeast(1L)
-                    val displayPosition = if (isSeeking) seekValue else positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                    val unknownDuration = durationMs <= 0L
+                    // Duration unknown (loaded but never played): keep the thumb
+                    // at the scrubbed fraction so the seek stays visible and
+                    // playback starts from it once the length is known.
+                    val displayPosition = when {
+                        isSeeking -> seekValue
+                        unknownDuration -> (playbackPendingSeekFraction() ?: 0f) * sliderMax
+                        else -> positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                    }
                     
                     Column(
                         Modifier
@@ -464,26 +472,34 @@ private fun M3EPlayerContent(
                                 isSeeking = true
                             },
                             onValueChangeFinished = {
+                                // Duration unknown (loaded but never played): the
+                                // value encodes the start fraction (0..1000) and
+                                // playback starts from it once the length is known.
                                 if (durationMs > 0) onSeek(seekValue.toLong())
+                                else onSeek((seekValue * 1000).toLong())
                                 isSeeking = false
                             },
-                            enabled = durationMs > 0,
+                            enabled = true,
                             valueRange = 0f..sliderMax.toFloat(),
                             style = ViviSliderStyle.EXPRESSIVE,
+                            bufferedFraction = playbackBufferedFraction(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Row(Modifier.fillMaxWidth()) {
                             Text(
-                                formatTime(displayPosition.toLong()),
+                                if (unknownDuration) "${(displayPosition * 100).roundToInt()}%"
+                                else formatTime(displayPosition.toLong()),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.weight(1f))
-                            Text(
-                                "-" + formatTime(maxOf(0L, durationMs - displayPosition.toLong())),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            if (!unknownDuration) {
+                                Text(
+                                    "-" + formatTime(maxOf(0L, durationMs - displayPosition.toLong())),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
 
@@ -1126,10 +1142,14 @@ private fun PlayerControlPanel(
     var isSeeking by remember(np.videoId) { mutableStateOf(false) }
     var seekValue by remember(np.videoId) { mutableStateOf(0f) }
     val sliderMax = durationMs.coerceAtLeast(1L)
-    val displayPosition = if (isSeeking) {
-        seekValue
-    } else {
-        positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+    val unknownDuration = durationMs <= 0L
+    // Duration unknown (loaded but never played): keep the thumb at the
+    // scrubbed fraction so the seek stays visible and playback starts from
+    // it once the length is known.
+    val displayPosition = when {
+        isSeeking -> seekValue
+        unknownDuration -> (playbackPendingSeekFraction() ?: 0f) * sliderMax
+        else -> positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
     }
     ViviSlider(
         value = displayPosition.coerceIn(0f, sliderMax.toFloat()),
@@ -1138,26 +1158,34 @@ private fun PlayerControlPanel(
             isSeeking = true
         },
         onValueChangeFinished = {
+            // Duration unknown (loaded but never played): the value encodes the
+            // start fraction (0..1000) and playback starts from it once the
+            // length is known.
             if (durationMs > 0) onSeek(seekValue.toLong())
+            else onSeek((seekValue * 1000).toLong())
             isSeeking = false
         },
-        enabled = durationMs > 0,
+        enabled = true,
         valueRange = 0f..sliderMax.toFloat(),
         style = sliderStyle,
+        bufferedFraction = playbackBufferedFraction(),
         modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth()) {
         Text(
-            formatTime(displayPosition.toLong()),
+            if (unknownDuration) "${(displayPosition * 100).roundToInt()}%"
+            else formatTime(displayPosition.toLong()),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
-        Text(
-            formatTime(durationMs),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!unknownDuration) {
+            Text(
+                formatTime(durationMs),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 
     if (loadPhase != LoadPhase.NONE) {
@@ -2283,7 +2311,7 @@ fun BoxScope.DesktopMiniPlayerBackgroundLayer(
     thumbnailUrl: String?,
     modifier: Modifier = Modifier,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = isAppInDarkTheme()
     val baseSurface = if (pureBlack && dark) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
     var extractedColors by remember(thumbnailUrl) { mutableStateOf<List<Color>>(emptyList()) }
 
@@ -2439,8 +2467,8 @@ fun ClassicDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -2576,29 +2604,64 @@ fun ClassicDesktopMiniPlayer(
 
                         Spacer(Modifier.height(4.dp))
 
+                        // Seek happens once when the drag ends (like the full
+                        // player): seeking on every drag tick restarted the
+                        // whole decode thread per tick, which made the slider
+                        // fight the live position reports and feel dead.
+                        var isSeeking by remember(nowPlaying.videoId) { mutableStateOf(false) }
+                        var seekValue by remember(nowPlaying.videoId) { mutableStateOf(0f) }
+                        val sliderMax = durationMs.coerceAtLeast(1L)
+                        val unknownDuration = durationMs <= 0L
+                        // Duration unknown (loaded but never played): keep the
+                        // thumb at the scrubbed fraction so the seek stays
+                        // visible and playback starts from it once the length is
+                        // known.
+                        val displayPosition = when {
+                            isSeeking -> seekValue
+                            unknownDuration -> (playbackPendingSeekFraction() ?: 0f) * sliderMax
+                            else -> positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                        }
+
                         Row(
                             Modifier.fillMaxWidth(0.9f),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                formatTime(positionMs),
+                                if (unknownDuration) "${(displayPosition * 100).roundToInt()}%"
+                                else formatTime(displayPosition.toLong()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = mutedColor,
                             )
                             Spacer(Modifier.width(8.dp))
                             ViviSlider(
-                                value = positionMs.toFloat().coerceIn(0f, durationMs.coerceAtLeast(1L).toFloat()),
-                                onValueChange = { onSeek(it.toLong()) },
-                                valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+                                value = displayPosition.coerceIn(0f, sliderMax.toFloat()),
+                                onValueChange = {
+                                    seekValue = it.coerceIn(0f, sliderMax.toFloat())
+                                    isSeeking = true
+                                },
+                                onValueChangeFinished = {
+                                    // Duration unknown (loaded but never played):
+                                    // the value encodes the start fraction
+                                    // (0..1000) and playback starts from it once
+                                    // the length is known.
+                                    if (durationMs > 0) onSeek(seekValue.toLong())
+                                    else onSeek((seekValue * 1000).toLong())
+                                    isSeeking = false
+                                },
+                                enabled = true,
+                                valueRange = 0f..sliderMax.toFloat(),
                                 style = ViviSliderStyle.SLIM,
+                                bufferedFraction = playbackBufferedFraction(),
                                 modifier = Modifier.weight(1f),
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(
-                                formatTime(durationMs),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = mutedColor,
-                            )
+                            if (!unknownDuration) {
+                                Text(
+                                    formatTime(durationMs),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = mutedColor,
+                                )
+                            }
                         }
                     }
 
@@ -2698,8 +2761,8 @@ fun NewDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
     var isFavorite by remember { mutableStateOf(false) }
@@ -2724,6 +2787,8 @@ fun NewDesktopMiniPlayer(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Circular Artwork Thumbnail with Song Progress Arc & Play/Pause Button Inside Cover
+            // (a fainter buffered arc sits behind the played arc while streaming)
+            val bufferedFraction = playbackBufferedFraction()
             Box(
                 Modifier
                     .size(46.dp)
@@ -2739,6 +2804,15 @@ fun NewDesktopMiniPlayer(
                         useCenter = false,
                         style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                     )
+                    if (bufferedFraction < 0.999f && bufferedFraction > progress + 0.002f) {
+                        drawArc(
+                            color = primaryColor.copy(alpha = 0.4f),
+                            startAngle = -90f,
+                            sweepAngle = 360f * bufferedFraction,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
                     drawArc(
                         color = primaryColor,
                         startAngle = -90f,
@@ -2897,8 +2971,8 @@ fun AppleDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
     Box(
@@ -2914,7 +2988,8 @@ fun AppleDesktopMiniPlayer(
             thumbnailUrl = nowPlaying.thumbnail,
         )
 
-        // Bottom 3dp Progress Bar
+        // Bottom 3dp Progress Bar (with a fainter buffered portion while streaming)
+        val bufferedFraction = playbackBufferedFraction()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2923,6 +2998,9 @@ fun AppleDesktopMiniPlayer(
                 .drawBehind {
                     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
                     drawRect(mutedColor.copy(alpha = 0.2f))
+                    if (bufferedFraction < 0.999f && bufferedFraction > progress + 0.002f) {
+                        drawRect(primaryColor.copy(alpha = 0.35f), size = Size(size.width * bufferedFraction, size.height))
+                    }
                     drawRect(primaryColor, size = Size(size.width * progress, size.height))
                 }
         )
