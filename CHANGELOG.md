@@ -11,7 +11,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
-## [6.4.45_DE-1.50.23-alpha] - 2026-09-05
+## [6.0.6.1_DE-1.50.23-alpha] - 2026-09-05
 
 ### Changed
 - [DE][APK] **Playback resolution ported from upstream vivizzz007/main (6.0.6)** to finally settle the song-resolution issues on both platforms: the desktop `StreamResolver` now uses the upstream client chain (VISIONOS → ANDROID_VR_1_65_10 → ANDROID_VR_1_43_32 → TVHTML5 → TVHTML5_SIMPLY_EMBEDDED_PLAYER → ANDROID_CREATOR → WEB_CREATOR, gated by `ContentAwareFallbackStrategy` and skipping PoToken-only clients the desktop cannot generate), and the desktop stream cache gained the upstream `StreamUrlCache` generation semantics so an in-flight resolution can no longer commit a stale URL after invalidation (fixes URL-invalidation races). (Closes #18)
@@ -23,6 +23,9 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ### Fixed
 - [APK] Device-sync now persists/restores the `EnableUnisonKey` lyrics preference (renamed upstream from SimpMusic), so lyrics-provider sync keeps working after the rebase.
+- [APK] **Updater defaults now match the fork distribution**: the prerelease ("beta updates") switch is ON by default (releases ship as pre-releases), and the update source defaults to `PiBOH/vivi-music` instead of the upstream repo — both remain switchable in Settings → Updates. (Closes #21)
+- [APK] **Fixed a broken CI workflow**: the nightly-flag line added in 1.50.22 for the About-screen badge contained a literal CR/LF inside a shell string, which made the whole `build.yml` workflow file invalid (the Android build job never ran and the APK asset was missing from the release). The line is now valid shell.
+- [DE] The release tag now correctly reads `6.0.6.1_DE-1.50.23-alpha`: the Android part of the combined version follows the APK version (`6.0.6.1`), documented in `AGENTS.md` — the previous tag (`6.4.45_DE-...`) was built from a stale `version.txt` and its release has been replaced.
 
 
 ## [6.4.45_DE-1.50.22-alpha] - 2026-09-04

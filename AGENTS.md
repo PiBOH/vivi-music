@@ -237,6 +237,17 @@ considers obvious):
 Never bump the DE version for a mobile-only change, and never bump the mobile
 version for a DE-only change.
 
+#### Android (APK) versioning
+
+The **Android version uses its own scheme, independent of SemVer**: only the
+**last digit increments** on every APK update (e.g. `6.0.6` → `6.0.6.1`
+→ `6.0.6.2`). The `versionCode` is a monotonic integer that must never
+decrease (users must always be able to update without uninstalling). Keep
+`version.txt` (lines 1-2), `app/build.gradle.kts` (`versionName` /
+`versionCode`) and the release tag (`<mobile>_DE-<de>[-<channel>]`) in sync.
+The **DE program follows standard SemVer** (`MAJOR.MINOR.PATCH`) as described
+above.
+
 #### Desktop versioning (`<mobile>_DE-<de>` + channel)
 
 Desktop releases are distinguished from Android releases with a combined

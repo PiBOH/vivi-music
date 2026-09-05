@@ -63,8 +63,7 @@ jobs:
           # which is set via -Pnightly=true. Drive it from the mobile channel
           # in version.txt (line 3): every non-stable build (nightly/alpha/...)
           # is labelled NIGHTLY in the About screen instead of STABLE.
-          MOBILE_CHANNEL="$(sed -n '3p' version.txt | tr -d '
-' | xargs | tr '[:upper:]' '[:lower:]')"
+          MOBILE_CHANNEL="$(sed -n '3p' version.txt | tr -d '[:space:]' | xargs | tr '[:upper:]' '[:lower:]')"
           NIGHTLY_FLAG=""
           if [[ -n "$MOBILE_CHANNEL" && "$MOBILE_CHANNEL" != "stable" ]]; then
             NIGHTLY_FLAG="-Pnightly=true"
