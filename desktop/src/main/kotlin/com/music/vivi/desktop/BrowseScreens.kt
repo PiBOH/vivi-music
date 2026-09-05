@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
+import com.music.innertube.models.WatchEndpoint
 import com.music.innertube.models.YTItem
 import com.music.innertube.pages.BrowseResult
 import com.music.innertube.pages.HomePage
@@ -94,6 +95,8 @@ fun HomeScreen(
     onRandomizeOrderChange: (Boolean) -> Unit = {},
     wrappedStats: WrappedStats = WrappedStats(),
     showWrapped: Boolean = false,
+    /** Recently started tracks (newest first) used as recommendation seeds. */
+    recentSeedTracks: List<NowPlaying> = emptyList(),
 ) {
     var home by remember { mutableStateOf<HomePage?>(null) }
     var moodAndGenres by remember { mutableStateOf<List<MoodAndGenres>?>(null) }
@@ -104,6 +107,27 @@ fun HomeScreen(
     // streaming the real carousels), so the Home can't be left permanently empty.
     var loadRequest by remember { mutableStateOf(0) }
     var autoRetried by remember { mutableStateOf(false) }
+
+    // Recommended songs, ported from the mobile app's HomeViewModel:
+    // for each recent seed track ask `YouTube.next(videoId)` for its related
+    // endpoint, then `YouTube.related(endpoint)` and surface the songs.
+    var recommendations by remember { mutableStateOf<List<SongItem>?>(null) }
+    LaunchedEffect(recentSeedTracks.map { it.videoId }.take(3).joinToString(",")) {
+        val seeds = recentSeedTracks.take(3)
+        if (seeds.isEmpty()) {
+            recommendations = null
+            return@LaunchedEffect
+        }
+        val collected = mutableListOf<SongItem>()
+        for (seed in seeds) {
+            val endpoint = YouTube.next(WatchEndpoint(videoId = seed.videoId))
+                .getOrNull()?.relatedEndpoint ?: continue
+            val page = YouTube.related(endpoint).getOrNull() ?: continue
+            collected += page.songs.filter { it.id != seed.videoId }
+            if (collected.size >= 12) break
+        }
+        recommendations = collected.distinctBy { it.id }.take(12).ifEmpty { null }
+    }
 
     LaunchedEffect(loadRequest, selectedChip) {
         val params = selectedChip?.endpoint?.params
@@ -444,6 +468,42 @@ fun HomeScreen(
                                 YtItemCard(
                                     item = item,
                                     onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3b. Recommended Section (ported from the mobile app):
+            // personalized related songs seeded from the tracks you listened to.
+            recommendations?.takeIf { it.isNotEmpty() }?.let { recs ->
+                item(key = "recommended_header") {
+                    Text(
+                        text = Localization.get(language, "recommended"),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                item(key = "recommended_content") {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        val recSongs = recs.distinctBy { it.id }
+                        items(recSongs, key = { "rec-${it.id}" }) { song ->
+                            Box(Modifier.width(300.dp)) {
+                                SongRow(
+                                    song = song,
+                                    language = language,
+                                    // Like the Android app: tapping a recommendation
+                                    // plays the whole recommendation list as a queue.
+                                    onClick = {
+                                        val start = recSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                        val rotated = recSongs.slice(start until recSongs.size) +
+                                            recSongs.slice(0 until start)
+                                        onPlayAll(rotated)
+                                    },
+                                    onAddToPlaylist = { onAddToPlaylist(song) },
                                 )
                             }
                         }

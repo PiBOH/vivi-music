@@ -12,17 +12,9 @@ import com.music.innertube.NewPipeExtractor
 import com.music.innertube.YouTube
 import com.music.innertube.models.YouTubeClient
 import com.music.innertube.models.YouTubeClient.Companion.ANDROID_CREATOR
-import com.music.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC
-import com.music.innertube.models.YouTubeClient.Companion.ANDROID_NO_SDK
 import com.music.vivi.utils.BotDetectionMitigator
 import com.music.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_43_32
-import com.music.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_61_48
-import com.music.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
-import com.music.innertube.models.YouTubeClient.Companion.IOS
-import com.music.innertube.models.YouTubeClient.Companion.IOS_MUSIC
 import com.music.innertube.models.YouTubeClient.Companion.VISIONOS
-import com.music.innertube.models.YouTubeClient.Companion.IPADOS
-import com.music.innertube.models.YouTubeClient.Companion.MOBILE
 import com.music.innertube.models.YouTubeClient.Companion.TVHTML5
 import com.music.innertube.models.YouTubeClient.Companion.TVHTML5_SIMPLY_EMBEDDED_PLAYER
 import com.music.innertube.models.YouTubeClient.Companion.WEB
@@ -44,7 +36,6 @@ import com.music.vivi.utils.PlaybackLogLevel
 import com.music.vivi.utils.PlaybackLogManager
 import com.music.innertube.models.IpVersion
 import com.music.innertube.models.WatchEndpoint
-import com.music.innertube.models.YouTubeClient.Companion.VISIONOS
 import com.music.innertube.strategy.ContentAwareFallbackStrategy
 import com.music.innertube.strategy.ContentHints
 import com.music.jiosaavn.SaavnService

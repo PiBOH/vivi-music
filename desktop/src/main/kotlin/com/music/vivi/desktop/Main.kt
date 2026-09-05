@@ -735,6 +735,8 @@ fun WindowScope.App(
     var backStack by remember { mutableStateOf(listOf<Screen>(Screen.Home)) }
     val player = remember { PlayerController() }
     val playerState by player.state.collectAsState()
+    // Recently started tracks, used as seeds for the Home "Recommended" section.
+    val recentSeedTracks by player.recentTracks.collectAsState()
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
     val audioLevel by player.audioLevel.collectAsState()
@@ -1864,6 +1866,7 @@ fun WindowScope.App(
                             topSongCount = sessionTopCount,
                         ),
                         showWrapped = showWrappedOnHome,
+                        recentSeedTracks = recentSeedTracks,
                     )
                     is Screen.Search -> SearchScreen(
                         language = language,

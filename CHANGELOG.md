@@ -11,7 +11,19 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
-- [APK] **Debug APK About screen now shows NIGHTLY for non-stable builds**: the CI built the APK without `-Pnightly=true`, so `BuildConfig.IS_NIGHTLY` was false and the About badge read "STABLE". The flag is now derived from the mobile channel in `version.txt` (line 3). (Closes #17)
+## [6.4.45_DE-1.50.23-alpha] - 2026-09-05
+
+### Changed
+- [DE][APK] **Playback resolution ported from upstream vivizzz007/main (6.0.6)** to finally settle the song-resolution issues on both platforms: the desktop `StreamResolver` now uses the upstream client chain (VISIONOS → ANDROID_VR_1_65_10 → ANDROID_VR_1_43_32 → TVHTML5 → TVHTML5_SIMPLY_EMBEDDED_PLAYER → ANDROID_CREATOR → WEB_CREATOR, gated by `ContentAwareFallbackStrategy` and skipping PoToken-only clients the desktop cannot generate), and the desktop stream cache gained the upstream `StreamUrlCache` generation semantics so an in-flight resolution can no longer commit a stale URL after invalidation (fixes URL-invalidation races). (Closes #18)
+- [APK] **Rebased on upstream 6.0.6**: StreamUrlCache, ContentAwareFallbackStrategy, CipherDeobfuscator (WEB_REMIX streaming), SponsorBlock, NetworkConfig, the new lyrics providers and all upstream fixes come in via the merge; our device-sync (pairing) glue is the only feature kept on top. versionName is now **6.0.6.1** with a monotonic versionCode (129) so existing installs keep updating. (Closes #20)
+- [DE] Upstream fallback order also restored `Android VR 1.65.10` and the Chrome UA set that upstream 6.0.6 ships.
+
+### Added
+- [DE] **Home "Recommended" section** (port of the mobile Daily-Discover mechanism): the three most recent tracks you played seed `YouTube.next` → `YouTube.related`, and the related songs appear as a horizontally scrollable section; tapping one plays the whole recommendation list as a queue. Hidden until you listen to something. (Closes #19)
+
+### Fixed
+- [APK] Device-sync now persists/restores the `EnableUnisonKey` lyrics preference (renamed upstream from SimpMusic), so lyrics-provider sync keeps working after the rebase.
+
 
 ## [6.4.45_DE-1.50.22-alpha] - 2026-09-04
 
@@ -21,6 +33,8 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ### Fixed
 - [DE] **Players, mini players and the sidebar now follow the app theme in light mode**: they decided dark/light from the OS theme (`isSystemInDarkTheme()`) instead of the app's own mode, so with a dark OS + light app they stayed dark (and could get light text on light surfaces). A new `LocalAppIsDark` (provided by `AppTheme`) drives those surfaces so the app-selected Light/Dark/System mode applies consistently. (Closes #15)
 - [DE] **Custom colors now appear in the palette live**: the Theme screen only persisted new/removed custom accents to disk without updating the list it displays, so swatches appeared only after re-entering the screen. It now forwards the stateful window-level callbacks, which update and persist in one step. (Closes #16)
+- [APK] **Debug APK About screen now shows NIGHTLY for non-stable builds**: the CI built the APK without `-Pnightly=true`, so `BuildConfig.IS_NIGHTLY` was false and the About badge read "STABLE". The flag is now derived from the mobile channel in `version.txt` (line 3). (Closes #17)
+
 
 ## [6.4.45_DE-1.50.21-nightly] - 2026-09-04
 

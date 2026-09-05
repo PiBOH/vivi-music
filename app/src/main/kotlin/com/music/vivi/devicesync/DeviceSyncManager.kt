@@ -33,7 +33,7 @@ import com.music.vivi.constants.EnableListenTogetherKey
 import com.music.vivi.constants.EnableLrcLibKey
 import com.music.vivi.constants.EnableMusixmatchKey
 import com.music.vivi.constants.EnablePaxsenixKey
-import com.music.vivi.constants.EnableSimpMusicKey
+import com.music.vivi.constants.EnableUnisonKey
 import com.music.vivi.constants.EnableYouLyPlusKey
 import com.music.vivi.constants.LyricsRomanizeChineseKey
 import com.music.vivi.constants.LyricsRomanizeJapaneseKey
@@ -584,7 +584,7 @@ class DeviceSyncManager @Inject constructor(
         put(EnableKugouKey.name, (prefs[EnableKugouKey] ?: false).toString())
         put(EnableLrcLibKey.name, (prefs[EnableLrcLibKey] ?: false).toString())
         put(EnableMusixmatchKey.name, (prefs[EnableMusixmatchKey] ?: false).toString())
-        put(EnableSimpMusicKey.name, (prefs[EnableSimpMusicKey] ?: false).toString())
+        put(EnableUnisonKey.name, (prefs[EnableUnisonKey] ?: false).toString())
         put(EnableYouLyPlusKey.name, (prefs[EnableYouLyPlusKey] ?: false).toString())
         put(EnablePaxsenixKey.name, (prefs[EnablePaxsenixKey] ?: false).toString())
         // Integrations
@@ -639,7 +639,7 @@ class DeviceSyncManager @Inject constructor(
                 EnableKugouKey.name -> prefs[EnableKugouKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableLrcLibKey.name -> prefs[EnableLrcLibKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableMusixmatchKey.name -> prefs[EnableMusixmatchKey] = value.toBooleanStrictOrNull() ?: return@edit
-                EnableSimpMusicKey.name -> prefs[EnableSimpMusicKey] = value.toBooleanStrictOrNull() ?: return@edit
+                EnableUnisonKey.name -> prefs[EnableUnisonKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableYouLyPlusKey.name -> prefs[EnableYouLyPlusKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnablePaxsenixKey.name -> prefs[EnablePaxsenixKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableLastFMScrobblingKey.name -> prefs[EnableLastFMScrobblingKey] = value.toBooleanStrictOrNull() ?: return@edit

@@ -51,23 +51,26 @@ object StreamResolver {
     private val MAIN_CLIENT: YouTubeClient = YouTubeClient.ANDROID_VR_1_43_32
 
     /**
-     * Ordered fallback clients. Only non-PoToken clients are used: `WEB` and
-     * `WEB_REMIX` are deliberately excluded because their googlevideo URLs are
-     * signed for the YouTube-Music web client and answer 403 without a PoToken,
-     * which the desktop cannot generate.
+     * Content-aware client ordering, ported from the mobile app (upstream
+     * 6.0.6 `ContentAwareFallbackStrategy`): the fallback chain is picked from
+     * the track's content hints instead of one static list.
+     */
+    private val fallbackStrategy = com.music.innertube.strategy.ContentAwareFallbackStrategy()
+
+    /**
+     * Clients that stream without a PoToken are the only ones usable on
+     * desktop (we cannot generate one). WEB_REMIX is allowed as a last
+     * resort: its URLs are n-deobfuscated and validated by the downloader,
+     * exactly like the mobile app does for web clients.
      */
     private val FALLBACK_CLIENTS: List<YouTubeClient> = listOf(
-        YouTubeClient.ANDROID_VR_1_61_48,
-        YouTubeClient.ANDROID_VR_NO_AUTH,
         YouTubeClient.VISIONOS,
+        YouTubeClient.ANDROID_VR_1_65_10,
+        YouTubeClient.ANDROID_VR_1_43_32,
+        YouTubeClient.TVHTML5,
         YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
         YouTubeClient.ANDROID_CREATOR,
-        YouTubeClient.IPADOS,
-        YouTubeClient.IOS,
-        YouTubeClient.IOS_MUSIC,
-        YouTubeClient.MOBILE,
-        YouTubeClient.ANDROID_MUSIC,
-        YouTubeClient.ANDROID_NO_SDK,
+        YouTubeClient.WEB_CREATOR,
     )
 
     /**
@@ -82,6 +85,13 @@ object StreamResolver {
     private val cache = java.util.concurrent.ConcurrentHashMap<String, Cached>()
     private const val CACHE_MAX_ENTRIES = 32
 
+    /** Monotonic per-track generation, ported from upstream `StreamUrlCache`:
+     *  bumped on every invalidation so a still-running resolution cannot store
+     *  a stale result under an already-invalidated track (URL-invalidation race). */
+    private val generations = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun generation(videoId: String): Long = generations[videoId] ?: 0L
+
     /** Cache lifetime in ms, read from the user setting (1–60 minutes);
      *  0 (or any non-positive value) means the cache never expires. */
     private fun cacheTtlMs(): Long = when (val minutes = DesktopSettings.load().streamCacheMinutes) {
@@ -92,10 +102,12 @@ object StreamResolver {
     /**
      * Evicts a cached resolution so the next resolve fetches a fresh URL.
      * googlevideo URLs are single-use / expire, so a cached "forever" URL must
-     * not be returned again after it has failed with a 403.
+     * not be returned again after it has failed with a 403. Also bumps the
+     * generation so in-flight resolutions are discarded instead of committed.
      */
     fun invalidate(videoId: String) {
         cache.remove(videoId)
+        generations[videoId] = generation(videoId) + 1
     }
 
     /**
@@ -136,18 +148,23 @@ object StreamResolver {
             attempts++
         }
         if (resolution.streams.isNotEmpty()) {
-            val ttl = cacheTtlMs()
-            val expiresAt = if (ttl == Long.MAX_VALUE) Long.MAX_VALUE else System.currentTimeMillis() + ttl
-            cache[videoId] = Cached(resolution.streams, expiresAt)
-            while (cache.size > CACHE_MAX_ENTRIES) {
-                val oldest = cache.entries.minByOrNull { it.value.expiresAt }?.key ?: break
-                cache.remove(oldest)
+            // Generation check (upstream StreamUrlCache semantics): commit only
+            // if the track was not invalidated while we were resolving.
+            val genAtStart = resolution.generation
+            if (generation(videoId) == genAtStart) {
+                val ttl = cacheTtlMs()
+                val expiresAt = if (ttl == Long.MAX_VALUE) Long.MAX_VALUE else System.currentTimeMillis() + ttl
+                cache[videoId] = Cached(resolution.streams, expiresAt)
+                while (cache.size > CACHE_MAX_ENTRIES) {
+                    val oldest = cache.entries.minByOrNull { it.value.expiresAt }?.key ?: break
+                    cache.remove(oldest)
+                }
             }
         }
         return resolution.streams
     }
 
-    private data class Resolution(val streams: List<ResolvedStream>, val anyFound: Boolean)
+    private data class Resolution(val streams: List<ResolvedStream>, val anyFound: Boolean, val generation: Long)
 
     private suspend fun resolveOnce(videoId: String, quality: AudioQuality): Resolution {
         // 1) NewPipe — handles the signature cipher and returns already-playable
@@ -164,7 +181,7 @@ object StreamResolver {
             }.getOrNull()
         }
         if (!newPipeUrl.isNullOrBlank()) {
-            return Resolution(listOf(ResolvedStream(newPipeUrl, YouTubeClient.USER_AGENT_WEB)), anyFound = true)
+            return Resolution(listOf(ResolvedStream(newPipeUrl, YouTubeClient.USER_AGENT_WEB)), anyFound = true, generation = generation(videoId))
         }
 
         // 2) Client chain — only reached when NewPipe was bot-blocked/failed.
@@ -198,7 +215,7 @@ object StreamResolver {
             if (collected.size >= 2) break
         }
 
-        return Resolution(collected, anyFound = collected.isNotEmpty())
+        return Resolution(collected, anyFound = collected.isNotEmpty(), generation = generation(videoId))
     }
 
     /** Picks the best AAC format from a successful player response and resolves its URL. */

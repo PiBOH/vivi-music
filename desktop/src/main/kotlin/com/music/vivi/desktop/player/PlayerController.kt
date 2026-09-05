@@ -68,6 +68,16 @@ class PlayerController {
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
+    /** Most recently started tracks (newest first), used as seeds for the Home
+     *  "Recommended" section (port of the mobile Daily-Discover mechanism). */
+    private val _recentTracks = MutableStateFlow<List<NowPlaying>>(emptyList())
+    val recentTracks: StateFlow<List<NowPlaying>> = _recentTracks.asStateFlow()
+
+    private fun noteTrackStarted(track: NowPlaying) {
+        _recentTracks.value =
+            (listOf(track) + _recentTracks.value).distinctBy { it.videoId }.take(12)
+    }
+
     /** User-initiated seeks (emitted so the sync layer can push them instantly). */
     private val _seekEvents = MutableSharedFlow<Long>(extraBufferCapacity = 16)
     val seekEvents: SharedFlow<Long> = _seekEvents.asSharedFlow()
@@ -597,6 +607,7 @@ class PlayerController {
         val track = tracks[index]
         val token = ++playToken
         loadedVideoId = track.videoId
+        noteTrackStarted(track)
         scope.launch {
             player.stop()
             _state.value = PlayerState(
