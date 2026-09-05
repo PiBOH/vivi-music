@@ -80,6 +80,10 @@ object DeveloperOptions {
     private val _showInTitleBar = MutableStateFlow(false)
     val showInTitleBar: StateFlow<Boolean> = _showInTitleBar.asStateFlow()
 
+    /** Dedicated live-log viewer window (opened from the Developer options). */
+    private val _logWindowVisible = MutableStateFlow(false)
+    val logWindowVisible: StateFlow<Boolean> = _logWindowVisible.asStateFlow()
+
     /** Emitted when the options transition from disabled to enabled (unlock notification). */
     private val _unlocked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val unlocked: SharedFlow<Unit> = _unlocked.asSharedFlow()
@@ -120,6 +124,10 @@ object DeveloperOptions {
     fun setShowInTitleBar(value: Boolean) {
         _showInTitleBar.value = value
         DesktopSettings.update { it.copy(devShowInTitleBar = value) }
+    }
+
+    fun setLogWindowVisible(value: Boolean) {
+        _logWindowVisible.value = value
     }
 }
 

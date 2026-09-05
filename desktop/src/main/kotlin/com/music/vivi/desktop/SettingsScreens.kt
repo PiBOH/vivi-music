@@ -1371,6 +1371,39 @@ fun DeveloperSection(language: String, syncManager: DesktopSyncManager) {
 
             Spacer(Modifier.height(24.dp))
 
+            // Live activity log viewer (dedicated window)
+            DevSectionHeader(language, "dev_open_live_log")
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { DeveloperOptions.setLogWindowVisible(true) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            Localization.get(language, "dev_open_live_log"),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            Localization.get(language, "dev_open_live_log_desc"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    SettingsChevron()
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
             // Display mode
             DevSectionHeader(language, "dev_tools_mode")
             Card(

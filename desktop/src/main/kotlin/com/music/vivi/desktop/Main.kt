@@ -1059,10 +1059,13 @@ fun WindowScope.App(
     // Undo/redo stacks for keyboard navigation history (Ctrl+Z / Ctrl+Y).
     var undoStack by remember { mutableStateOf(listOf<Screen>()) }
     var redoStack by remember { mutableStateOf(listOf<Screen>()) }
+    fun screenLabel(s: Screen): String = s::class.simpleName ?: s.toString()
+
     val navigate: (Screen) -> Unit = navigate@{ target ->
         // Never push a duplicate of the screen already on top (double-clicks
         // or a stale click handler must not create [X, X] entries).
         if (backStack.last() == target) return@navigate
+        AppLog.log("nav", "open ${screenLabel(target)}")
         redoStack = emptyList()
         undoStack = undoStack + backStack.last()
         backStack = backStack + target
@@ -1070,16 +1073,19 @@ fun WindowScope.App(
     val openRoot: (Screen) -> Unit = { screen ->
         // Keep Home at the base so "back" from a root (e.g. Settings) returns
         // to Home instead of getting stuck with nothing to pop.
+        AppLog.log("nav", "root → ${screenLabel(screen)}")
         backStack = if (screen == Screen.Home) listOf(Screen.Home) else listOf(Screen.Home, screen)
     }
     val goBack: () -> Unit = {
         if (backStack.size > 1) {
+            AppLog.log("nav", "back ← ${screenLabel(backStack.last())}")
             undoStack = undoStack + backStack.last()
             backStack = backStack.dropLast(1)
         }
     }
     val undo: () -> Unit = {
         if (undoStack.isNotEmpty()) {
+            AppLog.log("nav", "undo to ${screenLabel(undoStack.last())}")
             redoStack = redoStack + backStack.last()
             backStack = backStack + undoStack.last()
             undoStack = undoStack.dropLast(1)
@@ -1087,6 +1093,7 @@ fun WindowScope.App(
     }
     val redo: () -> Unit = {
         if (redoStack.isNotEmpty()) {
+            AppLog.log("nav", "redo to ${screenLabel(redoStack.last())}")
             undoStack = undoStack + backStack.last()
             backStack = backStack + redoStack.last()
             redoStack = redoStack.dropLast(1)
@@ -2827,6 +2834,30 @@ fun WindowScope.App(
                 SelectionContainer {
                     DevToolsPanel(syncManager = syncManager, language = language)
                 }
+            }
+        }
+    }
+
+    // Live activity log in a dedicated window (Developer options →
+    // "Open live log"). Shows playback/actions/errors in real time.
+    if (devEnabled && DeveloperOptions.logWindowVisible.collectAsState().value) {
+        Window(
+            onCloseRequest = { DeveloperOptions.setLogWindowVisible(false) },
+            title = "VIVI Music DE — Live log",
+        ) {
+            AppTheme(
+                mode = themeMode,
+                accent = accent,
+                pureBlack = pureBlack,
+                font = font,
+                spotify = spotifyLayout,
+                accentIntensity = accentIntensity,
+                customFontPath = customFontPath,
+            ) {
+                LiveLogWindowContent(
+                    language = language,
+                    onClose = { DeveloperOptions.setLogWindowVisible(false) },
+                )
             }
         }
     }
@@ -5885,10 +5916,11 @@ fun PlayerSection(
         value = if (streamCacheMinutes <= 0) 61f else streamCacheMinutes.toFloat(),
         onValueChange = {
             val v = it.roundToInt()
-            onStreamCacheMinutesChange(if (v >= 61) 0 else v.coerceIn(1, 60))
+            // Minimum is 10 minutes (issue #26): anything below means "forever" only at 61+.
+            onStreamCacheMinutesChange(if (v >= 61) 0 else v.coerceIn(10, 60))
         },
-        valueRange = 1f..61f,
-        steps = 59,
+        valueRange = 10f..61f,
+        steps = 50,
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
 }

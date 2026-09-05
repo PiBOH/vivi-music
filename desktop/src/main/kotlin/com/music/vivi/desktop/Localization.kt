@@ -193,6 +193,8 @@ private fun strings_0(): Map<String, String> =
         "dev_logs_export_failed" to "Export failed — the archive could not be written.",
         "dev_logs_exported" to "Logs exported",
         "dev_logs_exporting" to "Exporting…",
+        "dev_open_live_log" to "Open live log",
+        "dev_open_live_log_desc" to "Open a dedicated window showing VIVI's activity log (playback, navigation, errors) in real time.",
         "dev_tools_disabled" to "Disabled",
         "dev_tools_live_monitor" to "Live monitor",
         "dev_tools_mode" to "Display mode",

@@ -220,6 +220,8 @@ MAPPING = {
     "tooltip_favorite": "Favorite",
     "native_title_bar_desc": "Use the operating system's title bar instead of VIVI's custom one; VIVI's bar then hides its own window buttons. Applies after a restart.",
     "native_title_bar_desc_hint": "Turn it on if you have compatibility issues (window/rendering problems).",
+    "dev_open_live_log": "Open live log",
+    "dev_open_live_log_desc": "Open a dedicated window showing VIVI's activity log (playback, navigation, errors) in real time.",
     "dev_logs_export": "Export logs (.zip)",
     "dev_logs_export_desc": "Package VIVI's diagnostic logs (system info, settings summary, error logs) into a .zip file.",
     "dev_logs_exporting": "Exporting…",
