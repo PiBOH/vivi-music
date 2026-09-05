@@ -813,6 +813,7 @@ object YouTube {
     }
 
     suspend fun library(browseId: String, tabIndex: Int = 0): Result<LibraryPage> {
+        println("[UPLOAD_DEBUG] library() called with browseId=$browseId, tabIndex=$tabIndex")
         return runCatching {
             val response = innerTube.browse(
                 client = WEB_REMIX,
@@ -821,17 +822,41 @@ object YouTube {
             ).body<BrowseResponse>()
 
             val tabs = response.contents?.singleColumnBrowseResultsRenderer?.tabs
+            println("[UPLOAD_DEBUG] tabs count: ${tabs?.size ?: 0}")
+
+            // Debug: log the structure for uploaded songs browseId
+            if (browseId == "FEmusic_library_privately_owned_tracks") {
+                println("[UPLOAD_DEBUG] Raw response.contents: ${response.contents}")
+                tabs?.forEachIndexed { idx, tab ->
+                    println("[UPLOAD_DEBUG] Tab $idx: tabRenderer.content null? ${tab.tabRenderer.content == null}")
+                    println("[UPLOAD_DEBUG] Tab $idx: sectionListRenderer null? ${tab.tabRenderer.content?.sectionListRenderer == null}")
+                    println("[UPLOAD_DEBUG] Tab $idx: sectionListRenderer.contents size: ${tab.tabRenderer.content?.sectionListRenderer?.contents?.size ?: 0}")
+                    tab.tabRenderer.content?.sectionListRenderer?.contents?.forEachIndexed { cIdx, content ->
+                        println("[UPLOAD_DEBUG] Tab $idx Content $cIdx: gridRenderer=${content.gridRenderer != null}, musicShelfRenderer=${content.musicShelfRenderer != null}")
+                    }
+                }
+            }
+
             val contents = if (tabs != null && tabs.size >= tabIndex) {
                 tabs[tabIndex].tabRenderer.content?.sectionListRenderer?.contents?.firstOrNull()
-            } else {
+            }
+            else {
+                println("[UPLOAD_DEBUG] No tabs or tabIndex out of range")
                 null
             }
+
+            println("[UPLOAD_DEBUG] contents null? ${contents == null}")
+            println("[UPLOAD_DEBUG] gridRenderer null? ${contents?.gridRenderer == null}")
+            println("[UPLOAD_DEBUG] musicShelfRenderer null? ${contents?.musicShelfRenderer == null}")
 
             when {
                 contents?.gridRenderer != null -> {
                     val gridItems = contents.gridRenderer.items
+                    println("[UPLOAD_DEBUG] gridRenderer items count: ${gridItems.size}")
                     val twoRowItems = gridItems.mapNotNull(GridRenderer.Item::musicTwoRowItemRenderer)
+                    println("[UPLOAD_DEBUG] musicTwoRowItemRenderer count: ${twoRowItems.size}")
                     val parsedItems = twoRowItems.mapNotNull { LibraryPage.fromMusicTwoRowItemRenderer(it) }
+                    println("[UPLOAD_DEBUG] Successfully parsed items: ${parsedItems.size}")
                     LibraryPage(
                         items = parsedItems,
                         continuation = contents.gridRenderer.continuations?.getContinuation()
@@ -840,12 +865,37 @@ object YouTube {
 
                 else -> { // contents?.musicShelfRenderer != null
                     val shelfContents = contents?.musicShelfRenderer?.contents
+                    println("[UPLOAD_DEBUG] musicShelfRenderer contents count: ${shelfContents?.size ?: 0}")
                     if (shelfContents == null) {
+                        // API response format may have changed (e.g. Google updated response structure).
+                        // Return an empty page gracefully instead of crashing the entire library fetch,
+                        // which would keep accountPlaylists null and hide the homescreen playlists section.
+                        println("[UPLOAD_DEBUG] WARNING: No gridRenderer or musicShelfRenderer found for browseId=$browseId. API format may have changed. contents=$contents")
                         return@runCatching LibraryPage(items = emptyList(), continuation = null)
                     }
                     val listItemRenderers = shelfContents.mapNotNull(MusicShelfRenderer.Content::musicResponsiveListItemRenderer)
+                    println("[UPLOAD_DEBUG] musicResponsiveListItemRenderer count: ${listItemRenderers.size}")
+
+                    listItemRenderers.forEachIndexed { index, renderer ->
+                        println("[UPLOAD_DEBUG] Item $index: isSong=${renderer.isSong}, isArtist=${renderer.isArtist}, isAlbum=${renderer.isAlbum}, isPlaylist=${renderer.isPlaylist}")
+                        println("[UPLOAD_DEBUG] Item $index: playlistItemData=${renderer.playlistItemData}")
+                        println("[UPLOAD_DEBUG] Item $index: flexColumns count=${renderer.flexColumns.size}")
+                        renderer.flexColumns.forEachIndexed { colIdx, col ->
+                            println("[UPLOAD_DEBUG] Item $index flexColumn $colIdx: ${col.musicResponsiveListItemFlexColumnRenderer.text?.runs?.map { it.text }}")
+                        }
+                        println("[UPLOAD_DEBUG] Item $index: thumbnail=${renderer.thumbnail?.musicThumbnailRenderer?.thumbnail}")
+                    }
+
                     val parsedItems = listItemRenderers.mapNotNull { renderer ->
-                        LibraryPage.fromMusicResponsiveListItemRenderer(renderer)
+                        val result = LibraryPage.fromMusicResponsiveListItemRenderer(renderer)
+                        if (result == null) {
+                            println("[UPLOAD_DEBUG] Failed to parse renderer: videoId=${renderer.playlistItemData?.videoId}")
+                        }
+                        result
+                    }
+                    println("[UPLOAD_DEBUG] Successfully parsed items: ${parsedItems.size}")
+                    parsedItems.filterIsInstance<SongItem>().forEach { song ->
+                        println("[UPLOAD_DEBUG] Parsed song: id=${song.id}, title=${song.title}, artists=${song.artists.map { it.name }}")
                     }
                     LibraryPage(
                         items = parsedItems,
@@ -854,6 +904,7 @@ object YouTube {
                 }
             }
         }.onFailure { e ->
+            println("[UPLOAD_DEBUG] library() EXCEPTION for browseId=$browseId: ${e::class.simpleName}: ${e.message}")
             e.printStackTrace()
         }
     }
@@ -1325,6 +1376,68 @@ object YouTube {
         innerTube.player(client, videoId, playlistId, signatureTimestamp, poToken).body<PlayerResponse>()
     }
 
+    /**
+     * Smart streaming client waterfall — mimics what Brave browser does automatically.
+     *
+     * Priority chain (no-login path):
+     *   1. TVHTML5_SIMPLY_EMBEDDED_PLAYER — embedded TV client, bypasses age-restriction, no PoToken needed
+     *   2. MWEB — mobile Chrome/Brave equivalent, trusted by YouTube without PoToken
+     *   3. ANDROID_VR_1_65_10 — non-adaptive bitrate, fixes audio stuttering, no PoToken
+     *   4. NewPipeExtractor — pure stream URL extraction as final fallback
+     *
+     * When logged in, WEB_REMIX is tried first (caller should pass it directly).
+     * A response is considered valid only when streamingData has at least one playable URL.
+     */
+    suspend fun playerWithFallback(
+        videoId: String,
+        playlistId: String? = null,
+        isLoggedIn: Boolean = false,
+    ): Result<PlayerResponse> = runCatching {
+        // Resolve signature timestamp once via NewPipe (used for clients that need it)
+        val sigTimestamp = NewPipeExtractor.getSignatureTimestamp(videoId).getOrNull()
+
+        // Helper: try a client and return the response if it has valid stream URLs
+        suspend fun tryClient(client: YouTubeClient): PlayerResponse? {
+            return runCatching {
+                val response = innerTube.player(
+                    client = client,
+                    videoId = videoId,
+                    playlistId = playlistId,
+                    signatureTimestamp = if (client.useSignatureTimestamp) sigTimestamp else null,
+                    poToken = null, // We explicitly avoid PoToken — browser spoof handles authentication
+                ).body<PlayerResponse>()
+                // Validate we actually got playable URLs
+                val hasStreams = response.streamingData?.adaptiveFormats?.any { it.url != null || it.signatureCipher != null } == true
+                            || response.streamingData?.formats?.any { it.url != null || it.signatureCipher != null } == true
+                if (hasStreams && response.playabilityStatus.status == "OK") response else null
+            }.getOrNull()
+        }
+
+        // Step 1: Logged-in path — use WEB_REMIX (best quality + personalised content)
+        if (isLoggedIn) {
+            tryClient(YouTubeClient.WEB_REMIX)?.let { return@runCatching it }
+        }
+
+        // Step 2: TVHTML5_SIMPLY_EMBEDDED_PLAYER — no PoToken, bypasses age-restriction
+        tryClient(YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER)?.let { return@runCatching it }
+
+        // Step 3: MWEB — mobile Chrome/Brave equivalent, no PoToken required
+        tryClient(YouTubeClient.MWEB)?.let { return@runCatching it }
+
+        // Step 4: ANDROID_VR_1_65_10 — solid fallback, no adaptive bitrate issues
+        tryClient(YouTubeClient.ANDROID_VR_1_65_10)?.let { return@runCatching it }
+
+        // Step 5: NewPipeExtractor full stream resolution
+        val baseResponse = tryClient(YouTubeClient.ANDROID_VR_1_43_32)
+            ?: tryClient(YouTubeClient.TVHTML5)
+            ?: innerTube.player(YouTubeClient.MWEB, videoId, playlistId, sigTimestamp, null).body<PlayerResponse>()
+
+        // Patch the stream URLs using NewPipe's decryption engine
+        newPipePlayer(videoId, baseResponse)
+            ?: throw Exception("All streaming clients failed for videoId=$videoId")
+    }
+
+
     suspend fun registerPlayback(playlistId: String? = null, playbackTracking: String) = runCatching {
         val cpn = (1..16).map {
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"[Random.Default.nextInt(
@@ -1333,16 +1446,12 @@ object YouTube {
             )]
         }.joinToString("")
 
-        // Pass the videostatsPlaybackUrl as-is — it's a telemetry endpoint on s.youtube.com.
-        // Do NOT rewrite the host; doing so routes the request to the wrong server and causes
-        // silent history registration failures.
         innerTube.registerPlayback(
             url = playbackTracking,
             playlistId = playlistId,
             cpn = cpn
         )
     }
-
 
     suspend fun next(endpoint: WatchEndpoint, continuation: String? = null): Result<NextResult> = runCatching {
         val response = innerTube.next(

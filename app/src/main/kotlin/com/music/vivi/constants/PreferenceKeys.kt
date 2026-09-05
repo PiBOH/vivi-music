@@ -99,10 +99,10 @@ val EnableKugouKey = booleanPreferencesKey("enableKugou")
 val EnableLrcLibKey = booleanPreferencesKey("enableLrclib")
 val EnableBetterLyricsKey = booleanPreferencesKey("enableBetterLyrics")
 val EnableMusixmatchKey = booleanPreferencesKey("enableMusixmatch")
-val EnableSimpMusicKey = booleanPreferencesKey("enableSimpMusic")
 
 val EnableYouLyPlusKey = booleanPreferencesKey("enableYouLyPlus")
 val EnablePaxsenixKey = booleanPreferencesKey("enablePaxsenix")
+val EnableUnisonKey = booleanPreferencesKey("enableUnison")
 val HideExplicitKey = booleanPreferencesKey("hideExplicit")
 val HideVideoSongsKey = booleanPreferencesKey("hideVideoSongs")
 val HideYoutubeShortsKey = booleanPreferencesKey("hideYoutubeShorts")
@@ -133,6 +133,17 @@ val AudioOffload = booleanPreferencesKey("enableOffload")
 // JioSaavn streaming
 val EnableSaavnStreamingKey = booleanPreferencesKey("enableSaavnStreaming")
 val SaavnAudioQualityKey    = stringPreferencesKey("saavnAudioQuality")
+
+// SponsorBlock settings
+val EnableSponsorBlockKey = booleanPreferencesKey("enableSponsorBlock")
+val SponsorBlockServerUrlKey = stringPreferencesKey("sponsorBlockServerUrl")
+val SponsorBlockSkipNonMusicKey = booleanPreferencesKey("sponsorBlockSkipNonMusic")
+val SponsorBlockSkipSponsorKey = booleanPreferencesKey("sponsorBlockSkipSponsor")
+val SponsorBlockSkipSelfPromoKey = booleanPreferencesKey("sponsorBlockSkipSelfPromo")
+val SponsorBlockSkipInteractionKey = booleanPreferencesKey("sponsorBlockSkipInteraction")
+val SponsorBlockSkipIntroOutroKey = booleanPreferencesKey("sponsorBlockSkipIntroOutro")
+val SponsorBlockSkipPreviewFillerKey = booleanPreferencesKey("sponsorBlockSkipPreviewFiller")
+val SponsorBlockShowToastKey = booleanPreferencesKey("sponsorBlockShowToast")
 
 // Cipher Deobfuscation settings
 val EnableAutoCipherFetchKey = booleanPreferencesKey("enableAutoCipherFetch")
@@ -216,6 +227,7 @@ val EnableGoogleCastKey = booleanPreferencesKey("enableGoogleCast")
 // Listen Together
 val ListenTogetherServerUrlKey = stringPreferencesKey("listenTogetherServerUrl")
 val ListenTogetherUsernameKey = stringPreferencesKey("listenTogetherUsername")
+val ListenTogetherAvatarIndexKey = intPreferencesKey("listenTogetherAvatarIndex")
 val EnableListenTogetherKey = booleanPreferencesKey("enableListenTogether")
 val ListenTogetherAutoApprovalKey = booleanPreferencesKey("listenTogetherAutoApproval")
 val ListenTogetherSyncVolumeKey = booleanPreferencesKey("listenTogetherSyncVolume")
@@ -284,6 +296,7 @@ val DeviceSyncDeviceIdKey = stringPreferencesKey("deviceSyncDeviceId")
 val DeviceSyncDeviceNameKey = stringPreferencesKey("deviceSyncDeviceName")
 
 val ArtistViewTypeKey = stringPreferencesKey("artistViewType")
+val SearchListenHistoryKey = stringPreferencesKey("searchListenHistory")
 val AlbumViewTypeKey = stringPreferencesKey("albumViewType")
 val PlaylistViewTypeKey = stringPreferencesKey("playlistViewType")
 
@@ -458,9 +471,9 @@ enum class PreferredLyricsProvider {
     KUGOU,
     BETTER_LYRICS,
     MUSIXMATCH,
-    SIMPMUSIC,
     YOULYPLUS,
     PAXSENIX,
+    UNISON,
 }
 
 enum class PlayerButtonsStyle {

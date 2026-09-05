@@ -33,7 +33,7 @@ import androidx.navigation.NavController
 import com.music.vivi.LocalPlayerAwareWindowInsets
 import com.music.vivi.R
 import com.music.vivi.ui.component.IconButton
-import com.music.vivi.ui.component.Material3SettingsGroup
+import com.music.vivi.ui.component.ExpressiveSettingGroup
 import com.music.vivi.ui.component.Material3SettingsItem
 import com.music.vivi.vivimusic.component.UpdateInfoDialog
 import com.music.vivi.ui.utils.backToMain
@@ -167,13 +167,13 @@ fun UpdateSettings(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
-        Material3SettingsGroup(
-            title = stringResource(R.string.app_updates_title),
+        Spacer(modifier = Modifier.height(10.dp))
+        ExpressiveSettingGroup(
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.network_update),
                     title = { Text(stringResource(R.string.system_update)) },
-                    description = {
+                    trailingContent = {
                         if (isUpdateAvailable) {
                             Text(
                                 text = stringResource(R.string.update_available),
@@ -191,24 +191,28 @@ fun UpdateSettings(
                         } else {
                             navController.navigate("update")
                         }
-                    },
-                    isExpressive = true
+                    }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.info),
                     title = { Text(stringResource(R.string.app_version)) },
-                    description = { Text(BuildConfig.VERSION_NAME) },
-                    isExpressive = true
+                    trailingContent = { Text(BuildConfig.VERSION_NAME) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.stockpot_flavour),
                     title = { Text(stringResource(R.string.flavour)) },
-                    description = {
+                    trailingContent = {
                         val variant = if (BuildConfig.CAST_AVAILABLE) "GMS" else "FOSS"
                         Text(variant)
-                    },
-                    isExpressive = true
-                ),
+                    }
+                )
+            )
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+        
+        ExpressiveSettingGroup(
+            items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.update),
                     title = { Text(stringResource(R.string.auto_update_check)) },
@@ -239,8 +243,7 @@ fun UpdateSettings(
                         if (!autoUpdateEnabled) {
                             saveUpdateAvailableState(context, false)
                         }
-                    },
-                    isExpressive = true
+                    }
                 ),
 
                 Material3SettingsItem(
@@ -267,8 +270,7 @@ fun UpdateSettings(
                     onClick = {
                         betaUpdatesEnabled = !betaUpdatesEnabled
                         saveBetaUpdatesSetting(context, betaUpdatesEnabled)
-                    },
-                    isExpressive = true
+                    }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.github),
@@ -301,7 +303,7 @@ fun UpdateSettings(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.notification),
                     title = { Text(stringResource(R.string.notification_settings)) },
-                    description = {
+                    trailingContent = {
                         val status = if (isNotificationsActive) {
                             stringResource(R.string.enabled)
                         } else {
@@ -311,9 +313,15 @@ fun UpdateSettings(
                     },
                     onClick = {
                         navController.navigate("settings/update/notification_permission")
-                    },
-                    isExpressive = true
-                ),
+                    }
+                )
+            )
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        ExpressiveSettingGroup(
+            items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.delete),
                     title = { Text(stringResource(R.string.clear_downloaded_updates)) },
@@ -347,33 +355,26 @@ fun UpdateSettings(
                                 apkCount = getDownloadedApkCount(context)
                             }
                         }
-                    },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    }
                 )
             )
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Material3SettingsGroup(
-            title = stringResource(R.string.changelog),
+        ExpressiveSettingGroup(
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.history),
                     title = { Text(stringResource(R.string.changelog)) },
                     description = { Text(stringResource(R.string.view_version_history)) },
-                    onClick = { navController.navigate("settings/changelog") },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { navController.navigate("settings/changelog") }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.commit),
                     title = { Text(stringResource(R.string.commits)) },
                     description = { Text(stringResource(R.string.view_commit_history)) },
-                    onClick = { navController.navigate("settings/commits") },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { navController.navigate("settings/commits") }
                 )
             )
         )
