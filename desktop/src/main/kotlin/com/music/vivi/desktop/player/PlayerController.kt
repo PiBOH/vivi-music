@@ -1,5 +1,6 @@
 package com.music.vivi.desktop.player
 
+import com.music.vivi.desktop.AppLog
 import com.music.vivi.desktop.DesktopSettings
 import com.music.vivi.desktop.EqualizerProcessor
 import com.music.vivi.desktop.GuestSession
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 enum class RepeatMode { OFF, ALL, ONE }
@@ -172,12 +174,14 @@ class PlayerController {
     private var pendingStartFraction: Float? = null
 
     fun play(track: NowPlaying) {
+        AppLog.log("playback", "play: '${track.title}' [${track.videoId}]")
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(listOf(track), 0)
     }
 
     fun playAll(tracks: List<NowPlaying>, startIndex: Int = 0) {
         if (tracks.isEmpty()) return
+        AppLog.log("playback", "playAll: ${tracks.size} tracks, start at $startIndex ('${tracks[startIndex].title}') ")
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(tracks, startIndex.coerceIn(0, tracks.lastIndex))
     }
@@ -185,6 +189,7 @@ class PlayerController {
     /** Appends a track to the queue; if nothing is playing, starts it. */
     fun addToQueue(track: NowPlaying) {
         val s = _state.value
+        AppLog.log("queue", "addToQueue: '${track.title}' [${track.videoId}]")
         if (s.current == null) {
             play(track)
         } else {
@@ -195,6 +200,7 @@ class PlayerController {
     /** Appends a list of tracks to the queue; if nothing is playing, starts them. */
     fun addAllToQueue(tracks: List<NowPlaying>) {
         val s = _state.value
+        AppLog.log("queue", "addAllToQueue: ${tracks.size} tracks")
         if (s.current == null) {
             playAll(tracks)
         } else {
@@ -254,6 +260,7 @@ class PlayerController {
     fun next() {
         val s = _state.value
         if (s.queue.isEmpty()) return
+        AppLog.log("playback", "next (index ${s.index + 1} of ${s.queue.size})")
         // At the end of the queue "next" wraps back to the first track, so the
         // user never hits a dead button (repeat mode only affects auto-advance).
         val nextIndex = when {
@@ -270,6 +277,7 @@ class PlayerController {
     fun previous() {
         val s = _state.value
         if (s.queue.isEmpty()) return
+        AppLog.log("playback", "previous (index ${s.index - 1})")
         val prevIndex = when {
             s.isShuffle -> previousStack.removeLastOrNull() ?: randomIndexExcluding(s.queue.size, s.index)
             s.index > 0 -> s.index - 1
@@ -282,6 +290,7 @@ class PlayerController {
     fun skipTo(index: Int) {
         val s = _state.value
         if (index in s.queue.indices) {
+            AppLog.log("queue", "skipTo: index $index")
             lastLocalPlayIntentAt = System.currentTimeMillis()
             previousStack.addLast(s.index)
             playAt(s.queue, index)
@@ -290,6 +299,8 @@ class PlayerController {
 
     fun removeAt(index: Int) {
         val s = _state.value
+        if (index !in s.queue.indices) return
+        AppLog.log("queue", "removeAt: index $index")
         if (index !in s.queue.indices) return
         val newQueue = s.queue.toMutableList().apply { removeAt(index) }
         when {
@@ -309,6 +320,7 @@ class PlayerController {
 
     fun clearQueue() {
         val s = _state.value
+        AppLog.log("queue", "clearQueue (${s.queue.size} tracks)")
         playToken++
         player.stop()
         loadedVideoId = null
@@ -332,6 +344,7 @@ class PlayerController {
     fun toggle() {
         val s = _state.value
         if (s.current == null) return
+        AppLog.log("playback", if (s.isPlaying) "pause" else "play toggle")
         lastLocalPlayIntentAt = System.currentTimeMillis()
         if (s.isPlaying) {
             player.pause()
@@ -370,6 +383,7 @@ class PlayerController {
     }
 
     fun seekTo(ms: Long) {
+        AppLog.log("playback", "seek to ${ms}ms")
         seekInternal(ms, startStream = true)?.let { _seekEvents.tryEmit(it) }
     }
 
@@ -475,6 +489,7 @@ class PlayerController {
 
     fun setVolume(v: Float) {
         val clamped = v.coerceIn(0f, 1f)
+        AppLog.log("volume", "set to ${(clamped * 100).roundToInt()}%")
         player.setVolume(clamped)
         _state.update { it.copy(volume = clamped) }
         // Persist the volume so it survives restarts instead of resetting to
@@ -505,6 +520,7 @@ class PlayerController {
     fun toggleShuffle() {
         val s = _state.value
         val newShuffle = !s.isShuffle
+        AppLog.log("playback", "shuffle ${if (newShuffle) "on" else "off"}")
         if (!newShuffle) previousStack.clear()
         _state.update { it.copy(isShuffle = newShuffle) }
         persistShuffleRepeat()
@@ -517,6 +533,7 @@ class PlayerController {
             RepeatMode.ALL -> RepeatMode.ONE
             RepeatMode.ONE -> RepeatMode.OFF
         }
+        AppLog.log("playback", "repeat mode → $next")
         _state.update { it.copy(repeatMode = next) }
         persistShuffleRepeat()
     }
@@ -632,6 +649,7 @@ class PlayerController {
             // forever". Only tracks without a valid cache file need a stream
             // URL to fetch.
             val alreadyCached = player.isCached(track.videoId)
+            AppLog.log("playback", "resolving '${track.title}' [${track.videoId}] (attempt ${attempt + 1}/${MAX_PLAY_ATTEMPTS}, cached=$alreadyCached)")
             val streams = if (alreadyCached) {
                 emptyList()
             } else {
@@ -644,15 +662,18 @@ class PlayerController {
                 if (attempt + 1 < MAX_PLAY_ATTEMPTS) {
                     // Bot detection / transient resolution failure: rotate the
                     // guest identity and try a fresh resolution.
+                    AppLog.log("playback", "resolution failed, rotating guest and retrying")
                     GuestSession.rotate()
                     playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                 } else {
                     loadedVideoId = null
                     _bufferedFraction.value = 1f
+                    AppLog.log("playback", "resolution failed after $MAX_PLAY_ATTEMPTS attempts — surfacing stream_error")
                     _state.update { it.copy(isPlaying = false, errorKey = "stream_error", errorDetail = null, loadPhase = LoadPhase.NONE, isResolving = false) }
                 }
                 return@launch
             }
+            AppLog.log("playback", "stream ready for '${track.title}' (${if (alreadyCached) "cache" else "network"})")
             _state.update {
                 it.copy(
                     errorKey = null,
@@ -703,6 +724,7 @@ class PlayerController {
                 startAtFraction = startFraction,
                 startPaused = startPaused,
                 onError = { msg ->
+                    AppLog.log("playback", "playback error: $msg")
                     // Evict the cached resolution: a stale, single-use
                     // googlevideo URL must not be returned again by the retry.
                     StreamResolver.invalidate(track.videoId)
@@ -721,6 +743,7 @@ class PlayerController {
                     } else {
                         loadedVideoId = null
                         _bufferedFraction.value = 1f
+                        AppLog.log("playback", "giving up after $MAX_PLAY_ATTEMPTS attempts: $msg")
                         _state.update { s ->
                             if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
                                 s.copy(isPlaying = false, errorDetail = msg, loadPhase = LoadPhase.NONE, isResolving = false)
@@ -775,6 +798,7 @@ class PlayerController {
     }
 
     private fun handleTrackEnd(s: PlayerState, index: Int, token: Int) {
+        AppLog.log("playback", "track ended (repeat=${s.repeatMode}, autoPlayNext=$autoPlayNext)")
         when {
             s.repeatMode == RepeatMode.ONE -> {
                 if (token == playToken) playAt(s.queue, index)
@@ -790,6 +814,7 @@ class PlayerController {
                 if (nextIndex >= 0) {
                     // Auto-advance is also a local play intent: the peer's
                     // pre-advance "paused" echo must not pause the new track.
+                    AppLog.log("playback", "auto-advancing to index $nextIndex")
                     lastLocalPlayIntentAt = System.currentTimeMillis()
                     previousStack.addLast(s.index)
                     playAt(s.queue, nextIndex)

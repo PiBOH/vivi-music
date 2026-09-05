@@ -1,0 +1,498 @@
+body {
+  background-color: transparent !important;
+}
+
+#page-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  background: linear-gradient(180deg, #152671 10%, #1b2c78 30%, #5669bd 100%);
+  pointer-events: none;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.floating-element {
+  animation: float 4s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.floating-element-delayed {
+  animation: float 5s ease-in-out infinite;
+  animation-delay: 1s;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.glass-card {
+  background: rgba(175, 190, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(175, 190, 255, 0.25);
+}
+
+
+
+/* Page 2 Custom CSS */
+.vivid-glow-hover:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+.glass-panel {
+  background: rgba(175, 190, 255, 0.15);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(175, 190, 255, 0.25);
+}
+
+.mockup-container {
+  perspective: 1200px;
+}
+
+.mockup-item {
+  --px: 0px;
+  --py: 0px;
+  transform: translate3d(var(--px), var(--py), 0);
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.mockup-item:hover {
+  transform: translate3d(var(--px), calc(var(--py) - 24px), 0) scale(1.05);
+  z-index: 50;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Phone Mockup styles */
+.phone-frame {
+  box-shadow: 0 0 80px rgba(175, 190, 255, 0.15);
+}
+
+/* Progress bar */
+.progress-bar-fill {
+  transition: width 10s linear;
+}
+
+/* Glass Card for Bento Grid */
+.bento-glass-card {
+  position: relative;
+  background: rgba(175, 190, 255, 0.08);
+  border: 1px solid rgba(175, 190, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  overflow: hidden;
+}
+
+.bento-glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    300px circle at var(--mouse-x, 0) var(--mouse-y, 0),
+    rgba(175, 190, 255, 0.15),
+    transparent 40%
+  );
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.bento-glass-card:hover::before {
+  opacity: 1;
+}
+
+.bento-glass-card:hover {
+  background: rgba(175, 190, 255, 0.15);
+  border-color: rgba(175, 190, 255, 0.3);
+}
+
+/* Community Section CSS */
+.glow-avatar {
+  box-shadow: 0 0 30px rgba(175, 190, 255, 0.3), inset 0 0 20px rgba(175, 190, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.glow-button-purple {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+.glow-button-blue {
+  box-shadow: 0 0 20px rgba(175, 190, 255, 0.3);
+}
+
+.community-banner {
+  background: linear-gradient(135deg, rgba(175, 190, 255, 0.1) 0%, rgba(175, 190, 255, 0.02) 100%);
+  border: 1px solid rgba(175, 190, 255, 0.18);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+}
+
+.community-banner::before {
+  content: '';
+  position: absolute;
+  right: -100px;
+  top: -100px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(175, 190, 255, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth Scroll Reveal Animations */
+@keyframes revealUpAnim {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-up {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.reveal-visible {
+  animation: revealUpAnim 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #152671;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(175, 190, 255, 0.8) 0%, rgba(175, 190, 255, 0.2) 100%);
+  border-radius: 999px;
+  border: 2px solid #152671;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(175, 190, 255, 0.4) 100%);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(175, 190, 255, 0.5) #152671;
+}
+
+/* Navbar Slide-down Entrance Animation */
+@keyframes navSlideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+#top-navbar {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 100;
+  transition: padding-top 0.4s ease, padding-bottom 0.4s ease;
+}
+
+#top-navbar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 150%;
+  background: linear-gradient(180deg, #152671 0%, rgba(21, 38, 113, 0.99) 6.25%, rgba(21, 38, 113, 0.96) 12.5%, rgba(21, 38, 113, 0.91) 18.75%, rgba(21, 38, 113, 0.85) 25%, rgba(21, 38, 113, 0.77) 31.25%, rgba(21, 38, 113, 0.69) 37.5%, rgba(21, 38, 113, 0.59) 43.75%, rgba(21, 38, 113, 0.5) 50%, rgba(21, 38, 113, 0.4) 56.25%, rgba(21, 38, 113, 0.3) 62.5%, rgba(21, 38, 113, 0.22) 68.75%, rgba(21, 38, 113, 0.14) 75%, rgba(21, 38, 113, 0.08) 81.25%, rgba(21, 38, 113, 0.03) 87.5%, rgba(21, 38, 113, 0.01) 93.75%, rgba(21, 38, 113, 0) 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+#top-navbar.animate-nav {
+  animation: navSlideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#top-navbar.scrolled {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+#top-navbar.scrolled-black {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* Helium-matching Topbar Button Styles */
+.nav-link {
+  color: #ffffff !important;
+  background-color: transparent;
+  padding: 9px 16px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: 'Instrument Sans', sans-serif;
+  transition: background-color 0.1s ease, transform 0.2s ease, opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  user-select: none;
+  will-change: transform;
+}
+
+.nav-link:hover {
+  background-color: rgba(175, 190, 255, 0.25) !important;
+}
+
+.nav-link:active {
+  background-color: rgba(175, 190, 255, 0.3) !important;
+  transform: scale(0.97);
+}
+
+.mobile-menu-link {
+  color: #ffffff !important;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  user-select: none;
+  will-change: transform;
+}
+
+.mobile-menu-link:hover {
+  opacity: 0.8;
+}
+
+.mobile-menu-link:active {
+  transform: scale(0.97);
+  opacity: 0.7;
+}
+
+/* Dialog Animation Styles */
+dialog {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  background: transparent !important;
+  z-index: 1000;
+  border: none;
+  outline: none;
+}
+
+dialog[open] {
+  display: flex !important;
+}
+
+dialog::backdrop {
+  display: none !important;
+}
+
+/* Custom Backdrop Overlay inside dialog */
+.dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(27, 44, 120, 0);
+  backdrop-filter: blur(0px);
+  -webkit-backdrop-filter: blur(0px);
+  transition: background-color 0.2s ease, backdrop-filter 0.2s ease, -webkit-backdrop-filter 0.2s ease;
+  z-index: 1;
+  pointer-events: auto;
+}
+
+dialog.is-open .dialog-backdrop {
+  background-color: rgba(27, 44, 120, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Helium Dialog Container styling & entrance scale transition */
+.helium-dialog-container {
+  width: calc(100% - 32px);
+  max-width: 380px;
+  font-size: 16px;
+  background: rgba(27, 44, 120, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 2px solid rgba(175, 190, 255, 0.3);
+  border-radius: 28px;
+  transform-origin: center;
+  transform: scale(0.8);
+  opacity: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+dialog.is-open .helium-dialog-container {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Action button style inside download modal matching Helium style */
+.helium-dialog-btn {
+  background: rgba(175, 190, 255, 0.2);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #ffffff;
+  font-family: 'Instrument Sans', sans-serif;
+  text-align: center;
+  user-select: none;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  border: none;
+  outline: none;
+}
+
+.helium-dialog-btn:hover {
+  background-color: rgba(175, 190, 255, 0.25);
+}
+
+.helium-dialog-btn:active {
+  background-color: rgba(175, 190, 255, 0.3);
+  transform: scale(0.97);
+}
+
+/* Close button style matching Helium style */
+.helium-dialog-btn-close {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-radius: 12px !important;
+  padding: 11px 18px !important;
+  width: 100%;
+  font-family: 'Instrument Sans', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+}
+
+.helium-dialog-btn-close:hover {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.helium-dialog-btn-close:active {
+  transform: scale(0.97) !important;
+}
+
+/* Mobile Responsive Helium Dialog Styles (<= 550px) */
+@media screen and (max-width: 550px) {
+  dialog {
+    align-items: flex-end !important;
+  }
+
+  /* Backdrop transitions to gradient fill at the bottom */
+  .dialog-backdrop {
+    background: linear-gradient(0deg, rgba(21, 38, 113, 0.98) 40%, rgba(21, 38, 113, 0.6) 75%, rgba(21, 38, 113, 0) 100%) !important;
+    opacity: 0;
+    backdrop-filter: blur(0px) !important;
+    -webkit-backdrop-filter: blur(0px) !important;
+    transition: opacity 0.25s ease, backdrop-filter 0.25s ease, -webkit-backdrop-filter 0.25s ease !important;
+  }
+
+  dialog.is-open .dialog-backdrop {
+    opacity: 1 !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  /* Mobile dialog container overrides */
+  .helium-dialog-container {
+    width: calc(100% - 32px);
+    max-width: 500px;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin-bottom: 24px;
+    
+    /* Mobile entrance transition: slide up from bottom */
+    transform: translateY(100%) !important;
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease !important;
+  }
+
+  dialog.is-open .helium-dialog-container {
+    transform: translateY(0) !important;
+    opacity: 1;
+  }
+}
+
+
+
+
+
+
+
+/* ---- site chrome fallbacks ---- */
+html, body { background: transparent !important; }
+body::before { display: none !important; }   /* old noise overlay: off on the gradient */
+.font-geist { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; }
+.font-sora { font-family: 'Sora', ui-sans-serif, system-ui, sans-serif; }
+.font-instrument { font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; }
+.nav-link.active-nav { background-color: rgba(175, 190, 255, 0.18) !important; }
+.text-\[\#afbeff\]\/70 { color: rgba(175, 190, 255, 0.7); }
+.selection\:bg-white\/20::selection, ::selection { background: rgba(255, 255, 255, 0.2); }
+.pt-10 { padding-top: 2.5rem; }
+#mobile-menu.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+#mobile-menu-btn.open #mobile-menu-chevron { transform: rotate(180deg); }
+/* compat: preflight removes list markers; restore them for old sections
+   unless a class explicitly styles the list (classes win by specificity) */
+main ul { list-style: disc outside; padding-left: 1.4rem; }
+main ol { list-style: decimal outside; padding-left: 1.4rem; }

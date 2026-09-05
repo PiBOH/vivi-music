@@ -11,6 +11,19 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.46_DE-1.50.24-alpha] - 2026-09-05
+
+### Added
+- [DE] **Detailed activity logging**: every playback command (play/pause/seek/next/previous/queue/skip/volume/shuffle/repeat), navigation change and playback error is now recorded with a timestamp in a new in-app log. The log is written to `~/.vivimusic/actions.log`, so the "Export logs" archive now carries the full user-action history instead of only system info — much easier to debug playback and UI issues from a report. (Closes [#25](https://github.com/PiBOH/vivi-music/issues/25))
+- [DE] **Live log viewer window** (Developer options → "Open live log"): a dedicated window shows the activity log in real time (auto-scrolled, selectable text to copy lines, Clear button). (Closes [#25](https://github.com/PiBOH/vivi-music/issues/25))
+
+### Fixed
+- [DE] **Stream cache minimum is now 10 minutes** instead of 1 minute: the slider in Player settings starts at 10 and any legacy saved value below the floor is clamped to 10 minutes. (Closes [#26](https://github.com/PiBOH/vivi-music/issues/26))
+
+### Changed
+- [APK] **One-off version bump to 6.4.46 (versionCode 130)** so users still on 6.4.45/128 receive this update; the next release returns to the 6.0.6.x line with a higher code. (Closes [#27](https://github.com/PiBOH/vivi-music/issues/27))
+- [APK] **Update check is now chronology-aware**: "latest release" is chosen by published date (GitHub returns releases newest-first) instead of comparing version strings, which stalled updates whenever the versioning scheme changed (e.g. 6.4.45 vs the newer 6.0.6.1 tag — the string "6.4.45" would win and users stayed stuck). The installed version is matched to its published release by tag so the comparison is date-vs-date. (Closes [#27](https://github.com/PiBOH/vivi-music/issues/27))
+
 ## [6.0.6.1_DE-1.50.23-alpha] - 2026-09-05
 
 ### Changed

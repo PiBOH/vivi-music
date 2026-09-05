@@ -873,22 +873,32 @@ suspend fun checkForUpdate(
             var bestStableRelease: JSONObject? = null
             var bestOverallRelease: JSONObject? = null
 
+            // The releases endpoint returns entries newest-first by published
+            // date. "Latest" therefore means the first entry of the matching
+            // track — comparing version STRINGS instead would stall updates
+            // whenever the versioning scheme changes (e.g. combined tags like
+            // 6.4.45_DE-1.50.19 vs 6.0.6.1_DE-1.50.23: "6.4.45" would beat the
+            // newer "6.0.6.1" and users on 6.4.45 would never see it).
             for (i in 0 until releases.length()) {
                 val release = releases.getJSONObject(i)
-                val tagName = release.getString("tag_name")
-                val isBeta = tagName.startsWith("b")
-                
-                // Track best stable
-                if (!isBeta) {
-                    if (bestStableRelease == null || isNewerVersion(tagName, bestStableRelease.getString("tag_name"))) {
-                        bestStableRelease = release
+                val isPrerelease = release.optBoolean("prerelease", false)
+                val assets = release.optJSONArray("assets")
+                var hasApk = false
+                if (assets != null) {
+                    for (j in 0 until assets.length()) {
+                        if (assets.getJSONObject(j).optString("name").endsWith(".apk", ignoreCase = true)) {
+                            hasApk = true
+                            break
+                        }
                     }
                 }
-                
-                // Track best overall
-                if (bestOverallRelease == null || isNewerVersion(tagName, bestOverallRelease.getString("tag_name"))) {
+                if (bestOverallRelease == null && hasApk) {
                     bestOverallRelease = release
                 }
+                if (bestStableRelease == null && !isPrerelease && hasApk) {
+                    bestStableRelease = release
+                }
+                if (bestOverallRelease != null && (bestStableRelease != null || betaEnabled)) break
             }
 
             // Select the target release based on user preference
@@ -896,19 +906,44 @@ suspend fun checkForUpdate(
 
             if (targetRelease != null) {
                 val targetTagName = targetRelease.getString("tag_name")
-                val isNewer = isNewerVersion(targetTagName, currentVersion)
-                
+                val targetPublished = targetRelease.optString("published_at")
+
+                // "Is the target newer than what is installed?" decided by
+                // release chronology when the installed version is itself one
+                // of the published releases (find it by its mobile tag part),
+                // falling back to the plain version-string comparison for
+                // locally built / unofficial installs.
+                val currentClean = mobileVersionFromTag(currentVersion)
+                val targetClean = mobileVersionFromTag(targetTagName)
+                val isDifferentVersion = currentClean != targetClean
+
+                var isNewer = isDifferentVersion
+                var installedRelease: JSONObject? = null
+                for (i in 0 until releases.length()) {
+                    val r = releases.getJSONObject(i)
+                    if (mobileVersionFromTag(r.getString("tag_name")) == currentClean) {
+                        installedRelease = r
+                        break
+                    }
+                }
+                if (installedRelease != null && targetPublished.isNotBlank()) {
+                    val installedPublished = installedRelease.optString("published_at")
+                    if (installedPublished.isNotBlank()) {
+                        isNewer = try {
+                            java.time.OffsetDateTime.parse(targetPublished)
+                                .isAfter(java.time.OffsetDateTime.parse(installedPublished))
+                        } catch (e: Exception) {
+                            isDifferentVersion
+                        }
+                    }
+                }
+
                 // Track Switch Logic:
                 // If the user has disabled beta updates, we should offer the latest stable release
                 // even if it's technically a lower version number than their current beta/custom build.
                 // This allows users to correctly "roll back" to the stable track.
                 val currentIsBeta = currentVersion.startsWith("b")
-                val targetIsStable = targetTagName.startsWith("v")
-                
-                // Compare version numbers ignoring prefixes
-                val currentClean = mobileVersionFromTag(currentVersion)
-                val targetClean = mobileVersionFromTag(targetTagName)
-                val isDifferentVersion = currentClean != targetClean
+                val targetIsStable = !targetRelease.optBoolean("prerelease", false)
                 
                 var shouldShow = isNewer
                 if (!shouldShow && !betaEnabled) {

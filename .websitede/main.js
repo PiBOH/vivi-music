@@ -157,32 +157,21 @@
       });
     }
   };
-  /* ---------- Order releases by the version in the tag, not by GitHub order ----------
-   * GitHub returns releases newest-first by publish date, which can disagree with the
-   * actual version numbers (backdated releases, re-published tags, force pushes).
-   * The site must always resolve "latest" from the tag's version, so we sort
-   * descending by its numeric parts (tag format like 6.4.41_DE-1.41.15-nightly). */
-  function versionParts(tag) {
-    var m = String(tag || "").match(/\d+(?:\.\d+)*/g);
-    if (!m) return [];
-    return m.join(".").split(".").map(function (n) { return parseInt(n, 10) || 0; });
-  }
-  function compareParts(a, b) {
-    var len = Math.max(a.length, b.length);
-    for (var i = 0; i < len; i++) {
-      var av = a[i] || 0;
-      var bv = b[i] || 0;
-      if (av !== bv) return av - bv;
-    }
-    return 0;
-  }
-  function byVersionDesc(a, b) {
-    return compareParts(versionParts(b.tag_name), versionParts(a.tag_name));
+  /* ---------- Order releases by publish date (chronological), not by the ----------
+   * version numbers in the tag. GitHub returns releases newest-first by publish
+   * date; combined tags (e.g. 6.4.45_DE-1.50.22 vs 6.0.6.1_DE-1.50.23) are NOT
+   * string-comparable across versioning-scheme changes, so sorting by the tag
+   * would pick an OLD release as "latest". The site must always resolve
+   * "latest" as the most recently RELEASED one (chronology wins). */
+  function byPublishedDesc(a, b) {
+    var at = new Date(a.published_at || 0).getTime();
+    var bt = new Date(b.published_at || 0).getTime();
+    return bt - at;
   }
 
   window.vmReleases = function (n) {
     return window.vmGH.json("https://api.github.com/repos/" + REPO + "/releases?per_page=" + (n || 6))
-      .then(function (list) { return (list || []).filter(Boolean).sort(byVersionDesc); });
+      .then(function (list) { return (list || []).filter(Boolean).sort(byPublishedDesc); });
   };
   window.vmFindAsset = function (release, re) {
     var assets = (release && release.assets) || [];

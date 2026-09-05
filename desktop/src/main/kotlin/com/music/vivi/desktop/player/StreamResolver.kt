@@ -92,11 +92,16 @@ object StreamResolver {
 
     private fun generation(videoId: String): Long = generations[videoId] ?: 0L
 
-    /** Cache lifetime in ms, read from the user setting (1–60 minutes);
-     *  0 (or any non-positive value) means the cache never expires. */
-    private fun cacheTtlMs(): Long = when (val minutes = DesktopSettings.load().streamCacheMinutes) {
-        in 1..60 -> minutes * 60_000L
-        else -> Long.MAX_VALUE
+    /** Cache lifetime in ms, read from the user setting (10–60 minutes floor,
+     *  issue #26); 0 (or any non-positive value) means the cache never expires.
+     *  Values below the 10-minute floor (legacy 1–9) are clamped to 10. */
+    private fun cacheTtlMs(): Long {
+        val minutes = DesktopSettings.load().streamCacheMinutes
+        return when {
+            minutes <= 0 -> Long.MAX_VALUE
+            minutes in 1..9 -> 10 * 60_000L
+            else -> minutes.coerceAtMost(60) * 60_000L
+        }
     }
 
     /**
