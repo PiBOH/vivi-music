@@ -122,3 +122,6 @@ __pycache__/
 
 # Skills lock
 skills-lock.json
+
+# website template zips are local source material, not site content
+.websitede/*.zip
