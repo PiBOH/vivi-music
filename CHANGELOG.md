@@ -14,7 +14,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.0.6.2_DE-1.50.29-alpha] - 2026-09-06
 
 ### Changed
-- [APK] **The Android release workflow lets you choose the signing key**: on manual runs (`workflow_dispatch`) a new `signing_key` input selects `auto` (default — `RELEASE_KEYSTORE` when set, otherwise `DEBUG_KEYSTORE`), `release` or `debug`; pushes still resolve automatically. The release keystore secret is now `RELEASE_KEYSTORE` and the debug keystore (`DEBUG_KEYSTORE`) is only used as the fallback. (Closes [#41](https://github.com/PiBOH/vivi-music/issues/41))
+- [APK] **The Android release workflow lets you choose the signing key**: on manual runs (`workflow_dispatch`) a new `signing_key` input selects `auto` (default — `RELEASE_KEYSTORE` when set, otherwise `DEBUG_KEYSTORE`), `release` or `debug`; pushes still resolve automatically. The release keystore secret is now `RELEASE_KEYSTORE` and the debug keystore (`DEBUG_KEYSTORE`) is only used as the fallback.
 
 ## [6.0.6.2_DE-1.50.28-alpha] - 2026-09-06
 
