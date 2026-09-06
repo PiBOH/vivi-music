@@ -271,6 +271,6 @@
   <p align="center">The open-source community for tools, libraries, and APIs that make this project possible.</p>
   <p align="center"><strong>Thank you to all the amazing developers who made this project possible!</strong></p>
   <hr width="60%">
-  <p align="center"><strong>Made with ❤️ for music lovers everywhere.</strong></p>
+  <p align="center"><strong>Made with ❤️ for music lovers everywhere</strong></p>
   <p align="center">⭐ Star this repo if you enjoy VIVI Music DE!</p>
 </div>
