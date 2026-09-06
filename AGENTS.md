@@ -484,6 +484,14 @@ issue on `PiBOH/vivi-music` **before any code is changed**:
 4. **Close the issue** after the fix is committed and pushed:
    `gh issue close <NN> --repo PiBOH/vivi-music`.
 
+**NEVER open a GitHub issue for anything involving secrets** (keystores,
+signing keys, API tokens, passwords, credentials, secret names/values,
+signing-key selection in workflows, etc.). Secrets-related changes are done
+directly, without an issue — they must not leave any trace on GitHub (no
+issue, no issue link in the CHANGELOG/commit, and never log or echo secret
+values). Keep secret material only in gitignored files (`.ignore/`,
+`*.b64`, `*.keystore`).
+
 Existing commit rules still apply: never add a "Co-Authored-By: Codebuff"
 footer.
 
