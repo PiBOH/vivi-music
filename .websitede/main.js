@@ -199,7 +199,7 @@
       s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, "$1<em>$2</em>");
       return s;
     };
-    var html = "", inUl = false, inOl = false, inCode = false;
+    var html = "", inUl = false, inOl = false, inCode = false, codeBuf = null;
     var closeLists = function () {
       if (inUl) { html += "</ul>"; inUl = false; }
       if (inOl) { html += "</ol>"; inOl = false; }
@@ -207,8 +207,20 @@
     src.split(/\r?\n/).forEach(function (raw) {
       var line = raw.replace(/\s+$/, "");
       var t = line.trim();
-      if (/^```/.test(t)) { inCode = !inCode; closeLists(); return; }
-      if (inCode) { closeLists(); return; }
+      if (/^```/.test(t)) {
+        if (inCode) {
+          /* closing fence: render the collected lines as a code block */
+          html += "<pre><code>" + esc(codeBuf.join("\n")) + "</code></pre>";
+          inCode = false;
+          codeBuf = null;
+        } else {
+          inCode = true;
+          codeBuf = [];
+          closeLists();
+        }
+        return;
+      }
+      if (inCode) { codeBuf.push(line); return; }
       if (!t) { closeLists(); return; }
       var h = t.match(/^(#{1,4})\s+(.*)/);
       if (h) { closeLists(); html += '<div class="mdh">' + inline(h[2]) + "</div>"; return; }

@@ -231,7 +231,7 @@ code {
   cursor: pointer;
   transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
 }
-.btn:hover { text-decoration: none; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(242, 85, 85, 0.28); }
+.btn:hover { text-decoration: none; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(167, 139, 250, 0.28); }
 .btn.ghost {
   background: transparent;
   color: var(--text);
@@ -279,7 +279,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing:
 }
 .phead h1 { font-size: clamp(30px, 4.6vw, 48px); margin: 0 0 12px; }
 .phead .lead { color: var(--muted); font-size: 17px; max-width: 68ch; margin: 0; }
-.pbody { padding: 42px 0 90px; }
+.pbody { padding: 42px 22px 90px; }
 .pbody .prose { max-width: 780px; }
 .pbody h2 { font-size: clamp(20px, 2.6vw, 27px); margin: 44px 0 14px; }
 .pbody h2:first-child { margin-top: 0; }
@@ -474,8 +474,8 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   animation: rec 2.4s ease-in-out infinite;
 }
 @keyframes rec {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 85, 85, 0.55); }
-  50% { box-shadow: 0 0 0 7px rgba(242, 85, 85, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.55); }
+  50% { box-shadow: 0 0 0 7px rgba(167, 139, 250, 0); }
 }
 .hero h1 {
   font-size: clamp(33px, 5.4vw, 57px);
@@ -999,7 +999,7 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 .dl .miss { font: 500 11px var(--font-mono); color: var(--faint); }
 .dl.off { opacity: 0.5; }
 @keyframes flashbox {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(242, 85, 85, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); }
   30% { box-shadow: 0 0 0 5px var(--accent-soft); }
 }
 .flash { animation: flashbox 1.3s ease 2; }
@@ -1189,7 +1189,7 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.cl-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(242, 85, 85, 0.18); }
+.cl-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18); }
 .cl-search::placeholder { color: var(--faint); }
 .cl-sellabel { font-size: 13px; font-weight: 600; color: var(--muted); }
 .cl-select {
@@ -1239,8 +1239,15 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 .tl-date { font: 500 12px var(--font-mono); color: var(--faint); }
 .tl-body { color: var(--muted); font-size: 14.5px; }
 .tl-body p { margin: 0 0 10px; }
-.tl-body ul, .tl-body ol { margin: 0 0 10px; padding-left: 20px; }
+.tl-body ul, .tl-body ol { margin: 0 0 10px; padding-left: 22px; }
+/* the Tailwind reset sets list-style:none on ul/ol, so lists rendered from the
+   release-note markdown must get their markers back explicitly */
+.tl-body ul { list-style: disc; }
+.tl-body ol { list-style: decimal; }
 .tl-body li { margin-bottom: 5px; }
+.tl-body li > ul { margin-bottom: 2px; }
+.tl-body pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-x: auto; margin: 0 0 12px; }
+.tl-body pre code { color: var(--code-text); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; white-space: pre; }
 .tl-body .mdh { font-weight: 800; color: var(--text); font-size: 15px; margin: 14px 0 8px; }
 .tl-body code { white-space: normal; }
 .tl-more { display: inline-block; margin-top: 4px; font-weight: 700; font-size: 13.5px; }
@@ -1419,4 +1426,22 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   }
   .js .reveal { opacity: 1; transform: none; }
   .disc, .shot .frame .s-disc { animation: none; }
+}
+
+/* ---------- text safety ----------
+   the Tailwind preflight resets margins/list-markers and a few long inline
+   tokens (code paths, urls) used to escape their boxes on narrow screens.
+   These rules guarantee text wraps inside its container everywhere. */
+p, li, dt, dd, figcaption, blockquote, .a, .prose, .lead, .sub {
+  overflow-wrap: break-word;
+}
+.tl-body li, .prose li { overflow-wrap: anywhere; }
+code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+@media (max-width: 760px) {
+  code { white-space: normal; }
+  .relay-chip code, .tl-body pre code, pre.code, pre code { white-space: pre; }
+  .wrap.pbody { padding-left: 16px; padding-right: 16px; }
 }

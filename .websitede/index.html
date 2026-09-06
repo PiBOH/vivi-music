@@ -417,18 +417,6 @@
   var variant = $('#dl-variant');
   var rel = null;
 
-  function versionParts(tag) {
-    var m = String(tag || '').match(/\d+(?:\.\d+)*/g);
-    return m ? m.join('.').split('.').map(function (n) { return parseInt(n, 10) || 0; }) : [];
-  }
-  function newerTag(a, b) {
-    var A = versionParts(a), B = versionParts(b);
-    for (var i = 0; i < Math.max(A.length, B.length); i++) {
-      if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) - (B[i] || 0);
-    }
-    return 0;
-  }
-
   function findAsset(re) {
     var assets = (rel && rel.assets) || [];
     for (var i = 0; i < assets.length; i++) if (re.test(assets[i].name)) return assets[i];
@@ -459,7 +447,7 @@
       { re: /PKGBUILD/i, label: 'AUR (PKGBUILD)' }
     ],
     android: [
-      { re: /debug\.apk$/i, label: 'APK (debug build)' }
+      { re: /debug\.apk$/i, label: 'VIVI Music DE custom APK', note: 'pairs with this desktop app' }
     ]
   };
 
@@ -510,9 +498,13 @@
 
   function pickRelease(list) {
     var rels = (list || []).filter(function (r) { return r && !r.draft; });
-    rels.sort(function (a, b) { return newerTag(b.tag_name, a.tag_name); });
-    var stable = rels.filter(function (r) { return !r.prerelease; });
-    return stable.length ? stable[0] : rels[0] || null;
+    /* GitHub returns releases newest-first by publish date; sort by date so the
+       combined tags (6.4.45_DE-1.50.19 vs the NEWER 6.0.6.1_DE-1.50.23) can
+       never be compared as version strings — chronology defines "latest".
+       The newest non-prerelease wins, otherwise the newest release. */
+    rels.sort(function (a, b) { return new Date(b.published_at || 0) - new Date(a.published_at || 0); });
+    for (var i = 0; i < rels.length; i++) if (!rels[i].prerelease) return rels[i];
+    return rels[0] || null;
   }
 
   function loadRelease() {
@@ -582,8 +574,21 @@
         var top = list.slice(0, 3);
         if (!top.length) throw new Error("empty feed");
         grid.innerHTML = top.map(function (r, i) {
-          var body = String(r.body || "").replace(/\r?\n+/g, " ").trim();
-          if (body.length > 160) body = body.slice(0, 160).replace(/\s+\S*$/, "") + "…";
+          /* release notes arrive as markdown; the card already shows the tag
+             and the date, so skip headings and keep only the note lines — no
+             raw `##`/`**`/`-` markers should ever reach the cards */
+          var noteLines = [];
+          String(r.body || "").split(/\r?\n/).forEach(function (ln) {
+            if (noteLines.length >= 3) return;
+            var t = ln.replace(/\s+/g, " ").trim();
+            if (!t || t.charAt(0) === "#" || t.charAt(0) === "`" || /release\s+channel/i.test(t)) return;
+            t = t.replace(/^[-*]\s+/, "");
+            if (!t) return;
+            t = t.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+            noteLines.push(t);
+          });
+          var body = noteLines.join(" · ");
+          if (body.length > 170) body = body.slice(0, 170).replace(/\s+\S*$/, "") + "…";
           return '<div class="news-item" style="transition-delay:' + (i * 70) + 'ms">' +
             "<span class=\"ver\">" + window.vmEsc(r.tag_name || "release") + "</span>" +
             '<span class="dt">' + window.vmFmtDate(r.published_at) + "</span>" +
