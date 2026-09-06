@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.46.1_DE-1.50.27-alpha] - 2026-09-06
+
+### Fixed
+- [DE] **Website footer cleaned up**: the "verified Open Source" badge is gone, and the GitHub/Telegram round buttons no longer show raw `code`/`send` text overflowing the containers. The Material Symbols icon font was lost during the template port, so every icon on the site rendered as raw ligature text; it is now self-hosted in `assets/fonts/` with the proper `.material-symbols-outlined` base style restored. (Closes [#32](https://github.com/PiBOH/vivi-music/issues/32))
+- [DE] **Website animations now run on desktop too**: the `prefers-reduced-motion` kill switch was removed from the site CSS and JS, so the entrance, floating and scroll-reveal animations always play. Previously the Windows "Show animations" setting mapped to `prefers-reduced-motion` in every desktop browser and froze the whole site, while phones/tablets (which lack that setting) kept animating. (Closes [#34](https://github.com/PiBOH/vivi-music/issues/34))
+- [DE] **Website changelog is lazy now**: the page renders only the latest release and reveals older ones in batches through a "Load more…" button; search and the version picker still scan everything loaded. (Closes [#33](https://github.com/PiBOH/vivi-music/issues/33))
+
+### Changed
+- [APK] **The Android companion app is now "VIVI for DE"** (was "VIVI" / "VIVI Debug") and installs as `com.vivi.music.desktop` instead of the old debug package, so it can sit next to the upstream app without conflicts.
+- [APK] **`build-android.yml` rewritten**: it now triggers on the same release signal as the desktop autorelease (push whose commit message starts with "v", or manual dispatch) and builds the GMS and FOSS release APKs in parallel; every release asset list now mandatorily includes `vivi-gsm.apk` and `vivi-foss.apk`. (Closes [#35](https://github.com/PiBOH/vivi-music/issues/35))
+
 ## [6.4.46_DE-1.50.26-alpha] - 2026-09-06
 
 ### Added

@@ -22,16 +22,14 @@ android {
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.vivi.vivimusic"
+        applicationId = "com.vivi.music.desktop"
         minSdk = 26
         targetSdk = 37
-        // 6.0.6.1: rebased on upstream 6.0.6 + our device-sync glue.
-        // versionCode stays monotonic (upstream is at 75; ours already shipped 128).
-        // One-off bump to 6.4.46/130 for this release so users on 6.4.45/128
-        // receive the update that ships the chronology/versionCode-aware check;
-        // the next release returns to the 6.0.6.x line with a higher code.
-        versionCode = 130
-        versionName = "6.4.46"
+        // 6.4.46.1: companion build — installs as com.vivi.music.desktop and is
+        // named "VIVI for DE" so it can coexist with the upstream app.
+        // versionCode stays monotonic and always increases per release.
+        versionCode = 131
+        versionName = "6.4.46.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -130,7 +128,6 @@ buildTypes {
         buildConfigField("String", "ARCHITECTURE", "\"release\"")
     }
     debug {
-        applicationIdSuffix = ".debug"
         isDebuggable = true
         signingConfig = signingConfigs.getByName("debug")
         buildConfigField("String", "ARCHITECTURE", "\"debug\"")

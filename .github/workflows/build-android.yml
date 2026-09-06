@@ -1,17 +1,27 @@
 name: Build Android APK
 
 on:
-  workflow_call:
   workflow_dispatch:
+  push:
+    branches: [ vivi-music-de, main, beta ]
+    tags-ignore: [ '**' ]
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Android APKs (GMS + FOSS)
+    name: Android APK (${{ matrix.flavor }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Same release signal as the desktop autorelease: manual dispatch, or a
+    # push whose commit message starts with "v". GMS and FOSS build in
+    # parallel; each job produces the fixed-name APK the release expects.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [ gms, foss ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,54 +46,50 @@ jobs:
         shell: bash
         run: chmod +x gradlew
 
-      # The APK is optional in the release: a failure here (e.g. missing
-      # signing secrets) must not fail this job. GitHub forbids
-      # `continue-on-error` on the job that *calls* a reusable workflow, so the
-      # tolerance lives on the individual steps below instead.
       - name: Decode release keystore
-        continue-on-error: true
         shell: bash
         run: |
           mkdir -p app/keystore
-          echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/keystore/release.keystore
+          if [ -n "${{ secrets.KEYSTORE }}" ]; then
+            echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/keystore/release.keystore
+          else
+            echo "No KEYSTORE secret — release builds will fall back to the debug signing config."
+          fi
 
-      - name: Build GMS release APK
-        continue-on-error: true
+      - name: Build ${{ matrix.flavor }} release APK
         shell: bash
         env:
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleUniversalGmsRelease --no-configuration-cache --console=plain --warning-mode summary -x lint
+        run: |
+          # The About screen shows NIGHTLY/STABLE from BuildConfig.IS_NIGHTLY,
+          # driven by the mobile channel in version.txt (line 3).
+          MOBILE_CHANNEL="$(sed -n '3p' version.txt | tr -d '[:space:]' | xargs | tr '[:upper:]' '[:lower:]')"
+          NIGHTLY_FLAG=""
+          if [[ -n "$MOBILE_CHANNEL" && "$MOBILE_CHANNEL" != "stable" ]]; then
+            NIGHTLY_FLAG="-Pnightly=true"
+          fi
+          ./gradlew assembleUniversal${{ matrix.flavor == 'gms' && 'Gms' || 'Foss' }}Release $NIGHTLY_FLAG \
+            --no-configuration-cache --console=plain --warning-mode summary -x lint
 
-      - name: Build FOSS release APK
-        continue-on-error: true
-        shell: bash
-        env:
-          STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleUniversalFossRelease --no-configuration-cache --console=plain --warning-mode summary -x lint
-
-      - name: Collect APKs
-        continue-on-error: true
+      - name: Collect APK
         shell: bash
         run: |
           set -euo pipefail
-          MOBILE="$(sed -n '1p' version.txt | tr -d '\r\n' | xargs)"
           mkdir -p dist
-          GMS="$(find app/build/outputs/apk/universalGms/release -name '*.apk' -print -quit)"
-          FOSS="$(find app/build/outputs/apk/universalFoss/release -name '*.apk' -print -quit)"
-          if [ -n "$GMS" ]; then cp "$GMS" "dist/VIVIMusic-${MOBILE}-gms.apk"; fi
-          if [ -n "$FOSS" ]; then cp "$FOSS" "dist/VIVIMusic-${MOBILE}-foss.apk"; fi
+          APK_DIR="app/build/outputs/apk/universal${{ matrix.flavor == 'gms' && 'Gms' || 'Foss' }}/release"
+          APK="$(find "$APK_DIR" -name '*.apk' -print -quit)"
+          if [ -z "$APK" ]; then
+            echo "No APK produced in $APK_DIR" >&2
+            exit 1
+          fi
+          cp "$APK" "dist/vivi-${{ matrix.flavor }}.apk"
           ls -la dist
-          [ -n "$GMS" ] || [ -n "$FOSS" ] || { echo "No APKs produced" >&2; exit 1; }
 
-      - name: Upload APKs
-        if: always()
-        continue-on-error: true
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-apks
-          path: dist/*
-          if-no-files-found: warn
+          name: android-apk-${{ matrix.flavor }}
+          path: dist/vivi-${{ matrix.flavor }}.apk
+          if-no-files-found: error
