@@ -2,6 +2,16 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      signing_key:
+        description: "Keystore to sign with (auto = RELEASE_KEYSTORE if set, else DEBUG_KEYSTORE)"
+        required: false
+        type: choice
+        default: auto
+        options:
+          - auto
+          - release
+          - debug
   push:
     branches: [ vivi-music-de, main, beta ]
     tags-ignore: [ '**' ]
@@ -46,22 +56,55 @@ jobs:
         shell: bash
         run: chmod +x gradlew
 
+      # Signing key resolution: manual runs pick explicitly (release/debug);
+      # everything else defaults to auto — release when the RELEASE_KEYSTORE
+      # secret exists, otherwise the debug keystore (DEBUG_KEYSTORE).
+      - name: Resolve signing key
+        id: signing
+        shell: bash
+        run: |
+          REQUESTED="${{ github.event.inputs.signing_key }}"
+          if [ -z "$REQUESTED" ]; then REQUESTED="auto"; fi
+          HAS_RELEASE="${{ secrets.RELEASE_KEYSTORE != '' }}"
+          case "$REQUESTED" in
+            release)
+              if [ "$HAS_RELEASE" != "true" ]; then
+                echo "::error::signing_key=release was requested but the RELEASE_KEYSTORE secret is not set." >&2
+                exit 1
+              fi
+              echo "key=release" >> "$GITHUB_OUTPUT"
+              ;;
+            debug)
+              echo "key=debug" >> "$GITHUB_OUTPUT"
+              ;;
+            auto)
+              if [ "$HAS_RELEASE" = "true" ]; then
+                echo "key=release" >> "$GITHUB_OUTPUT"
+              else
+                echo "key=debug" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            *)
+              echo "::error::Unknown signing_key value: $REQUESTED" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Decode release keystore
+        if: steps.signing.outputs.key == 'release'
         shell: bash
         run: |
           mkdir -p app/keystore
-          if [ -n "${{ secrets.KEYSTORE }}" ]; then
-            echo "${{ secrets.KEYSTORE }}" | base64 --decode > app/keystore/release.keystore
-          else
-            echo "No KEYSTORE secret — release builds will fall back to the debug signing config."
-          fi
+          echo "${{ secrets.RELEASE_KEYSTORE }}" | base64 --decode > app/keystore/release.keystore
+          echo "Release keystore restored from RELEASE_KEYSTORE secret"
 
-      - name: Restore persistent debug keystore
+      # Always restore a valid debug keystore: when the release key is absent
+      # the release signing config falls back to the debug keystore, so the
+      # runner needs ~/.android/debug.keystore or :app:validateSigning<Flavor>Release
+      # fails.
+      - name: Restore debug keystore
         shell: bash
         run: |
-          # The release signing config falls back to the debug keystore when the
-          # real one is missing, so the runner needs a valid ~/.android/debug.keystore
-          # or :app:validateSigning<Flavor>Release fails.
           mkdir -p ~/.android
           if [ -n "${{ secrets.DEBUG_KEYSTORE }}" ]; then
             echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 --decode > ~/.android/debug.keystore
@@ -115,4 +158,4 @@ jobs:
         with:
           name: android-apk-${{ matrix.flavor }}
           path: dist/vivi-${{ matrix.flavor }}.apk
-          if-no-files-found: error
+          if-no-files-found: error
