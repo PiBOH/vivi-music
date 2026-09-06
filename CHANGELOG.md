@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.2_DE-1.50.28-alpha] - 2026-09-06
+
+### Added
+- [DE] **Do Not Disturb is detected before sending native notifications**: when native notifications are enabled but the OS is suppressing them (Windows Focus Assist / quiet hours, macOS Focus modes, GNOME "show banners" off), the app now shows an in-app notice instead, explaining that the native one was skipped because Do Not Disturb is active — so a notification is never silently lost. (Closes [#37](https://github.com/PiBOH/vivi-music/issues/37))
+- [APK] **A dedicated release keystore now exists** (`app/keystore/release.keystore`, generated locally and gitignored): the release signing on CI consumes it through the `KEYSTORE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD` secrets, so release builds no longer depend on the debug key. Instructions are in `.ignore/KEYSTORE-INFO.txt`. (Closes [#39](https://github.com/PiBOH/vivi-music/issues/39))
+
+### Changed
+- [APK] **Android versioning is back on the `6.0.6.x` line** (`6.0.6.2`, versionCode 132): the previous one-off bumps (`6.4.45` / `6.4.46` / `6.4.46.1`) were temporary; per the documented scheme only the last digit increments on each APK update, and the versionCode stays monotonic. (Closes [#36](https://github.com/PiBOH/vivi-music/issues/36))
+
+### Translations
+- [DE] Added the `notif_dnd_title` / `notif_dnd_body` keys in all 52 supported languages (thanks to @codebuffai).
+
 ## [6.4.46.1_DE-1.50.27-alpha] - 2026-09-06
 
 ### Fixed

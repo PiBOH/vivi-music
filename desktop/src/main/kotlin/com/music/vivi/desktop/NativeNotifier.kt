@@ -25,7 +25,22 @@ object DesktopNotifier {
     val events: SharedFlow<Notice> = _events.asSharedFlow()
 
     fun notify(title: String, message: String, section: String? = null) {
-        val mode = if (DesktopSettings.load().notificationMode == "native") "native" else "in_app"
+        val state = DesktopSettings.load()
+        val native = state.notificationMode == "native"
+        val mode = if (native) "native" else "in_app"
+        // When the OS is suppressing notifications (Do Not Disturb / Focus
+        // Assist), a native toast would be silently dropped. Fall back to an
+        // in-app notice that explains WHY it appears in-app instead (and why
+        // the native one was skipped), so the user is never left wondering
+        // where their notification went.
+        if (native && DoNotDisturb.isActive()) {
+            val language = state.language
+            val whyTitle = Localization.get(language, "notif_dnd_title")
+            val whyBody = Localization.get(language, "notif_dnd_body")
+            NotificationHistory.record(whyTitle, "$whyBody\n\n$title\n$message", "in_app")
+            _events.tryEmit(Notice(whyTitle, "$whyBody\n\n$title\n$message"))
+            return
+        }
         NotificationHistory.record(title, message, mode)
         if (mode == "native") {
             NativeNotifier.notify(title, message, section)
@@ -70,6 +85,82 @@ object NotificationHistory {
             DesktopSettings.update { it.copy(notificationHistory = emptyList()) }
         }
     }
+}
+
+/**
+ * Best-effort check for an active OS-level "Do Not Disturb" / Focus Assist
+ * state. When the OS silences notifications, a native toast would be sent but
+ * never shown, so [DesktopNotifier] falls back to an in-app notice explaining
+ * why (see [DesktopNotifier.notify]). Detection is best-effort per platform:
+ *  - Windows: Focus Assist / quiet hours + the global toast master switch in
+ *    the registry.
+ *  - macOS: the Focus/Do Not Disturb mode state files under
+ *    `~/Library/DoNotDisturb/DB` (ModeConfigurations.json on newer macOS,
+ *    Assertions.json on older ones).
+ *  - Linux: GNOME's `show-banners` gsettings key (other desktops: false).
+ * Unsupported or unreadable states report false (no DND), so a normal native
+ * notification is still attempted.
+ */
+object DoNotDisturb {
+    private val os = System.getProperty("os.name", "").lowercase()
+
+    /** True when the OS is currently suppressing notifications. */
+    fun isActive(): Boolean = when {
+        os.contains("win") -> windowsDndActive()
+        os.contains("mac") -> macDndActive()
+        os.contains("linux") -> linuxDndActive()
+        else -> false
+    }
+
+    /** Windows: Focus Assist / quiet hours + global toast master switch. */
+    private fun windowsDndActive(): Boolean = runCatching {
+        // Focus Assist "quiet hours" — value 1 means notifications are on hold.
+        val quiet = regQuery("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\QuietHours", "Enabled")
+        if (quiet.contains("0x1", ignoreCase = true)) return true
+        // Global toast master switch (1 = toasts allowed).
+        val toasts = regQuery(
+            "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings",
+            "NOC_GLOBAL_SETTING_TOASTS_ENABLED",
+        )
+        if (toasts.contains("0x0", ignoreCase = true)) return true
+        false
+    }.getOrDefault(false)
+
+    private fun regQuery(key: String, value: String): String = runCatching {
+        val p = ProcessBuilder("reg", "query", key, "/v", value)
+            .redirectErrorStream(true)
+            .start()
+        val out = p.inputStream.bufferedReader().readText()
+        p.waitFor(5, TimeUnit.SECONDS)
+        out
+    }.getOrDefault("")
+
+    /**
+     * macOS: DND is on when any Focus mode is enabled. The state lives in
+     * `~/Library/DoNotDisturb/DB/` — ModeConfigurations.json (macOS 13+),
+     * Assertions.json (older). Parse leniently: if the file lists an enabled
+     * mode/assertion, treat DND as active.
+     */
+    private fun macDndActive(): Boolean = runCatching {
+        val home = System.getProperty("user.home") ?: return false
+        val dbDir = java.io.File(home, "Library/DoNotDisturb/DB")
+        if (!dbDir.isDirectory) return false
+        val modes = java.io.File(dbDir, "ModeConfigurations.json")
+        if (modes.isFile && modes.readText().contains("\"enabled\" : true")) return true
+        val assertions = java.io.File(dbDir, "Assertions.json")
+        if (assertions.isFile && assertions.readText().contains("\"endDate\" : null")) return true
+        false
+    }.getOrDefault(false)
+
+    /** Linux: GNOME "show banners" must be false for DND to be active. */
+    private fun linuxDndActive(): Boolean = runCatching {
+        val p = ProcessBuilder("gsettings", "get", "org.gnome.desktop.notifications", "show-banners")
+            .redirectErrorStream(true)
+            .start()
+        val out = p.inputStream.bufferedReader().readText().trim()
+        p.waitFor(5, TimeUnit.SECONDS)
+        out == "false"
+    }.getOrDefault(false)
 }
 
 /**

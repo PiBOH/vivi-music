@@ -580,6 +580,8 @@ ENGLISH = {
     "retry": "Retry",
     "charts_empty": "Nothing to show here yet.",
     "home_empty": "The home feed came back empty — check your connection and try again.",
+    "notif_dnd_title": "Notification silenced",
+    "notif_dnd_body": "Do Not Disturb is active on your system, so the native notification was skipped. This notice appears in-app instead.",
     "connect_and_generate_code": "Connect & Generate Pair Code",
     "contributors_section": "CONTRIBUTORS",
     "regenerate_pair_code": "Regenerate Pair Code",
