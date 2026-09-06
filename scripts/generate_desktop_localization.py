@@ -579,6 +579,7 @@ ENGLISH = {
     "connect_hint": "This can take a few seconds — up to 2 minutes if the relay server needs to wake up.",
     "retry": "Retry",
     "charts_empty": "Nothing to show here yet.",
+    "home_empty": "The home feed came back empty — check your connection and try again.",
     "connect_and_generate_code": "Connect & Generate Pair Code",
     "contributors_section": "CONTRIBUTORS",
     "regenerate_pair_code": "Regenerate Pair Code",

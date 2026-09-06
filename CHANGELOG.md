@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.46_DE-1.50.25-alpha] - 2026-09-06
+
+### Added
+- [DE] **The activity log now records every settings change**: whenever an option is modified, the log line names the field and shows `old → new` (large lists are summarized; secrets such as cookies, visitor data and API keys are redacted). Together with the existing playback, navigation and error entries, an exported log archive is now a complete trail of what was clicked and what was changed. (Closes [#31](https://github.com/PiBOH/vivi-music/issues/31))
+
+### Fixed
+- [DE] **The Home "Recommended" row no longer disappears on fresh profiles**: when there is no in-session listening history yet, it seeds from the first songs of the loaded Home feed, so the row shows up even right after a clean install. (Closes [#28](https://github.com/PiBOH/vivi-music/issues/28))
+- [DE] **The Home empty state shows real text instead of a raw `home_empty` key**: the string was missing from every language table; it is now in the English base table and the other languages pick it up with the next dedicated translation pass. A full audit of every `Localization.get` call found this to be the only referenced-but-missing key.
+
+
 ## [6.4.46_DE-1.50.24-alpha] - 2026-09-05
 
 ### Added

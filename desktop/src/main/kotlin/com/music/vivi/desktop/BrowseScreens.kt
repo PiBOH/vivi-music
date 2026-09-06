@@ -112,18 +112,30 @@ fun HomeScreen(
     // for each recent seed track ask `YouTube.next(videoId)` for its related
     // endpoint, then `YouTube.related(endpoint)` and surface the songs.
     var recommendations by remember { mutableStateOf<List<SongItem>?>(null) }
-    LaunchedEffect(recentSeedTracks.map { it.videoId }.take(3).joinToString(",")) {
-        val seeds = recentSeedTracks.take(3)
+    // Seeds come from the most recent in-session tracks. On a fresh profile
+    // there is no history yet, so the first songs that came back in the Home
+    // feed are used instead — the "Recommended" row must never silently
+    // disappear just because nothing was played in this session.
+    LaunchedEffect(
+        recentSeedTracks.map { it.videoId }.take(3).joinToString(","),
+        home,
+    ) {
+        var seeds = recentSeedTracks.take(3).map { it.videoId }
+        if (seeds.isEmpty() && home != null) {
+            val homeSongs: List<SongItem> =
+                home!!.sections.flatMap { it.items }.filterIsInstance<SongItem>()
+            seeds = homeSongs.map { it.id }.distinct().take(3)
+        }
         if (seeds.isEmpty()) {
             recommendations = null
             return@LaunchedEffect
         }
         val collected = mutableListOf<SongItem>()
-        for (seed in seeds) {
-            val endpoint = YouTube.next(WatchEndpoint(videoId = seed.videoId))
+        for (videoId in seeds) {
+            val endpoint = YouTube.next(WatchEndpoint(videoId = videoId))
                 .getOrNull()?.relatedEndpoint ?: continue
             val page = YouTube.related(endpoint).getOrNull() ?: continue
-            collected += page.songs.filter { it.id != seed.videoId }
+            collected += page.songs.filter { it.id != videoId }
             if (collected.size >= 12) break
         }
         recommendations = collected.distinctBy { it.id }.take(12).ifEmpty { null }

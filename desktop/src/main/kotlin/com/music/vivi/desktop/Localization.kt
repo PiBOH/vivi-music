@@ -286,6 +286,7 @@ private fun strings_0(): Map<String, String> =
         "history" to "History",
         "history_empty" to "No history yet",
         "home" to "Home",
+        "home_empty" to "The home feed came back empty — check your connection and try again.",
         "home_greeting_afternoon" to "Good afternoon",
         "home_greeting_evening" to "Good evening",
         "home_greeting_morning" to "Good morning",

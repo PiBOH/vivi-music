@@ -3,6 +3,11 @@ package com.music.vivi.desktop
 import com.music.vivi.sync.LibrarySnapshot
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.UUID
 
@@ -251,7 +256,66 @@ object DesktopSettings {
      */
     fun update(transform: (DesktopSyncState) -> DesktopSyncState) {
         synchronized(lock) {
-            save(transform(load()))
+            val before = load()
+            val after = transform(before)
+            logChanges(before, after)
+            save(after)
+        }
+    }
+
+    /**
+     * Fields that change on their own (window/bookkeeping, playback state,
+     * history accumulators, sync bookkeeping) would only spam the activity
+     * log, so they are skipped by [logChanges].
+     */
+    private val volatileFields = setOf(
+        "windowX", "windowY", "windowWidth", "windowHeight", "windowMaximized",
+        "widgetX", "widgetY",
+        "queueJson", "queueIndex",
+        "library",
+        "notificationHistory", "recognitionHistory", "searchHistory",
+        "languageSeq", "languagePeerId", "languagePeerSeq",
+        "firstLaunchDate",
+    )
+
+    /** Secrets / personal data that must never be written to the activity log. */
+    private val redactedFields = setOf(
+        "cookie", "dataSyncId", "visitorData", "aiApiKey", "deeplApiKey",
+        "lastfmSession", "accountEmail", "accountChannelHandle",
+        "listenTogetherSessionToken",
+    )
+
+    private fun jsonSummary(el: kotlinx.serialization.json.JsonElement?): String = when (el) {
+        null -> "unset"
+        is JsonPrimitive -> {
+            val s = el.content
+            if (s.length > 60) s.take(34) + "…(" + s.length + " chars)" else s
+        }
+        is JsonArray -> "[${el.size} items]"
+        is JsonObject -> "{${el.size} fields}"
+        else -> el.toString()
+    }
+
+    /**
+     * Records every setting the user actually changed (field: old → new) into
+     * the activity log. Skipping [volatileFields] keeps the log readable;
+     * [redactedFields] are never dumped in clear text.
+     */
+    private fun logChanges(before: DesktopSyncState, after: DesktopSyncState) {
+        if (before == after) return
+        runCatching {
+            val a = json.encodeToJsonElement(after).jsonObject
+            val b = json.encodeToJsonElement(before).jsonObject
+            val parts = mutableListOf<String>()
+            for ((key, newValue) in a) {
+                if (key in volatileFields) continue
+                val oldValue = b[key]
+                if (oldValue == newValue) continue
+                val shownOld = if (key in redactedFields) "[redacted]" else jsonSummary(oldValue)
+                val shownNew = if (key in redactedFields) "[redacted]" else jsonSummary(newValue)
+                parts += "$key: $shownOld → $shownNew"
+            }
+            if (parts.isNotEmpty()) AppLog.log("settings", parts.joinToString(" | "))
         }
     }
 
