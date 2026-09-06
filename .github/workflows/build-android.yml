@@ -56,6 +56,29 @@ jobs:
             echo "No KEYSTORE secret — release builds will fall back to the debug signing config."
           fi
 
+      - name: Restore persistent debug keystore
+        shell: bash
+        run: |
+          # The release signing config falls back to the debug keystore when the
+          # real one is missing, so the runner needs a valid ~/.android/debug.keystore
+          # or :app:validateSigning<Flavor>Release fails.
+          mkdir -p ~/.android
+          if [ -n "${{ secrets.DEBUG_KEYSTORE }}" ]; then
+            echo "${{ secrets.DEBUG_KEYSTORE }}" | base64 --decode > ~/.android/debug.keystore
+            echo "Using persistent debug keystore from DEBUG_KEYSTORE secret"
+          else
+            echo "DEBUG_KEYSTORE secret not set — generating a fresh debug keystore"
+            keytool -genkey -v \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Build ${{ matrix.flavor }} release APK
         shell: bash
         env:
