@@ -10,8 +10,7 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var root = document.documentElement;
-  var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.VM = { $: $, $$: $$, RM: RM };
+  window.VM = { $: $, $$: $$ };
 
   /* ---------- theme (toggle; the no-flash init lives in each page's <head>) ---------- */
   function setThemeIcon(t) {
@@ -57,7 +56,7 @@
   (function initReveal() {
     var els = $$(".reveal");
     if (!els.length) return;
-    if (RM || !("IntersectionObserver" in window)) {
+    if (!("IntersectionObserver" in window)) {
       els.forEach(function (el) { el.classList.add("in"); });
       return;
     }

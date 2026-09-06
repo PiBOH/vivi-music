@@ -413,9 +413,6 @@ details.qa .a { padding: 0 18px 16px; color: var(--muted); font-size: 14.5px; }
 /* accordion open animation: content fades/slides in under the summary */
 @keyframes qaIn { from { opacity: 0; transform: translateY(-7px); } to { opacity: 1; transform: none; } }
 details.qa[open] .a { animation: qaIn 0.28s ease both; }
-@media (prefers-reduced-motion: reduce) {
-  details.qa[open] .a { animation: none; }
-}
 
 /* chips */
 .chiprow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
@@ -1205,6 +1202,23 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 }
 .cl-select:focus { border-color: var(--accent); }
 
+.cl-morewrap { text-align: center; margin-top: 26px; max-width: 800px; }
+.cl-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 14px var(--font-ui);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.cl-more:hover { border-color: var(--accent); background: var(--surface1); }
+.cl-more:active { transform: scale(0.97); }
+
 .tl { position: relative; padding-left: 30px; max-width: 800px; }
 .tl::before {
   content: "";
@@ -1415,18 +1429,6 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 /* tablets / foldables: keep desktop layout but drop the two-pane guide */
 .vm-tablet .guide { grid-template-columns: 1fr; gap: 30px; }
 .vm-tablet .toc { display: none; }
-
-/* ---------- reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-  .js .reveal { opacity: 1; transform: none; }
-  .disc, .shot .frame .s-disc { animation: none; }
-}
 
 /* ---------- text safety ----------
    the Tailwind preflight resets margins/list-markers and a few long inline
