@@ -171,8 +171,14 @@
         <h2><span class="oi" aria-hidden="true"></span> Android</h2>
         <div class="dl-grid">
           <div class="dl">
-            <span class="t">VIVI Music (mobile)</span>
-            <span class="d">The original Android app, maintained upstream by VIVIDH P ASHOKAN. It's the side of the pair that talks to this one.</span>
+            <span class="t">VIVI Music DE — custom APK</span>
+            <span class="d">This project's own Android build (PiBOH fork). It's the mobile side that pairs with the desktop app through Devices.</span>
+            <a class="btn sm" data-dl=".apk" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download APK</a>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+          </div>
+          <div class="dl">
+            <span class="t">VIVI Music (upstream mobile)</span>
+            <span class="d">The original Android app, maintained upstream. It's the same codebase our APK is forked from.</span>
             <a class="btn sm ghost" href="https://vivimusic.mkmdevilmi.workers.dev/" target="_blank" rel="noopener">Official site</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">not part of this project — just the partner</span>
           </div>
@@ -223,10 +229,6 @@
         <p class="text-[#afbeff]/70 font-geist text-sm leading-relaxed mb-6 max-w-[280px]">
           VIVI Music is released under a <strong class="text-white font-semibold">modified GPL-3.0 License</strong>. We believe in the power of free and open software.
         </p>
-        <div class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 bg-white/5 text-[#afbeff] text-xs font-semibold tracking-wide">
-          <span class="material-symbols-outlined text-[16px]">verified</span>
-          Open Source
-        </div>
       </div>
     </div>
     <div class="container mx-auto max-w-7xl pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-geist text-[#afbeff]/50">
@@ -328,18 +330,6 @@
   var variant = $('#dl-variant');
   var rel = null;
 
-  function versionParts(tag) {
-    var m = String(tag || '').match(/\d+(?:\.\d+)*/g);
-    return m ? m.join('.').split('.').map(function (n) { return parseInt(n, 10) || 0; }) : [];
-  }
-  function newerTag(a, b) {
-    var A = versionParts(a), B = versionParts(b);
-    for (var i = 0; i < Math.max(A.length, B.length); i++) {
-      if ((A[i] || 0) !== (B[i] || 0)) return (A[i] || 0) - (B[i] || 0);
-    }
-    return 0;
-  }
-
   function findAsset(re) {
     var assets = (rel && rel.assets) || [];
     for (var i = 0; i < assets.length; i++) if (re.test(assets[i].name)) return assets[i];
@@ -370,7 +360,7 @@
       { re: /PKGBUILD/i, label: 'AUR (PKGBUILD)' }
     ],
     android: [
-      { re: /debug\.apk$/i, label: 'APK (debug build)' }
+      { re: /debug\.apk$/i, label: 'VIVI Music DE custom APK', note: 'pairs with this desktop app' }
     ]
   };
 
@@ -421,9 +411,13 @@
 
   function pickRelease(list) {
     var rels = (list || []).filter(function (r) { return r && !r.draft; });
-    rels.sort(function (a, b) { return newerTag(b.tag_name, a.tag_name); });
-    var stable = rels.filter(function (r) { return !r.prerelease; });
-    return stable.length ? stable[0] : rels[0] || null;
+    /* GitHub returns releases newest-first by publish date; sort by date so the
+       combined tags (6.4.45_DE-1.50.19 vs the NEWER 6.0.6.1_DE-1.50.23) can
+       never be compared as version strings — chronology defines "latest".
+       The newest non-prerelease wins, otherwise the newest release. */
+    rels.sort(function (a, b) { return new Date(b.published_at || 0) - new Date(a.published_at || 0); });
+    for (var i = 0; i < rels.length; i++) if (!rels[i].prerelease) return rels[i];
+    return rels[0] || null;
   }
 
   function loadRelease() {
@@ -520,7 +514,8 @@
       { fmt: ".dmg-arm", re: /arm64.*\.dmg$/i },
       { fmt: ".pkg-arm", re: /arm64.*\.pkg$/i },
       { fmt: ".dmg-x64", re: /x64.*\.dmg$/i },
-      { fmt: ".pkg-x64", re: /x64.*\.pkg$/i }
+      { fmt: ".pkg-x64", re: /x64.*\.pkg$/i },
+      { fmt: ".apk", re: /-debug\.apk$/i }
     ];
 
     function render() {
@@ -594,7 +589,8 @@
       });
       if (!data.stable && !data.prerelease) throw new Error("empty");
       /* Stable is the default, but it intentionally falls back to the newest
-         prerelease when no stable tag exists. vmReleases already sorted by tag. */
+         prerelease when no stable tag exists. vmReleases already sorted by
+         publish date (chronological) so the first match is the latest one. */
       if (current === "prerelease" && !data.prerelease) current = "stable";
       $$(".tabs [data-channel-tab]").forEach(function (t) {
         t.classList.toggle("active", t.dataset.channelTab === current);

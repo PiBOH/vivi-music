@@ -39,10 +39,10 @@ jobs:
     uses: ./.github/workflows/build-desktop-macos.yml
     secrets: inherit
 
-  # The Android APK is not built here: the existing "CI & Debug Build"
-  # workflow (build.yml) already produces it on every push. The release job
-  # below waits for that run and downloads its artifact, so the APK ships with
-  # the desktop release without a second build workflow.
+  # The Android APKs are not built here: build-android.yml triggers on the
+  # same release signal (commit starting with "v") and builds the GMS and
+  # FOSS release APKs in parallel. The release job below waits for that run
+  # and downloads both APKs, so every release ships vivi-gsm.apk + vivi-foss.apk.
 
   release:
     name: Publish GitHub Release
@@ -169,42 +169,49 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Wait for CI and fetch the APK
+      - name: Wait for Android build and collect the APKs
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          # Best-effort: the APK comes from the existing "CI & Debug Build"
-          # (build.yml) run for this commit. If it can't be found or fails,
-          # release the desktop installers without it.
-          RUN_ID="$(gh run list --workflow "CI & Debug Build" --commit "$GITHUB_SHA" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
+          # vivi-gsm.apk + vivi-foss.apk are MANDATORY release assets: they come
+          # from the parallel 'Build Android APK' run for this commit. On a
+          # release push (commit starting with "v") a missing/failed Android
+          # build fails the release. Only a manual dispatch (where the Android
+          # workflow was never triggered) skips them with a warning.
+          RUN_ID="$(gh run list --workflow "Build Android APK" --commit "$GITHUB_SHA" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
           if [ -z "$RUN_ID" ]; then
-            RUN_ID="$(gh run list --workflow build.yml --commit "$GITHUB_SHA" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
-          fi
-          if [ -z "$RUN_ID" ]; then
-            echo "No CI run found for this commit; releasing without the APK."
-            exit 0
-          fi
-          echo "Waiting for CI run $RUN_ID to finish..."
-          if ! gh run watch "$RUN_ID" --exit-status --interval 15; then
-            echo "CI run $RUN_ID did not succeed; releasing without the APK."
-            exit 0
-          fi
-          mkdir -p apk_dist artifacts
-          if gh run download "$RUN_ID" -n app-universal-gms-debug -D apk_dist; then
-            MOBILE_VERSION="$(sed -n '1p' version.txt | tr -d '\r\n' | xargs)"
-            APK="$(find apk_dist -name '*.apk' -print -quit)"
-            if [ -n "$APK" ]; then
-              cp "$APK" "artifacts/VIVIMusic-${MOBILE_VERSION}-debug.apk"
-              echo "APK added to release assets: VIVIMusic-${MOBILE_VERSION}-debug.apk"
-              ls -la artifacts
-            else
-              echo "No APK inside the CI artifact; releasing without it."
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              echo "No Android build run for this commit (manual dispatch) - releasing without the APKs."
+              echo "Dispatch 'Build Android APK' manually to attach vivi-gsm.apk / vivi-foss.apk."
+              exit 0
             fi
-          else
-            echo "Could not download the APK artifact; releasing without it."
+            echo "ERROR: no 'Build Android APK' run found for commit $GITHUB_SHA - vivi-gsm.apk and vivi-foss.apk are required release assets." >&2
+            exit 1
           fi
+          echo "Waiting for Android build run $RUN_ID to finish..."
+          if ! gh run watch "$RUN_ID" --exit-status --interval 15; then
+            echo "ERROR: Android build run $RUN_ID failed - vivi-gsm.apk and vivi-foss.apk are required release assets." >&2
+            exit 1
+          fi
+          mkdir -p apk_dist/gms apk_dist/foss artifacts
+          if ! gh run download "$RUN_ID" -n android-apk-gms -D apk_dist/gms; then
+            echo "ERROR: could not download the android-apk-gms artifact." >&2
+            exit 1
+          fi
+          if ! gh run download "$RUN_ID" -n android-apk-foss -D apk_dist/foss; then
+            echo "ERROR: could not download the android-apk-foss artifact." >&2
+            exit 1
+          fi
+          GMS="$(find apk_dist/gms -name '*.apk' -print -quit)"
+          FOSS="$(find apk_dist/foss -name '*.apk' -print -quit)"
+          if [ -z "$GMS" ]; then echo "ERROR: vivi-gsm.apk is missing." >&2; exit 1; fi
+          if [ -z "$FOSS" ]; then echo "ERROR: vivi-foss.apk is missing." >&2; exit 1; fi
+          cp "$GMS" artifacts/vivi-gsm.apk
+          cp "$FOSS" artifacts/vivi-foss.apk
+          echo "APKs added to release assets: vivi-gsm.apk + vivi-foss.apk"
+          ls -la artifacts
 
       - name: Generate AUR packaging assets
         shell: bash

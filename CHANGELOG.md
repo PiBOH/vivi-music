@@ -11,6 +11,36 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.46.1_DE-1.50.27-alpha] - 2026-09-06
+
+### Fixed
+- [DE] **Website footer cleaned up**: the "verified Open Source" badge is gone, and the GitHub/Telegram round buttons no longer show raw `code`/`send` text overflowing the containers. The Material Symbols icon font was lost during the template port, so every icon on the site rendered as raw ligature text; it is now self-hosted in `assets/fonts/` with the proper `.material-symbols-outlined` base style restored. (Closes [#32](https://github.com/PiBOH/vivi-music/issues/32))
+- [DE] **Website animations now run on desktop too**: the `prefers-reduced-motion` kill switch was removed from the site CSS and JS, so the entrance, floating and scroll-reveal animations always play. Previously the Windows "Show animations" setting mapped to `prefers-reduced-motion` in every desktop browser and froze the whole site, while phones/tablets (which lack that setting) kept animating. (Closes [#34](https://github.com/PiBOH/vivi-music/issues/34))
+- [DE] **Website changelog is lazy now**: the page renders only the latest release and reveals older ones in batches through a "Load more…" button; search and the version picker still scan everything loaded. (Closes [#33](https://github.com/PiBOH/vivi-music/issues/33))
+
+### Changed
+- [APK] **The Android companion app is now "VIVI for DE"** (was "VIVI" / "VIVI Debug") and installs as `com.vivi.music.desktop` instead of the old debug package, so it can sit next to the upstream app without conflicts.
+- [APK] **`build-android.yml` rewritten**: it now triggers on the same release signal as the desktop autorelease (push whose commit message starts with "v", or manual dispatch) and builds the GMS and FOSS release APKs in parallel; every release asset list now mandatorily includes `vivi-gsm.apk` and `vivi-foss.apk`. (Closes [#35](https://github.com/PiBOH/vivi-music/issues/35))
+
+## [6.4.46_DE-1.50.26-alpha] - 2026-09-06
+
+### Added
+- [DE] **The settings search now covers every sub-screen**: each top-level Settings row is indexed with the localized labels of the options inside its sub-screens (theme & accent, fonts, canvas, density/grid, screen transitions, player & mini-player design, equalizer, notifications, backups, update channel/source, AI, data saver, developer options and more), so typing any option name — in the active language — surfaces the row that leads to it. (Closes [#30](https://github.com/PiBOH/vivi-music/issues/30))
+
+### Translations
+- `home_empty` (the empty Home state message) is now fully translated in all 47 supported languages instead of falling back to English. Thanks to @codebuffai for the translation pass.
+
+
+## [6.4.46_DE-1.50.25-alpha] - 2026-09-06
+
+### Added
+- [DE] **The activity log now records every settings change**: whenever an option is modified, the log line names the field and shows `old → new` (large lists are summarized; secrets such as cookies, visitor data and API keys are redacted). Together with the existing playback, navigation and error entries, an exported log archive is now a complete trail of what was clicked and what was changed. (Closes [#31](https://github.com/PiBOH/vivi-music/issues/31))
+
+### Fixed
+- [DE] **The Home "Recommended" row no longer disappears on fresh profiles**: when there is no in-session listening history yet, it seeds from the first songs of the loaded Home feed, so the row shows up even right after a clean install. (Closes [#28](https://github.com/PiBOH/vivi-music/issues/28))
+- [DE] **The Home empty state shows real text instead of a raw `home_empty` key**: the string was missing from every language table; it is now in the English base table and the other languages pick it up with the next dedicated translation pass. A full audit of every `Localization.get` call found this to be the only referenced-but-missing key.
+
+
 ## [6.4.46_DE-1.50.24-alpha] - 2026-09-05
 
 ### Added

@@ -10,8 +10,7 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var root = document.documentElement;
-  var RM = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  window.VM = { $: $, $$: $$, RM: RM };
+  window.VM = { $: $, $$: $$ };
 
   /* ---------- theme (toggle; the no-flash init lives in each page's <head>) ---------- */
   function setThemeIcon(t) {
@@ -57,7 +56,7 @@
   (function initReveal() {
     var els = $$(".reveal");
     if (!els.length) return;
-    if (RM || !("IntersectionObserver" in window)) {
+    if (!("IntersectionObserver" in window)) {
       els.forEach(function (el) { el.classList.add("in"); });
       return;
     }
@@ -199,7 +198,7 @@
       s = s.replace(/(^|[^*\w])\*([^*\n]+)\*/g, "$1<em>$2</em>");
       return s;
     };
-    var html = "", inUl = false, inOl = false, inCode = false;
+    var html = "", inUl = false, inOl = false, inCode = false, codeBuf = null;
     var closeLists = function () {
       if (inUl) { html += "</ul>"; inUl = false; }
       if (inOl) { html += "</ol>"; inOl = false; }
@@ -207,8 +206,20 @@
     src.split(/\r?\n/).forEach(function (raw) {
       var line = raw.replace(/\s+$/, "");
       var t = line.trim();
-      if (/^```/.test(t)) { inCode = !inCode; closeLists(); return; }
-      if (inCode) { closeLists(); return; }
+      if (/^```/.test(t)) {
+        if (inCode) {
+          /* closing fence: render the collected lines as a code block */
+          html += "<pre><code>" + esc(codeBuf.join("\n")) + "</code></pre>";
+          inCode = false;
+          codeBuf = null;
+        } else {
+          inCode = true;
+          codeBuf = [];
+          closeLists();
+        }
+        return;
+      }
+      if (inCode) { codeBuf.push(line); return; }
       if (!t) { closeLists(); return; }
       var h = t.match(/^(#{1,4})\s+(.*)/);
       if (h) { closeLists(); html += '<div class="mdh">' + inline(h[2]) + "</div>"; return; }
@@ -223,10 +234,6 @@
     return html;
   };
 
-  /* ---------- footer year + ticker loop ---------- */
+  /* ---------- footer year ---------- */
   $$("[data-year]").forEach(function (el) { el.textContent = new Date().getFullYear(); });
-  (function initTicker() {
-    var tr = $(".ticker-track");
-    if (tr) tr.innerHTML += tr.innerHTML; /* duplicate for a seamless -50% loop */
-  })();
 })();
