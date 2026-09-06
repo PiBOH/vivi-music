@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.4.46_DE-1.50.26-alpha] - 2026-09-06
+
+### Added
+- [DE] **The settings search now covers every sub-screen**: each top-level Settings row is indexed with the localized labels of the options inside its sub-screens (theme & accent, fonts, canvas, density/grid, screen transitions, player & mini-player design, equalizer, notifications, backups, update channel/source, AI, data saver, developer options and more), so typing any option name — in the active language — surfaces the row that leads to it. (Closes [#30](https://github.com/PiBOH/vivi-music/issues/30))
+
+### Translations
+- `home_empty` (the empty Home state message) is now fully translated in all 47 supported languages instead of falling back to English. Thanks to @codebuffai for the translation pass.
+
+
 ## [6.4.46_DE-1.50.25-alpha] - 2026-09-06
 
 ### Added

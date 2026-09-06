@@ -4278,6 +4278,28 @@ fun SettingsScreen(
         "about" to Localization.get(language, "about"),
     )
 
+    val rowSearchTerms: Map<String, List<String>> = mapOf(
+        "language" to listOf("choose_language", "content_language", "language"),
+        "updates" to listOf("update_available", "up_to_date", "check_updates", "update_check_interval", "include_prereleases", "update_source", "changelog", "commits", "latest_release", "install_now", "restart_now", "open_release_page"),
+        "notifications" to listOf("notification_duration", "notification_duration_desc", "notification_history", "notification_main_window", "notification_mode", "notification_mode_desc", "notification_native", "notifications", "save_notification_history", "test_notification"),
+        "appearance" to listOf("animations", "animations_desc", "app_font", "appearance", "density_and_grid", "intro", "native_title_bar", "native_title_bar_desc", "native_title_bar_desc_hint", "player_design", "restart_required", "restart_required_title", "right_panel", "right_panel_desc", "screen_transitions", "show_intro_on_startup", "theme_colors", "vivimusic_canvas", "accent_intensity", "add_to_palette", "brightness", "color_palette", "custom_color", "custom_colors", "hue", "pure_black", "remove_custom_color", "saturation", "theme_dark", "theme_light", "theme_mode", "theme_system", "custom_font", "font_google_sans", "font_outfit", "font_plus_jakarta_sans", "font_sans_flex", "font_selection", "font_system", "import_font", "preview_text_quote", "typography_preview", "canvas_source", "vivimusic_canvas_desc", "grid_item_size", "transition_fade", "transition_off", "transition_slide", "mini_player_background", "mini_player_design", "player_background", "pure_black_mini", "pure_black_mini_desc", "rotating_thumbnail", "rotating_thumbnail_desc", "intro_background", "intro_desc", "intro_style", "preview_intro"),
+        "player_audio" to listOf("add_example_profile", "band_count", "delete_profile_confirmation", "delete_profile_desc", "eq_band", "eq_disabled", "eq_edit_profile", "eq_gain", "eq_preamp", "eq_q_factor", "equalizer_header", "import_error_title", "import_profile", "no_profiles", "mini_player_background", "mini_player_design", "player_background", "player_design", "pure_black_mini", "pure_black_mini_desc", "rotating_thumbnail", "rotating_thumbnail_desc", "autoplay_next", "audio_quality", "audio_quality_auto", "audio_quality_high", "audio_quality_low", "persistent_queue", "remember_shuffle_repeat", "sync_vivi_volume", "stream_cache_minutes", "stream_cache_minutes_desc", "stream_cache_forever", "eq_range_sub_bass", "eq_range_bass", "eq_range_low_mid", "eq_range_mid", "eq_range_high_mid", "eq_range_treble"),
+        "account" to listOf("clear_session", "logout", "login", "login_google", "login_manual_title", "logged_in_as", "not_logged_in", "account", "cookie_label", "visitor_data_label", "data_sync_id_label"),
+        "device_sync" to listOf("connection_method", "method_relay", "method_lan", "relay_server", "lan_sync", "connect", "generate_code", "regenerate_pair_code", "code_expires_in", "code_hint", "lan_hint", "pair", "unpair", "scan_qr", "connected", "disconnected", "status", "download_mobile_apk", "how_to_connect", "waiting_for_pairing"),
+        "content" to listOf("content", "content_country", "content_language", "system_default"),
+        "ai_lyrics_translation" to listOf("ai_api_key", "ai_base_url", "ai_deepl_formality", "ai_deepl_formality_default", "ai_deepl_formality_less", "ai_deepl_formality_more", "ai_lyrics_translation", "ai_model", "ai_provider", "ai_target_language", "ai_translation_literal", "ai_translation_mode", "ai_translation_transcribed", "not_set", "ai_setup_guide"),
+        "lyrics" to listOf("lyrics", "lyrics_line_spacing", "lyrics_text_size", "synced_lyrics", "synced_lyrics_desc", "lyrics_focus"),
+        "privacy" to listOf("clear_search_history", "pause_listen_history", "pause_search_history", "privacy", "privacy_desc"),
+        "data_saver" to listOf("data_saver", "data_saver_desc", "data_saver_turns_off_header", "data_saver_album_canvas", "data_saver_player_canvas", "data_saver_artist_video", "data_saver_artist_bg_video", "data_saver_high_quality_images"),
+        "storage" to listOf("storage", "cache_size", "clear_cache", "cache_cleared", "delete_installers", "installers_deleted"),
+        "backup_restore" to listOf("action_backup", "action_restore", "auto_backup", "automatic_backup_desc", "backup_desc", "backup_restore", "backup_restore_desc", "backups_empty", "delete_backup_confirm", "restore_backup_confirm", "restore_desc", "restore_failed", "restore_success", "restore_success_title", "stored_backups"),
+        "wrapped_title" to listOf("wrapped_desc", "wrapped_show_on_home", "wrapped_show_on_home_desc", "wrapped_title"),
+        "integrations" to listOf("discord_client_id", "discord_presence", "lastfm", "lastfm_session", "discord_presence_desc", "lastfm_enable", "lastfm_now_playing"),
+        "desktop_features" to listOf("desktop_features", "desktop_features_desc", "media_keys", "media_keys_desc", "now_playing_widget", "now_playing_widget_desc", "requires_accessibility", "tray_menu", "tray_menu_desc"),
+        "system" to listOf("system", "developer_options", "dev_tools_live_monitor", "dev_tools_mode", "dev_tools_movable", "dev_tools_overlay", "dev_tools_window", "dev_tools_profile", "dev_tools_title_bar", "developer_options_enabled", "dev_tools_disabled", "intro", "show_intro_on_startup", "intro_style", "intro_background", "intro_desc", "preview_intro", "dev_logs_export", "dev_logs_export_desc", "dev_unlocked_title", "dev_unlocked_desc", "dev_unlocked_open", "tap_version_code_hint"),
+        "about" to listOf("about", "version_code", "current_version", "app_developer", "developer_section", "community_section", "license", "github_repository", "telegram_channel", "website", "changelog", "contributors_section", "app_info_section", "installed_date_title"),
+    )
+
     val query = searchQuery.trim()
     val searching = query.isNotEmpty()
 
@@ -4316,7 +4338,17 @@ fun SettingsScreen(
         }
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
-        val matches = { key: String -> query.isEmpty() || allRows.any { it.first == key && it.second.contains(query, ignoreCase = true) } }
+        // The query matches a row when either its own label or any of the
+        // localized labels of the options inside its sub-screen(s) contains it,
+        // so every setting is reachable from the settings search bar.
+        val rowTermsText = { key: String ->
+            (rowSearchTerms[key].orEmpty()).joinToString(" ") { Localization.get(language, it) }
+        }
+        val matches = { key: String ->
+            query.isEmpty() ||
+                allRows.any { it.first == key && it.second.contains(query, ignoreCase = true) } ||
+                rowTermsText(key).contains(query, ignoreCase = true)
+        }
 
         if (!searching || matches("language") || matches("updates") || matches("notifications")) {
             M3SettingsGroup(
@@ -4382,7 +4414,7 @@ fun SettingsScreen(
                 ),
             )
         }
-        if (searching && !allRows.any { it.second.contains(query, ignoreCase = true) }) {
+        if (searching && !allRows.any { r -> r.second.contains(query, ignoreCase = true) || rowTermsText(r.first).contains(query, ignoreCase = true) }) {
             Text(
                 Localization.get(language, "no_results_found"),
                 style = MaterialTheme.typography.bodyMedium,
