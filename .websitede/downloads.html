@@ -171,8 +171,8 @@
         <h2><span class="oi" aria-hidden="true"></span> Android</h2>
         <div class="dl-grid">
           <div class="dl">
-            <span class="t">VIVI Music DE — custom APK</span>
-            <span class="d">This project's own Android build (PiBOH fork). It's the mobile side that pairs with the desktop app through Devices.</span>
+            <span class="t">VIVI for DE — Android (GMS & FOSS)</span>
+            <span class="d">This project's own Android build (PiBOH fork), released as vivi-gsm.apk (with Google services) and vivi-foss.apk (without). It's the mobile side that pairs with the desktop app through Devices.</span>
             <a class="btn sm" data-dl=".apk" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download APK</a>
             <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
           </div>
@@ -360,7 +360,8 @@
       { re: /PKGBUILD/i, label: 'AUR (PKGBUILD)' }
     ],
     android: [
-      { re: /debug\.apk$/i, label: 'VIVI Music DE custom APK', note: 'pairs with this desktop app' }
+      { re: /vivi-gsm\.apk$/i, label: 'VIVI for DE (GMS)', note: 'with Google services' },
+      { re: /vivi-foss\.apk$/i, label: 'VIVI for DE (FOSS)', note: 'without Google services' }
     ]
   };
 
