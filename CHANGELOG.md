@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.31-alpha] - 2026-09-07
+
+### Added
+- [DE] **"Auto load more songs" and "Enable similar content" options in Player & audio** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)): when the queue reaches its end and autoplay is on, VIVI now fetches related/radio tracks for the last song (same innertube path as the Home "Recommended" row — `YouTube.next` + `YouTube.related`), appends the new tracks and keeps the music going instead of stopping. A single song played alone therefore continues into a radio-like stream of similar songs, and duplicates already in the queue are never re-added. Both options are enabled by default and can be turned off separately in Settings → Player & audio; the labels/descriptions are English-only for now.
+
 ## [6.0.6.3_DE-1.50.30-alpha] - 2026-09-07
 
 ### Fixed

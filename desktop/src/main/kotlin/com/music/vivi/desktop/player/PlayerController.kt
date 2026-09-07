@@ -1,5 +1,7 @@
 package com.music.vivi.desktop.player
 
+import com.music.innertube.YouTube
+import com.music.innertube.models.WatchEndpoint
 import com.music.vivi.desktop.AppLog
 import com.music.vivi.desktop.DesktopSettings
 import com.music.vivi.desktop.EqualizerProcessor
@@ -62,9 +64,26 @@ class PlayerController {
     /** Whether to automatically play the next queued track when one ends. */
     @Volatile var autoPlayNext: Boolean = true
 
+    /**
+     * "Auto load more songs": when the queue reaches its end, fetch
+     * related/radio tracks for the last song and keep the music going instead
+     * of stopping (port of the mobile option, recommendations).
+     */
+    @Volatile var autoLoadMore: Boolean = true
+
+    /**
+     * "Enable similar content": gates the same end-of-queue extension with
+     * similar/related tracks (the mobile option only allows the automatic
+     * "automix" continuation when enabled).
+     */
+    @Volatile var similarContent: Boolean = true
+
     private companion object {
         /** Total resolution/playback attempts before an error is surfaced. */
         const val MAX_PLAY_ATTEMPTS = 3
+
+        /** Cap for the related tracks fetched at the end of the queue. */
+        const val MAX_AUTO_LOAD_RELATED = 15
     }
 
     private val _state = MutableStateFlow(PlayerState())
@@ -819,8 +838,7 @@ class PlayerController {
                     previousStack.addLast(s.index)
                     playAt(s.queue, nextIndex)
                 } else {
-                    loadedVideoId = null
-                    _state.update { it.copy(isPlaying = false) }
+                    extendQueueAtEnd(s, token)
                 }
             }
             else -> {
@@ -828,6 +846,74 @@ class PlayerController {
                 _state.update { it.copy(isPlaying = false) }
             }
         }
+    }
+
+    /**
+     * The queue has run out and auto-advance is on. With the "Auto load more
+     * songs" and "Similar content" options (default on) the playback keeps
+     * going like a radio: related tracks of the last song are fetched and
+     * appended, then the first new track starts. Otherwise playback stops
+     * cleanly (the ended state is set synchronously so the UI never freezes on
+     * a stale "playing" indicator while the fetch is in flight).
+     */
+    private fun extendQueueAtEnd(s: PlayerState, token: Int) {
+        val seed = s.current ?: run {
+            loadedVideoId = null
+            _state.update { it.copy(isPlaying = false) }
+            return
+        }
+        // Stop cleanly right away; a successful fetch below restarts playback.
+        loadedVideoId = null
+        _state.update { it.copy(isPlaying = false) }
+        if (!autoLoadMore || !similarContent) {
+            AppLog.log("playback", "queue ended — auto load more / similar content is off, stopping")
+            return
+        }
+        val seedId = seed.videoId
+        AppLog.log("playback", "queue ended — fetching related tracks for '${seed.title}' [$seedId]")
+        scope.launch {
+            val related = runCatching { fetchRelatedSongs(seedId) }.getOrDefault(emptyList())
+            // The user changed the track/queue (or stopped) while we fetched:
+            // never inject tracks into a playback that moved on.
+            if (token != playToken) return@launch
+            val st = _state.value
+            if (st.queue.getOrNull(st.index)?.videoId != seedId) return@launch
+            val known = (st.queue.map { it.videoId } + seedId).toHashSet()
+            val fresh = related.filter { it.videoId !in known }
+            if (fresh.isEmpty()) {
+                AppLog.log("playback", "no new related tracks to extend the queue — stopping")
+                return@launch
+            }
+            val newQueue = st.queue + fresh
+            AppLog.log("playback", "auto load more: appended ${fresh.size} related tracks (queue ${st.queue.size} → ${newQueue.size})")
+            previousStack.addLast(st.index)
+            playAt(newQueue, st.queue.size, startAtMs = 0L, startPaused = false, resumeWhenReady = true)
+        }
+    }
+
+    /**
+     * Fetches up to [MAX_AUTO_LOAD_RELATED] related/radio songs for [videoId]
+     * (the same innertube path the Home "Recommended" row uses: `YouTube.next`
+     * for the related endpoint, then `YouTube.related` for the songs).
+     */
+    private suspend fun fetchRelatedSongs(videoId: String): List<NowPlaying> {
+        val endpoint = YouTube.next(WatchEndpoint(videoId = videoId))
+            .getOrNull()?.relatedEndpoint ?: return emptyList()
+        val page = YouTube.related(endpoint).getOrNull() ?: return emptyList()
+        return page.songs
+            .asSequence()
+            .filter { it.id != videoId && it.id.isNotBlank() }
+            .take(MAX_AUTO_LOAD_RELATED)
+            .map { song ->
+                NowPlaying(
+                    videoId = song.id,
+                    title = song.title,
+                    artist = song.artists.joinToString(", ") { it.name },
+                    thumbnail = song.thumbnail,
+                    durationMs = (song.duration ?: 0) * 1000L,
+                )
+            }
+            .toList()
     }
 
     private fun randomIndexExcluding(size: Int, exclude: Int): Int {

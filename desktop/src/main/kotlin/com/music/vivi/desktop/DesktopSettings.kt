@@ -98,6 +98,10 @@ data class DesktopSyncState(
     val canvasEnabled: Boolean = true,
     val canvasSource: String = "AUTO",
     val autoPlayNext: Boolean = true,
+    /** Auto-fetch related/radio tracks when the queue reaches its end (recommendations). */
+    val autoLoadMore: Boolean = true,
+    /** Allow similar/related content to extend playback past the end of the queue. */
+    val similarContent: Boolean = true,
     val sidebarCollapsed: Boolean = false,
     /** Spotify-inspired 3-panel card layout & top navigation header. */
     val spotifyLayout: Boolean = true,

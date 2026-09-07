@@ -58,6 +58,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
@@ -870,6 +872,11 @@ fun WindowScope.App(
 
     var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
+
+    var autoLoadMore by remember { mutableStateOf(DesktopSettings.load().autoLoadMore) }
+    player.autoLoadMore = autoLoadMore
+    var similarContent by remember { mutableStateOf(DesktopSettings.load().similarContent) }
+    player.similarContent = similarContent
 
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
@@ -2099,6 +2106,18 @@ fun WindowScope.App(
                         onToggleAutoPlayNext = { checked ->
                             autoPlayNext = checked
                             DesktopSettings.update { it.copy(autoPlayNext = checked) }
+                        },
+                        autoLoadMore = autoLoadMore,
+                        onToggleAutoLoadMore = { checked ->
+                            autoLoadMore = checked
+                            player.autoLoadMore = checked
+                            DesktopSettings.update { it.copy(autoLoadMore = checked) }
+                        },
+                        similarContent = similarContent,
+                        onToggleSimilarContent = { checked ->
+                            similarContent = checked
+                            player.similarContent = checked
+                            DesktopSettings.update { it.copy(similarContent = checked) }
                         },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
@@ -5850,6 +5869,10 @@ fun PlayerSection(
     language: String,
     autoPlayNext: Boolean,
     onToggleAutoPlayNext: (Boolean) -> Unit,
+    autoLoadMore: Boolean,
+    onToggleAutoLoadMore: (Boolean) -> Unit,
+    similarContent: Boolean,
+    onToggleSimilarContent: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -5925,6 +5948,20 @@ fun PlayerSection(
                 title = { Text(Localization.get(language, "sync_vivi_volume")) },
                 trailing = { Switch(checked = syncViviVolume, onCheckedChange = onToggleSyncViviVolume) },
                 onClick = { onToggleSyncViviVolume(!syncViviVolume) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Autorenew,
+                title = { Text(Localization.get(language, "auto_load_more")) },
+                description = { Text(Localization.get(language, "auto_load_more_desc")) },
+                trailing = { Switch(checked = autoLoadMore, onCheckedChange = onToggleAutoLoadMore) },
+                onClick = { onToggleAutoLoadMore(!autoLoadMore) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.PlaylistAddCheck,
+                title = { Text(Localization.get(language, "enable_similar_content")) },
+                description = { Text(Localization.get(language, "similar_content_desc")) },
+                trailing = { Switch(checked = similarContent, onCheckedChange = onToggleSimilarContent) },
+                onClick = { onToggleSimilarContent(!similarContent) },
             ),
         ),
     )
