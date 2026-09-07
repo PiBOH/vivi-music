@@ -1,6 +1,7 @@
 package com.music.vivi.desktop.player
 
 import com.music.innertube.YouTube
+import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
 import com.music.vivi.desktop.AppLog
 import com.music.vivi.desktop.DesktopSettings
@@ -216,6 +217,10 @@ class PlayerController {
         resetShuffleForNewQueue()
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(listOf(track), 0)
+        // Tapping a single song anywhere must build a real queue right away
+        // (the mobile app shows an up-next/radio list): fetch it in background
+        // while the first track is still playing.
+        scheduleQueueExtensionIfSingle(listOf(track))
     }
 
     fun playAll(tracks: List<NowPlaying>, startIndex: Int = 0) {
@@ -224,6 +229,36 @@ class PlayerController {
         resetShuffleForNewQueue()
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(tracks, startIndex.coerceIn(0, tracks.lastIndex))
+        // Same as [play]: a one-item list is a radio seed, not a queue.
+        if (tracks.size == 1) scheduleQueueExtensionIfSingle(tracks)
+    }
+
+    /**
+     * "Auto load more songs": while a freshly started single-track queue is
+     * still playing, fetch the up-next/automix tracks for that seed and append
+     * them, so the queue isn't a lonely 1-item list (mobile behavior). No-op
+     * unless the queue is still exactly that seed when the fetch returns, so a
+     * user who moved on is never disturbed.
+     */
+    private fun scheduleQueueExtensionIfSingle(initial: List<NowPlaying>) {
+        if (!autoLoadMore || !similarContent) return
+        if (initial.size != 1) return
+        val seed = initial[0]
+        val token = playToken
+        scope.launch {
+            val candidates = fetchAutoLoadCandidates(seed.videoId)
+            if (token != playToken) return@launch
+            val st = _state.value
+            if (st.queue.size != 1 || st.queue.getOrNull(0)?.videoId != seed.videoId) return@launch
+            if (st.current?.videoId != seed.videoId) return@launch
+            val fresh = candidates.filter { it.videoId != seed.videoId }
+            if (fresh.isEmpty()) {
+                AppLog.log("queue", "auto load more: no up-next candidates for '${seed.title}' — queue stays single")
+                return@launch
+            }
+            AppLog.log("queue", "auto load more: built the queue for '${seed.title}' — ${fresh.size} up-next tracks appended")
+            _state.update { it.copy(queue = st.queue + fresh) }
+        }
     }
 
     /**
@@ -981,51 +1016,93 @@ class PlayerController {
             return
         }
         val seedId = seed.videoId
-        AppLog.log("playback", "queue ended — fetching related tracks for '${seed.title}' [$seedId]")
+        AppLog.log("playback", "queue ended — fetching up-next tracks for '${seed.title}' [$seedId]")
         scope.launch {
-            val related = runCatching { fetchRelatedSongs(seedId) }.getOrDefault(emptyList())
+            val candidates = fetchAutoLoadCandidates(seedId)
             // The user changed the track/queue (or stopped) while we fetched:
             // never inject tracks into a playback that moved on.
             if (token != playToken) return@launch
             val st = _state.value
             if (st.queue.getOrNull(st.index)?.videoId != seedId) return@launch
             val known = (st.queue.map { it.videoId } + seedId).toHashSet()
-            val fresh = related.filter { it.videoId !in known }
+            val fresh = candidates.filter { it.videoId !in known }
             if (fresh.isEmpty()) {
-                AppLog.log("playback", "no new related tracks to extend the queue — stopping")
+                AppLog.log("playback", "no new up-next tracks to extend the queue — stopping")
                 return@launch
             }
             val newQueue = st.queue + fresh
-            AppLog.log("playback", "auto load more: appended ${fresh.size} related tracks (queue ${st.queue.size} → ${newQueue.size})")
+            AppLog.log("playback", "auto load more: appended ${fresh.size} up-next tracks (queue ${st.queue.size} → ${newQueue.size})")
             previousStack.addLast(st.index)
             playAt(newQueue, st.queue.size, startAtMs = 0L, startPaused = false, resumeWhenReady = true)
         }
     }
 
     /**
-     * Fetches up to [MAX_AUTO_LOAD_RELATED] related/radio songs for [videoId]
-     * (the same innertube path the Home "Recommended" row uses: `YouTube.next`
-     * for the related endpoint, then `YouTube.related` for the songs).
+     * Fetches up to [MAX_AUTO_LOAD_RELATED] "up next" songs that keep the
+     * playback going after a single track / at the end of the queue. Mirrors
+     * the mobile radio flow, with the automix list first and the Related tab as
+     * fallback:
+     *
+     *  1. `YouTube.next(videoId).items` — the automix/"up next" queue that
+     *     YouTube returns for the video (usually ~25 similar songs);
+     *  2. `YouTube.next(videoId).relatedEndpoint` → `YouTube.related(...)` —
+     *     the Related tab (what the Home "Recommended" row also uses).
+     *
+     * Every failure/short result is logged with its cause and the exact state
+     * of the request, so a broken case is diagnosable from an exported log
+     * instead of silently returning nothing.
      */
-    private suspend fun fetchRelatedSongs(videoId: String): List<NowPlaying> {
-        val endpoint = YouTube.next(WatchEndpoint(videoId = videoId))
-            .getOrNull()?.relatedEndpoint ?: return emptyList()
-        val page = YouTube.related(endpoint).getOrNull() ?: return emptyList()
-        return page.songs
-            .asSequence()
-            .filter { it.id != videoId && it.id.isNotBlank() }
-            .take(MAX_AUTO_LOAD_RELATED)
-            .map { song ->
-                NowPlaying(
-                    videoId = song.id,
-                    title = song.title,
-                    artist = song.artists.joinToString(", ") { it.name },
-                    thumbnail = song.thumbnail,
-                    durationMs = (song.duration ?: 0) * 1000L,
-                )
+    private suspend fun fetchAutoLoadCandidates(videoId: String): List<NowPlaying> {
+        // YouTube.next already returns a Result (no runCatching wrapper: it
+        // would nest Result<Result<...>> and break the member access below).
+        val nextResult = YouTube.next(WatchEndpoint(videoId = videoId))
+            .onFailure { AppLog.log("queue", "auto load more: YouTube.next failed for $videoId — ${it.message}") }
+            .getOrNull()
+        nextResult?.let { n ->
+            val fromQueue = n.items
+                .asSequence()
+                .filter { it.id != videoId && it.id.isNotBlank() }
+                .take(MAX_AUTO_LOAD_RELATED)
+                .map { it.toAutoLoadNowPlaying() }
+                .toList()
+            if (fromQueue.isNotEmpty()) {
+                AppLog.log("queue", "auto load more: got ${fromQueue.size} up-next/automix items for $videoId")
+                return fromQueue
             }
-            .toList()
+        }
+        val endpoint = nextResult?.relatedEndpoint
+        if (endpoint != null) {
+            val page = YouTube.related(endpoint)
+                .onFailure { AppLog.log("queue", "auto load more: YouTube.related failed for $videoId — ${it.message}") }
+                .getOrNull()
+            if (page != null) {
+                val fromRelated = page.songs
+                    .asSequence()
+                    .filter { it.id != videoId && it.id.isNotBlank() }
+                    .take(MAX_AUTO_LOAD_RELATED)
+                    .map { it.toAutoLoadNowPlaying() }
+                    .toList()
+                if (fromRelated.isNotEmpty()) {
+                    AppLog.log("queue", "auto load more: got ${fromRelated.size} related-tab items for $videoId")
+                    return fromRelated
+                }
+            }
+        }
+        AppLog.log(
+            "queue",
+            "auto load more: no up-next/related candidates for $videoId " +
+                "(nextResult=${nextResult != null}, automixItems=${nextResult?.items?.size ?: 0}, relatedEndpoint=${endpoint != null})",
+        )
+        return emptyList()
     }
+
+    private fun SongItem.toAutoLoadNowPlaying(): NowPlaying = NowPlaying(
+        videoId = id,
+        title = title,
+        artist = artists.joinToString(", ") { it.name },
+        thumbnail = thumbnail,
+        durationMs = (duration ?: 0) * 1000L,
+    )
 
     /**
      * "Auto skip to next song when error occurs": once the retries for

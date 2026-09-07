@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.35-alpha] - 2026-09-07
+
+### Fixed
+- [DE] **[Critical] Tapping a song on Home / Library now creates a real queue again**: a single track no longer sits alone in the queue and stops after one song. The "Auto load more songs" extension now fetches the automix/"up next" list (`YouTube.next(...).items`, the same list the mobile radio uses) with the Related tab as fallback, instead of only the Related tab that often returned nothing; and the extension is scheduled **right away** when a one-track queue starts, so the queue is populated while the first song still plays (not only after it ends). Every fetch now logs its cause and result so failures are diagnosable from an exported log. (Closes [#44](https://github.com/PiBOH/vivi-music/issues/44))
+- [DE] **[Critical] Lyrics are no longer missing, wrong-version or permanently wrong**: the desktop edition asked a single community server (LrcLib) **without the real track duration** and cached the result forever (even the look-ahead pre-fetch poisoned the cache). Lyrics are now fetched on demand through a multi-provider chain that mirrors the mobile app — LrcLib → BetterLyrics → YouLyPlus → KuGou → Musixmatch → Paxsenix → Unison, each given the **real duration** when known, ending with the **official YouTube Music lyrics** for the exact video so a track no community server covers still shows its correct text. The look-ahead pre-fetch was removed and the persistent cache was versioned (`v2`), so previously cached wrong lyrics are re-fetched once with the fixed resolver. (Closes [#45](https://github.com/PiBOH/vivi-music/issues/45))
+
+### Commits
+- v: DE 1.50.35-alpha — critical fixes: single-song taps build a real up-next queue (automix first); multi-provider, duration-aware lyrics with official YouTube fallback
+
 ## [6.0.6.3_DE-1.50.34-alpha] - 2026-09-07
 
 ### Added

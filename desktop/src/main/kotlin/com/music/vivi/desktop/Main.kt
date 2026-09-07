@@ -211,7 +211,6 @@ import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 import com.music.innertube.YouTubeExtractor
 import com.music.innertube.models.SongItem
-import com.music.lrclib.LrcLib
 import com.music.vivi.desktop.player.PlayerController
 import com.music.vivi.desktop.player.RepeatMode
 import com.music.vivi.desktop.player.StreamResolver
@@ -1404,16 +1403,13 @@ fun WindowScope.App(
                 // instantly instead of resolving + downloading.
                 val currentTrack = queue.getOrNull(index)
 
-                // Lyrics for the three upcoming tracks: fetch + keep in the
-                // persistent cache (best-effort, independent of the audio pass).
-                upcoming.take(3).forEach { track ->
-                    if (LyricsCache.get(track.videoId) == null) {
-                        launch(Dispatchers.IO) {
-                            LrcLib.getLyrics(title = track.title, artist = track.artist, duration = -1)
-                                .onSuccess { LyricsCache.put(track.videoId, it) }
-                        }
-                    }
-                }
+                // Lyrics for the upcoming tracks used to be pre-fetched here
+                // with a fake duration (-1). Without a real duration the
+                // community server can return the WRONG recording of a title
+                // and, because the result was cached forever, the mistake
+                // stuck. Lyrics are fetched on demand (with the real duration,
+                // through [DesktopLyrics]) when each song actually plays, so
+                // this poisoning pre-fetch is intentionally gone.
 
                 // A queue/index change restarts the pass on the new window
                 // (an old pass must not keep downloading stale tracks).

@@ -135,7 +135,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.music.lrclib.LrcLib
 import com.music.vivi.canvas.CanvasArtwork
 import com.music.vivi.desktop.player.LoadPhase
 import com.music.vivi.desktop.player.RepeatMode
@@ -1974,8 +1973,19 @@ fun LyricsScreen(
             loading = false
             return@LaunchedEffect
         }
-        LrcLib.getLyrics(title = np.title, artist = np.artist, duration = -1).fold(
-            onSuccess = { lyrics = it; error = null; LyricsCache.put(np.videoId, it) },
+        // Multi-provider fetch: real duration when known, community servers
+        // first and the official YouTube Music lyrics as the exact fallback.
+        DesktopLyrics.fetch(
+            videoId = np.videoId,
+            title = np.title,
+            artist = np.artist,
+            durationMs = np.durationMs,
+        ).fold(
+            onSuccess = {
+                lyrics = it
+                error = null
+                LyricsCache.put(np.videoId, it)
+            },
             onFailure = { error = it.message },
         )
         loading = false
