@@ -387,7 +387,7 @@
 
     var releases = [];
     var shownCount = 1;
-    var MORE_STEP = 4;
+    var MORE_STEP = 2;
     var searchInput = document.getElementById("changelog-search");
     var sel = document.getElementById("changelog-select");
     var moreWrap = document.getElementById("cl-morewrap");
@@ -407,8 +407,10 @@
           '<div class="tl-body"><p>Nothing matches this filter. Try a different version or search term.</p></div></div>';
         return;
       }
-      /* Without a filter show only the newest releases, "Load more…" reveals older ones.
-         Searching or picking a version shows every match at once. */
+      /* Without a filter show only the newest release, "Load more…" reveals older
+         ones two at a time. Searching (or picking a version) ALWAYS scans the whole
+         history — every release fetched by vmAllReleases(), not just the ones shown
+         so far — so even the very first release is reachable from the search bar. */
       var limited = (chosen || q) ? shown : shown.slice(0, shownCount);
       tl.innerHTML = limited.map(function (r) {
         var body = String(r.body || "");
