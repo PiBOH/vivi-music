@@ -11,7 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
-## [6.0.6.3_DE-1.50.38-alpha] - 2026-09-07
+## [6.0.6.3_DE-1.50.39-alpha] - 2026-09-07
+
+### Translations
+- [DE] **Full translation sweep across all 47 supported languages**: every desktop key now has a non-English translation — no key falls back to raw English anymore. The Player & audio port keys (crossfade, crossfade duration, disable for gapless albums, prevent duplicate tracks, auto skip on error, keep screen on, pause when muted, persistent shuffle, progressive seek, auto download on like, history duration, skip silence, similar content, autoplay next, sync VIVI volume, synced lyrics…) are translated in all languages, together with the device sync/pairing screens (connect & generate code, LAN/relay methods, QR scan, pairing states), the login flows (Google sign-in, manual cookies, waiting/saving states) and the live-log developer option. Seven Player & audio options that exist verbatim in the Android strings now reuse the mobile translations (`auto_load_more`, `auto_skip_next_on_error`, `retry`, `skip_silence`, `undo`, …). Thanks to @codebuffai for the translation sweep.
+
+### Commits
+- v: DE 1.50.39-alpha — full 47-language translation sweep (Player & audio port, device sync, login, live log)
+
 
 ### Fixed
 - [DE] **The similar/up-next queue is no longer wiped when a track's first attempt fails**: starting a single song builds the queue with ~15 up-next/automix tracks, but a playback error (e.g. a transient download race) triggered a retry that replayed with the *original one-track list*, collapsing the queue back to 1 song — "next" then only looped the seed. Retries now replay on the **current queue**, so the already-appended similar tracks survive the retry. (Closes [#47](https://github.com/PiBOH/vivi-music/issues/47))
