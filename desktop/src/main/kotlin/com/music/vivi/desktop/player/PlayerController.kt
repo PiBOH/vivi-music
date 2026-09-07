@@ -78,6 +78,19 @@ class PlayerController {
      */
     @Volatile var similarContent: Boolean = true
 
+    /**
+     * "Prevent duplicate tracks in queue": when adding a track that is
+     * already queued, remove the old copy first (single copy per track).
+     */
+    @Volatile var preventDuplicateTracksInQueue: Boolean = false
+
+    /**
+     * "Auto skip to next song when error occurs": after all retries for a
+     * failing track are exhausted, skip to the next track instead of surfacing
+     * the error and stopping.
+     */
+    @Volatile var autoSkipNextOnError: Boolean = false
+
     private companion object {
         /** Total resolution/playback attempts before an error is surfaced. */
         const val MAX_PLAY_ATTEMPTS = 3
@@ -212,7 +225,7 @@ class PlayerController {
         if (s.current == null) {
             play(track)
         } else {
-            _state.update { it.copy(queue = it.queue + track) }
+            appendTracks(s, listOf(track))
         }
     }
 
@@ -223,7 +236,19 @@ class PlayerController {
         if (s.current == null) {
             playAll(tracks)
         } else {
-            _state.update { it.copy(queue = it.queue + tracks) }
+            appendTracks(s, tracks)
+        }
+    }
+
+    /** Appends [tracks] to the end of the queue, honoring duplicate prevention. */
+    private fun appendTracks(s: PlayerState, tracks: List<NowPlaying>) {
+        if (tracks.isEmpty()) return
+        val purged = purgeQueueDuplicates(tracks, s.queue, s.index)
+        val newQueue = purged + tracks
+        _state.update {
+            // Copies purged before the current track shift its index forward.
+            val newIndex = purged.take(it.index).size
+            it.copy(queue = newQueue, index = newIndex)
         }
     }
 
@@ -238,8 +263,33 @@ class PlayerController {
             play(track)
             return
         }
-        val idx = (s.index + 1).coerceAtMost(s.queue.size)
-        _state.update { it.copy(queue = it.queue.toMutableList().apply { add(idx, track) }) }
+        val purged = purgeQueueDuplicates(listOf(track), s.queue, s.index)
+        // Copies purged before the current track shift its index forward.
+        val newIndex = purged.take(s.index).size
+        val idx = (newIndex + 1).coerceAtMost(purged.size)
+        _state.update { it.copy(queue = purged.toMutableList().apply { add(idx, track) }, index = newIndex) }
+    }
+
+    /**
+     * "Prevent duplicate tracks in queue": removes every copy of the incoming
+     * tracks already queued (except the currently playing one, which always
+     * stays), so adding a track moves it instead of duplicating it.
+     */
+    private fun purgeQueueDuplicates(
+        incoming: List<NowPlaying>,
+        queue: List<NowPlaying>,
+        currentIndex: Int,
+    ): List<NowPlaying> {
+        if (!preventDuplicateTracksInQueue) return queue
+        val current = queue.getOrNull(currentIndex)
+        if (current == null) return queue
+        val incomingIds = incoming.map { it.videoId }.toHashSet()
+        if (incomingIds.isEmpty()) return queue
+        val purged = queue.filterIndexed { i, t -> i == currentIndex || t.videoId !in incomingIds }
+        if (purged.size != queue.size) {
+            AppLog.log("queue", "prevent duplicates: removed ${queue.size - purged.size} old copy/copies")
+        }
+        return purged
     }
 
     /**
@@ -684,7 +734,7 @@ class PlayerController {
                     AppLog.log("playback", "resolution failed, rotating guest and retrying")
                     GuestSession.rotate()
                     playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
-                } else {
+                } else if (!skipToNextOnErrorIfEnabled(index, track)) {
                     loadedVideoId = null
                     _bufferedFraction.value = 1f
                     AppLog.log("playback", "resolution failed after $MAX_PLAY_ATTEMPTS attempts — surfacing stream_error")
@@ -759,7 +809,7 @@ class PlayerController {
                             GuestSession.rotate()
                             playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                         }
-                    } else {
+                    } else if (!skipToNextOnErrorIfEnabled(index, track)) {
                         loadedVideoId = null
                         _bufferedFraction.value = 1f
                         AppLog.log("playback", "giving up after $MAX_PLAY_ATTEMPTS attempts: $msg")
@@ -914,6 +964,29 @@ class PlayerController {
                 )
             }
             .toList()
+    }
+
+    /**
+     * "Auto skip to next song when error occurs": once the retries for
+     * [track] at [index] are exhausted, continue with the next queued track
+     * (wrapping to the first only when repeat-all is on) instead of surfacing
+     * the error. Only skips while the failing track is still the current one.
+     * Returns true when the playback moved on.
+     */
+    private fun skipToNextOnErrorIfEnabled(index: Int, track: NowPlaying): Boolean {
+        if (!autoSkipNextOnError) return false
+        val s = _state.value
+        if (s.index != index || s.queue.getOrNull(index)?.videoId != track.videoId) return false
+        val nextIndex = when {
+            s.index < s.queue.lastIndex -> s.index + 1
+            s.repeatMode == RepeatMode.ALL && s.queue.size > 1 -> 0
+            else -> -1
+        }
+        if (nextIndex < 0) return false
+        AppLog.log("playback", "auto skip on error: skipping to index $nextIndex")
+        lastLocalPlayIntentAt = System.currentTimeMillis()
+        playAt(s.queue, nextIndex)
+        return true
     }
 
     private fun randomIndexExcluding(size: Int, exclude: Int): Int {

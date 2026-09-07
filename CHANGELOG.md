@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.32-alpha] - 2026-09-07
+
+### Added
+- [DE] **New "Player & audio" options** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)):
+  - **Prevent duplicate tracks in queue**: adding a track that is already queued removes its old copy first, so every track appears once. Applies to "Add to queue", "Add all to queue" and "Play next".
+  - **Auto skip to next song when error occurs**: after all retries for a failing track are exhausted, playback continues with the next queued track (wrapping only when repeat-all is on) instead of stopping on the error.
+  - **Pause music when media is muted**: when the OS output volume is muted or at zero while VIVI is playing, playback pauses and resumes when the volume comes back (reacts only to transitions, so pressing play manually while muted still works). Detects mute on Windows (WASAPI master mute), macOS (`get volume settings`) and Linux (`pactl`/`amixer`).
+  - **Keep screen on when player is expanded**: holds a keep-awake request while the full player screen is open (Windows `SetThreadExecutionState` / macOS `caffeinate`). Keep-awake is now multi-source — the pairing request and the expanded-player request are independent and no longer cancel each other.
+- All four options are **off by default** (as on mobile) and the labels/descriptions are English-only for now.
+
 ## [6.0.6.3_DE-1.50.31-alpha] - 2026-09-07
 
 ### Added

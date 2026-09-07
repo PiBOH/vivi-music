@@ -60,6 +60,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
@@ -878,6 +882,13 @@ fun WindowScope.App(
     var similarContent by remember { mutableStateOf(DesktopSettings.load().similarContent) }
     player.similarContent = similarContent
 
+    var preventDuplicateTracksInQueue by remember { mutableStateOf(DesktopSettings.load().preventDuplicateTracksInQueue) }
+    player.preventDuplicateTracksInQueue = preventDuplicateTracksInQueue
+    var autoSkipNextOnError by remember { mutableStateOf(DesktopSettings.load().autoSkipNextOnError) }
+    player.autoSkipNextOnError = autoSkipNextOnError
+    var pauseWhenMediaMuted by remember { mutableStateOf(DesktopSettings.load().pauseWhenMediaMuted) }
+    var keepScreenOnWhenPlayerExpanded by remember { mutableStateOf(DesktopSettings.load().keepScreenOnWhenPlayerExpanded) }
+
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
     var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
@@ -1062,6 +1073,14 @@ fun WindowScope.App(
     }
 
     val current = backStack.last()
+
+    // "Keep screen on when player is expanded": hold a keep-awake request
+    // while the full player screen is open (desktop adaptation of the mobile
+    // window flag). Independent of the pairing keep-awake, which uses its own
+    // request name.
+    LaunchedEffect(keepScreenOnWhenPlayerExpanded, current) {
+        KeepAwake.request("expanded-player", keepScreenOnWhenPlayerExpanded && current is Screen.Player)
+    }
 
     // Undo/redo stacks for keyboard navigation history (Ctrl+Z / Ctrl+Y).
     var undoStack by remember { mutableStateOf(listOf<Screen>()) }
@@ -1317,7 +1336,7 @@ fun WindowScope.App(
             // Keep the display/system awake while paired so the OS sleeping
             // the screen can't tear down the sync socket and unpair the two
             // devices.
-            KeepAwake.setEnabled(paired)
+            KeepAwake.request("paired", paired)
             if (paired != wasPaired) {
                 wasPaired = paired
                 if (paired) {
@@ -1490,6 +1509,41 @@ fun WindowScope.App(
                         systemVolumeGuard.lastPushed = sv
                     }
                 }
+            }
+            delay(800L)
+        }
+    }
+
+    // "Pause music when media is muted": when the OS output volume is muted
+    // (or at zero) while VIVI is playing, pause; resume when it comes back.
+    // Only reacts to state transitions (like the mobile volume listener), so a
+    // manual play while muted is not fought.
+    LaunchedEffect(Unit) {
+        var lastMuted: Boolean? = null
+        var pausedForMute = false
+        while (true) {
+            val enabled = DesktopSettings.load().pauseWhenMediaMuted
+            if (enabled) {
+                val muted = SystemVolume.isMuted() == true
+                val volume = SystemVolume.get()
+                val nowMuted = muted || (volume != null && volume <= 0.001f)
+                if (nowMuted != lastMuted) {
+                    lastMuted = nowMuted
+                    if (nowMuted) {
+                        if (player.state.value.isPlaying) {
+                            pausedForMute = true
+                            AppLog.log("playback", "OS output muted — pausing (pause when media is muted)")
+                            player.toggle()
+                        }
+                    } else if (pausedForMute && !player.state.value.isPlaying) {
+                        pausedForMute = false
+                        AppLog.log("playback", "OS output unmuted — resuming")
+                        player.toggle()
+                    }
+                }
+            } else {
+                lastMuted = null
+                pausedForMute = false
             }
             delay(800L)
         }
@@ -2118,6 +2172,28 @@ fun WindowScope.App(
                             similarContent = checked
                             player.similarContent = checked
                             DesktopSettings.update { it.copy(similarContent = checked) }
+                        },
+                        preventDuplicateTracksInQueue = preventDuplicateTracksInQueue,
+                        onTogglePreventDuplicateTracksInQueue = { checked ->
+                            preventDuplicateTracksInQueue = checked
+                            player.preventDuplicateTracksInQueue = checked
+                            DesktopSettings.update { it.copy(preventDuplicateTracksInQueue = checked) }
+                        },
+                        autoSkipNextOnError = autoSkipNextOnError,
+                        onToggleAutoSkipNextOnError = { checked ->
+                            autoSkipNextOnError = checked
+                            player.autoSkipNextOnError = checked
+                            DesktopSettings.update { it.copy(autoSkipNextOnError = checked) }
+                        },
+                        pauseWhenMediaMuted = pauseWhenMediaMuted,
+                        onTogglePauseWhenMediaMuted = { checked ->
+                            pauseWhenMediaMuted = checked
+                            DesktopSettings.update { it.copy(pauseWhenMediaMuted = checked) }
+                        },
+                        keepScreenOnWhenPlayerExpanded = keepScreenOnWhenPlayerExpanded,
+                        onToggleKeepScreenOnWhenPlayerExpanded = { checked ->
+                            keepScreenOnWhenPlayerExpanded = checked
+                            DesktopSettings.update { it.copy(keepScreenOnWhenPlayerExpanded = checked) }
                         },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
@@ -5873,6 +5949,14 @@ fun PlayerSection(
     onToggleAutoLoadMore: (Boolean) -> Unit,
     similarContent: Boolean,
     onToggleSimilarContent: (Boolean) -> Unit,
+    preventDuplicateTracksInQueue: Boolean,
+    onTogglePreventDuplicateTracksInQueue: (Boolean) -> Unit,
+    autoSkipNextOnError: Boolean,
+    onToggleAutoSkipNextOnError: (Boolean) -> Unit,
+    pauseWhenMediaMuted: Boolean,
+    onTogglePauseWhenMediaMuted: (Boolean) -> Unit,
+    keepScreenOnWhenPlayerExpanded: Boolean,
+    onToggleKeepScreenOnWhenPlayerExpanded: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -5962,6 +6046,32 @@ fun PlayerSection(
                 description = { Text(Localization.get(language, "similar_content_desc")) },
                 trailing = { Switch(checked = similarContent, onCheckedChange = onToggleSimilarContent) },
                 onClick = { onToggleSimilarContent(!similarContent) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.ContentCopy,
+                title = { Text(Localization.get(language, "prevent_duplicate_tracks")) },
+                description = { Text(Localization.get(language, "prevent_duplicate_tracks_desc")) },
+                trailing = { Switch(checked = preventDuplicateTracksInQueue, onCheckedChange = onTogglePreventDuplicateTracksInQueue) },
+                onClick = { onTogglePreventDuplicateTracksInQueue(!preventDuplicateTracksInQueue) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FastForward,
+                title = { Text(Localization.get(language, "auto_skip_next_on_error")) },
+                description = { Text(Localization.get(language, "auto_skip_next_on_error_desc")) },
+                trailing = { Switch(checked = autoSkipNextOnError, onCheckedChange = onToggleAutoSkipNextOnError) },
+                onClick = { onToggleAutoSkipNextOnError(!autoSkipNextOnError) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VolumeOff,
+                title = { Text(Localization.get(language, "pause_music_when_media_muted")) },
+                trailing = { Switch(checked = pauseWhenMediaMuted, onCheckedChange = onTogglePauseWhenMediaMuted) },
+                onClick = { onTogglePauseWhenMediaMuted(!pauseWhenMediaMuted) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.BrightnessHigh,
+                title = { Text(Localization.get(language, "keep_screen_on_player_expanded")) },
+                trailing = { Switch(checked = keepScreenOnWhenPlayerExpanded, onCheckedChange = onToggleKeepScreenOnWhenPlayerExpanded) },
+                onClick = { onToggleKeepScreenOnWhenPlayerExpanded(!keepScreenOnWhenPlayerExpanded) },
             ),
         ),
     )
