@@ -484,6 +484,12 @@ issue on `PiBOH/vivi-music` **before any code is changed**:
 4. **Close the issue** after the fix is committed and pushed:
    `gh issue close <NN> --repo PiBOH/vivi-music`.
 
+**Website-only changes do NOT require an issue.** Pure `.websitede/` edits
+(page HTML, `style.css`, site JS — nothing in the desktop/mobile app code,
+no version bump, no release) are done directly: no GitHub issue, no
+CHANGELOG entry. They are committed on `vivi-music-de` with a message that
+does NOT start with `v`, then the commit is synced to `vivi-music-de-apk`.
+
 **NEVER open a GitHub issue for anything involving secrets** (keystores,
 signing keys, API tokens, passwords, credentials, secret names/values,
 signing-key selection in workflows, etc.). Secrets-related changes are done
