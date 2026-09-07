@@ -1174,20 +1174,26 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   border-radius: 16px;
   background: var(--surface1);
 }
-.cl-search {
+/* The template loads Tailwind through the Play CDN (tpl.js), which injects its
+   reset stylesheet into <head> AFTER style.css. Its `[type=...]` rule paints
+   inputs white with specificity 0-1-0, so it beats the equal-specificity theme
+   classes (.cl-search, .err-search) and leaves white bars with near-white text.
+   Prefixing the selectors with the element type out-ranks that reset so every
+   search field keeps the site theme in dark and light mode. */
+input.cl-search {
   flex: 1;
   min-width: 200px;
   padding: 9px 14px;
   border-radius: 999px;
   border: 1px solid var(--line2);
-  background: var(--surface2);
+  background-color: var(--surface2);
   color: var(--text);
   font: 500 14px var(--font-ui);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.cl-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18); }
-.cl-search::placeholder { color: var(--faint); }
+input.cl-search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.18); }
+input.cl-search::placeholder { color: var(--faint); }
 .cl-sellabel { font-size: 13px; font-weight: 600; color: var(--muted); }
 .cl-select {
   padding: 8px 12px;
@@ -1268,11 +1274,11 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 
 /* ---------- errors page ---------- */
 .err-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
-.err-search {
+input.err-search {
   flex: 1;
   min-width: 240px;
   max-width: 440px;
-  background: var(--surface);
+  background-color: var(--surface);
   border: 1px solid var(--line2);
   border-radius: 12px;
   padding: 12px 16px;
@@ -1280,7 +1286,7 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   font: 500 14px var(--font-mono);
   transition: border-color 0.15s ease;
 }
-.err-search:focus { outline: none; border-color: var(--accent); }
+input.err-search:focus { outline: none; border-color: var(--accent); }
 .err-count { font: 500 12px var(--font-mono); color: var(--faint); }
 .err-legend { display: flex; gap: 8px; }
 .err-legend .chip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }

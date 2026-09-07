@@ -172,6 +172,24 @@
     return window.vmGH.json("https://api.github.com/repos/" + REPO + "/releases?per_page=" + (n || 6))
       .then(function (list) { return (list || []).filter(Boolean).sort(byPublishedDesc); });
   };
+  /* Fetch EVERY release, oldest included. The GitHub API caps per_page at
+     100, so one call only ever returns the newest page; the changelog needs
+     the full history ("first to last") to be searchable, so keep requesting
+     the next page until a short one comes back, then sort by publish date. */
+  window.vmAllReleases = function () {
+    var PER = 100;
+    var url = "https://api.github.com/repos/" + REPO + "/releases?per_page=" + PER + "&page=";
+    var all = [];
+    function next(page) {
+      return window.vmGH.json(url + page).then(function (list) {
+        var batch = (list || []).filter(Boolean);
+        all = all.concat(batch);
+        if (batch.length === PER) return next(page + 1);
+        return all.sort(byPublishedDesc);
+      });
+    }
+    return next(1);
+  };
   window.vmFindAsset = function (release, re) {
     var assets = (release && release.assets) || [];
     for (var i = 0; i < assets.length; i++) if (re.test(assets[i].name)) return assets[i];
