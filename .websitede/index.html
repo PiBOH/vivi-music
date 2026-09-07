@@ -268,7 +268,21 @@
             <figcaption>03 · device sync — the pairing screen your phone talks to</figcaption>
           </figure>
         </div>
-        <p class="news-more reveal"><a href="screenshots.html">See the full screenshot gallery →</a></p>
+      </div>
+    </section>
+
+    <!-- ============ real screenshots (auto .webp from images/screenshots) ============ -->
+    <section class="section" style="padding-top:0">
+      <div class="wrap">
+        <div class="sec-head reveal">
+          <p class="kicker">03 · real screenshots</p>
+          <h2>As seen on real installs</h2>
+          <p class="sub">Straight from the desktop app — <b>.webp</b> images, 16:9. Hover to zoom; click any preview to view it full size.</p>
+        </div>
+        <div id="homeShots" class="shot-grid" aria-live="polite">
+          <p class="hnote" style="grid-column:1/-1">Loading screenshots…</p>
+        </div>
+        <p class="news-more reveal"><a href="screenshots.html">Browse the full gallery →</a></p>
       </div>
     </section>
 
@@ -276,7 +290,7 @@
     <section class="section" style="padding-top:0">
       <div class="wrap">
         <div class="sec-head reveal">
-          <p class="kicker">03 · what's new</p>
+          <p class="kicker">04 · what's new</p>
           <h2>Fresh from the releases feed</h2>
           <p class="sub">Pulled live from GitHub. If the feed stays quiet, the API is being slow — the releases page is always there as a backup.</p>
         </div>
@@ -636,5 +650,18 @@
     }
   })();
   </script>
+
+<script>
+  /* Home "real screenshots": show the newest .webp shots from images/screenshots. */
+  (function () {
+    var el = document.getElementById('homeShots');
+    if (!el) return;
+    window.vmShots(el, {
+      max: 6,
+      emptyText: 'Real screenshots are on their way — the mockups above give you the idea until they land.',
+      emptyHideSection: true
+    });
+  })();
+</script>
 </body>
 </html>
