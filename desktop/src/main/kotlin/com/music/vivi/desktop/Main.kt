@@ -64,6 +64,9 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
@@ -888,6 +891,20 @@ fun WindowScope.App(
     player.autoSkipNextOnError = autoSkipNextOnError
     var pauseWhenMediaMuted by remember { mutableStateOf(DesktopSettings.load().pauseWhenMediaMuted) }
     var keepScreenOnWhenPlayerExpanded by remember { mutableStateOf(DesktopSettings.load().keepScreenOnWhenPlayerExpanded) }
+
+    var persistentShuffle by remember { mutableStateOf(DesktopSettings.load().persistentShuffle) }
+    player.persistentShuffleAcrossQueues = persistentShuffle
+    var progressiveSeek by remember { mutableStateOf(DesktopSettings.load().progressiveSeek) }
+    var historyDurationSeconds by remember { mutableStateOf(DesktopSettings.load().historyDurationSeconds) }
+    var autoDownloadOnLike by remember { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
+
+    // "Auto download on like": cache a song into the audio cache the moment it
+    // is liked (the setting is read live when the like happens).
+    LaunchedEffect(player) {
+        SongActions.onSongLiked = { id, _ ->
+            if (DesktopSettings.load().autoDownloadOnLike) player.downloadToCache(id)
+        }
+    }
 
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
@@ -2195,6 +2212,27 @@ fun WindowScope.App(
                             keepScreenOnWhenPlayerExpanded = checked
                             DesktopSettings.update { it.copy(keepScreenOnWhenPlayerExpanded = checked) }
                         },
+                        persistentShuffle = persistentShuffle,
+                        onTogglePersistentShuffle = { checked ->
+                            persistentShuffle = checked
+                            player.persistentShuffleAcrossQueues = checked
+                            DesktopSettings.update { it.copy(persistentShuffle = checked) }
+                        },
+                        progressiveSeek = progressiveSeek,
+                        onToggleProgressiveSeek = { checked ->
+                            progressiveSeek = checked
+                            DesktopSettings.update { it.copy(progressiveSeek = checked) }
+                        },
+                        autoDownloadOnLike = autoDownloadOnLike,
+                        onToggleAutoDownloadOnLike = { checked ->
+                            autoDownloadOnLike = checked
+                            DesktopSettings.update { it.copy(autoDownloadOnLike = checked) }
+                        },
+                        historyDurationSeconds = historyDurationSeconds,
+                        onHistoryDurationSecondsChange = { v ->
+                            historyDurationSeconds = v
+                            DesktopSettings.update { it.copy(historyDurationSeconds = v) }
+                        },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
                             audioQuality = q
@@ -2684,6 +2722,7 @@ fun WindowScope.App(
                         accent = accent,
                         audioLevel = audioLevel,
                         onBack = goBack,
+                        progressiveSeek = progressiveSeek,
                     )
                     is Screen.LyricsFocus -> LyricsFocusScreen(
                         nowPlaying = nowPlaying,
@@ -5957,6 +5996,14 @@ fun PlayerSection(
     onTogglePauseWhenMediaMuted: (Boolean) -> Unit,
     keepScreenOnWhenPlayerExpanded: Boolean,
     onToggleKeepScreenOnWhenPlayerExpanded: (Boolean) -> Unit,
+    persistentShuffle: Boolean,
+    onTogglePersistentShuffle: (Boolean) -> Unit,
+    progressiveSeek: Boolean,
+    onToggleProgressiveSeek: (Boolean) -> Unit,
+    autoDownloadOnLike: Boolean,
+    onToggleAutoDownloadOnLike: (Boolean) -> Unit,
+    historyDurationSeconds: Int,
+    onHistoryDurationSecondsChange: (Int) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -6073,7 +6120,45 @@ fun PlayerSection(
                 trailing = { Switch(checked = keepScreenOnWhenPlayerExpanded, onCheckedChange = onToggleKeepScreenOnWhenPlayerExpanded) },
                 onClick = { onToggleKeepScreenOnWhenPlayerExpanded(!keepScreenOnWhenPlayerExpanded) },
             ),
+            M3SettingsItem(
+                icon = Icons.Filled.Shuffle,
+                title = { Text(Localization.get(language, "persistent_shuffle")) },
+                description = { Text(Localization.get(language, "persistent_shuffle_desc")) },
+                trailing = { Switch(checked = persistentShuffle, onCheckedChange = onTogglePersistentShuffle) },
+                onClick = { onTogglePersistentShuffle(!persistentShuffle) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.TouchApp,
+                title = { Text(Localization.get(language, "progressive_seek")) },
+                description = { Text(Localization.get(language, "progressive_seek_desc")) },
+                trailing = { Switch(checked = progressiveSeek, onCheckedChange = onToggleProgressiveSeek) },
+                onClick = { onToggleProgressiveSeek(!progressiveSeek) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Favorite,
+                title = { Text(Localization.get(language, "auto_download_on_like")) },
+                description = { Text(Localization.get(language, "auto_download_on_like_desc")) },
+                trailing = { Switch(checked = autoDownloadOnLike, onCheckedChange = onToggleAutoDownloadOnLike) },
+                onClick = { onToggleAutoDownloadOnLike(!autoDownloadOnLike) },
+            ),
         ),
+    )
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Schedule,
+                title = { Text("${Localization.get(language, "history_duration")}: $historyDurationSeconds s") },
+                description = { Text(Localization.get(language, "history_duration_desc")) },
+            ),
+        ),
+    )
+    Slider(
+        value = historyDurationSeconds.coerceIn(1, 100).toFloat(),
+        onValueChange = { onHistoryDurationSecondsChange(it.roundToInt().coerceIn(1, 100)) },
+        valueRange = 1f..100f,
+        steps = 98,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
 
     M3SettingsGroup(

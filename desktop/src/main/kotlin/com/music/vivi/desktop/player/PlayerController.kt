@@ -91,6 +91,12 @@ class PlayerController {
      */
     @Volatile var autoSkipNextOnError: Boolean = false
 
+    /**
+     * "Persistent shuffle": keep shuffle enabled when starting new songs or
+     * playlists (when off, a freshly started queue resets shuffle).
+     */
+    @Volatile var persistentShuffleAcrossQueues: Boolean = false
+
     private companion object {
         /** Total resolution/playback attempts before an error is surfaced. */
         const val MAX_PLAY_ATTEMPTS = 3
@@ -207,6 +213,7 @@ class PlayerController {
 
     fun play(track: NowPlaying) {
         AppLog.log("playback", "play: '${track.title}' [${track.videoId}]")
+        resetShuffleForNewQueue()
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(listOf(track), 0)
     }
@@ -214,8 +221,42 @@ class PlayerController {
     fun playAll(tracks: List<NowPlaying>, startIndex: Int = 0) {
         if (tracks.isEmpty()) return
         AppLog.log("playback", "playAll: ${tracks.size} tracks, start at $startIndex ('${tracks[startIndex].title}') ")
+        resetShuffleForNewQueue()
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(tracks, startIndex.coerceIn(0, tracks.lastIndex))
+    }
+
+    /**
+     * Starting a brand-new queue (a fresh song/playlist/album) clears the
+     * shuffle state unless "Persistent shuffle" is enabled — mirroring the
+     * mobile behavior where shuffle is per-queue by default.
+     */
+    private fun resetShuffleForNewQueue() {
+        if (persistentShuffleAcrossQueues) return
+        if (_state.value.isShuffle) {
+            AppLog.log("playback", "new queue — resetting shuffle (persistent shuffle off)")
+            previousStack.clear()
+            _state.update { it.copy(isShuffle = false) }
+            persistShuffleRepeat()
+        }
+    }
+
+    /**
+     * "Auto download on like": downloads [videoId] into the audio cache
+     * without playing it (same join-safe path used by look-ahead prefetch).
+     */
+    fun downloadToCache(videoId: String) {
+        if (player.isCached(videoId)) return
+        AppLog.log("cache", "auto download on like: caching $videoId")
+        scope.launch {
+            val quality = StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality)
+            val streams = StreamResolver.resolveAacStream(videoId, quality)
+            if (streams.isNotEmpty()) {
+                player.prefetch(streams, videoId)
+            } else {
+                AppLog.log("cache", "auto download on like: no stream for $videoId")
+            }
+        }
     }
 
     /** Appends a track to the queue; if nothing is playing, starts it. */
@@ -693,8 +734,13 @@ class PlayerController {
         val track = tracks[index]
         val token = ++playToken
         loadedVideoId = track.videoId
-        noteTrackStarted(track)
         scope.launch {
+            // "History duration": a track only enters the listen history (the
+            // seeds behind the Home "Recommended" row) after it actually played
+            // for this long, not the moment it starts (default 30 s, like the
+            // mobile app). Tracks skipped/stopped earlier never pollute it.
+            val historyThresholdMs = (DesktopSettings.load().historyDurationSeconds * 1000L).coerceAtLeast(0L)
+            var historyNoted = false
             player.stop()
             _state.value = PlayerState(
                 queue = tracks,
@@ -821,6 +867,16 @@ class PlayerController {
                     }
                 },
                 onPosition = { pos ->
+                    // Record the track into the listen history (Home seeds)
+                    // only after it actually played for the "History duration"
+                    // threshold — and only while it is still the current track.
+                    if (!historyNoted && pos >= historyThresholdMs) {
+                        val stNow = _state.value
+                        if (stNow.index == index && stNow.queue.getOrNull(index)?.videoId == track.videoId) {
+                            historyNoted = true
+                            noteTrackStarted(track)
+                        }
+                    }
                     // First position report means audio is actually ready. When
                     // we were held only because the peer was still resolving
                     // (resumeWhenReady), resume now so the paired device never

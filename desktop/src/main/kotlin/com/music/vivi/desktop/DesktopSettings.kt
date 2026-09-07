@@ -110,6 +110,14 @@ data class DesktopSyncState(
     val pauseWhenMediaMuted: Boolean = false,
     /** Keep the display/system awake while the expanded player screen is open. */
     val keepScreenOnWhenPlayerExpanded: Boolean = false,
+    /** Keep shuffle enabled when starting new songs or playlists. */
+    val persistentShuffle: Boolean = false,
+    /** Double-click artwork seek adds +5s incrementally per rapid double-tap. */
+    val progressiveSeek: Boolean = false,
+    /** Minimum listen time (seconds) before a track enters the listen history. */
+    val historyDurationSeconds: Int = 30,
+    /** Auto-cache (download) a song into the audio cache when it is liked. */
+    val autoDownloadOnLike: Boolean = false,
     val sidebarCollapsed: Boolean = false,
     /** Spotify-inspired 3-panel card layout & top navigation header. */
     val spotifyLayout: Boolean = true,

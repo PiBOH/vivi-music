@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.33-alpha] - 2026-09-07
+
+### Added
+- [DE] **More "Player & audio" options ported from the mobile app** (issue [#42](https://github.com/PiBOH/vivi-music/issues/42)):
+  - **Persistent shuffle** (default off): a freshly started queue (new song / playlist / album) now resets shuffle unless the option is enabled — matching the mobile per-queue shuffle behavior (previously shuffle always carried over).
+  - **Progressive seek** (default off): double-clicking the left/right half of the artwork in the full player skips ∓5 seconds; with the option on, each rapid repeat (<1 s) adds 5 extra seconds incrementally (5 → 10 → 15…), exactly like the mobile double-tap seek. Applies to the classic/new/Spotify-style player designs (the expressive design keeps its canvas interactions untouched).
+  - **History duration** (default 30 s, slider 1–100 s): a track is only recorded into the listen history — the seeds behind the Home "Recommended" row — after it has actually played for this long, so quick skips no longer pollute the recommendations.
+  - **Auto download on like** (default off): liking a song now downloads it straight into the audio cache in the background (same join-safe path as the look-ahead prefetch), so it plays instantly later; cached files still follow the user's audio-cache retention setting.
+- Both "Resume on Bluetooth connect" and "Shuffle playlist/album first" have no real desktop equivalent (the desktop has no app-level Bluetooth audio routing, and similar content is only ever appended after the original queue is exhausted — the "original first, then similar" behavior already always holds), so they are not ported and are documented as not-applicable in issue #42.
+- All new labels/descriptions are English-only for now.
+
 ## [6.0.6.3_DE-1.50.32-alpha] - 2026-09-07
 
 ### Added
