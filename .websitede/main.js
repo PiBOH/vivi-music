@@ -254,4 +254,72 @@
 
   /* ---------- footer year ---------- */
   $$("[data-year]").forEach(function (el) { el.textContent = new Date().getFullYear(); });
+  /* ---------- screenshot gallery helper ----------
+     Lists .webp files in images/screenshots via the GitHub contents API and
+     renders 16:9 cards into `container`. Freshly pushed images may not be on
+     Pages yet, so every <img> falls back to raw.githubusercontent.com once. */
+  function vmShotsLightbox(container) {
+    var doc = container.ownerDocument;
+    var lb = doc.createElement('div');
+    lb.className = 'vm-lightbox';
+    lb.setAttribute('role', 'dialog');
+    lb.setAttribute('aria-label', 'Screenshot preview');
+    doc.body.appendChild(lb);
+    container.addEventListener('click', function (e) {
+      var card = e.target.closest ? e.target.closest('.gshot') : null;
+      if (!card) return;
+      lb.innerHTML = '<img src="' + card.getAttribute('data-src') + '" alt="">';
+      lb.classList.add('open');
+    });
+    lb.addEventListener('click', function () { lb.classList.remove('open'); });
+    doc.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') lb.classList.remove('open');
+    });
+  }
+
+  window.vmShots = function (container, opts) {
+    opts = opts || {};
+    if (!container) return;
+    var API = 'https://api.github.com/repos/' + REPO + '/contents/.websitede/images/screenshots?ref=vivi-music-de';
+    var PAGES = 'https://piboh.github.io/vivi-music/images/screenshots/';
+    var RAW = 'https://raw.githubusercontent.com/' + REPO + '/vivi-music-de/.websitede/images/screenshots/';
+
+    function pretty(name) {
+            return name.replace(/\.webp$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+    function empty() {
+      container.innerHTML = '<p class="hnote" style="grid-column:1/-1">' + (opts.emptyText || 'No screenshots here yet.') + '</p>';
+      if (opts.emptyHideSection) {
+        var sec = container.closest('section');
+        if (sec) sec.style.display = 'none';
+      }
+    }
+
+    return window.vmGH.json(API)
+      .then(function (files) {
+                var shots = (files || []).filter(function (f) { return f.type === 'file' && /\.webp$/i.test(f.name); })
+          .sort(function (a, b) { return a.name.localeCompare(b.name); });
+        if (opts.max > 0) shots = shots.slice(0, opts.max);
+        if (!shots.length) { empty(); return []; }
+        var html = '';
+        shots.forEach(function (f) {
+          var enc = encodeURIComponent(f.name);
+          var alt = pretty(f.name);
+          html += '<figure class="gshot" data-src="' + PAGES + enc + '" data-fallback="' + RAW + enc + '">' +
+            '<img src="' + PAGES + enc + '" alt="VIVI Music DE screenshot — ' + alt + '" loading="lazy" decoding="async">' +
+            '<figcaption>' + alt + '</figcaption></figure>';
+        });
+        container.innerHTML = html;
+        Array.prototype.forEach.call(container.querySelectorAll('img'), function (img) {
+          img.addEventListener('error', function () {
+            var fb = img.getAttribute('data-fallback');
+            if (fb && img.src.indexOf(fb) === -1) img.src = fb;
+          });
+        });
+        if (opts.lightbox !== false) vmShotsLightbox(container);
+        return shots;
+      })
+      .catch(function () { empty(); return []; });
+  };
+
 })();

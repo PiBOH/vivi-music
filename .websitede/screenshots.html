@@ -390,72 +390,10 @@
 </script>
 <script src="main.js"></script>
 <script>
-/* ---- screenshot gallery: loads every 16:9 .webp from images/screenshots ---- */
-(function () {
-  'use strict';
-  var grid = document.getElementById('shotGrid');
-  if (!grid) return;
-  var status = document.getElementById('shotStatus');
-  var API = 'https://api.github.com/repos/PiBOH/vivi-music/contents/.websitede/images/screenshots?ref=vivi-music-de';
-  var PAGES = 'https://piboh.github.io/vivi-music/images/screenshots/';
-  var RAW = 'https://raw.githubusercontent.com/PiBOH/vivi-music/vivi-music-de/.websitede/images/screenshots/';
-
-  function pretty(name) {
-    return name.replace(/\.webp$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
-  }
-
-  function message(html) {
-    grid.innerHTML = '<p class="hnote" style="grid-column:1/-1">' + html + '</p>';
-  }
-
-  fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
-    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function (files) {
-      var shots = (files || []).filter(function (f) { return f.type === 'file' && /\.webp$/i.test(f.name); })
-        .sort(function (a, b) { return a.name.localeCompare(b.name); });
-      if (!shots.length) {
-        message('No screenshots here yet. Drop <b>.webp</b> images (16:9) into <code>images/screenshots/</code> and they appear automatically.');
-        return;
-      }
-      if (status) status.style.display = 'none';
-      var html = '';
-      shots.forEach(function (f) {
-        var enc = encodeURIComponent(f.name);
-        var alt = pretty(f.name);
-        html += '<figure class="gshot" data-src="' + PAGES + enc + '">' +
-          '<img src="' + PAGES + enc + '" data-fallback="' + RAW + enc + '" alt="VIVI Music DE screenshot — ' + alt + '" loading="lazy" decoding="async">' +
-          '<figcaption>' + alt + '</figcaption></figure>';
-      });
-      grid.innerHTML = html;
-      /* if a fresh image is not deployed to Pages yet, fall back to raw.githubusercontent */
-      Array.prototype.forEach.call(grid.querySelectorAll('img'), function (img) {
-        img.addEventListener('error', function () {
-          var fb = img.getAttribute('data-fallback');
-          if (fb && img.src.indexOf(fb) === -1) img.src = fb;
-        });
-      });
-    })
-    .catch(function () {
-      message('Could not reach GitHub to list the screenshots — please try again in a moment.');
-    });
-
-  /* lightweight lightbox */
-  var lb = document.createElement('div');
-  lb.className = 'vm-lightbox';
-  lb.setAttribute('role', 'dialog');
-  lb.setAttribute('aria-label', 'Screenshot preview');
-  document.body.appendChild(lb);
-  grid.addEventListener('click', function (e) {
-    var card = e.target.closest ? e.target.closest('.gshot') : null;
-    if (!card) return;
-    lb.innerHTML = '<img src="' + card.getAttribute('data-src') + '" alt="">';
-    lb.classList.add('open');
+  /* Screenshot gallery: every 16:9 .webp in images/screenshots, auto-loaded. */
+  window.vmShots(document.getElementById('shotGrid'), {
+    emptyText: 'No screenshots here yet. Drop <b>.webp</b> images (16:9) into <code>images/screenshots/</code> and they appear automatically.'
   });
-  lb.addEventListener('click', function () { lb.classList.remove('open'); });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') lb.classList.remove('open');
-  });
-})();
-</script>
+</script></script>
 </body>
 </html>
