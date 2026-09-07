@@ -49,6 +49,15 @@ android {
 //add nightly build label support
         val isNightly = project.hasProperty("nightly") && project.property("nightly") == "true"
         buildConfigField("Boolean", "IS_NIGHTLY", isNightly.toString())
+
+        // Actual release channel for the About label (stable / rc / beta /
+        // alpha / nightly). The build workflow passes -Pchannel=... from
+        // version.txt (mobile channel line); falls back to the binary nightly
+        // flag so locally built APKs keep the old stable/nightly behaviour.
+        val releaseChannel = (project.findProperty("channel") as String?)
+            ?.lowercase()?.trim()?.takeIf { it.isNotBlank() }
+            ?: if (isNightly) "nightly" else "stable"
+        buildConfigField("String", "RELEASE_CHANNEL", "\"$releaseChannel\"")
     }
     
 

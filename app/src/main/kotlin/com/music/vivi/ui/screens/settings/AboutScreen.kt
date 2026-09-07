@@ -133,7 +133,14 @@ fun AboutScreen(
         Spacer(modifier = Modifier.height(16.dp))
         AppVersionTile(
             appName = stringResource(R.string.vivi_music_title),
-            description = "v${BuildConfig.VERSION_NAME} • ${stringResource(if (BuildConfig.IS_NIGHTLY) R.string.build_nightly else R.string.build_stable)}",
+            description = "v${BuildConfig.VERSION_NAME} • ${stringResource(
+                when (BuildConfig.RELEASE_CHANNEL.lowercase()) {
+                    "alpha" -> R.string.build_alpha
+                    "nightly" -> R.string.build_nightly
+                    "stable" -> R.string.build_stable
+                    else -> if (BuildConfig.IS_NIGHTLY) R.string.build_nightly else R.string.build_stable
+                }
+            )}",
             onGithubClick = { uriHandler.safeOpenUri(context, "https://github.com/vivizzz007/vivi-music") }
         )
         

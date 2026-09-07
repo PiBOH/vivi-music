@@ -136,7 +136,9 @@ jobs:
           if [[ -n "$MOBILE_CHANNEL" && "$MOBILE_CHANNEL" != "stable" ]]; then
             NIGHTLY_FLAG="-Pnightly=true"
           fi
-          ./gradlew assembleUniversal${{ matrix.flavor == 'gms' && 'Gms' || 'Foss' }}Release $NIGHTLY_FLAG \
+          # The About label (BuildConfig.RELEASE_CHANNEL) mirrors version.txt's
+          # mobile channel so a fork build reads ALPHA instead of NIGHTLY.
+          ./gradlew assembleUniversal${{ matrix.flavor == 'gms' && 'Gms' || 'Foss' }}Release $NIGHTLY_FLAG -Pchannel="$MOBILE_CHANNEL" \
             --no-configuration-cache --console=plain --warning-mode summary -x lint
 
       - name: Collect APK
