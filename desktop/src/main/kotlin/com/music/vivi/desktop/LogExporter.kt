@@ -29,12 +29,31 @@ object LogExporter {
 
     fun defaultFileName(): String = "vivi-de-logs-${AppInfo.FULL_VERSION}-$stamp.zip"
 
-    /** Every diagnostic log file currently present, newest first. */
-    fun collectLogFiles(): List<File> =
-        vivimusicDir.listFiles { f -> f.isFile && f.extension.equals("log", ignoreCase = true) }
-            ?.sortedByDescending { it.lastModified() }
+    /** Every diagnostic log file currently present, newest first: the legacy
+     *  flat `*.log` files in `~/.vivimusic/` plus every session log under
+     *  `~/.vivimusic/logs/<timestamp>/`. */
+    fun collectLogFiles(): List<File> {
+        val rootLogs = vivimusicDir.listFiles { f -> f.isFile && f.extension.equals("log", ignoreCase = true) }
             ?.toList()
             ?: emptyList()
+        val logsRoot = File(vivimusicDir, "logs")
+        val sessionLogs = if (logsRoot.exists()) {
+            logsRoot.walkTopDown()
+                .filter { it.isFile && it.extension.equals("log", ignoreCase = true) }
+                .toList()
+        } else {
+            emptyList()
+        }
+        return (rootLogs + sessionLogs).sortedByDescending { it.lastModified() }
+    }
+
+    /** Zip entry name for a log file: `logs/<relative-path>` keeps the
+     *  session folders (`logs/20260907-2152/playback.log`) while legacy root
+     *  files stay flat (`logs/actions.log`). */
+    private fun entryName(log: File): String {
+        val rel = log.relativeTo(vivimusicDir).path.replace('\\', '/')
+        return if (rel.startsWith("logs/")) rel else "logs/$rel"
+    }
 
     /** App/OS/hardware summary written as `system-info.txt` inside the zip. */
     fun buildSystemInfo(): String {
@@ -119,8 +138,9 @@ object LogExporter {
             addEntry("settings-summary.txt", buildSettingsSummary().toByteArray(Charsets.UTF_8))
             for (log in logs) {
                 val bytes = runCatching { log.readBytes() }.getOrNull() ?: continue
-                addEntry("logs/${log.name}", bytes)
-                entries.add("logs/${log.name}")
+                val name = entryName(log)
+                addEntry(name, bytes)
+                entries.add(name)
             }
         }
         return entries
@@ -137,10 +157,10 @@ object LogExporter {
             out.println(buildSettingsSummary())
             for (log in logs) {
                 out.println()
-                out.println("=== logs/${log.name} ===")
+                out.println("=== ${entryName(log)} ===")
                 out.println(runCatching { log.readText() }.getOrDefault("<unreadable>"))
             }
         }
-        return listOf("system-info.txt", "settings-summary.txt") + logs.map { it.name }
+        return listOf("system-info.txt", "settings-summary.txt") + logs.map { entryName(it) }
     }
 }

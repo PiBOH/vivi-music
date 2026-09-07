@@ -22,9 +22,12 @@ import kotlin.concurrent.withLock
  *  1. **Live viewer** (Developer options → the "Live monitor" card, opened in
  *     a dedicated window): the last [MAX_LINES] lines are exposed as a
  *     [StateFlow] and rendered as they arrive.
- *  2. **Log export** (Settings → System → "Export logs"): every line is
- *     appended to `~/.vivimusic/actions.log`, which [LogExporter] already
- *     packages because it collects every `*.log` file under that directory.
+ *  2. **On-disk session logs** (`~/.vivimusic/logs/<yyyyMMdd-HHmmss>/`): every
+ *     launch creates a timestamped session folder holding one file per
+ *     category (`playback.log`, `queue.log`, `lyrics.log`, `nav.log`,
+ *     `actions.log`, …) plus nothing else — the old single flat
+ *     `~/.vivimusic/actions.log` is migrated into the newest session folder on
+ *     startup. [LogExporter] packages the whole tree for support requests.
  *
  * Lines are intentionally kept technical (English) — they are diagnostic
  * data, not UI, so they never go through localization.
@@ -36,8 +39,19 @@ object AppLog {
     private val vivimusicDir: File
         get() = File(System.getProperty("user.home"), ".vivimusic")
 
-    private val file: File
-        get() = File(vivimusicDir, "actions.log")
+    /** Session folder created at startup: `~/.vivimusic/logs/<yyyyMMdd-HHmmss>/`. */
+    private val sessionDir: File = run {
+        val logsRoot = File(File(System.getProperty("user.home"), ".vivimusic"), "logs")
+        logsRoot.mkdirs()
+        val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+        File(logsRoot, stamp).apply { mkdirs() }
+    }
+
+    /** One file per category inside the session folder. */
+    private fun categoryFile(category: String): File {
+        val safe = category.replace(Regex("[^A-Za-z0-9._-]"), "_").ifBlank { "misc" }
+        return File(sessionDir, "$safe.log")
+    }
 
     private val lock = ReentrantLock()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -51,6 +65,15 @@ object AppLog {
 
     init {
         vivimusicDir.mkdirs()
+        // Migrate the legacy flat actions.log into this session's folder so
+        // the old diagnostics are not lost (and the root stays clean).
+        val legacy = File(vivimusicDir, "actions.log")
+        if (legacy.exists()) {
+            runCatching {
+                legacy.copyTo(File(sessionDir, "actions.log"), overwrite = true)
+                legacy.delete()
+            }
+        }
     }
 
     /** Appends a diagnostic line with a category tag, e.g. `log("playback", "seek to 42s")`. */
@@ -60,25 +83,29 @@ object AppLog {
         scope.launch {
             lock.withLock {
                 runCatching {
-                    file.parentFile?.mkdirs()
-                    file.appendText(line + "\n", Charsets.UTF_8)
+                    val f = categoryFile(category)
+                    f.parentFile?.mkdirs()
+                    f.appendText(line + "\n", Charsets.UTF_8)
                     // Trim the file when it grows past the cap (keep the tail).
-                    if (file.length() > MAX_FILE_BYTES) {
-                        val tail = file.readText(Charsets.UTF_8).takeLast((MAX_FILE_BYTES / 2).toInt())
-                        file.writeText(tail, Charsets.UTF_8)
+                    if (f.length() > MAX_FILE_BYTES) {
+                        val tail = f.readText(Charsets.UTF_8).takeLast((MAX_FILE_BYTES / 2).toInt())
+                        f.writeText(tail, Charsets.UTF_8)
                     }
                 }
             }
         }
     }
 
-    /** Clears the in-memory buffer and the on-disk file. */
+    /** Clears the in-memory buffer and the current session's on-disk logs. */
     fun clear() {
         _lines.value = emptyList()
         scope.launch {
             lock.withLock {
-                runCatching { file.delete() }
+                runCatching {
+                    sessionDir.listFiles { f -> f.isFile && f.extension.equals("log", ignoreCase = true) }
+                        ?.forEach { it.delete() }
+                }
             }
         }
     }
-}
+}

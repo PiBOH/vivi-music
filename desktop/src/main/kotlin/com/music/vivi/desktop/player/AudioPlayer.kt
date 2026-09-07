@@ -550,7 +550,21 @@ class AudioPlayer {
         knownDurationMs: Long = 0L,
         startAtFraction: Float? = null,
     ) {
-        NIOUtils.readableChannel(handle.file).use { channel ->
+        // The download thread creates the `.part` file asynchronously (and can
+        // delete/recreate it between stream candidates), so opening the channel
+        // the instant play() returns raced it and threw FileNotFoundException
+        // ("cannot find the file specified") right after "stream ready" — the
+        // failed attempt then retried and wiped the just-built up-next queue.
+        // Wait until the file actually exists before opening the channel.
+        var opened: SeekableByteChannel? = null
+        while (opened == null) {
+            opened = runCatching { NIOUtils.readableChannel(handle.file) }.getOrNull()
+            if (opened != null) break
+            if (handle.failed || handle.complete || stopped || gen != generation) break
+            Thread.sleep(DOWNLOAD_POLL_MS)
+        }
+        val channel = opened ?: throw IOException(handle.failure ?: "Audio file is not available")
+        channel.use { channel ->
             // The download may still be in flight: wait until the head of the
             // file (`ftyp` + `moov`) is on disk before parsing the container.
             while (handle.downloadedBytes < MIN_START_BYTES && !handle.complete && !handle.failed) {

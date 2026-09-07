@@ -864,7 +864,13 @@ class PlayerController {
                     // guest identity and try a fresh resolution.
                     AppLog.log("playback", "resolution failed, rotating guest and retrying")
                     GuestSession.rotate()
-                    playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
+                    // Retry on the CURRENT queue, not the original one-item
+                    // list: the "auto load more" extension may have appended
+                    // up-next/automix tracks while this track was resolving,
+                    // and replaying with the seed-only list wiped them (the
+                    // queue visibly collapsed back to 1 song).
+                    val retryTracks = _state.value.queue.ifEmpty { tracks }
+                    playAtAttempt(retryTracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                 } else if (!skipToNextOnErrorIfEnabled(index, track)) {
                     loadedVideoId = null
                     _bufferedFraction.value = 1f
@@ -938,7 +944,10 @@ class PlayerController {
                         // rotate the guest identity and re-resolve, then retry.
                         scope.launch {
                             GuestSession.rotate()
-                            playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
+                            // Same as the resolution retry: keep the queue that
+                            // may have grown with similar/up-next tracks.
+                            val retryTracks = _state.value.queue.ifEmpty { tracks }
+                            playAtAttempt(retryTracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                         }
                     } else if (!skipToNextOnErrorIfEnabled(index, track)) {
                         loadedVideoId = null

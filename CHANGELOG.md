@@ -11,7 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
-## [6.0.6.3_DE-1.50.37-alpha] - 2026-09-07
+## [6.0.6.3_DE-1.50.38-alpha] - 2026-09-07
+
+### Fixed
+- [DE] **The similar/up-next queue is no longer wiped when a track's first attempt fails**: starting a single song builds the queue with ~15 up-next/automix tracks, but a playback error (e.g. a transient download race) triggered a retry that replayed with the *original one-track list*, collapsing the queue back to 1 song — "next" then only looped the seed. Retries now replay on the **current queue**, so the already-appended similar tracks survive the retry. (Closes [#47](https://github.com/PiBOH/vivi-music/issues/47))
+- [DE] **The "cannot find the file specified" playback error right after "stream ready" is fixed**: the decoder opened the shared `.part` download file the instant the download thread had created its handle but not yet created the file on disk (a race that produced `FileNotFoundException` and forced the retry above). The decoder now waits until the file actually exists before opening the channel.
+- [DE] **Logs are now organized per session**: every launch writes `~/.vivimusic/logs/<yyyyMMdd-HHmmss>/` with one file per category (`playback.log`, `queue.log`, `lyrics.log`, `nav.log`, `settings.log`, …). The old flat `actions.log` is migrated into the newest session folder on startup, and "Export logs" packages the whole tree (session folders included) so each bug report carries the exact playback/queue/lyrics trail.
+
+### Commits
+- v: DE 1.50.38-alpha — retries keep the grown similar queue; decoder waits for the .part file; per-session categorized logs
+
 
 ### Added
 - [DE] **Crossfade** (port of the mobile option, Settings → Player & audio): tracks now overlap with a short fade at the end of each song instead of hard-cutting. A second audio session starts the next track muted near the end of the current one and both volumes ramp over the fade window, then the incoming session becomes the active player — with the option **off** (default) the audio path is byte-identical to before. Includes a **Crossfade duration** slider (1–12 s, like mobile) and a **Disable for gapless albums** toggle that skips the fade between tracks of the same album so they flow seamlessly (album metadata is carried on the now-playing model when known). Manual next/previous/seek/pause/stop cancels the overlap and falls back to the normal advance, and a track whose stream fails to resolve in time advances normally instead of stalling. (Closes [#42](https://github.com/PiBOH/vivi-music/issues/42) — last item of the Player & audio port)
