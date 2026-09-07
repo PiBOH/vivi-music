@@ -58,6 +58,17 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
@@ -200,7 +211,6 @@ import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 import com.music.innertube.YouTubeExtractor
 import com.music.innertube.models.SongItem
-import com.music.lrclib.LrcLib
 import com.music.vivi.desktop.player.PlayerController
 import com.music.vivi.desktop.player.RepeatMode
 import com.music.vivi.desktop.player.StreamResolver
@@ -871,6 +881,34 @@ fun WindowScope.App(
     var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
 
+    var autoLoadMore by remember { mutableStateOf(DesktopSettings.load().autoLoadMore) }
+    player.autoLoadMore = autoLoadMore
+    var similarContent by remember { mutableStateOf(DesktopSettings.load().similarContent) }
+    player.similarContent = similarContent
+
+    var preventDuplicateTracksInQueue by remember { mutableStateOf(DesktopSettings.load().preventDuplicateTracksInQueue) }
+    player.preventDuplicateTracksInQueue = preventDuplicateTracksInQueue
+    var autoSkipNextOnError by remember { mutableStateOf(DesktopSettings.load().autoSkipNextOnError) }
+    player.autoSkipNextOnError = autoSkipNextOnError
+    var pauseWhenMediaMuted by remember { mutableStateOf(DesktopSettings.load().pauseWhenMediaMuted) }
+    var keepScreenOnWhenPlayerExpanded by remember { mutableStateOf(DesktopSettings.load().keepScreenOnWhenPlayerExpanded) }
+
+    var persistentShuffle by remember { mutableStateOf(DesktopSettings.load().persistentShuffle) }
+    player.persistentShuffleAcrossQueues = persistentShuffle
+    var progressiveSeek by remember { mutableStateOf(DesktopSettings.load().progressiveSeek) }
+    var historyDurationSeconds by remember { mutableStateOf(DesktopSettings.load().historyDurationSeconds) }
+    var autoDownloadOnLike by remember { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
+    var skipSilence by remember { mutableStateOf(DesktopSettings.load().skipSilence) }
+    var skipSilenceInstant by remember { mutableStateOf(DesktopSettings.load().skipSilenceInstant) }
+
+    // "Auto download on like": cache a song into the audio cache the moment it
+    // is liked (the setting is read live when the like happens).
+    LaunchedEffect(player) {
+        SongActions.onSongLiked = { id, _ ->
+            if (DesktopSettings.load().autoDownloadOnLike) player.downloadToCache(id)
+        }
+    }
+
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
     var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
@@ -1055,6 +1093,14 @@ fun WindowScope.App(
     }
 
     val current = backStack.last()
+
+    // "Keep screen on when player is expanded": hold a keep-awake request
+    // while the full player screen is open (desktop adaptation of the mobile
+    // window flag). Independent of the pairing keep-awake, which uses its own
+    // request name.
+    LaunchedEffect(keepScreenOnWhenPlayerExpanded, current) {
+        KeepAwake.request("expanded-player", keepScreenOnWhenPlayerExpanded && current is Screen.Player)
+    }
 
     // Undo/redo stacks for keyboard navigation history (Ctrl+Z / Ctrl+Y).
     var undoStack by remember { mutableStateOf(listOf<Screen>()) }
@@ -1310,7 +1356,7 @@ fun WindowScope.App(
             // Keep the display/system awake while paired so the OS sleeping
             // the screen can't tear down the sync socket and unpair the two
             // devices.
-            KeepAwake.setEnabled(paired)
+            KeepAwake.request("paired", paired)
             if (paired != wasPaired) {
                 wasPaired = paired
                 if (paired) {
@@ -1357,16 +1403,13 @@ fun WindowScope.App(
                 // instantly instead of resolving + downloading.
                 val currentTrack = queue.getOrNull(index)
 
-                // Lyrics for the three upcoming tracks: fetch + keep in the
-                // persistent cache (best-effort, independent of the audio pass).
-                upcoming.take(3).forEach { track ->
-                    if (LyricsCache.get(track.videoId) == null) {
-                        launch(Dispatchers.IO) {
-                            LrcLib.getLyrics(title = track.title, artist = track.artist, duration = -1)
-                                .onSuccess { LyricsCache.put(track.videoId, it) }
-                        }
-                    }
-                }
+                // Lyrics for the upcoming tracks used to be pre-fetched here
+                // with a fake duration (-1). Without a real duration the
+                // community server can return the WRONG recording of a title
+                // and, because the result was cached forever, the mistake
+                // stuck. Lyrics are fetched on demand (with the real duration,
+                // through [DesktopLyrics]) when each song actually plays, so
+                // this poisoning pre-fetch is intentionally gone.
 
                 // A queue/index change restarts the pass on the new window
                 // (an old pass must not keep downloading stale tracks).
@@ -1483,6 +1526,41 @@ fun WindowScope.App(
                         systemVolumeGuard.lastPushed = sv
                     }
                 }
+            }
+            delay(800L)
+        }
+    }
+
+    // "Pause music when media is muted": when the OS output volume is muted
+    // (or at zero) while VIVI is playing, pause; resume when it comes back.
+    // Only reacts to state transitions (like the mobile volume listener), so a
+    // manual play while muted is not fought.
+    LaunchedEffect(Unit) {
+        var lastMuted: Boolean? = null
+        var pausedForMute = false
+        while (true) {
+            val enabled = DesktopSettings.load().pauseWhenMediaMuted
+            if (enabled) {
+                val muted = SystemVolume.isMuted() == true
+                val volume = SystemVolume.get()
+                val nowMuted = muted || (volume != null && volume <= 0.001f)
+                if (nowMuted != lastMuted) {
+                    lastMuted = nowMuted
+                    if (nowMuted) {
+                        if (player.state.value.isPlaying) {
+                            pausedForMute = true
+                            AppLog.log("playback", "OS output muted — pausing (pause when media is muted)")
+                            player.toggle()
+                        }
+                    } else if (pausedForMute && !player.state.value.isPlaying) {
+                        pausedForMute = false
+                        AppLog.log("playback", "OS output unmuted — resuming")
+                        player.toggle()
+                    }
+                }
+            } else {
+                lastMuted = null
+                pausedForMute = false
             }
             delay(800L)
         }
@@ -2100,6 +2178,71 @@ fun WindowScope.App(
                             autoPlayNext = checked
                             DesktopSettings.update { it.copy(autoPlayNext = checked) }
                         },
+                        autoLoadMore = autoLoadMore,
+                        onToggleAutoLoadMore = { checked ->
+                            autoLoadMore = checked
+                            player.autoLoadMore = checked
+                            DesktopSettings.update { it.copy(autoLoadMore = checked) }
+                        },
+                        similarContent = similarContent,
+                        onToggleSimilarContent = { checked ->
+                            similarContent = checked
+                            player.similarContent = checked
+                            DesktopSettings.update { it.copy(similarContent = checked) }
+                        },
+                        preventDuplicateTracksInQueue = preventDuplicateTracksInQueue,
+                        onTogglePreventDuplicateTracksInQueue = { checked ->
+                            preventDuplicateTracksInQueue = checked
+                            player.preventDuplicateTracksInQueue = checked
+                            DesktopSettings.update { it.copy(preventDuplicateTracksInQueue = checked) }
+                        },
+                        autoSkipNextOnError = autoSkipNextOnError,
+                        onToggleAutoSkipNextOnError = { checked ->
+                            autoSkipNextOnError = checked
+                            player.autoSkipNextOnError = checked
+                            DesktopSettings.update { it.copy(autoSkipNextOnError = checked) }
+                        },
+                        pauseWhenMediaMuted = pauseWhenMediaMuted,
+                        onTogglePauseWhenMediaMuted = { checked ->
+                            pauseWhenMediaMuted = checked
+                            DesktopSettings.update { it.copy(pauseWhenMediaMuted = checked) }
+                        },
+                        keepScreenOnWhenPlayerExpanded = keepScreenOnWhenPlayerExpanded,
+                        onToggleKeepScreenOnWhenPlayerExpanded = { checked ->
+                            keepScreenOnWhenPlayerExpanded = checked
+                            DesktopSettings.update { it.copy(keepScreenOnWhenPlayerExpanded = checked) }
+                        },
+                        persistentShuffle = persistentShuffle,
+                        onTogglePersistentShuffle = { checked ->
+                            persistentShuffle = checked
+                            player.persistentShuffleAcrossQueues = checked
+                            DesktopSettings.update { it.copy(persistentShuffle = checked) }
+                        },
+                        progressiveSeek = progressiveSeek,
+                        onToggleProgressiveSeek = { checked ->
+                            progressiveSeek = checked
+                            DesktopSettings.update { it.copy(progressiveSeek = checked) }
+                        },
+                        autoDownloadOnLike = autoDownloadOnLike,
+                        onToggleAutoDownloadOnLike = { checked ->
+                            autoDownloadOnLike = checked
+                            DesktopSettings.update { it.copy(autoDownloadOnLike = checked) }
+                        },
+                        historyDurationSeconds = historyDurationSeconds,
+                        onHistoryDurationSecondsChange = { v ->
+                            historyDurationSeconds = v
+                            DesktopSettings.update { it.copy(historyDurationSeconds = v) }
+                        },
+                        skipSilence = skipSilence,
+                        onToggleSkipSilence = { checked ->
+                            skipSilence = checked
+                            DesktopSettings.update { it.copy(skipSilence = checked) }
+                        },
+                        skipSilenceInstant = skipSilenceInstant,
+                        onToggleSkipSilenceInstant = { checked ->
+                            skipSilenceInstant = checked
+                            DesktopSettings.update { it.copy(skipSilenceInstant = checked) }
+                        },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
                             audioQuality = q
@@ -2589,6 +2732,7 @@ fun WindowScope.App(
                         accent = accent,
                         audioLevel = audioLevel,
                         onBack = goBack,
+                        progressiveSeek = progressiveSeek,
                     )
                     is Screen.LyricsFocus -> LyricsFocusScreen(
                         nowPlaying = nowPlaying,
@@ -5850,6 +5994,30 @@ fun PlayerSection(
     language: String,
     autoPlayNext: Boolean,
     onToggleAutoPlayNext: (Boolean) -> Unit,
+    autoLoadMore: Boolean,
+    onToggleAutoLoadMore: (Boolean) -> Unit,
+    similarContent: Boolean,
+    onToggleSimilarContent: (Boolean) -> Unit,
+    preventDuplicateTracksInQueue: Boolean,
+    onTogglePreventDuplicateTracksInQueue: (Boolean) -> Unit,
+    autoSkipNextOnError: Boolean,
+    onToggleAutoSkipNextOnError: (Boolean) -> Unit,
+    pauseWhenMediaMuted: Boolean,
+    onTogglePauseWhenMediaMuted: (Boolean) -> Unit,
+    keepScreenOnWhenPlayerExpanded: Boolean,
+    onToggleKeepScreenOnWhenPlayerExpanded: (Boolean) -> Unit,
+    persistentShuffle: Boolean,
+    onTogglePersistentShuffle: (Boolean) -> Unit,
+    progressiveSeek: Boolean,
+    onToggleProgressiveSeek: (Boolean) -> Unit,
+    autoDownloadOnLike: Boolean,
+    onToggleAutoDownloadOnLike: (Boolean) -> Unit,
+    historyDurationSeconds: Int,
+    onHistoryDurationSecondsChange: (Int) -> Unit,
+    skipSilence: Boolean,
+    onToggleSkipSilence: (Boolean) -> Unit,
+    skipSilenceInstant: Boolean,
+    onToggleSkipSilenceInstant: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -5926,7 +6094,99 @@ fun PlayerSection(
                 trailing = { Switch(checked = syncViviVolume, onCheckedChange = onToggleSyncViviVolume) },
                 onClick = { onToggleSyncViviVolume(!syncViviVolume) },
             ),
+            M3SettingsItem(
+                icon = Icons.Filled.Autorenew,
+                title = { Text(Localization.get(language, "auto_load_more")) },
+                description = { Text(Localization.get(language, "auto_load_more_desc")) },
+                trailing = { Switch(checked = autoLoadMore, onCheckedChange = onToggleAutoLoadMore) },
+                onClick = { onToggleAutoLoadMore(!autoLoadMore) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.PlaylistAddCheck,
+                title = { Text(Localization.get(language, "enable_similar_content")) },
+                description = { Text(Localization.get(language, "similar_content_desc")) },
+                trailing = { Switch(checked = similarContent, onCheckedChange = onToggleSimilarContent) },
+                onClick = { onToggleSimilarContent(!similarContent) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.ContentCopy,
+                title = { Text(Localization.get(language, "prevent_duplicate_tracks")) },
+                description = { Text(Localization.get(language, "prevent_duplicate_tracks_desc")) },
+                trailing = { Switch(checked = preventDuplicateTracksInQueue, onCheckedChange = onTogglePreventDuplicateTracksInQueue) },
+                onClick = { onTogglePreventDuplicateTracksInQueue(!preventDuplicateTracksInQueue) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FastForward,
+                title = { Text(Localization.get(language, "auto_skip_next_on_error")) },
+                description = { Text(Localization.get(language, "auto_skip_next_on_error_desc")) },
+                trailing = { Switch(checked = autoSkipNextOnError, onCheckedChange = onToggleAutoSkipNextOnError) },
+                onClick = { onToggleAutoSkipNextOnError(!autoSkipNextOnError) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VolumeOff,
+                title = { Text(Localization.get(language, "pause_music_when_media_muted")) },
+                trailing = { Switch(checked = pauseWhenMediaMuted, onCheckedChange = onTogglePauseWhenMediaMuted) },
+                onClick = { onTogglePauseWhenMediaMuted(!pauseWhenMediaMuted) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.BrightnessHigh,
+                title = { Text(Localization.get(language, "keep_screen_on_player_expanded")) },
+                trailing = { Switch(checked = keepScreenOnWhenPlayerExpanded, onCheckedChange = onToggleKeepScreenOnWhenPlayerExpanded) },
+                onClick = { onToggleKeepScreenOnWhenPlayerExpanded(!keepScreenOnWhenPlayerExpanded) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Shuffle,
+                title = { Text(Localization.get(language, "persistent_shuffle")) },
+                description = { Text(Localization.get(language, "persistent_shuffle_desc")) },
+                trailing = { Switch(checked = persistentShuffle, onCheckedChange = onTogglePersistentShuffle) },
+                onClick = { onTogglePersistentShuffle(!persistentShuffle) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.TouchApp,
+                title = { Text(Localization.get(language, "progressive_seek")) },
+                description = { Text(Localization.get(language, "progressive_seek_desc")) },
+                trailing = { Switch(checked = progressiveSeek, onCheckedChange = onToggleProgressiveSeek) },
+                onClick = { onToggleProgressiveSeek(!progressiveSeek) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Favorite,
+                title = { Text(Localization.get(language, "auto_download_on_like")) },
+                description = { Text(Localization.get(language, "auto_download_on_like_desc")) },
+                trailing = { Switch(checked = autoDownloadOnLike, onCheckedChange = onToggleAutoDownloadOnLike) },
+                onClick = { onToggleAutoDownloadOnLike(!autoDownloadOnLike) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FastRewind,
+                title = { Text(Localization.get(language, "skip_silence")) },
+                description = { Text(Localization.get(language, "skip_silence_desc")) },
+                trailing = { Switch(checked = skipSilence, onCheckedChange = onToggleSkipSilence) },
+                onClick = { onToggleSkipSilence(!skipSilence) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FlashOn,
+                title = { Text(Localization.get(language, "skip_silence_instant")) },
+                description = { Text(Localization.get(language, "skip_silence_instant_desc")) },
+                trailing = { Switch(checked = skipSilenceInstant, onCheckedChange = onToggleSkipSilenceInstant) },
+                onClick = { onToggleSkipSilenceInstant(!skipSilenceInstant) },
+            ),
         ),
+    )
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Schedule,
+                title = { Text("${Localization.get(language, "history_duration")}: $historyDurationSeconds s") },
+                description = { Text(Localization.get(language, "history_duration_desc")) },
+            ),
+        ),
+    )
+    Slider(
+        value = historyDurationSeconds.coerceIn(1, 100).toFloat(),
+        onValueChange = { onHistoryDurationSecondsChange(it.roundToInt().coerceIn(1, 100)) },
+        valueRange = 1f..100f,
+        steps = 98,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
 
     M3SettingsGroup(

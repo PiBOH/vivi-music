@@ -11,6 +11,54 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.36-alpha] - 2026-09-07
+
+### Changed
+- [DE] **Lyrics prefer the synced (timed) version when the "Synced lyrics" option is on**: instead of returning the first provider that answers (which could be plain text even when another source had a timed LRC for the same song), the resolver now keeps hunting across the chain once a plain result arrives and returns a timed LRC as soon as one is found — plain text is only used when no source has timestamps. The persistent lyric cache was versioned again (`v3`) so entries cached with the previous first-answer-wins behavior are re-fetched. With the option off the first usable answer still wins. (Closes [#46](https://github.com/PiBOH/vivi-music/issues/46))
+
+### Commits
+- v: DE 1.50.36-alpha — synced lyrics preferred across providers when the Synced lyrics option is on
+
+## [6.0.6.3_DE-1.50.35-alpha] - 2026-09-07
+
+### Fixed
+- [DE] **[Critical] Tapping a song on Home / Library now creates a real queue again**: a single track no longer sits alone in the queue and stops after one song. The "Auto load more songs" extension now fetches the automix/"up next" list (`YouTube.next(...).items`, the same list the mobile radio uses) with the Related tab as fallback, instead of only the Related tab that often returned nothing; and the extension is scheduled **right away** when a one-track queue starts, so the queue is populated while the first song still plays (not only after it ends). Every fetch now logs its cause and result so failures are diagnosable from an exported log. (Closes [#44](https://github.com/PiBOH/vivi-music/issues/44))
+- [DE] **[Critical] Lyrics are no longer missing, wrong-version or permanently wrong**: the desktop edition asked a single community server (LrcLib) **without the real track duration** and cached the result forever (even the look-ahead pre-fetch poisoned the cache). Lyrics are now fetched on demand through a multi-provider chain that mirrors the mobile app — LrcLib → BetterLyrics → YouLyPlus → KuGou → Musixmatch → Paxsenix → Unison, each given the **real duration** when known, ending with the **official YouTube Music lyrics** for the exact video so a track no community server covers still shows its correct text. The look-ahead pre-fetch was removed and the persistent cache was versioned (`v2`), so previously cached wrong lyrics are re-fetched once with the fixed resolver. (Closes [#45](https://github.com/PiBOH/vivi-music/issues/45))
+
+### Commits
+- v: DE 1.50.35-alpha — critical fixes: single-song taps build a real up-next queue (automix first); multi-provider, duration-aware lyrics with official YouTube fallback
+
+## [6.0.6.3_DE-1.50.34-alpha] - 2026-09-07
+
+### Added
+- [DE] **"Skip silence" and "Instantly skip silence" options in Player & audio** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)): silent runs of a track are dropped from the output while it plays (the normal option skips runs longer than ~150 ms so breaths/quiet attacks stay intact; the instant option cuts the leading silence at the start/after a seek right away and jumps mid-track silences as soon as they are detected). Implemented as a pure add-on on the decoded-PCM output path inside `AudioPlayer`: with both options off the audio path stays byte-identical. Both default off; labels/descriptions English-only for now; changes apply from the next played track.
+
+## [6.0.6.3_DE-1.50.33-alpha] - 2026-09-07
+
+### Added
+- [DE] **More "Player & audio" options ported from the mobile app** (issue [#42](https://github.com/PiBOH/vivi-music/issues/42)):
+  - **Persistent shuffle** (default off): a freshly started queue (new song / playlist / album) now resets shuffle unless the option is enabled — matching the mobile per-queue shuffle behavior (previously shuffle always carried over).
+  - **Progressive seek** (default off): double-clicking the left/right half of the artwork in the full player skips ∓5 seconds; with the option on, each rapid repeat (<1 s) adds 5 extra seconds incrementally (5 → 10 → 15…), exactly like the mobile double-tap seek. Applies to the classic/new/Spotify-style player designs (the expressive design keeps its canvas interactions untouched).
+  - **History duration** (default 30 s, slider 1–100 s): a track is only recorded into the listen history — the seeds behind the Home "Recommended" row — after it has actually played for this long, so quick skips no longer pollute the recommendations.
+  - **Auto download on like** (default off): liking a song now downloads it straight into the audio cache in the background (same join-safe path as the look-ahead prefetch), so it plays instantly later; cached files still follow the user's audio-cache retention setting.
+- Both "Resume on Bluetooth connect" and "Shuffle playlist/album first" have no real desktop equivalent (the desktop has no app-level Bluetooth audio routing, and similar content is only ever appended after the original queue is exhausted — the "original first, then similar" behavior already always holds), so they are not ported and are documented as not-applicable in issue #42.
+- All new labels/descriptions are English-only for now.
+
+## [6.0.6.3_DE-1.50.32-alpha] - 2026-09-07
+
+### Added
+- [DE] **New "Player & audio" options** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)):
+  - **Prevent duplicate tracks in queue**: adding a track that is already queued removes its old copy first, so every track appears once. Applies to "Add to queue", "Add all to queue" and "Play next".
+  - **Auto skip to next song when error occurs**: after all retries for a failing track are exhausted, playback continues with the next queued track (wrapping only when repeat-all is on) instead of stopping on the error.
+  - **Pause music when media is muted**: when the OS output volume is muted or at zero while VIVI is playing, playback pauses and resumes when the volume comes back (reacts only to transitions, so pressing play manually while muted still works). Detects mute on Windows (WASAPI master mute), macOS (`get volume settings`) and Linux (`pactl`/`amixer`).
+  - **Keep screen on when player is expanded**: holds a keep-awake request while the full player screen is open (Windows `SetThreadExecutionState` / macOS `caffeinate`). Keep-awake is now multi-source — the pairing request and the expanded-player request are independent and no longer cancel each other.
+- All four options are **off by default** (as on mobile) and the labels/descriptions are English-only for now.
+
+## [6.0.6.3_DE-1.50.31-alpha] - 2026-09-07
+
+### Added
+- [DE] **"Auto load more songs" and "Enable similar content" options in Player & audio** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)): when the queue reaches its end and autoplay is on, VIVI now fetches related/radio tracks for the last song (same innertube path as the Home "Recommended" row — `YouTube.next` + `YouTube.related`), appends the new tracks and keeps the music going instead of stopping. A single song played alone therefore continues into a radio-like stream of similar songs, and duplicates already in the queue are never re-added. Both options are enabled by default and can be turned off separately in Settings → Player & audio; the labels/descriptions are English-only for now.
+
 ## [6.0.6.3_DE-1.50.30-alpha] - 2026-09-07
 
 ### Fixed

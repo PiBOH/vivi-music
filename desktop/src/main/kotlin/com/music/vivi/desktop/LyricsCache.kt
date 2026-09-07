@@ -28,8 +28,15 @@ object LyricsCache {
         runCatching { file(videoId).writeText(lyrics) }
     }
 
+    /**
+     * v3: file names carry a version suffix so lyrics cached by older flows
+     * are ignored and re-fetched once. v2 invalidated the single-provider,
+     * no-duration lookups (sometimes the wrong recording); v3 invalidates the
+     * first-answer-wins entries cached before the resolver preferred synced
+     * (timed) lyrics when the "Synced lyrics" option is enabled.
+     */
     private fun file(videoId: String): File {
         val safe = videoId.replace(Regex("[^A-Za-z0-9._-]"), "_")
-        return File(dir, "$safe.txt")
+        return File(dir, "$safe.v3.txt")
     }
 }

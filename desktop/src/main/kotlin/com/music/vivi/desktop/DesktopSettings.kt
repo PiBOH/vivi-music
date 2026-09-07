@@ -98,6 +98,30 @@ data class DesktopSyncState(
     val canvasEnabled: Boolean = true,
     val canvasSource: String = "AUTO",
     val autoPlayNext: Boolean = true,
+    /** Auto-fetch related/radio tracks when the queue reaches its end (recommendations). */
+    val autoLoadMore: Boolean = true,
+    /** Allow similar/related content to extend playback past the end of the queue. */
+    val similarContent: Boolean = true,
+    /** Keep a single copy of a track in the queue: adding one already present removes the old copy. */
+    val preventDuplicateTracksInQueue: Boolean = false,
+    /** Auto-skip to the next track when the current one fails after all retries. */
+    val autoSkipNextOnError: Boolean = false,
+    /** Pause playback while the OS output volume is muted or at zero. */
+    val pauseWhenMediaMuted: Boolean = false,
+    /** Keep the display/system awake while the expanded player screen is open. */
+    val keepScreenOnWhenPlayerExpanded: Boolean = false,
+    /** Keep shuffle enabled when starting new songs or playlists. */
+    val persistentShuffle: Boolean = false,
+    /** Double-click artwork seek adds +5s incrementally per rapid double-tap. */
+    val progressiveSeek: Boolean = false,
+    /** Minimum listen time (seconds) before a track enters the listen history. */
+    val historyDurationSeconds: Int = 30,
+    /** Auto-cache (download) a song into the audio cache when it is liked. */
+    val autoDownloadOnLike: Boolean = false,
+    /** Drop silent runs while a track plays ("Skip silence"). */
+    val skipSilence: Boolean = false,
+    /** Also cut leading silence immediately at start/seek ("Instantly skip silence"). */
+    val skipSilenceInstant: Boolean = false,
     val sidebarCollapsed: Boolean = false,
     /** Spotify-inspired 3-panel card layout & top navigation header. */
     val spotifyLayout: Boolean = true,

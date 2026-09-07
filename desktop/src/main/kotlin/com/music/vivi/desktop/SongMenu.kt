@@ -48,12 +48,24 @@ object SongActions {
     private val liked = mutableStateMapOf<String, Boolean>()
     private val inLibrary = mutableStateMapOf<String, Boolean>()
 
+    /**
+     * Fired when a song is liked ("Auto download on like" hooks here):
+     * receives the song id and title. Registered once by the main window.
+     */
+    @Volatile
+    var onSongLiked: ((id: String, title: String) -> Unit)? = null
+
     fun isLiked(id: String): Boolean = liked[id] ?: false
 
     fun isInLibrary(song: SongItem): Boolean =
         inLibrary[song.id] ?: (song.libraryRemoveToken != null)
 
-    fun setLiked(id: String, value: Boolean) { liked[id] = value }
+    fun setLiked(id: String, value: Boolean, title: String? = null) {
+        liked[id] = value
+        if (value && title != null) {
+            onSongLiked?.invoke(id, title)
+        }
+    }
     fun setInLibrary(id: String, value: Boolean) { inLibrary[id] = value }
 }
 
@@ -98,7 +110,7 @@ fun SongMenu(
                 onClick = {
                     expanded = false
                     val next = !liked
-                    SongActions.setLiked(song.id, next)
+                    SongActions.setLiked(song.id, next, title = song.title)
                     scope.launch { YouTube.likeVideo(song.id, next) }
                 },
             )

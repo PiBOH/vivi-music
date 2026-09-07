@@ -35,6 +35,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -134,7 +135,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.music.lrclib.LrcLib
 import com.music.vivi.canvas.CanvasArtwork
 import com.music.vivi.desktop.player.LoadPhase
 import com.music.vivi.desktop.player.RepeatMode
@@ -179,6 +179,7 @@ fun PlayerScreen(
     accent: Color = MaterialTheme.colorScheme.primary,
     audioLevel: Float = 0f,
     onBack: (() -> Unit)? = null,
+    progressiveSeek: Boolean = false,
 ) {
     val np = queue.getOrNull(index)
     var canvasArt by remember { mutableStateOf<CanvasArtwork?>(null) }
@@ -311,6 +312,7 @@ fun PlayerScreen(
                     background = background,
                     rotatingThumbnail = rotatingThumbnail,
                     accent = accent,
+                    progressiveSeek = progressiveSeek,
                 )
             }
         }
@@ -810,6 +812,7 @@ private fun PlayerContent(
     background: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
+    progressiveSeek: Boolean = false,
 ) {
     val contentWidth = 980.dp
     val metrics = design.metrics()
@@ -867,6 +870,10 @@ private fun PlayerContent(
                 language = language,
                 onAddToPlaylist = onAddToPlaylist,
                 onOpenQueue = onOpenQueue,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                onSeek = onSeek,
+                progressiveSeek = progressiveSeek,
             )
             Spacer(Modifier.height(24.dp))
             Column(
@@ -916,6 +923,10 @@ private fun PlayerContent(
                         language = language,
                         onAddToPlaylist = onAddToPlaylist,
                         onOpenQueue = onOpenQueue,
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        onSeek = onSeek,
+                        progressiveSeek = progressiveSeek,
                     )
                 }
                 Column(Modifier.weight(1f)) {
@@ -979,6 +990,10 @@ private fun PlayerArtworkBlock(
     language: String,
     onAddToPlaylist: (() -> Unit)?,
     onOpenQueue: () -> Unit,
+    positionMs: Long = 0L,
+    durationMs: Long = 0L,
+    onSeek: ((Long) -> Unit)? = null,
+    progressiveSeek: Boolean = false,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // Artwork with Apple-style ambience: a colored glow (blurred artwork)
@@ -995,7 +1010,33 @@ private fun PlayerArtworkBlock(
                     fallbackColor = Color.Transparent,
                 ) {}
             }
-            Box(Modifier.shadow(24.dp, RoundedCornerShape(metrics.artCorner))) {
+            // "Progressive seek": double-click the left/right half of the
+            // artwork to skip ±5 seconds (mobile behavior); when the option is
+            // on, each rapid repeat (<1 s) adds 5 extra seconds (5 → 10 → 15…).
+            val currentPos by rememberUpdatedState(positionMs)
+            val blockModifier = if (onSeek != null && durationMs > 0L) {
+                Modifier
+                    .shadow(24.dp, RoundedCornerShape(metrics.artCorner))
+                    .pointerInput(np.videoId) {
+                        var skipMultiplier = 1
+                        var lastTapAt = 0L
+                        detectTapGestures(onDoubleTap = { offset ->
+                            val now = System.currentTimeMillis()
+                            if (progressiveSeek && now - lastTapAt < 1_000L) skipMultiplier++ else skipMultiplier = 1
+                            lastTapAt = now
+                            val amount = 5_000L * skipMultiplier
+                            val target = if (offset.x < size.width / 2f) {
+                                (currentPos - amount).coerceAtLeast(0L)
+                            } else {
+                                (currentPos + amount).coerceAtMost(durationMs)
+                            }
+                            onSeek(target)
+                        })
+                    }
+            } else {
+                Modifier.shadow(24.dp, RoundedCornerShape(metrics.artCorner))
+            }
+            Box(blockModifier) {
                 Box {
                     PlayerThumbnail(np.thumbnail, metrics.artSize, metrics.artCorner, rotatingThumbnail)
                     if (metrics.overlayTitle) {
@@ -1932,8 +1973,22 @@ fun LyricsScreen(
             loading = false
             return@LaunchedEffect
         }
-        LrcLib.getLyrics(title = np.title, artist = np.artist, duration = -1).fold(
-            onSuccess = { lyrics = it; error = null; LyricsCache.put(np.videoId, it) },
+        // Multi-provider fetch: real duration when known, community servers
+        // first and the official YouTube Music lyrics as the exact fallback.
+        // With the "Synced lyrics" option on, a timed LRC is preferred across
+        // the whole chain (plain text only if no source has timestamps).
+        DesktopLyrics.fetch(
+            videoId = np.videoId,
+            title = np.title,
+            artist = np.artist,
+            durationMs = np.durationMs,
+            preferSynced = synced,
+        ).fold(
+            onSuccess = {
+                lyrics = it
+                error = null
+                LyricsCache.put(np.videoId, it)
+            },
             onFailure = { error = it.message },
         )
         loading = false
