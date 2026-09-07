@@ -25,13 +25,13 @@ android {
         applicationId = "com.vivi.music.desktop"
         minSdk = 26
         targetSdk = 37
-        // 6.0.6.2: companion build — installs as com.vivi.music.desktop and is
+        // 6.0.6.3: companion build — installs as com.vivi.music.desktop and is
         // named "VIVI for DE" so it can coexist with the upstream app.
         // Versioning follows the Android scheme (last digit increments per
-        // release: 6.0.6 -> 6.0.6.1 -> 6.0.6.2). versionCode stays monotonic
-        // and always increases per release.
-        versionCode = 132
-        versionName = "6.0.6.2"
+        // release: 6.0.6 -> 6.0.6.1 -> 6.0.6.2 -> 6.0.6.3). versionCode stays
+        // monotonic and always increases per release.
+        versionCode = 133
+        versionName = "6.0.6.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

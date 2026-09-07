@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.30-alpha] - 2026-09-07
+
+### Fixed
+- [APK] **Prerelease updates on the fork now come from GitHub Releases, not nightly runs**: the nightly-workflow mechanism only exists upstream (`vivizzz007/vivi-music`), so when the update source is the fork (`PiBOH/vivi-music`) and the prerelease option is enabled, the check resolves the **newest release by publish date** and only offers it when the matching APK is really attached (`vivi-gsm.apk` for GMS builds, `vivi-foss.apk` for FOSS builds, with a fallback to any `.apk` asset). Non-existent "nightly" builds are no longer offered. (Closes [#43](https://github.com/PiBOH/vivi-music/issues/43))
+- [APK] **The About screen shows the real release channel**: a new `BuildConfig.RELEASE_CHANNEL` (fed from the mobile channel in `version.txt`) makes companion builds read **ALPHA** instead of the stale NIGHTLY label.
+
 ## [6.0.6.2_DE-1.50.29-alpha] - 2026-09-06
 
 ### Changed
