@@ -118,6 +118,10 @@ data class DesktopSyncState(
     val historyDurationSeconds: Int = 30,
     /** Auto-cache (download) a song into the audio cache when it is liked. */
     val autoDownloadOnLike: Boolean = false,
+    /** Drop silent runs while a track plays ("Skip silence"). */
+    val skipSilence: Boolean = false,
+    /** Also cut leading silence immediately at start/seek ("Instantly skip silence"). */
+    val skipSilenceInstant: Boolean = false,
     val sidebarCollapsed: Boolean = false,
     /** Spotify-inspired 3-panel card layout & top navigation header. */
     val spotifyLayout: Boolean = true,

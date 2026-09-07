@@ -735,11 +735,16 @@ class PlayerController {
         val token = ++playToken
         loadedVideoId = track.videoId
         scope.launch {
+            val playSettings = DesktopSettings.load()
+            // "Skip silence": flags are snapshotted per played track (changing
+            // the toggle applies from the next track/session).
+            player.skipSilence = playSettings.skipSilence
+            player.skipSilenceInstant = playSettings.skipSilenceInstant
             // "History duration": a track only enters the listen history (the
             // seeds behind the Home "Recommended" row) after it actually played
             // for this long, not the moment it starts (default 30 s, like the
             // mobile app). Tracks skipped/stopped earlier never pollute it.
-            val historyThresholdMs = (DesktopSettings.load().historyDurationSeconds * 1000L).coerceAtLeast(0L)
+            val historyThresholdMs = (playSettings.historyDurationSeconds * 1000L).coerceAtLeast(0L)
             var historyNoted = false
             player.stop()
             _state.value = PlayerState(

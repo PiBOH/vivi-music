@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.34-alpha] - 2026-09-07
+
+### Added
+- [DE] **"Skip silence" and "Instantly skip silence" options in Player & audio** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)): silent runs of a track are dropped from the output while it plays (the normal option skips runs longer than ~150 ms so breaths/quiet attacks stay intact; the instant option cuts the leading silence at the start/after a seek right away and jumps mid-track silences as soon as they are detected). Implemented as a pure add-on on the decoded-PCM output path inside `AudioPlayer`: with both options off the audio path stays byte-identical. Both default off; labels/descriptions English-only for now; changes apply from the next played track.
+
 ## [6.0.6.3_DE-1.50.33-alpha] - 2026-09-07
 
 ### Added

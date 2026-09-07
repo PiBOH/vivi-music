@@ -67,6 +67,8 @@ import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
@@ -897,6 +899,8 @@ fun WindowScope.App(
     var progressiveSeek by remember { mutableStateOf(DesktopSettings.load().progressiveSeek) }
     var historyDurationSeconds by remember { mutableStateOf(DesktopSettings.load().historyDurationSeconds) }
     var autoDownloadOnLike by remember { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
+    var skipSilence by remember { mutableStateOf(DesktopSettings.load().skipSilence) }
+    var skipSilenceInstant by remember { mutableStateOf(DesktopSettings.load().skipSilenceInstant) }
 
     // "Auto download on like": cache a song into the audio cache the moment it
     // is liked (the setting is read live when the like happens).
@@ -2232,6 +2236,16 @@ fun WindowScope.App(
                         onHistoryDurationSecondsChange = { v ->
                             historyDurationSeconds = v
                             DesktopSettings.update { it.copy(historyDurationSeconds = v) }
+                        },
+                        skipSilence = skipSilence,
+                        onToggleSkipSilence = { checked ->
+                            skipSilence = checked
+                            DesktopSettings.update { it.copy(skipSilence = checked) }
+                        },
+                        skipSilenceInstant = skipSilenceInstant,
+                        onToggleSkipSilenceInstant = { checked ->
+                            skipSilenceInstant = checked
+                            DesktopSettings.update { it.copy(skipSilenceInstant = checked) }
                         },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
@@ -6004,6 +6018,10 @@ fun PlayerSection(
     onToggleAutoDownloadOnLike: (Boolean) -> Unit,
     historyDurationSeconds: Int,
     onHistoryDurationSecondsChange: (Int) -> Unit,
+    skipSilence: Boolean,
+    onToggleSkipSilence: (Boolean) -> Unit,
+    skipSilenceInstant: Boolean,
+    onToggleSkipSilenceInstant: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -6140,6 +6158,20 @@ fun PlayerSection(
                 description = { Text(Localization.get(language, "auto_download_on_like_desc")) },
                 trailing = { Switch(checked = autoDownloadOnLike, onCheckedChange = onToggleAutoDownloadOnLike) },
                 onClick = { onToggleAutoDownloadOnLike(!autoDownloadOnLike) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FastRewind,
+                title = { Text(Localization.get(language, "skip_silence")) },
+                description = { Text(Localization.get(language, "skip_silence_desc")) },
+                trailing = { Switch(checked = skipSilence, onCheckedChange = onToggleSkipSilence) },
+                onClick = { onToggleSkipSilence(!skipSilence) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FlashOn,
+                title = { Text(Localization.get(language, "skip_silence_instant")) },
+                description = { Text(Localization.get(language, "skip_silence_instant_desc")) },
+                trailing = { Switch(checked = skipSilenceInstant, onCheckedChange = onToggleSkipSilenceInstant) },
+                onClick = { onToggleSkipSilenceInstant(!skipSilenceInstant) },
             ),
         ),
     )

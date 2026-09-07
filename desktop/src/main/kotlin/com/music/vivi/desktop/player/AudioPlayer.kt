@@ -98,6 +98,14 @@ class AudioPlayer {
          *  the atom walk keeps a huge network burst from stalling the decode
          *  thread in a single giant scan (see [decodeAndPlay]). */
         const val SCAN_WINDOW_BYTES = 256 * 1024L
+
+        /** RMS level below which a decoded frame counts as silence (~-62 dBFS). */
+        const val SILENCE_RMS_LEVEL = 0.0008f
+
+        /** Minimum consecutive silent frames before a run is skipped (~150 ms
+         *  at ~43 frames/s): short gaps, breaths and quiet attacks stay intact.
+         *  With "Instantly skip silence" the wait is reduced to 2 frames. */
+        const val MIN_SILENCE_RUN_FRAMES = 7
     }
 
     @Volatile private var line: SourceDataLine? = null
@@ -109,6 +117,20 @@ class AudioPlayer {
      * EQ profile (Settings → Player & audio → Equalizer).
      */
     @Volatile var equalizer: EqualizerProcessor? = null
+
+    /**
+     * "Skip silence": silent runs are dropped from the output while a track
+     * plays, so it fast-forwards through them. Default false = the audio path
+     * is byte-identical to before (no silence detection runs).
+     */
+    @Volatile var skipSilence: Boolean = false
+
+    /**
+     * "Instantly skip silence": on top of [skipSilence], leading silence at
+     * the start of a track/seek is cut right away and mid-track silent runs
+     * are jumped as soon as they are detected (2 frames instead of ~150 ms).
+     */
+    @Volatile var skipSilenceInstant: Boolean = false
 
     private var onPosition: ((Long) -> Unit)? = null
     private var onDuration: ((Long) -> Unit)? = null
@@ -746,33 +768,63 @@ class AudioPlayer {
                 }
             }
 
+            // "Skip silence" state. [leading] is true until the first audible
+            // frame of this decode session has actually been written, so a
+            // silent intro (or the silence after a seek) is cut without waiting
+            // for the run-length detection. [silentRunFrames] counts consecutive
+            // silent frames; once it crosses the threshold the run is dropped.
+            val silenceEnabled = skipSilence || skipSilenceInstant
+            var leading = true
+            var silentRunFrames = 0
+            var suppressing = false
+
             fun emit() {
                 // Write the current frame to the output line (skipped while
                 // paused) and report the decoded position.
-                if (elapsedSeconds + buffer.length >= targetSeconds) {
-                    if (!paused) {
-                        val data = if (volume < 0.999f && bitsPerSample == 16) {
-                            scale16(buffer.data, volume, bigEndian)
-                        } else {
-                            buffer.data
+                val doWrite = !paused && elapsedSeconds + buffer.length >= targetSeconds
+                var suppressed = false
+                if (doWrite && bitsPerSample == 16 && silenceEnabled) {
+                    val silent = rms16(buffer.data, bigEndian) <= SILENCE_RMS_LEVEL
+                    if (silent) {
+                        // Nothing audible has been written yet: cut immediately.
+                        // Otherwise count the run; "instantly" skips as soon as
+                        // the run is clearly detected (2 frames), the normal
+                        // mode after the longer minimum (~150 ms) so breaths
+                        // and quiet attacks stay intact.
+                        val minRun = if (skipSilenceInstant) 2 else MIN_SILENCE_RUN_FRAMES
+                        if (!suppressing) {
+                            if (leading || ++silentRunFrames >= minRun) suppressing = true
                         }
-                        // Optional EQ: applied to the final PCM buffer (after the
-                        // volume scale) so it stays a pure add-on — null default
-                        // keeps the audio path identical to before.
-                        val outData = equalizer?.let { eq ->
-                            if (bitsPerSample == 16) eq.process(data, bigEndian, buffer.sampleRate, buffer.channels)
-                            else data
-                        } ?: data
-                        var written = 0
-                        while (written < outData.size) {
-                            val n = out.write(outData, written, outData.size - written)
-                            if (n <= 0) break
-                            written += n
-                        }
-                        if (bitsPerSample == 16) {
-                            levelTick = !levelTick
-                            if (levelTick) onLevel?.invoke(rms16(outData, bigEndian))
-                        }
+                        if (suppressing) suppressed = true
+                    } else {
+                        // An audible frame ends any suppression window.
+                        suppressing = false
+                        silentRunFrames = 0
+                    }
+                }
+                if (doWrite && !suppressed) {
+                    leading = false
+                    val data = if (volume < 0.999f && bitsPerSample == 16) {
+                        scale16(buffer.data, volume, bigEndian)
+                    } else {
+                        buffer.data
+                    }
+                    // Optional EQ: applied to the final PCM buffer (after the
+                    // volume scale) so it stays a pure add-on — null default
+                    // keeps the audio path identical to before.
+                    val outData = equalizer?.let { eq ->
+                        if (bitsPerSample == 16) eq.process(data, bigEndian, buffer.sampleRate, buffer.channels)
+                        else data
+                    } ?: data
+                    var written = 0
+                    while (written < outData.size) {
+                        val n = out.write(outData, written, outData.size - written)
+                        if (n <= 0) break
+                        written += n
+                    }
+                    if (bitsPerSample == 16) {
+                        levelTick = !levelTick
+                        if (levelTick) onLevel?.invoke(rms16(outData, bigEndian))
                     }
                 }
                 reportPosition()
