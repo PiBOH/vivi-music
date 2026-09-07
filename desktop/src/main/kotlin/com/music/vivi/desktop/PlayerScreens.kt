@@ -1975,11 +1975,14 @@ fun LyricsScreen(
         }
         // Multi-provider fetch: real duration when known, community servers
         // first and the official YouTube Music lyrics as the exact fallback.
+        // With the "Synced lyrics" option on, a timed LRC is preferred across
+        // the whole chain (plain text only if no source has timestamps).
         DesktopLyrics.fetch(
             videoId = np.videoId,
             title = np.title,
             artist = np.artist,
             durationMs = np.durationMs,
+            preferSynced = synced,
         ).fold(
             onSuccess = {
                 lyrics = it

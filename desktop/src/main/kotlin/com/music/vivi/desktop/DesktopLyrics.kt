@@ -33,16 +33,33 @@ object DesktopLyrics {
     /** Per-provider ceiling; a hung provider is skipped, never blocks lyrics. */
     private const val PROVIDER_TIMEOUT_MS = 6_000L
 
+    /** LRC line timestamp, e.g. `[01:23.45]` / `[1:23]`. */
+    private val lrcTime = Regex("""\[\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?]""")
+
+    /** Rich-sync word timestamp, e.g. `<01:23.45>`. */
+    private val richTime = Regex("""<\d{1,2}:\d{2}(?:[.:]\d{1,3})?>""")
+
+    /** True when the text carries timestamps (line-level LRC or word-level). */
+    private fun looksSynced(text: String) = lrcTime.containsMatchIn(text) || richTime.containsMatchIn(text)
+
     /**
      * Tries the providers in order and returns the first usable text.
      * [durationMs] may be 0/unknown — providers then fall back to their own
      * title/artist matching (same as before).
+     *
+     * When [preferSynced] is true (the "Synced lyrics" option), a TIMED
+     * result is preferred across the whole chain: once a provider answers with
+     * plain text, the search keeps going through the remaining sources in the
+     * hope of finding a synced version of the same song, and only falls back
+     * to that plain text when no source has timestamps. When false, the first
+     * usable answer wins (previous behavior).
      */
     suspend fun fetch(
         videoId: String,
         title: String,
         artist: String,
         durationMs: Long,
+        preferSynced: Boolean = true,
     ): Result<String> {
         val durationSec = if (durationMs > 0) (durationMs / 1000L).toInt() else -1
 
@@ -61,8 +78,9 @@ object DesktopLyrics {
 
         AppLog.log(
             "lyrics",
-            "fetch lyrics for '$title' [$videoId] (duration=${if (durationSec > 0) "${durationSec}s" else "unknown"})",
+            "fetch lyrics for '$title' [$videoId] (duration=${if (durationSec > 0) "${durationSec}s" else "unknown"}, preferSynced=$preferSynced)",
         )
+        var plainFallback: String? = null
         for ((name, call) in providers) {
             val result = withTimeoutOrNull(PROVIDER_TIMEOUT_MS) { call() }
             if (result == null) {
@@ -71,13 +89,31 @@ object DesktopLyrics {
             }
             result
                 .onSuccess { text ->
-                    if (text.isNotBlank()) {
-                        AppLog.log("lyrics", "  $name: got ${text.length} chars for '$title'")
-                        return Result.success(text)
+                    if (text.isBlank()) {
+                        AppLog.log("lyrics", "  $name: returned blank lyrics for '$title'")
+                        return@onSuccess
                     }
-                    AppLog.log("lyrics", "  $name: returned blank lyrics for '$title'")
+                    val synced = looksSynced(text)
+                    AppLog.log(
+                        "lyrics",
+                        "  $name: got ${text.length} chars (${if (synced) "synced" else "plain"}) for '$title'",
+                    )
+                    // Synced result (or the option off / any answer): done.
+                    if (synced || !preferSynced) return Result.success(text)
+                    // Plain answer while syncing is wanted: remember it as a
+                    // fallback but keep looking for a timed version.
+                    if (plainFallback == null) {
+                        plainFallback = text
+                        AppLog.log("lyrics", "  $name: plain fallback kept — hunting for synced lyrics")
+                    }
                 }
                 .onFailure { AppLog.log("lyrics", "  $name: ${it.message} for '$title'") }
+        }
+
+        // No source had timestamps: use the best plain text we found.
+        plainFallback?.let {
+            AppLog.log("lyrics", "no synced lyrics found — using the plain fallback (${it.length} chars) for '$title'")
+            return Result.success(it)
         }
 
         // Last resort: the official lyrics for this exact video (never a wrong
