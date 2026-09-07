@@ -124,6 +124,8 @@ import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.filled.DiscFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.QueueMusic
@@ -900,6 +902,9 @@ fun WindowScope.App(
     var autoDownloadOnLike by remember { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
     var skipSilence by remember { mutableStateOf(DesktopSettings.load().skipSilence) }
     var skipSilenceInstant by remember { mutableStateOf(DesktopSettings.load().skipSilenceInstant) }
+    var crossfade by remember { mutableStateOf(DesktopSettings.load().crossfade) }
+    var crossfadeDurationSeconds by remember { mutableStateOf(DesktopSettings.load().crossfadeDurationSeconds) }
+    var disableCrossfadeGapless by remember { mutableStateOf(DesktopSettings.load().disableCrossfadeGapless) }
 
     // "Auto download on like": cache a song into the audio cache the moment it
     // is liked (the setting is read live when the like happens).
@@ -1185,6 +1190,9 @@ fun WindowScope.App(
         artist = song.artists.joinToString(", ") { it.name },
         thumbnail = song.thumbnail,
         durationMs = (song.duration ?: 0) * 1000L,
+        // Album name (when known): feeds the "disable crossfade for gapless
+        // albums" rule on the player.
+        album = song.album?.name,
     )
 
     val playSong: (SongItem) -> Unit = { song -> player.play(songToNowPlaying(song)) }
@@ -2242,6 +2250,21 @@ fun WindowScope.App(
                         onToggleSkipSilenceInstant = { checked ->
                             skipSilenceInstant = checked
                             DesktopSettings.update { it.copy(skipSilenceInstant = checked) }
+                        },
+                        crossfade = crossfade,
+                        onToggleCrossfade = { checked ->
+                            crossfade = checked
+                            DesktopSettings.update { it.copy(crossfade = checked) }
+                        },
+                        crossfadeDurationSeconds = crossfadeDurationSeconds,
+                        onCrossfadeDurationSecondsChange = { v ->
+                            crossfadeDurationSeconds = v
+                            DesktopSettings.update { it.copy(crossfadeDurationSeconds = v) }
+                        },
+                        disableCrossfadeGapless = disableCrossfadeGapless,
+                        onToggleDisableCrossfadeGapless = { checked ->
+                            disableCrossfadeGapless = checked
+                            DesktopSettings.update { it.copy(disableCrossfadeGapless = checked) }
                         },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
@@ -6018,6 +6041,12 @@ fun PlayerSection(
     onToggleSkipSilence: (Boolean) -> Unit,
     skipSilenceInstant: Boolean,
     onToggleSkipSilenceInstant: (Boolean) -> Unit,
+    crossfade: Boolean,
+    onToggleCrossfade: (Boolean) -> Unit,
+    crossfadeDurationSeconds: Int,
+    onCrossfadeDurationSecondsChange: (Int) -> Unit,
+    disableCrossfadeGapless: Boolean,
+    onToggleDisableCrossfadeGapless: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -6169,7 +6198,38 @@ fun PlayerSection(
                 trailing = { Switch(checked = skipSilenceInstant, onCheckedChange = onToggleSkipSilenceInstant) },
                 onClick = { onToggleSkipSilenceInstant(!skipSilenceInstant) },
             ),
+            M3SettingsItem(
+                icon = Icons.Filled.CompareArrows,
+                title = { Text(Localization.get(language, "crossfade")) },
+                description = { Text(Localization.get(language, "crossfade_desc")) },
+                trailing = { Switch(checked = crossfade, onCheckedChange = onToggleCrossfade) },
+                onClick = { onToggleCrossfade(!crossfade) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.DiscFull,
+                title = { Text(Localization.get(language, "disable_crossfade_gapless")) },
+                description = { Text(Localization.get(language, "disable_crossfade_gapless_desc")) },
+                trailing = { Switch(checked = disableCrossfadeGapless, onCheckedChange = onToggleDisableCrossfadeGapless) },
+                onClick = { onToggleDisableCrossfadeGapless(!disableCrossfadeGapless) },
+            ),
         ),
+    )
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.CompareArrows,
+                title = { Text("${Localization.get(language, "crossfade_duration")}: $crossfadeDurationSeconds s") },
+                description = { Text(Localization.get(language, "crossfade_duration_desc")) },
+            ),
+        ),
+    )
+    Slider(
+        value = crossfadeDurationSeconds.coerceIn(1, 12).toFloat(),
+        onValueChange = { onCrossfadeDurationSecondsChange(it.roundToInt().coerceIn(1, 12)) },
+        valueRange = 1f..12f,
+        steps = 10,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
 
     M3SettingsGroup(

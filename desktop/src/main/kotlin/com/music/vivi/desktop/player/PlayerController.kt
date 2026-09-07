@@ -12,7 +12,9 @@ import com.music.vivi.desktop.ParametricEQ
 import com.music.vivi.desktop.SavedEQProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -60,7 +62,7 @@ data class PlayerState(
  */
 class PlayerController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val player = AudioPlayer()
+    @Volatile private var player = AudioPlayer()
 
     /** Whether to automatically play the next queued track when one ends. */
     @Volatile var autoPlayNext: Boolean = true
@@ -97,6 +99,37 @@ class PlayerController {
      * playlists (when off, a freshly started queue resets shuffle).
      */
     @Volatile var persistentShuffleAcrossQueues: Boolean = false
+
+    // ------------------------------------------------------------------
+    // Crossfade ("Crossfade", port of the mobile option)
+    // ------------------------------------------------------------------
+    // When enabled, the current track is overlapped with the next one near
+    // its end: a second AudioPlayer (its own output line on the same mixer,
+    // which the OS mixes together) starts the incoming track muted and both
+    // volumes ramp over the fade window, then the swap hands the incoming
+    // player to the main slot. With the option OFF every path here is
+    // skipped and the playback core behaves exactly as before.
+
+    /** "Crossfade": overlap tracks near the end of the current one. */
+    @Volatile var crossfadeEnabled: Boolean = false
+
+    /** Crossfade overlap in seconds (1–12, like mobile). */
+    @Volatile var crossfadeDurationSeconds: Int = 5
+
+    /** "Disable for gapless albums": skip the fade between same-album tracks. */
+    @Volatile var disableCrossfadeGapless: Boolean = false
+
+    /** Incoming (second) player used for the fade; null = no fade in flight. */
+    @Volatile private var crossfadePlayer: AudioPlayer? = null
+
+    private var fadeJob: Job? = null
+
+    /** playToken of the track whose end has a scheduled crossfade (-1 = none). */
+    @Volatile private var crossfadeScheduledToken = -1
+
+    @Volatile private var crossfadeTargetIndex = -1
+    @Volatile private var crossfadeInPositionMs = 0L
+    @Volatile private var crossfadeInDurationMs = 0L
 
     private companion object {
         /** Total resolution/playback attempts before an error is surfaced. */
@@ -520,6 +553,7 @@ class PlayerController {
 
     fun stop() {
         playToken++
+        abortCrossfade()
         player.stop()
         loadedVideoId = null
         _bufferedFraction.value = 1f
@@ -529,6 +563,8 @@ class PlayerController {
 
     fun seekTo(ms: Long) {
         AppLog.log("playback", "seek to ${ms}ms")
+        // A local scrub during the fade window cancels the overlap.
+        abortCrossfade()
         seekInternal(ms, startStream = true)?.let { _seekEvents.tryEmit(it) }
     }
 
@@ -627,6 +663,7 @@ class PlayerController {
         if (playing) {
             startCurrent(s)
         } else {
+            abortCrossfade()
             player.pause()
             _state.update { it.copy(isPlaying = false) }
         }
@@ -704,6 +741,7 @@ class PlayerController {
     fun restoreQueue(tracks: List<NowPlaying>, index: Int) {
         if (tracks.isEmpty()) return
         playToken++
+        abortCrossfade()
         player.stop()
         loadedVideoId = null
         _bufferedFraction.value = 1f
@@ -775,6 +813,13 @@ class PlayerController {
             // the toggle applies from the next track/session).
             player.skipSilence = playSettings.skipSilence
             player.skipSilenceInstant = playSettings.skipSilenceInstant
+            // "Crossfade": snapshot per played track (like skip silence), and
+            // abandon any in-flight fade from a previous session (a manual
+            // next/previous/seek/restart always cancels the overlap).
+            crossfadeEnabled = playSettings.crossfade
+            crossfadeDurationSeconds = playSettings.crossfadeDurationSeconds.coerceIn(1, 12)
+            disableCrossfadeGapless = playSettings.disableCrossfadeGapless
+            abortCrossfade()
             // "History duration": a track only enters the listen history (the
             // seeds behind the Home "Recommended" row) after it actually played
             // for this long, not the moment it starts (default 30 s, like the
@@ -907,6 +952,9 @@ class PlayerController {
                     }
                 },
                 onPosition = { pos ->
+                    // Crossfade: once the playhead enters the fade window
+                    // before the end, schedule the next track's overlap.
+                    maybeScheduleCrossfade(index, track, pos)
                     // Record the track into the listen history (Home seeds)
                     // only after it actually played for the "History duration"
                     // threshold — and only while it is still the current track.
@@ -953,6 +1001,23 @@ class PlayerController {
                 },
                 onComplete = {
                     if (token != playToken) return@play
+                    // A crossfade was scheduled for this track's end: if the
+                    // incoming player is already running, hand it the main
+                    // slot; otherwise fall back to the normal advance (the
+                    // incoming stream failed to resolve in time).
+                    if (crossfadeScheduledToken == token) {
+                        if (crossfadePlayer != null) {
+                            completeCrossfadeSwap()
+                        } else {
+                            crossfadeScheduledToken = -1
+                            crossfadeTargetIndex = -1
+                            val s = _state.value
+                            if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
+                                handleTrackEnd(s, index, token)
+                            }
+                        }
+                        return@play
+                    }
                     val s = _state.value
                     if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
                         handleTrackEnd(s, index, token)
@@ -969,13 +1034,7 @@ class PlayerController {
                 if (token == playToken) playAt(s.queue, index)
             }
             autoPlayNext -> {
-                val nextIndex = when {
-                    s.queue.size == 1 && s.repeatMode != RepeatMode.ALL -> -1
-                    s.isShuffle -> randomIndexExcluding(s.queue.size, s.index)
-                    s.index < s.queue.lastIndex -> s.index + 1
-                    s.repeatMode == RepeatMode.ALL -> 0
-                    else -> -1
-                }
+                val nextIndex = nextIndexFor(s) ?: -1
                 if (nextIndex >= 0) {
                     // Auto-advance is also a local play intent: the peer's
                     // pre-advance "paused" echo must not pause the new track.
@@ -991,6 +1050,201 @@ class PlayerController {
                 loadedVideoId = null
                 _state.update { it.copy(isPlaying = false) }
             }
+        }
+    }
+
+    /** Next queue index under the current repeat/shuffle/auto-advance rules
+     *  (null = no next track). Shared by [handleTrackEnd] and the crossfade
+     *  scheduler so both advance identically. */
+    private fun nextIndexFor(s: PlayerState): Int? = when {
+        s.repeatMode == RepeatMode.ONE -> s.index
+        !autoPlayNext -> null
+        s.queue.size == 1 && s.repeatMode != RepeatMode.ALL -> null
+        s.isShuffle -> randomIndexExcluding(s.queue.size, s.index)
+        s.index < s.queue.lastIndex -> s.index + 1
+        s.repeatMode == RepeatMode.ALL -> 0
+        else -> null
+    }
+
+    /** Abandons any in-flight crossfade (new play intent, stop, local seek…).
+     *  Cheap no-op when no fade is scheduled. */
+    private fun abortCrossfade() {
+        fadeJob?.cancel()
+        fadeJob = null
+        crossfadePlayer?.let { cp ->
+            crossfadePlayer = null
+            runCatching { cp.stop() }
+        }
+        crossfadeScheduledToken = -1
+        crossfadeTargetIndex = -1
+        // The fade ramp may have lowered the main player's volume: restore it.
+        player.setVolume(_state.value.volume)
+    }
+
+    /** Called from the current track's position reports: schedules the overlap
+     *  once the playhead enters the fade window before the end. */
+    private fun maybeScheduleCrossfade(index: Int, track: NowPlaying, pos: Long) {
+        if (!crossfadeEnabled) return
+        if (crossfadeScheduledToken != -1) return
+        val s = _state.value
+        if (s.index != index) return
+        val dur = s.durationMs
+        if (dur <= 0L) return
+        val fadeMs = crossfadeDurationSeconds.coerceIn(1, 12) * 1000L
+        val remaining = dur - pos
+        // ~1.5 s of margin for the incoming stream to resolve; a negative
+        // remaining means the track already ended (normal onComplete path).
+        if (remaining > fadeMs + 1500L || remaining <= 0L) return
+        val next = nextIndexFor(s) ?: return
+        val nextTrack = s.queue.getOrNull(next) ?: return
+        if (disableCrossfadeGapless && !track.album.isNullOrBlank() && track.album == nextTrack.album) {
+            AppLog.log("playback", "crossfade skipped — same album (gapless): '${track.album}'")
+            return
+        }
+        startCrossfade(next, nextTrack, fadeMs)
+    }
+
+    private fun startCrossfade(nextIndex: Int, nextTrack: NowPlaying, fadeMs: Long) {
+        crossfadeScheduledToken = playToken
+        crossfadeTargetIndex = nextIndex
+        AppLog.log("playback", "crossfade: scheduling '${nextTrack.title}' (index $nextIndex, fade ${fadeMs}ms)")
+        scope.launch {
+            val alreadyCached = player.isCached(nextTrack.videoId)
+            val streams = if (alreadyCached) {
+                emptyList()
+            } else {
+                runCatching {
+                    StreamResolver.resolveAacStream(
+                        nextTrack.videoId,
+                        StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                    )
+                }.getOrDefault(emptyList())
+            }
+            if (crossfadeScheduledToken != playToken) return@launch
+            if (streams.isEmpty() && !alreadyCached) {
+                // No stream: fall back to the normal advance (the outgoing
+                // track's onComplete will handle it).
+                AppLog.log("playback", "crossfade: no stream for '${nextTrack.title}' — normal advance")
+                crossfadeScheduledToken = -1
+                crossfadeTargetIndex = -1
+                return@launch
+            }
+            val cp = AudioPlayer()
+            // Same visual feeds as the main player (level / buffered fraction).
+            cp.onLevel = { level -> _audioLevel.value = level }
+            cp.onBufferedFraction = { frac -> _bufferedFraction.value = frac }
+            cp.equalizer = player.equalizer
+            val ps = DesktopSettings.load()
+            cp.skipSilence = ps.skipSilence
+            cp.skipSilenceInstant = ps.skipSilenceInstant
+            val token = playToken
+            var historyNoted = false
+            val historyThresholdMs = (ps.historyDurationSeconds * 1000L).coerceAtLeast(0L)
+            cp.play(
+                streams = streams,
+                cacheKey = nextTrack.videoId,
+                startAtMs = 0L,
+                startPaused = true,
+                onError = { msg ->
+                    AppLog.log("playback", "crossfade error for '${nextTrack.title}': $msg — normal advance")
+                    if (crossfadeScheduledToken == token) {
+                        crossfadeScheduledToken = -1
+                        crossfadeTargetIndex = -1
+                        crossfadePlayer = null
+                        runCatching { cp.stop() }
+                    }
+                },
+                onPosition = { p ->
+                    crossfadeInPositionMs = p
+                    // History entry once actually heard (threshold, like the
+                    // main path) — only after the swap makes it the current
+                    // track, so the guard below matches.
+                    if (p >= historyThresholdMs && !historyNoted) {
+                        val st = _state.value
+                        if (st.index == nextIndex && st.queue.getOrNull(nextIndex)?.videoId == nextTrack.videoId) {
+                            historyNoted = true
+                            noteTrackStarted(nextTrack)
+                        }
+                    }
+                },
+                onDuration = { d -> crossfadeInDurationMs = d },
+                onComplete = {
+                    // The incoming track finished: it is the active player now
+                    // (the swap already happened on the outgoing track's end).
+                    if (token != playToken) return@play
+                    val s = _state.value
+                    if (s.index == nextIndex && s.queue.getOrNull(nextIndex)?.videoId == nextTrack.videoId) {
+                        handleTrackEnd(s, nextIndex, token)
+                    }
+                },
+            )
+            // The outgoing track may have ended while the stream was still
+            // resolving (no overlap possible): the normal advance is already
+            // running, so stop the incoming player here.
+            if (crossfadeScheduledToken != playToken) {
+                runCatching { cp.stop() }
+                crossfadePlayer = null
+                return@launch
+            }
+            crossfadePlayer = cp
+            cp.resume()
+            fadeJob = scope.launch {
+                val master = _state.value.volume
+                val steps = 40
+                repeat(steps) { i ->
+                    val t = (i + 1) / steps.toFloat()
+                    runCatching { cp.setVolume(master * t) }
+                    runCatching { player.setVolume(master * (1 - t)) }
+                    delay(fadeMs / steps)
+                }
+                runCatching { cp.setVolume(master) }
+            }
+        }
+    }
+
+    /** Called from the outgoing track's onComplete while the fade is live:
+     *  hands the incoming player to the main slot and updates the state. */
+    private fun completeCrossfadeSwap() {
+        val incoming = crossfadePlayer ?: run {
+            crossfadeScheduledToken = -1
+            crossfadeTargetIndex = -1
+            return
+        }
+        val s = _state.value
+        val bIndex = crossfadeTargetIndex
+        val bTrack = s.queue.getOrNull(bIndex) ?: run {
+            crossfadeScheduledToken = -1
+            crossfadeTargetIndex = -1
+            return
+        }
+        fadeJob?.cancel()
+        fadeJob = null
+        crossfadeScheduledToken = -1
+        crossfadeTargetIndex = -1
+        crossfadePlayer = null
+        runCatching { player.stop() }
+        player = incoming
+        loadedVideoId = bTrack.videoId
+        val vol = s.volume
+        incoming.setVolume(vol)
+        val dur = crossfadeInDurationMs.takeIf { it > 0L } ?: bTrack.durationMs
+        AppLog.log("playback", "crossfade complete — '${bTrack.title}' is now current")
+        val queue = s.queue.toMutableList()
+        if (queue.getOrNull(bIndex)?.videoId == bTrack.videoId && dur > 0L) {
+            queue[bIndex] = queue[bIndex].copy(durationMs = dur)
+        }
+        _state.update {
+            it.copy(
+                queue = queue,
+                index = bIndex,
+                positionMs = crossfadeInPositionMs.coerceAtMost(dur),
+                durationMs = dur,
+                isPlaying = true,
+                isResolving = false,
+                loadPhase = LoadPhase.NONE,
+                errorKey = null,
+                errorDetail = null,
+            )
         }
     }
 

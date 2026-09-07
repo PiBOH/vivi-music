@@ -122,6 +122,12 @@ data class DesktopSyncState(
     val skipSilence: Boolean = false,
     /** Also cut leading silence immediately at start/seek ("Instantly skip silence"). */
     val skipSilenceInstant: Boolean = false,
+    /** "Crossfade": overlap tracks near the end of the current one (port of the mobile option). */
+    val crossfade: Boolean = false,
+    /** Crossfade overlap duration in seconds (mobile range 1–12). */
+    val crossfadeDurationSeconds: Int = 5,
+    /** "Disable for gapless albums": skip crossfade between tracks of the same album. */
+    val disableCrossfadeGapless: Boolean = false,
     val sidebarCollapsed: Boolean = false,
     /** Spotify-inspired 3-panel card layout & top navigation header. */
     val spotifyLayout: Boolean = true,

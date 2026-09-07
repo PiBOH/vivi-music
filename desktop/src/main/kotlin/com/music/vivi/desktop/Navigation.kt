@@ -79,6 +79,8 @@ data class NowPlaying(
     val artist: String,
     val thumbnail: String? = null,
     val durationMs: Long = 0L,
+    /** Album name when known (used by the "disable crossfade for gapless albums" rule). */
+    val album: String? = null,
 )
 
 /** Session listening stats shown by the Home "VIVI Wrapped" card. */

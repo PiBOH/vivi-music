@@ -11,7 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
-## [6.0.6.3_DE-1.50.36-alpha] - 2026-09-07
+## [6.0.6.3_DE-1.50.37-alpha] - 2026-09-07
+
+### Added
+- [DE] **Crossfade** (port of the mobile option, Settings → Player & audio): tracks now overlap with a short fade at the end of each song instead of hard-cutting. A second audio session starts the next track muted near the end of the current one and both volumes ramp over the fade window, then the incoming session becomes the active player — with the option **off** (default) the audio path is byte-identical to before. Includes a **Crossfade duration** slider (1–12 s, like mobile) and a **Disable for gapless albums** toggle that skips the fade between tracks of the same album so they flow seamlessly (album metadata is carried on the now-playing model when known). Manual next/previous/seek/pause/stop cancels the overlap and falls back to the normal advance, and a track whose stream fails to resolve in time advances normally instead of stalling. (Closes [#42](https://github.com/PiBOH/vivi-music/issues/42) — last item of the Player & audio port)
+
+### Commits
+- v: DE 1.50.37-alpha — crossfade with duration slider and same-album gapless exemption completes the #42 port
+
 
 ### Changed
 - [DE] **Lyrics prefer the synced (timed) version when the "Synced lyrics" option is on**: instead of returning the first provider that answers (which could be plain text even when another source had a timed LRC for the same song), the resolver now keeps hunting across the chain once a plain result arrives and returns a timed LRC as soon as one is found — plain text is only used when no source has timestamps. The persistent lyric cache was versioned again (`v3`) so entries cached with the previous first-answer-wins behavior are re-fetched. With the option off the first usable answer still wins. (Closes [#46](https://github.com/PiBOH/vivi-music/issues/46))
