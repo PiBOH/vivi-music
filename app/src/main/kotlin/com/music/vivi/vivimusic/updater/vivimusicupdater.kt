@@ -787,7 +787,14 @@ suspend fun checkForUpdate(
             var nightlyRunObject: JSONObject? = null
             val nightlyChangelog = mutableListOf<String>()
 
-            if (betaEnabled) {
+            // The nightly-workflow mechanism only exists UPSTREAM (vivizzz007):
+            // its nightly.yml CI produces vivi-music-gms-nightly.zip served via
+            // nightly.link. Our fork (PiBOH/vivi-music) publishes the companion
+            // APKs as GitHub RELEASES (combined alpha tags), so when the update
+            // source is the fork the prerelease channel MUST be resolved from
+            // the releases below — never from (non-existent) nightly runs.
+            val isUpstreamSource = updateRepo(context) == REPO_ORIGINAL
+            if (betaEnabled && isUpstreamSource) {
                 try {
                     val nightlyUrl = URL("https://api.github.com/repos/${updateRepo(context)}/actions/workflows/nightly.yml/runs?status=success&per_page=100")
                     val nightlyJson = nightlyUrl.openStream().bufferedReader().use { it.readText() }
@@ -999,10 +1006,15 @@ suspend fun checkForUpdate(
 
                     var apkSizeInMB = ""
                     var apkDownloadUrl = ""
-                    // Prefer the original repo's `vivi.apk`; otherwise any APK
-                    // (the fork ships `VIVIMusic-<version>-debug.apk`).
+                    // Pick the APK that matches this build: the fork releases
+                    // carry vivi-gsm.apk (Google services) and vivi-foss.apk
+                    // (no Google services), while upstream ships vivi.apk. Fall
+                    // back to any .apk asset so a release is only offered when
+                    // an APK is actually attached.
                     val apkAssets = (0 until assets.length()).map { assets.getJSONObject(it) }
-                    val apkAsset = apkAssets.firstOrNull { it.getString("name") == "vivi.apk" }
+                    val expectedApk = if (BuildConfig.CAST_AVAILABLE) "vivi-gsm.apk" else "vivi-foss.apk"
+                    val apkAsset = apkAssets.firstOrNull { it.getString("name") == expectedApk }
+                        ?: apkAssets.firstOrNull { it.getString("name") == "vivi.apk" }
                         ?: apkAssets.firstOrNull { it.getString("name").endsWith(".apk", ignoreCase = true) }
                     if (apkAsset != null) {
                         val apkSizeInBytes = apkAsset.getLong("size")
