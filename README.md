@@ -66,7 +66,7 @@
     </td>
     <td width="33%" align="center">
       <b>🐧 Linux</b><br>
-      <small><code>.deb</code> (Debian/Ubuntu) and portable <code>.AppImage</code></small>
+      <small><code>.deb</code> (Debian/Ubuntu) and portable <code>.AppImage</code> and Arch (see install guide in each release)</small>
     </td>
     <td width="33%" align="center">
       <b>🍎 macOS 10.15+</b><br>
