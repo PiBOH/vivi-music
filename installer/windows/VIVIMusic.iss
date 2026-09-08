@@ -23,7 +23,7 @@
 
 #define AppName "VIVI Music DE"
 #define AppExe "VIVIMusic.exe"
-#define AppPublisher "VIVI Music"
+#define AppPublisher "PiBOH"
 #define AppId "com.vivi.vivimusic.desktop"
 
 [Setup]
@@ -32,7 +32,7 @@ AppName={#AppName}
 ; Inno Setup requires a numeric application version. The full `-DE` SemVer stays
 ; visible in AppVerName and in the output filename.
 AppVersion={#InstallerVersion}
-AppVerName={#AppName} {#AppVersion}
+AppVerName={#AppName}
 AppPublisher={#AppPublisher}
 AppPublisherURL=https://github.com/PiBOH/vivi-music
 AppSupportURL=https://github.com/PiBOH/vivi-music
@@ -63,7 +63,7 @@ VersionInfoDescription={#AppName} desktop client
 VersionInfoProductName={#AppName}
 VersionInfoVersion={#InstallerVersion}
 VersionInfoProductVersion={#InstallerVersion}
-VersionInfoCopyright=Copyright (c) 2026 VIVI Music
+VersionInfoCopyright=Copyright (c) 2026 PiBOH
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -311,7 +311,13 @@ end;
 
 procedure InitializeUninstallProgressForm();
 begin
-  CreateUninstallDetailsMemo();
+  try
+    CreateUninstallDetailsMemo();
+  except
+    { TNewMemo.Create may fail during uninstall on some Inno Setup versions
+      because UninstallProgressForm.InstallingPage is not always available.
+      The cleanup still runs fine without the log box. }
+  end;
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
