@@ -3689,7 +3689,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "back")) {
+                Tooltip(Localization.get(language, "tooltip_back")) {
                     IconButton(
                         onClick = onBack,
                         enabled = canGoBack,
@@ -3737,7 +3737,7 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Tooltip(Localization.get(language, "home")) {
+                Tooltip(Localization.get(language, "tooltip_home")) {
                     IconButton(
                         onClick = onOpenHome,
                         modifier = Modifier.size(36.dp),
@@ -3957,7 +3957,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "lyrics")) {
+                Tooltip(Localization.get(language, "tooltip_lyrics")) {
                     IconButton(
                         onClick = onOpenLyrics,
                         modifier = Modifier.size(32.dp),
@@ -3970,7 +3970,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "queue")) {
+                Tooltip(Localization.get(language, "tooltip_queue")) {
                     IconButton(
                         onClick = onOpenQueue,
                         modifier = Modifier.size(32.dp),
@@ -3983,7 +3983,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "history")) {
+                Tooltip(Localization.get(language, "tooltip_history")) {
                     IconButton(
                         onClick = onOpenHistory,
                         modifier = Modifier.size(32.dp),
@@ -3996,7 +3996,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "wrapped_title")) {
+                Tooltip(Localization.get(language, "tooltip_wrapped")) {
                     IconButton(
                         onClick = onOpenStats,
                         modifier = Modifier.size(32.dp),
@@ -4009,7 +4009,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "listen_together_title")) {
+                Tooltip(Localization.get(language, "tooltip_listen_together")) {
                     IconButton(
                         onClick = onOpenListenTogether,
                         modifier = Modifier.size(32.dp),
@@ -4022,7 +4022,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "settings")) {
+                Tooltip(Localization.get(language, "tooltip_settings")) {
                     IconButton(
                         onClick = onOpenSettings,
                         modifier = Modifier.size(32.dp),
@@ -4236,7 +4236,7 @@ fun MiniPlayer(
                             }
                         }
                     }
-                    Tooltip(Localization.get(language, "next")) {
+                    Tooltip(Localization.get(language, "tooltip_next")) {
                         IconButton(onClick = onNext) {
                             Icon(
                                 Icons.Filled.SkipNext,
@@ -4246,7 +4246,7 @@ fun MiniPlayer(
                             )
                         }
                     }
-                    Tooltip(Localization.get(language, "queue")) {
+                    Tooltip(Localization.get(language, "tooltip_queue")) {
                         IconButton(onClick = onOpenQueue) {
                             Icon(
                                 Icons.AutoMirrored.Filled.QueueMusic,
@@ -4763,7 +4763,7 @@ fun DeviceSyncSection(
         qrAddr
     }
     Box(Modifier.padding(top = 8.dp)) {
-        Tooltip(Localization.get(language, "connection_method")) {
+        Tooltip(Localization.get(language, "tooltip_connection_method")) {
             OutlinedButton(onClick = { methodExpanded = true }) {
                 Text(Localization.get(language, if (relayMode) "method_relay" else "method_lan"))
             }

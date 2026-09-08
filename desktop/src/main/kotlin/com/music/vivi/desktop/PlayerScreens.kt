@@ -2615,7 +2615,7 @@ fun ClassicDesktopMiniPlayer(
                                     )
                                 }
                             }
-                            Tooltip(Localization.get(language, "previous")) {
+                            Tooltip(Localization.get(language, "tooltip_previous")) {
                                 IconButton(onClick = onPrevious) {
                                     Icon(
                                         Icons.Filled.SkipPrevious,
@@ -2646,7 +2646,7 @@ fun ClassicDesktopMiniPlayer(
                                     }
                                 }
                             }
-                            Tooltip(Localization.get(language, "next")) {
+                            Tooltip(Localization.get(language, "tooltip_next")) {
                                 IconButton(onClick = onNext) {
                                     Icon(
                                         Icons.Filled.SkipNext,
@@ -2737,7 +2737,7 @@ fun ClassicDesktopMiniPlayer(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Tooltip(Localization.get(language, "lyrics")) {
+                        Tooltip(Localization.get(language, "tooltip_lyrics")) {
                             IconButton(onClick = onOpenLyrics) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.Subject,
@@ -2747,7 +2747,7 @@ fun ClassicDesktopMiniPlayer(
                                 )
                             }
                         }
-                        Tooltip(Localization.get(language, "queue")) {
+                        Tooltip(Localization.get(language, "tooltip_queue")) {
                             IconButton(onClick = onOpenQueue) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.QueueMusic,
@@ -2970,7 +2970,7 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "next")) {
+                Tooltip(Localization.get(language, "tooltip_next")) {
                     IconButton(onClick = onNext) {
                         Icon(
                             Icons.Filled.SkipNext,
@@ -2990,7 +2990,7 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "queue")) {
+                Tooltip(Localization.get(language, "tooltip_queue")) {
                     IconButton(onClick = onOpenQueue) {
                         Icon(
                             Icons.AutoMirrored.Filled.QueueMusic,
@@ -3146,7 +3146,7 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "next")) {
+                Tooltip(Localization.get(language, "tooltip_next")) {
                     IconButton(onClick = onNext) {
                         Icon(
                             Icons.Filled.SkipNext,
@@ -3166,7 +3166,7 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "lyrics")) {
+                Tooltip(Localization.get(language, "tooltip_lyrics")) {
                     IconButton(onClick = onOpenLyrics) {
                         Icon(
                             Icons.AutoMirrored.Filled.Subject,
@@ -3176,7 +3176,7 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "queue")) {
+                Tooltip(Localization.get(language, "tooltip_queue")) {
                     IconButton(onClick = onOpenQueue) {
                         Icon(
                             Icons.AutoMirrored.Filled.QueueMusic,
@@ -3464,7 +3464,7 @@ fun LyricsFocusScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Tooltip(Localization.get(language, "previous")) {
+            Tooltip(Localization.get(language, "tooltip_previous")) {
                 IconButton(onClick = onPrevious) {
                     Icon(
                         Icons.Filled.SkipPrevious,
@@ -3491,7 +3491,7 @@ fun LyricsFocusScreen(
                 }
             }
             Spacer(Modifier.width(20.dp))
-            Tooltip(Localization.get(language, "next")) {
+            Tooltip(Localization.get(language, "tooltip_next")) {
                 IconButton(onClick = onNext) {
                     Icon(
                         Icons.Filled.SkipNext,

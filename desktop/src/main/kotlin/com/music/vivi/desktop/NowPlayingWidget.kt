@@ -142,7 +142,7 @@ fun NowPlayingWidgetWindow(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Tooltip(Localization.get(language, "previous")) {
+                    Tooltip(Localization.get(language, "tooltip_previous")) {
                         IconButton(onClick = { player.previous() }, modifier = Modifier.size(30.dp)) {
                             Icon(
                                 Icons.Filled.SkipPrevious,
@@ -167,7 +167,7 @@ fun NowPlayingWidgetWindow(
                             )
                         }
                     }
-                    Tooltip(Localization.get(language, "next")) {
+                    Tooltip(Localization.get(language, "tooltip_next")) {
                         IconButton(onClick = { player.next() }, modifier = Modifier.size(30.dp)) {
                             Icon(
                                 Icons.Filled.SkipNext,

@@ -88,7 +88,7 @@ fun SongMenu(
     val inLibrary = SongActions.isInLibrary(song)
 
     Box {
-        Tooltip(Localization.get(language, "more")) {
+        Tooltip(Localization.get(language, "tooltip_more")) {
             IconButton(onClick = { expanded = true }) {
                 Icon(
                     Icons.Filled.MoreVert,

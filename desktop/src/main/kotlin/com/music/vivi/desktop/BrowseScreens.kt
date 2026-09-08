@@ -248,7 +248,7 @@ fun HomeScreen(
                         )
                     }
 
-                    Tooltip(Localization.get(language, "notifications")) {
+                    Tooltip(Localization.get(language, "tooltip_notifications")) {
                         IconButton(
                             onClick = { AppLog.click("Home notifications") /* Home hub / notifications */ },
                             colors = IconButtonDefaults.iconButtonColors(

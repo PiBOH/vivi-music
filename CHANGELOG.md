@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.46-alpha] - 2026-09-08
+
+### Changed
+- [DE] **Remaining tooltips now use action verbs**: "Menu" → "Open menu", "Back" → "Go back", "Forward" → "Go forward", "Home" → "Go to home", "Settings" → "Open settings", "Queue" → "Open queue", "Lyrics" → "Show lyrics", "History" → "Open history", "Notifications" → "Open notifications", "More" → "Show more options", "Next" → "Skip to next", "Previous" → "Skip to previous", "Output device" → "Select output device", "Queue options" → "Show queue options", "Autoplay" → "Toggle autoplay", "Favorite" → "Add to favorites", "Connection method" → "Select connection method", "Wrapped" → "Open VIVI Wrapped", "Listen Together" → "Start Listen Together". New `tooltip_*` keys were added to the localization generator so every language falls back to the action wording.
+
 ## [6.0.6.3_DE-1.50.45-alpha] - 2026-09-08
 
 ### Changed
