@@ -200,9 +200,12 @@
         <div class="dl-grid">
           <div class="dl">
             <span class="t">VIVI for DE — Android (GMS & FOSS)</span>
-            <span class="d">This project's own Android build (PiBOH fork), released as vivi-gsm.apk (with Google services) and vivi-foss.apk (without). It's the mobile side that pairs with the desktop app through Devices.</span>
-            <a class="btn sm" data-dl=".apk" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download APK</a>
-            <span class="miss mono" style="font-size:11px;color:var(--faint)">fetching asset list…</span>
+            <span class="d">This project's own Android build (PiBOH fork). It's the mobile side that pairs with the desktop app through Devices.</span>
+            <div class="btn-row">
+              <a class="btn sm" data-dl=".apk-gsm" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download GMS</a>
+              <a class="btn sm" data-dl=".apk-foss" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download FOSS</a>
+            </div>
+            <span class="miss mono" style="font-size:11px;color:var(--faint)">GMS = with Google services · FOSS = without</span>
           </div>
           <div class="dl">
             <span class="t">VIVI Music (upstream mobile)</span>
@@ -547,7 +550,8 @@
       { fmt: ".pkg-arm", re: /arm64.*\.pkg$/i },
       { fmt: ".dmg-x64", re: /x64.*\.dmg$/i },
       { fmt: ".pkg-x64", re: /x64.*\.pkg$/i },
-      { fmt: ".apk", re: /(vivi-gsm|vivi-foss)\.apk$/i }
+      { fmt: ".apk-gsm", re: /vivi-gsm\.apk$/i },
+      { fmt: ".apk-foss", re: /vivi-foss\.apk$/i }
     ];
 
     function render() {

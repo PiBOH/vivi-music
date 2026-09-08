@@ -993,6 +993,8 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 .dl .t { font-weight: 800; font-size: 15px; }
 .dl .d { font-size: 13px; color: var(--muted); margin: 0; }
 .dl .btn { margin-top: auto; }
+.dl .btn-row { margin-top: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.dl .btn-row .btn { margin-top: 0; }
 .dl .miss { font: 500 11px var(--font-mono); color: var(--faint); }
 .dl.off { opacity: 0.5; }
 @keyframes flashbox {
