@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.47-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **The classic mini-player seek bar now works without opening the full player first**: scrubbing a track that was already loaded (restored from the persistent queue, prefetched at startup, or cached) used to be a silent no-op, because the seek path only started the stream when `loadedVideoId` differed from the current track — but a loaded track always has a matching `loadedVideoId`. The scrub now always starts (or restarts) the stream at the chosen point when nothing is resolving. (Closes #23)
+
 ## [6.0.6.3_DE-1.50.46-alpha] - 2026-09-08
 
 ### Changed

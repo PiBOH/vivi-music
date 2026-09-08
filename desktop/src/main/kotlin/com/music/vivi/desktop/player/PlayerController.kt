@@ -624,8 +624,16 @@ class PlayerController {
             _state.update { it.copy(positionMs = 0L) }
             // Scrubbing a never-resolved track starts its stream right away;
             // [playAtAttempt] applies the pending fraction to the real duration
-            // the moment it becomes known.
-            if (startStream && !s.isResolving && loadedVideoId != s.current?.videoId) {
+            // the moment it becomes known. The scrub must start the stream even
+            // when the track was already loaded once (restored from the
+            // persistent queue, prefetched at startup, or in the cache):
+            // [playAtAttempt] sets `loadedVideoId` immediately, so keying on
+            // `loadedVideoId != current` made the scrub a silent no-op on those
+            // tracks (the mini player's seek bar felt dead until the full
+            // player was opened). playAt stops the old decoder and restarts
+            // from the scrubbed fraction, so it is safe to call on a loaded
+            // but paused stream.
+            if (startStream && !s.isResolving) {
                 playAt(s.queue, s.index, startAtMs = 0L, startPaused = false)
             }
             return null
