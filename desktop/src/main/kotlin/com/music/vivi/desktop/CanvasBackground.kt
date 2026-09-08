@@ -39,6 +39,7 @@ fun CanvasBackground(url: String?, modifier: Modifier = Modifier) {
         label = "canvasScale",
     )
 
+    val dark = isAppInDarkTheme()
     Box(modifier.clipToBounds().background(MaterialTheme.colorScheme.surfaceVariant)) {
         if (!url.isNullOrBlank()) {
             AsyncImage(
@@ -54,7 +55,12 @@ fun CanvasBackground(url: String?, modifier: Modifier = Modifier) {
                     },
             )
         }
-        // Dark scrim for contrast with the overlaid text/controls.
-        Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.35f)))
+        // Scrim for contrast with the overlaid text/controls. Without artwork
+        // the surface is the plain theme background (so the player follows
+        // Light/Dark like the rest of the UI); with artwork the scrim is
+        // stronger in dark mode and lighter in light mode.
+        if (!url.isNullOrBlank()) {
+            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = if (dark) 0.35f else 0.2f)))
+        }
     }
 }

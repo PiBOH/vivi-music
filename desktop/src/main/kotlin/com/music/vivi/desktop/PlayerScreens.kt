@@ -1512,7 +1512,7 @@ fun AppleUpNextQueueScreen(
                         Icon(
                             Icons.Filled.AllInclusive,
                             contentDescription = "Autoplay",
-                            tint = if (isAutoplayEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = if (isAutoplayEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -2256,7 +2256,7 @@ fun SpotifyRightNowPlayingPanel(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
@@ -2329,7 +2329,7 @@ fun SpotifyRightNowPlayingPanel(
                     .clickable(onClick = onOpenLyrics),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(

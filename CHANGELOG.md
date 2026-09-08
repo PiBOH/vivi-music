@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.48-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Full players and mini-player backgrounds now follow the Light/Dark/System theme**: the canvas, blur and Apple Music backgrounds hardcoded dark scrims over the artwork (and over the plain surface when no artwork was loaded), so in light mode the player surface stayed dark while the rest of the UI went light. Scrims are now theme-aware (stronger in dark, lighter in light, skipped entirely without artwork), and the autoplay indicator and artist-card borders use theme tokens instead of hardcoded white. (Closes #24)
+
 ## [6.0.6.3_DE-1.50.47-alpha] - 2026-09-08
 
 ### Fixed
