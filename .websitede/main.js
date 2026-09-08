@@ -264,16 +264,51 @@
     lb.className = 'vm-lightbox';
     lb.setAttribute('role', 'dialog');
     lb.setAttribute('aria-label', 'Screenshot preview');
+    lb.innerHTML =
+      '<button class="vm-lb-nav vm-lb-prev" aria-label="Previous screenshot">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>' +
+      '</button>' +
+      '<button class="vm-lb-nav vm-lb-next" aria-label="Next screenshot">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>' +
+      '</button>' +
+      '<span class="vm-lb-count"></span>' +
+      '<img class="vm-lb-img" src="" alt="">';
     doc.body.appendChild(lb);
+
+    function cards() {
+      return Array.prototype.slice.call(container.querySelectorAll('.gshot'));
+    }
+    var idx = -1;
+    function show(i) {
+      var list = cards();
+      if (!list.length) return;
+      idx = (i + list.length) % list.length;
+      var card = list[idx];
+      var img = lb.querySelector('.vm-lb-img');
+      img.src = card.getAttribute('data-src');
+      var cap = card.querySelector('figcaption');
+      img.alt = cap ? cap.textContent : '';
+      lb.querySelector('.vm-lb-count').textContent = (idx + 1) + ' / ' + list.length;
+      lb.classList.add('open');
+    }
+    function prev() { show(idx - 1); }
+    function next() { show(idx + 1); }
+
     container.addEventListener('click', function (e) {
       var card = e.target.closest ? e.target.closest('.gshot') : null;
       if (!card) return;
-      lb.innerHTML = '<img src="' + card.getAttribute('data-src') + '" alt="">';
-      lb.classList.add('open');
+      show(cards().indexOf(card));
     });
-    lb.addEventListener('click', function () { lb.classList.remove('open'); });
+    lb.addEventListener('click', function (e) {
+      var nav = e.target.closest ? e.target.closest('.vm-lb-nav') : null;
+      if (nav) { nav.classList.contains('vm-lb-prev') ? prev() : next(); return; }
+      lb.classList.remove('open');
+    });
     doc.addEventListener('keydown', function (e) {
+      if (!lb.classList.contains('open')) return;
       if (e.key === 'Escape') lb.classList.remove('open');
+      else if (e.key === 'ArrowLeft') prev();
+      else if (e.key === 'ArrowRight') next();
     });
   }
 
