@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.43-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Crossfade sub-options are now hidden when crossfade is off**: the "Disable for gapless albums" toggle and the crossfade duration slider no longer show when the master crossfade toggle is off. (Closes #56)
+- [DE] **Browsing "Pinned for later" and similar playlists no longer crashes**: `MusicResponsiveHeaderRenderer.buttons` is now nullable with a default empty list, so YouTube responses that omit the field are handled gracefully instead of throwing a serialization error. (Closes #57)
+
 ## [6.0.6.3_DE-1.50.42-alpha] - 2026-09-08
 
 ### Fixed

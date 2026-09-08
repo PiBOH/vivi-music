@@ -6196,32 +6196,34 @@ fun PlayerSection(
                 trailing = { Switch(checked = crossfade, onCheckedChange = onToggleCrossfade) },
                 onClick = { onToggleCrossfade(!crossfade) },
             ),
-            M3SettingsItem(
+            if (crossfade) M3SettingsItem(
                 icon = Icons.Filled.DiscFull,
                 title = { Text(Localization.get(language, "disable_crossfade_gapless")) },
                 description = { Text(Localization.get(language, "disable_crossfade_gapless_desc")) },
                 trailing = { Switch(checked = disableCrossfadeGapless, onCheckedChange = onToggleDisableCrossfadeGapless) },
                 onClick = { onToggleDisableCrossfadeGapless(!disableCrossfadeGapless) },
-            ),
+            ) else null,
         ),
     )
 
-    M3SettingsGroup(
-        items = listOf(
-            M3SettingsItem(
-                icon = Icons.Filled.CompareArrows,
-                title = { Text("${Localization.get(language, "crossfade_duration")}: $crossfadeDurationSeconds s") },
-                description = { Text(Localization.get(language, "crossfade_duration_desc")) },
+    if (crossfade) {
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.CompareArrows,
+                    title = { Text("${Localization.get(language, "crossfade_duration")}: $crossfadeDurationSeconds s") },
+                    description = { Text(Localization.get(language, "crossfade_duration_desc")) },
+                ),
             ),
-        ),
-    )
-    Slider(
-        value = crossfadeDurationSeconds.coerceIn(1, 12).toFloat(),
-        onValueChange = { onCrossfadeDurationSecondsChange(it.roundToInt().coerceIn(1, 12)) },
-        valueRange = 1f..12f,
-        steps = 10,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-    )
+        )
+        Slider(
+            value = crossfadeDurationSeconds.coerceIn(1, 12).toFloat(),
+            onValueChange = { onCrossfadeDurationSecondsChange(it.roundToInt().coerceIn(1, 12)) },
+            valueRange = 1f..12f,
+            steps = 10,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+    }
 
     M3SettingsGroup(
         items = listOf(
