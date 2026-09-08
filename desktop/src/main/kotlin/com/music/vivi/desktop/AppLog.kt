@@ -96,6 +96,15 @@ object AppLog {
         }
     }
 
+    /**
+     * Records a user click with a short human-readable target, e.g.
+     * `click("Home shuffle")`. Goes to the session's `actions.log`, which is
+     * the click trail used to reproduce a crash from the logs (issue #59).
+     */
+    fun click(target: String) {
+        log("actions", "click $target")
+    }
+
     /** Clears the in-memory buffer and the current session's on-disk logs. */
     fun clear() {
         _lines.value = emptyList()

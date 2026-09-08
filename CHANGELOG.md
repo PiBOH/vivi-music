@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.44-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Clicking any button on Home no longer crashes with an NPE**: the Home `LazyColumn` content dereferenced the reloadable `home` state with `!!`; when a click (chip, shuffle, pill toggle, retry…) started a reload the loading effect nulled `home` and the snapshot observer re-ran the list content at that moment, throwing `NullPointerException` at `BrowseScreens.kt:355` right after the click (an empty list is now emitted while the loading state takes over). (Closes [#58](https://github.com/PiBOH/vivi-music/issues/58))
+
+### Added
+- [DE] **Crash dumps are now written to disk on every uncaught error**: `~/.vivimusic/crash.log` is always overwritten with the most recent crash, while `~/.vivimusic/logs/<timestamp>/crash_<timestamp>.log` keeps a timestamped copy per crash (never overwritten), so past crashes can be diagnosed from exported logs. (Closes [#59](https://github.com/PiBOH/vivi-music/issues/59))
+- [DE] **Every click is now recorded in the session `actions.log`**: cards, song rows, section headers, mood & genres chips, back buttons, Home controls (chips, quick picks/last listen, shuffle, retry, see-all) and navigation (sidebar/roots/back) log a human-readable `click …` line, making a crash reproducible from the logs. (Closes [#59](https://github.com/PiBOH/vivi-music/issues/59))
+
 ## [6.0.6.3_DE-1.50.43-alpha] - 2026-09-08
 
 ### Fixed

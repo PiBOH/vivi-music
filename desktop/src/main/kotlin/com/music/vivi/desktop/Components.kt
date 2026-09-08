@@ -243,7 +243,10 @@ private fun subtitleOf(item: YTItem): String = when (item) {
 @Composable
 fun YtItemCard(item: YTItem, onClick: () -> Unit, width: Dp? = 140.dp, modifier: Modifier = Modifier) {
     val root = if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()
-    Column(root.then(modifier).clickable(onClick = onClick)) {
+    Column(root.then(modifier).clickable(onClick = {
+        AppLog.click("card '${item.title}'")
+        onClick()
+    })) {
         Thumbnail(item.thumbnail, Modifier.fillMaxWidth().aspectRatio(1f))
         Text(
             item.title,
@@ -279,7 +282,10 @@ fun SongRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                AppLog.click("song '${song.title}'")
+                onClick()
+            })
             .padding(vertical = 6.dp)
             .let { if (isCurrent) it.background(accent.copy(alpha = 0.07f), RoundedCornerShape(8.dp)) else it }
             .padding(horizontal = 4.dp),
@@ -330,7 +336,10 @@ fun SongRow(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .clickable { onAddToQueue() }
+                    .clickable {
+                        AppLog.click("add to queue '${song.title}'")
+                        onAddToQueue()
+                    }
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             )
         }
@@ -404,7 +413,12 @@ fun BackButton(language: String, onClick: () -> Unit) {
         "‹ ${Localization.get(language, "back")}",
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.clickable(onClick = onClick).padding(vertical = 8.dp),
+        modifier = Modifier
+            .clickable {
+                AppLog.click("back")
+                onClick()
+            }
+            .padding(vertical = 8.dp),
     )
 }
 
@@ -443,7 +457,10 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .clickable(enabled = onClick != null) {
+                if (onClick != null) AppLog.click("section '${title.ifBlank { label.orEmpty() }}' see all")
+                onClick?.invoke()
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
@@ -467,7 +484,10 @@ fun SectionHeader(
 
         if (onPlayAll != null) {
             OutlinedButton(
-                onClick = onPlayAll,
+                onClick = {
+                    AppLog.click("section '${title.ifBlank { label.orEmpty() }}' play all")
+                    onPlayAll()
+                },
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                 modifier = Modifier.height(28.dp),
@@ -495,7 +515,10 @@ fun MoodAndGenresButton(title: String, onClick: () -> Unit, modifier: Modifier =
             .height(48.dp)
             .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 8.dp, bottomEnd = 18.dp, bottomStart = 8.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick)
+            .clickable {
+                AppLog.click("mood/genre '$title'")
+                onClick()
+            }
             .padding(horizontal = 14.dp),
     ) {
         Text(

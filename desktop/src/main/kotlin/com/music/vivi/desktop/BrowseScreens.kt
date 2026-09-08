@@ -206,7 +206,11 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))
-            Button(onClick = { autoRetried = true; loadRequest++ }) {
+            Button(onClick = {
+                AppLog.click("Home retry")
+                autoRetried = true
+                loadRequest++
+            }) {
                 Text(Localization.get(language, "retry"))
             }
         }
@@ -217,6 +221,15 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // `home` is a reloadable state: while a chip/reload request is in
+            // flight the loading effect nulls it *before* refetching. The
+            // LazyColumn content DSL can be re-executed by the snapshot
+            // observer at that exact moment, so dereferencing it here with `!!`
+            // crashed with an NPE as soon as any button on Home was clicked
+            // (see issue #58). Bail out to an empty list instead; the LoadingBox
+            // branch of the outer `when` takes over on the next recomposition.
+            val page = home ?: return@LazyColumn
+
             // 1. Greeting Header Row
             item(key = "greeting_header") {
                 Row(
@@ -237,7 +250,7 @@ fun HomeScreen(
 
                     Tooltip(Localization.get(language, "notifications")) {
                         IconButton(
-                            onClick = { /* Home hub / notifications */ },
+                            onClick = { AppLog.click("Home notifications") /* Home hub / notifications */ },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 contentColor = MaterialTheme.colorScheme.onSurface,
@@ -283,7 +296,10 @@ fun HomeScreen(
                                         if (quickPicksSelected) MaterialTheme.colorScheme.primaryContainer
                                         else Color.Transparent
                                     )
-                                    .clickable { onUseLastListenChange(false) }
+                                    .clickable {
+                                        AppLog.click("Home quick picks")
+                                        onUseLastListenChange(false)
+                                    }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -305,7 +321,10 @@ fun HomeScreen(
                                         if (lastListenSelected) MaterialTheme.colorScheme.primaryContainer
                                         else Color.Transparent
                                     )
-                                    .clickable { onUseLastListenChange(true) }
+                                    .clickable {
+                                        AppLog.click("Home last listen")
+                                        onUseLastListenChange(true)
+                                    }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -325,7 +344,10 @@ fun HomeScreen(
 
                     val shuffleColor = if (randomizeOrder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     Surface(
-                        onClick = { onRandomizeOrderChange(!randomizeOrder) },
+                        onClick = {
+                            AppLog.click("Home randomize order")
+                            onRandomizeOrderChange(!randomizeOrder)
+                        },
                         shape = RoundedCornerShape(50),
                         color = if (randomizeOrder) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -352,8 +374,6 @@ fun HomeScreen(
                 }
             }
 
-            val page = home!!
-
             // Chips row (if available)
             val chipsList = page.chips.orEmpty().filter { !it.title.equals("Podcasts", ignoreCase = true) }
             if (chipsList.isNotEmpty()) {
@@ -365,7 +385,10 @@ fun HomeScreen(
                         items(chipsList, key = { chip -> chip.title }) { chip ->
                             val selected = selectedChip?.title == chip.title
                             Surface(
-                                onClick = { selectedChip = if (selected) null else chip },
+                                onClick = {
+                                    AppLog.click("Home chip '${chip.title}'")
+                                    selectedChip = if (selected) null else chip
+                                },
                                 shape = RoundedCornerShape(50),
                                 color = if (selected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -427,7 +450,10 @@ fun HomeScreen(
                             if (endpoint != null) {
                                 Tooltip(Localization.get(language, "see_all")) {
                                     IconButton(
-                                        onClick = { onOpenBrowse(endpoint.browseId, endpoint.params) },
+                                        onClick = {
+                                            AppLog.click("Home see all '${section.title}'")
+                                            onOpenBrowse(endpoint.browseId, endpoint.params)
+                                        },
                                         colors = IconButtonDefaults.iconButtonColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                             contentColor = MaterialTheme.colorScheme.onSurface,

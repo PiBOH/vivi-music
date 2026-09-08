@@ -1112,6 +1112,7 @@ fun WindowScope.App(
         // Never push a duplicate of the screen already on top (double-clicks
         // or a stale click handler must not create [X, X] entries).
         if (backStack.last() == target) return@navigate
+        AppLog.click("open ${screenLabel(target)}")
         AppLog.log("nav", "open ${screenLabel(target)}")
         redoStack = emptyList()
         undoStack = undoStack + backStack.last()
@@ -1120,11 +1121,13 @@ fun WindowScope.App(
     val openRoot: (Screen) -> Unit = { screen ->
         // Keep Home at the base so "back" from a root (e.g. Settings) returns
         // to Home instead of getting stuck with nothing to pop.
+        AppLog.click("root ${screenLabel(screen)}")
         AppLog.log("nav", "root → ${screenLabel(screen)}")
         backStack = if (screen == Screen.Home) listOf(Screen.Home) else listOf(Screen.Home, screen)
     }
     val goBack: () -> Unit = {
         if (backStack.size > 1) {
+            AppLog.click("back ← ${screenLabel(backStack.last())}")
             AppLog.log("nav", "back ← ${screenLabel(backStack.last())}")
             undoStack = undoStack + backStack.last()
             backStack = backStack.dropLast(1)

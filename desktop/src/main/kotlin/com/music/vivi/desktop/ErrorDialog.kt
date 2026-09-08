@@ -7,6 +7,8 @@ import java.awt.datatransfer.StringSelection
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.JLabel
 import javax.swing.JOptionPane
@@ -29,10 +31,58 @@ import javax.swing.SwingUtilities
 fun installGlobalErrorDialog() {
     val previous = Thread.getDefaultUncaughtExceptionHandler()
     Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+        // Persist the crash before doing anything else: ~/.vivimusic/crash.log is
+        // always overwritten with the most recent crash, while a timestamped
+        // copy under ~/.vivimusic/logs/<timestamp>/crash_<timestamp>.log is kept
+        // (never overwritten), so past crashes survive for diagnosis (issue #59).
+        runCatching { writeCrashDump(thread, throwable) }
         if (!handleSkikoGlCrash(throwable)) {
             runCatching { showErrorDialog(throwable) }
         }
         previous?.uncaughtException(thread, throwable)
+    }
+}
+
+/**
+ * Writes a crash dump with the stack trace to the two crash log locations:
+ *  - `~/.vivimusic/crash.log` — always overwritten with the latest crash;
+ *  - `~/.vivimusic/logs/<yyyyMMdd-HHmmss>/crash_<yyyyMMdd-HHmmss>.log` — each
+ *    crash gets its own timestamped file so it is never overwritten.
+ * Synchronous on purpose: the JVM may be about to die.
+ */
+private fun writeCrashDump(thread: Thread, throwable: Throwable) {
+    val vivimusic = File(System.getProperty("user.home"), ".vivimusic")
+    val header = buildString {
+        appendLine("VIVI Music DE crash dump")
+        appendLine("Time: ${LocalDateTime.now()}")
+        appendLine("App version: ${runCatching { AppInfo.FULL_VERSION }.getOrNull() ?: "unknown"} (${runCatching { AppInfo.CHANNEL }.getOrNull() ?: "unknown"})")
+        appendLine("OS: ${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})")
+        appendLine("Java: ${System.getProperty("java.version")} (${System.getProperty("java.vendor")})")
+        appendLine("Thread: ${thread.name} (${if (thread.isDaemon) "daemon" else "normal"})")
+        appendLine("Throwable: ${throwable.javaClass.name}: ${throwable.message}")
+    }
+    val body = buildString {
+        append(header)
+        val sw = StringWriter()
+        throwable.printStackTrace(PrintWriter(sw))
+        append(sw.toString())
+        // Include suppressed exceptions, which AWT/Swing exceptions often carry.
+        throwable.suppressed.forEachIndexed { i, s ->
+            append("\nSuppressed #$i: ${s.javaClass.name}: ${s.message}\n")
+            val sw2 = StringWriter()
+            s.printStackTrace(PrintWriter(sw2))
+            append(sw2.toString())
+        }
+    }
+    vivimusic.mkdirs()
+    // 1) Root crash.log — overwritten with the newest crash.
+    runCatching { File(vivimusic, "crash.log").writeText(body, Charsets.UTF_8) }
+    // 2) Timestamped session + file — kept forever, never clobbered.
+    runCatching {
+        val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+        val dir = File(File(vivimusic, "logs"), stamp)
+        dir.mkdirs()
+        File(dir, "crash_$stamp.log").writeText(body, Charsets.UTF_8)
     }
 }
 
