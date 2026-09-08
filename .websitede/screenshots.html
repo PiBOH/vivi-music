@@ -391,9 +391,16 @@
 <script src="main.js"></script>
 <script>
   /* Screenshot gallery: every 16:9 .webp in images/screenshots, auto-loaded. */
-  window.vmShots(document.getElementById('shotGrid'), {
-    emptyText: 'No screenshots here yet. Drop <b>.webp</b> images (16:9) into <code>images/screenshots/</code> and they appear automatically.'
+  document.addEventListener('DOMContentLoaded', function() {
+    var grid = document.getElementById('shotGrid');
+    if (grid && typeof window.vmShots === 'function') {
+      window.vmShots(grid, {
+        emptyText: 'No screenshots here yet. Drop <b>.webp</b> images (16:9) into <code>images/screenshots/</code> and they appear automatically.'
+      });
+    } else if (grid) {
+      grid.innerHTML = '<p class="hnote" style="grid-column:1/-1">Gallery temporarily unavailable — try refreshing.</p>';
+    }
   });
-</script></script>
+</script>
 </body>
 </html>

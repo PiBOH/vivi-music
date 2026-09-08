@@ -175,7 +175,8 @@ compose.desktop {
             }
 
             linux {
-                debMaintainer = "VIVI Music"
+                debMaintainer = "PiBOH"
+                appCategory = "Audio"
                 iconFile.set(project.file("icons/logo_vmde.png"))
             }
 

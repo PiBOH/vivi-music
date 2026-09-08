@@ -11,6 +11,63 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.42-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Windows uninstall no longer crashes with 'Type Mismatch'**: the uninstaller tried to create a detail log box using `TNewMemo` on `UninstallProgressForm`, whose type is not available during uninstall on some Inno Setup versions — the creation is now wrapped in `try/except` so the cleanup always completes. (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+- [DE] **Metadata now show 'PiBOH' as publisher and 'VIVI Music' as product name**: the Windows Control Panel showed 'Vivi Music' as author and included the version string in the display name; the Linux .deb was placed in the 'Other' category instead of 'Audio'. Author, display name and Linux app category are now corrected. (Closes [#53](https://github.com/PiBOH/vivi-music/issues/53))
+- [DE] **In-app changelog now shows all released versions**: versions 1.50.36 through 1.50.38 had their release notes nested inside the 1.50.39 entry instead of having their own `## [version]` headings, so the parser skipped them — each now has a proper heading. (Closes [#54](https://github.com/PiBOH/vivi-music/issues/54))
+- [Website] **Screenshot gallery loads reliably**: a duplicate `</script>` tag broke the inline script that initializes the gallery, so the 'Loading screenshots…' placeholder was never replaced. The gallery init is now wrapped in `DOMContentLoaded` and has a fallback message. (Closes [#55](https://github.com/PiBOH/vivi-music/issues/55))
+
+### Commits
+- v: DE 1.50.42-alpha — fix uninstall crash, metadata author/category, changelog headings, website gallery
+
+## [6.0.6.3_DE-1.50.41-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Stale cached lyrics can no longer hide the resolver fixes**: the lyrics cache used only the video id as its key, so a plain (non-timed) or wrong-version result cached earlier (e.g. fetched before the synced-first resolver landed, or with the track duration still unknown) was returned from disk forever — making the 1.50.35/1.50.36 improvements look like they did nothing. The cache is now keyed by the fetch mode too (synced-first vs first-answer, new `v4` files), so toggling "Synced lyrics" never reuses the other mode's text, and stale v3 entries are re-fetched once. (Closes [#51](https://github.com/PiBOH/vivi-music/issues/51))
+- [DE] **Results fetched without a known duration are no longer cached**: a duration-less lookup (duration −1) is the most likely to match the wrong recording (radio edit vs original, live vs studio); those results are shown but not persisted, so the next time the track duration is known the search re-runs with a precise match.
+- [DE] **The album is now passed to every lyrics provider** (LrcLib, BetterLyrics, YouLyPlus, KuGou, Musixmatch, Paxsenix, Unison), matching the mobile app — album-aware providers use it to pick the right recording instead of relying on title/artist alone.
+
+### Commits
+- v: DE 1.50.41-alpha — lyrics cache keyed by sync mode; never cache duration-less matches; pass album to providers
+
+## [6.0.6.3_DE-1.50.40-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **The two "keep the queue going" settings are merged into one**: "Auto load more songs" and "Enable similar content" both gated the exact same queue-extension code (fetching YouTube up-next/related tracks), so toggling one off silently disabled the other — they were duplicates. The "Enable similar content" entry is removed and the behavior is now controlled by the single "Auto load more songs" toggle (matching the mobile app). (Closes [#48](https://github.com/PiBOH/vivi-music/issues/48))
+- [DE] **"Instantly skip silence" only appears when "Skip silence" is on**: the instant variant is a derivative of the master toggle (it has no effect on its own), so the settings screen now hides it unless the master switch is enabled, and turning the master off also clears the derivative — same gating as the mobile app. (Closes [#49](https://github.com/PiBOH/vivi-music/issues/49))
+- [DE] **The slider style setting now applies to every player**: previously it only affected the classic full-screen player, while the classic mini player always rendered the slim style and the expressive player always the thick expressive capsule — so every player slider looked the same regardless of the chosen style. The selected Slim / Squiggly / Wavy style is now honored by the mini player seek bar and volume slider and by the expressive player's seek and volume sliders too. (Closes [#50](https://github.com/PiBOH/vivi-music/issues/50))
+
+### Commits
+- v: DE 1.50.40-alpha — merge duplicate auto-load-more settings; gate instant skip silence; apply slider style to all players
+
+## [6.0.6.3_DE-1.50.39-alpha] - 2026-09-07
+
+### Translations
+- [DE] **Full translation sweep across all 47 supported languages**: every desktop key now has a non-English translation — no key falls back to raw English anymore. The Player & audio port keys (crossfade, crossfade duration, disable for gapless albums, prevent duplicate tracks, auto skip on error, keep screen on, pause when muted, persistent shuffle, progressive seek, auto download on like, history duration, skip silence, similar content, autoplay next, sync VIVI volume, synced lyrics…) are translated in all languages, together with the device sync/pairing screens (connect & generate code, LAN/relay methods, QR scan, pairing states), the login flows (Google sign-in, manual cookies, waiting/saving states) and the live-log developer option. Seven Player & audio options that exist verbatim in the Android strings now reuse the mobile translations (`auto_load_more`, `auto_skip_next_on_error`, `retry`, `skip_silence`, `undo`, …). Thanks to @codebuffai for the translation sweep.
+
+### Commits
+- v: DE 1.50.39-alpha — full 47-language translation sweep (Player & audio port, device sync, login, live log)
+
+## [6.0.6.3_DE-1.50.38-alpha] - 2026-09-07
+
+### Fixed
+- [DE] **The similar/up-next queue is no longer wiped when a track's first attempt fails**: starting a single song builds the queue with ~15 up-next/automix tracks, but a playback error (e.g. a transient download race) triggered a retry that replayed with the *original one-track list*, collapsing the queue back to 1 song — "next" then only looped the seed. Retries now replay on the **current queue**, so the already-appended similar tracks survive the retry. (Closes [#47](https://github.com/PiBOH/vivi-music/issues/47))
+- [DE] **The "cannot find the file specified" playback error right after "stream ready" is fixed**: the decoder opened the shared `.part` download file the instant the download thread had created its handle but not yet created the file on disk (a race that produced `FileNotFoundException` and forced the retry above). The decoder now waits until the file actually exists before opening the channel.
+- [DE] **Logs are now organized per session**: every launch writes `~/.vivimusic/logs/<yyyyMMdd-HHmmss>/` with one file per category (`playback.log`, `queue.log`, `lyrics.log`, `nav.log`, `settings.log`, …). The old flat `actions.log` is migrated into the newest session folder on startup, and "Export logs" packages the whole tree (session folders included) so each bug report carries the exact playback/queue/lyrics trail.
+
+### Commits
+- v: DE 1.50.38-alpha — retries keep the grown similar queue; decoder waits for the .part file; per-session categorized logs
+
+## [6.0.6.3_DE-1.50.37-alpha] - 2026-09-07
+
+### Added
+- [DE] **Crossfade** (port of the mobile option, Settings → Player & audio): tracks now overlap with a short fade at the end of each song instead of hard-cutting. A second audio session starts the next track muted near the end of the current one and both volumes ramp over the fade window, then the incoming session becomes the active player — with the option **off** (default) the audio path is byte-identical to before. Includes a **Crossfade duration** slider (1–12 s, like mobile) and a **Disable for gapless albums** toggle that skips the fade between tracks of the same album so they flow seamlessly (album metadata is carried on the now-playing model when known). Manual next/previous/seek/pause/stop cancels the overlap and falls back to the normal advance, and a track whose stream fails to resolve in time advances normally instead of stalling. (Closes [#42](https://github.com/PiBOH/vivi-music/issues/42) — last item of the Player & audio port)
+
+### Commits
+- v: DE 1.50.37-alpha — crossfade with duration slider and same-album gapless exemption completes the #42 port
+
 ## [6.0.6.3_DE-1.50.36-alpha] - 2026-09-07
 
 ### Changed
