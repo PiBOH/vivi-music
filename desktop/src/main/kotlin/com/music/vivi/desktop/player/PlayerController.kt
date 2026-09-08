@@ -75,13 +75,6 @@ class PlayerController {
     @Volatile var autoLoadMore: Boolean = true
 
     /**
-     * "Enable similar content": gates the same end-of-queue extension with
-     * similar/related tracks (the mobile option only allows the automatic
-     * "automix" continuation when enabled).
-     */
-    @Volatile var similarContent: Boolean = true
-
-    /**
      * "Prevent duplicate tracks in queue": when adding a track that is
      * already queued, remove the old copy first (single copy per track).
      */
@@ -274,7 +267,7 @@ class PlayerController {
      * user who moved on is never disturbed.
      */
     private fun scheduleQueueExtensionIfSingle(initial: List<NowPlaying>) {
-        if (!autoLoadMore || !similarContent) return
+        if (!autoLoadMore) return
         if (initial.size != 1) return
         val seed = initial[0]
         val token = playToken
@@ -1274,8 +1267,8 @@ class PlayerController {
         // Stop cleanly right away; a successful fetch below restarts playback.
         loadedVideoId = null
         _state.update { it.copy(isPlaying = false) }
-        if (!autoLoadMore || !similarContent) {
-            AppLog.log("playback", "queue ended — auto load more / similar content is off, stopping")
+        if (!autoLoadMore) {
+            AppLog.log("playback", "queue ended — auto load more is off, stopping")
             return
         }
         val seedId = seed.videoId

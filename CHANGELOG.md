@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.40-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **The two "keep the queue going" settings are merged into one**: "Auto load more songs" and "Enable similar content" both gated the exact same queue-extension code (fetching YouTube up-next/related tracks), so toggling one off silently disabled the other — they were duplicates. The "Enable similar content" entry is removed and the behavior is now controlled by the single "Auto load more songs" toggle (matching the mobile app). (Closes [#48](https://github.com/PiBOH/vivi-music/issues/48))
+- [DE] **"Instantly skip silence" only appears when "Skip silence" is on**: the instant variant is a derivative of the master toggle (it has no effect on its own), so the settings screen now hides it unless the master switch is enabled, and turning the master off also clears the derivative — same gating as the mobile app. (Closes [#49](https://github.com/PiBOH/vivi-music/issues/49))
+- [DE] **The slider style setting now applies to every player**: previously it only affected the classic full-screen player, while the classic mini player always rendered the slim style and the expressive player always the thick expressive capsule — so every player slider looked the same regardless of the chosen style. The selected Slim / Squiggly / Wavy style is now honored by the mini player seek bar and volume slider and by the expressive player's seek and volume sliders too. (Closes [#50](https://github.com/PiBOH/vivi-music/issues/50))
+
+### Commits
+- v: DE 1.50.40-alpha — merge duplicate auto-load-more settings; gate instant skip silence; apply slider style to all players
+
 ## [6.0.6.3_DE-1.50.39-alpha] - 2026-09-07
 
 ### Translations

@@ -483,7 +483,7 @@ private fun M3EPlayerContent(
                             },
                             enabled = true,
                             valueRange = 0f..sliderMax.toFloat(),
-                            style = ViviSliderStyle.EXPRESSIVE,
+                            style = sliderStyle,
                             bufferedFraction = playbackBufferedFraction(),
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -626,7 +626,7 @@ private fun M3EPlayerContent(
                             value = volume,
                             onValueChange = onVolume,
                             valueRange = 0f..1f,
-                            style = ViviSliderStyle.EXPRESSIVE,
+                            style = sliderStyle,
                             modifier = Modifier.weight(1f)
                         )
                         Icon(
@@ -2519,6 +2519,7 @@ fun ClassicDesktopMiniPlayer(
     isFullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
     language: String,
+    sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
@@ -2705,7 +2706,7 @@ fun ClassicDesktopMiniPlayer(
                                 },
                                 enabled = true,
                                 valueRange = 0f..sliderMax.toFloat(),
-                                style = ViviSliderStyle.SLIM,
+                                style = sliderStyle,
                                 bufferedFraction = playbackBufferedFraction(),
                                 modifier = Modifier.weight(1f),
                             )
@@ -2761,7 +2762,7 @@ fun ClassicDesktopMiniPlayer(
                                 value = volume.coerceIn(0f, 1f),
                                 onValueChange = onVolume,
                                 valueRange = 0f..1f,
-                                style = ViviSliderStyle.SLIM,
+                                style = sliderStyle,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -3218,6 +3219,7 @@ fun DesktopMiniPlayer(
     isFullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
     language: String,
+    sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     modifier: Modifier = Modifier,
 ) {
     val np = nowPlaying ?: return
@@ -3295,6 +3297,7 @@ fun DesktopMiniPlayer(
                 isFullscreen = isFullscreen,
                 onToggleFullscreen = onToggleFullscreen,
                 language = language,
+                sliderStyle = sliderStyle,
                 modifier = modifier,
             )
         }
@@ -3330,6 +3333,7 @@ fun SpotifyPlayerBar(
     isFullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
     language: String,
+    sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     modifier: Modifier = Modifier,
 ) {
     DesktopMiniPlayer(
@@ -3359,6 +3363,7 @@ fun SpotifyPlayerBar(
         isFullscreen = isFullscreen,
         onToggleFullscreen = onToggleFullscreen,
         language = language,
+        sliderStyle = sliderStyle,
         modifier = modifier,
     )
 }

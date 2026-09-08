@@ -882,12 +882,8 @@ fun WindowScope.App(
 
     var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
-
     var autoLoadMore by remember { mutableStateOf(DesktopSettings.load().autoLoadMore) }
     player.autoLoadMore = autoLoadMore
-    var similarContent by remember { mutableStateOf(DesktopSettings.load().similarContent) }
-    player.similarContent = similarContent
-
     var preventDuplicateTracksInQueue by remember { mutableStateOf(DesktopSettings.load().preventDuplicateTracksInQueue) }
     player.preventDuplicateTracksInQueue = preventDuplicateTracksInQueue
     var autoSkipNextOnError by remember { mutableStateOf(DesktopSettings.load().autoSkipNextOnError) }
@@ -2192,12 +2188,6 @@ fun WindowScope.App(
                             player.autoLoadMore = checked
                             DesktopSettings.update { it.copy(autoLoadMore = checked) }
                         },
-                        similarContent = similarContent,
-                        onToggleSimilarContent = { checked ->
-                            similarContent = checked
-                            player.similarContent = checked
-                            DesktopSettings.update { it.copy(similarContent = checked) }
-                        },
                         preventDuplicateTracksInQueue = preventDuplicateTracksInQueue,
                         onTogglePreventDuplicateTracksInQueue = { checked ->
                             preventDuplicateTracksInQueue = checked
@@ -2244,7 +2234,14 @@ fun WindowScope.App(
                         skipSilence = skipSilence,
                         onToggleSkipSilence = { checked ->
                             skipSilence = checked
-                            DesktopSettings.update { it.copy(skipSilence = checked) }
+                            // The "Instantly skip silence" option is a derivative of
+                            // the master toggle: turning the master off disables it too.
+                            if (!checked) {
+                                skipSilenceInstant = false
+                                DesktopSettings.update { it.copy(skipSilence = false, skipSilenceInstant = false) }
+                            } else {
+                                DesktopSettings.update { it.copy(skipSilence = true) }
+                            }
                         },
                         skipSilenceInstant = skipSilenceInstant,
                         onToggleSkipSilenceInstant = { checked ->
@@ -2951,6 +2948,7 @@ fun WindowScope.App(
         miniPlayerDesign = miniPlayerDesign,
         miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
         pureBlackMiniPlayer = pureBlackMiniPlayer,
+        sliderStyle = ViviSliderStyle.from(sliderStyle),
     )
         }
     }
@@ -6019,8 +6017,6 @@ fun PlayerSection(
     onToggleAutoPlayNext: (Boolean) -> Unit,
     autoLoadMore: Boolean,
     onToggleAutoLoadMore: (Boolean) -> Unit,
-    similarContent: Boolean,
-    onToggleSimilarContent: (Boolean) -> Unit,
     preventDuplicateTracksInQueue: Boolean,
     onTogglePreventDuplicateTracksInQueue: (Boolean) -> Unit,
     autoSkipNextOnError: Boolean,
@@ -6098,7 +6094,7 @@ fun PlayerSection(
     )
 
     M3SettingsGroup(
-        items = listOf(
+        items = listOfNotNull(
             M3SettingsItem(
                 icon = Icons.Filled.PlayArrow,
                 title = { Text(Localization.get(language, "autoplay_next")) },
@@ -6129,13 +6125,6 @@ fun PlayerSection(
                 description = { Text(Localization.get(language, "auto_load_more_desc")) },
                 trailing = { Switch(checked = autoLoadMore, onCheckedChange = onToggleAutoLoadMore) },
                 onClick = { onToggleAutoLoadMore(!autoLoadMore) },
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.PlaylistAddCheck,
-                title = { Text(Localization.get(language, "enable_similar_content")) },
-                description = { Text(Localization.get(language, "similar_content_desc")) },
-                trailing = { Switch(checked = similarContent, onCheckedChange = onToggleSimilarContent) },
-                onClick = { onToggleSimilarContent(!similarContent) },
             ),
             M3SettingsItem(
                 icon = Icons.Filled.ContentCopy,
@@ -6191,13 +6180,15 @@ fun PlayerSection(
                 trailing = { Switch(checked = skipSilence, onCheckedChange = onToggleSkipSilence) },
                 onClick = { onToggleSkipSilence(!skipSilence) },
             ),
-            M3SettingsItem(
+            // "Instantly skip silence" is a derivative of the master toggle:
+            // it only shows (and only has an effect) when "Skip silence" is on.
+            if (skipSilence) M3SettingsItem(
                 icon = Icons.Filled.FlashOn,
                 title = { Text(Localization.get(language, "skip_silence_instant")) },
                 description = { Text(Localization.get(language, "skip_silence_instant_desc")) },
                 trailing = { Switch(checked = skipSilenceInstant, onCheckedChange = onToggleSkipSilenceInstant) },
                 onClick = { onToggleSkipSilenceInstant(!skipSilenceInstant) },
-            ),
+            ) else null,
             M3SettingsItem(
                 icon = Icons.Filled.CompareArrows,
                 title = { Text(Localization.get(language, "crossfade")) },

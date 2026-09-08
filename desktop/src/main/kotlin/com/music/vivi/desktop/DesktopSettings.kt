@@ -100,8 +100,6 @@ data class DesktopSyncState(
     val autoPlayNext: Boolean = true,
     /** Auto-fetch related/radio tracks when the queue reaches its end (recommendations). */
     val autoLoadMore: Boolean = true,
-    /** Allow similar/related content to extend playback past the end of the queue. */
-    val similarContent: Boolean = true,
     /** Keep a single copy of a track in the queue: adding one already present removes the old copy. */
     val preventDuplicateTracksInQueue: Boolean = false,
     /** Auto-skip to the next track when the current one fails after all retries. */
