@@ -59,21 +59,24 @@ object DesktopLyrics {
         title: String,
         artist: String,
         durationMs: Long,
+        album: String? = null,
         preferSynced: Boolean = true,
     ): Result<String> {
         val durationSec = if (durationMs > 0) (durationMs / 1000L).toInt() else -1
 
         // Order: community synced sources first (LrcLib keeps its previous
         // priority so songs that already worked keep working), official
-        // YouTube Music lyrics last as an exact-text guarantee.
+        // YouTube Music lyrics last as an exact-text guarantee. Album is
+        // passed through like the mobile app does — it helps the providers
+        // pick the right recording (radio edit vs original, live vs studio).
         val providers: List<Pair<String, suspend () -> Result<String>>> = listOf(
-            "LrcLib" to { LrcLib.getLyrics(title, artist, durationSec) },
-            "BetterLyrics" to { BetterLyrics.getLyrics(title, artist, durationSec) },
-            "YouLyPlus" to { YouLyPlus.getLyrics(title, artist, durationSec, id = videoId) },
-            "KuGou" to { KuGou.getLyrics(title, artist, durationSec) },
-            "Musixmatch" to { Musixmatch.getLyrics(title, artist, durationSec) },
-            "Paxsenix" to { Paxsenix.getLyrics(title, artist, durationSec) },
-            "Unison" to { Unison.getLyrics(title, artist, durationSec, videoId = videoId) },
+            "LrcLib" to { LrcLib.getLyrics(title, artist, durationSec, album) },
+            "BetterLyrics" to { BetterLyrics.getLyrics(title, artist, durationSec, album) },
+            "YouLyPlus" to { YouLyPlus.getLyrics(title, artist, durationSec, album, id = videoId) },
+            "KuGou" to { KuGou.getLyrics(title, artist, durationSec, album) },
+            "Musixmatch" to { Musixmatch.getLyrics(title, artist, durationSec, album) },
+            "Paxsenix" to { Paxsenix.getLyrics(title, artist, durationSec, album) },
+            "Unison" to { Unison.getLyrics(title, artist, durationSec, album, videoId = videoId) },
         )
 
         AppLog.log(

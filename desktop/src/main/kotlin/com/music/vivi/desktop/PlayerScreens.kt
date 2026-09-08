@@ -1966,28 +1966,38 @@ fun LyricsScreen(
             return@LaunchedEffect
         }
         loading = true
-        val cached = LyricsCache.get(np.videoId)
+        // The cache is keyed by the fetch mode too: a plain text cached when
+        // "Synced lyrics" was off must never satisfy a synced request (and
+        // vice versa), or the resolver improvements look like they do nothing.
+        val cached = LyricsCache.get(np.videoId, preferSynced = synced)
         if (cached != null) {
             lyrics = cached
             error = null
             loading = false
             return@LaunchedEffect
         }
-        // Multi-provider fetch: real duration when known, community servers
-        // first and the official YouTube Music lyrics as the exact fallback.
-        // With the "Synced lyrics" option on, a timed LRC is preferred across
-        // the whole chain (plain text only if no source has timestamps).
+        // Multi-provider fetch: real duration + album when known, community
+        // servers first and the official YouTube Music lyrics as the exact
+        // fallback. With the "Synced lyrics" option on, a timed LRC is
+        // preferred across the whole chain (plain text only if no source has
+        // timestamps).
         DesktopLyrics.fetch(
             videoId = np.videoId,
             title = np.title,
             artist = np.artist,
             durationMs = np.durationMs,
+            album = np.album,
             preferSynced = synced,
         ).fold(
             onSuccess = {
                 lyrics = it
                 error = null
-                LyricsCache.put(np.videoId, it)
+                // Only persist results matched with a known duration: a
+                // duration-less lookup (duration -1) is the most likely to
+                // return the wrong recording, and caching it would freeze the
+                // mistake forever. The next time the duration is known the
+                // search re-runs with a precise match.
+                if (np.durationMs > 0) LyricsCache.put(np.videoId, it, preferSynced = synced)
             },
             onFailure = { error = it.message },
         )

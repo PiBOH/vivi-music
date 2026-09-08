@@ -11,6 +11,16 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.41-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Stale cached lyrics can no longer hide the resolver fixes**: the lyrics cache used only the video id as its key, so a plain (non-timed) or wrong-version result cached earlier (e.g. fetched before the synced-first resolver landed, or with the track duration still unknown) was returned from disk forever — making the 1.50.35/1.50.36 improvements look like they did nothing. The cache is now keyed by the fetch mode too (synced-first vs first-answer, new `v4` files), so toggling "Synced lyrics" never reuses the other mode's text, and stale v3 entries are re-fetched once. (Closes [#51](https://github.com/PiBOH/vivi-music/issues/51))
+- [DE] **Results fetched without a known duration are no longer cached**: a duration-less lookup (duration −1) is the most likely to match the wrong recording (radio edit vs original, live vs studio); those results are shown but not persisted, so the next time the track duration is known the search re-runs with a precise match.
+- [DE] **The album is now passed to every lyrics provider** (LrcLib, BetterLyrics, YouLyPlus, KuGou, Musixmatch, Paxsenix, Unison), matching the mobile app — album-aware providers use it to pick the right recording instead of relying on title/artist alone.
+
+### Commits
+- v: DE 1.50.41-alpha — lyrics cache keyed by sync mode; never cache duration-less matches; pass album to providers
+
 ## [6.0.6.3_DE-1.50.40-alpha] - 2026-09-08
 
 ### Fixed
