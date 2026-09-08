@@ -142,7 +142,7 @@
 
 <h2>🔗 Pairing with your phone</h2>
 
-<p>VIVI Music DE syncs with the <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a> Android app:</p>
+<p>VIVI Music DE syncs with the <a href="https://github.com/PiBOH/vivi-music/releases/latest">VIVI Music</a> Android app:</p>
 
 <ol>
   <li>On the desktop, open <strong>Settings → Device sync</strong> and tap <strong>Start LAN server</strong> (same Wi-Fi), or connect to a relay server.</li>
