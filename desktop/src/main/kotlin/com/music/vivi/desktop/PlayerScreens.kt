@@ -2777,11 +2777,11 @@ fun ClassicDesktopMiniPlayer(
                             )
                         }
                         Spacer(Modifier.width(4.dp))
-                        Tooltip(Localization.get(language, "right_panel")) {
+                        Tooltip(Localization.get(language, if (showRightSidebar) "tooltip_hide_right_panel" else "tooltip_show_right_panel")) {
                             IconButton(onClick = onToggleRightSidebar) {
                                 Icon(
                                     Icons.Filled.VerticalSplit,
-                                    contentDescription = "Right panel",
+                                    contentDescription = Localization.get(language, if (showRightSidebar) "tooltip_hide_right_panel" else "tooltip_show_right_panel"),
                                     tint = if (showRightSidebar) MaterialTheme.colorScheme.primary else mutedColor,
                                     modifier = Modifier.size(20.dp),
                                 )

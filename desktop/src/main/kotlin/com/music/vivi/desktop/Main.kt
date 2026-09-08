@@ -3006,9 +3006,10 @@ fun WindowScope.App(
         }
     }
 
-    // Live activity log in a dedicated window (Developer options →
-    // "Open live log"). Shows playback/actions/errors in real time.
-    if (devEnabled && DeveloperOptions.logWindowVisible.collectAsState().value) {
+    // Live activity log in a dedicated window (Settings → System →
+    // "Open live log", always available). Shows playback/actions/errors in
+    // real time.
+    if (DeveloperOptions.logWindowVisible.collectAsState().value) {
         Window(
             onCloseRequest = { DeveloperOptions.setLogWindowVisible(false) },
             title = "VIVI Music DE — Live log",
@@ -3145,14 +3146,14 @@ fun Sidebar(
             // Collapsed: menu button to expand the rail (works in both the
             // Spotify layout and the classic layout).
             if (collapsed) {
-                Tooltip(Localization.get(language, "tooltip_menu")) {
+                Tooltip(Localization.get(language, "tooltip_expand_sidebar")) {
                     IconButton(
                         onClick = onToggleCollapsed,
                         modifier = Modifier.padding(bottom = 8.dp),
                     ) {
                         Icon(
                             Icons.Filled.Menu,
-                            contentDescription = "Menu",
+                            contentDescription = Localization.get(language, "tooltip_expand_sidebar"),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -3716,14 +3717,14 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "tooltip_toggle_sidebar")) {
+                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
                     IconButton(
                         onClick = onToggleSidebar,
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
                             Icons.Filled.ViewColumn,
-                            contentDescription = "Toggle sidebar",
+                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
                             tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp),
                         )
@@ -4079,14 +4080,14 @@ private fun WindowControls(
                 )
             }
         }
-        Tooltip(if (isMaximized) "Restore" else "Maximize") {
+        Tooltip(Localization.get(language, if (isMaximized) "tooltip_restore" else "tooltip_maximize")) {
             IconButton(
                 onClick = onMaximize,
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
                     if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
-                    contentDescription = if (isMaximized) "Restore" else "Maximize",
+                    contentDescription = Localization.get(language, if (isMaximized) "tooltip_restore" else "tooltip_maximize"),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                     modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
                 )
@@ -4217,7 +4218,7 @@ fun MiniPlayer(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Tooltip(if (isPlaying) "Pause" else "Play") {
+                    Tooltip(Localization.get(language, if (isPlaying) "pause" else "play")) {
                         IconButton(onClick = onTogglePlay) {
                             if (isLoading) {
                                 CircularProgressIndicator(
@@ -4228,7 +4229,7 @@ fun MiniPlayer(
                             } else {
                                 Icon(
                                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
                                     tint = if (pureBlack) Color.White else LocalContentColor.current,
                                     modifier = Modifier.size(22.dp),
                                 )
@@ -4464,7 +4465,7 @@ fun SettingsScreen(
         "wrapped_title" to listOf("wrapped_desc", "wrapped_show_on_home", "wrapped_show_on_home_desc", "wrapped_title"),
         "integrations" to listOf("discord_client_id", "discord_presence", "lastfm", "lastfm_session", "discord_presence_desc", "lastfm_enable", "lastfm_now_playing"),
         "desktop_features" to listOf("desktop_features", "desktop_features_desc", "media_keys", "media_keys_desc", "now_playing_widget", "now_playing_widget_desc", "requires_accessibility", "tray_menu", "tray_menu_desc"),
-        "system" to listOf("system", "developer_options", "dev_tools_live_monitor", "dev_tools_mode", "dev_tools_movable", "dev_tools_overlay", "dev_tools_window", "dev_tools_profile", "dev_tools_title_bar", "developer_options_enabled", "dev_tools_disabled", "intro", "show_intro_on_startup", "intro_style", "intro_background", "intro_desc", "preview_intro", "dev_logs_export", "dev_logs_export_desc", "dev_unlocked_title", "dev_unlocked_desc", "dev_unlocked_open", "tap_version_code_hint"),
+        "system" to listOf("system", "developer_options", "dev_tools_live_monitor", "dev_tools_mode", "dev_tools_movable", "dev_tools_overlay", "dev_tools_window", "dev_tools_profile", "dev_tools_title_bar", "developer_options_enabled", "dev_tools_disabled", "intro", "show_intro_on_startup", "intro_style", "intro_background", "intro_desc", "preview_intro", "dev_open_live_log", "dev_open_live_log_desc", "dev_logs_export", "dev_logs_export_desc", "dev_unlocked_title", "dev_unlocked_desc", "dev_unlocked_open", "tap_version_code_hint"),
         "about" to listOf("about", "version_code", "current_version", "app_developer", "developer_section", "community_section", "license", "github_repository", "telegram_channel", "website", "changelog", "contributors_section", "app_info_section", "installed_date_title"),
     )
 
@@ -4631,6 +4632,13 @@ fun SettingsSystemScreen(
                     },
                     trailing = { SettingsChevron() },
                     onClick = onOpenIntro,
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Info,
+                    title = { Text(Localization.get(language, "dev_open_live_log")) },
+                    description = { Text(Localization.get(language, "dev_open_live_log_desc")) },
+                    trailing = { SettingsChevron() },
+                    onClick = { DeveloperOptions.setLogWindowVisible(true) },
                 ),
             ),
         )
