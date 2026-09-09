@@ -19,11 +19,13 @@ import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -186,16 +188,20 @@ class InnerTube {
             visitorData?.let { append("X-Goog-Visitor-Id", it) }
             if (setLogin && client.loginSupported) {
                 cookie?.let { cookie ->
-                    append("cookie", cookie)
                     // The Authorization hash uses the APISID token. Modern Google
                     // logins (e.g. the embedded WebView) may only expose the
                     // Secure variants (__Secure-3PAPISID / __Secure-1PAPISID)
                     // instead of the legacy SAPISID; without the hash the API
                     // answers 401 "Request is missing required authentication
                     // credential". Try all three in order of preference.
+                    // IMPORTANT: if none of the three is present, do NOT send a
+                    // partial auth (cookie without SAPISIDHASH) — that is worse
+                    // than an anonymous request and is exactly what triggers the
+                    // 401 for New release albums etc. Fall back to anonymous.
                     val apisid = listOf("SAPISID", "__Secure-3PAPISID", "__Secure-1PAPISID")
                         .firstOrNull { it in cookieMap }
                         ?: return@let
+                    append("cookie", cookie)
                     val currentTime = System.currentTimeMillis() / 1000
                     val sapisidHash = sha1("$currentTime ${cookieMap[apisid]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
@@ -317,21 +323,55 @@ class InnerTube {
         params: String? = null,
         continuation: String? = null,
         setLogin: Boolean = false,
-    ) = withRetry {
-        httpClient.post("browse") {
-            ytClient(client, setLogin = setLogin || useLoginForBrowse)
-            setBody(
-                BrowseBody(
-                    context = client.toContext(
-                        locale,
-                        visitorData,
-                        if (setLogin || useLoginForBrowse) dataSyncId else null
-                    ),
-                    browseId = browseId,
-                    params = params,
-                    continuation = continuation
-                )
-            )
+    ): io.ktor.client.statement.HttpResponse {
+        val wantsLogin = setLogin || useLoginForBrowse
+        // First attempt: as requested (authed if wantsLogin and a cookie is present).
+        // On 401 UNAUTHENTICATED we retry once anonymously so public browse
+        // pages (e.g. FEmusic_new_releases_albums / explore / moodAndGenres)
+        // never show E1031 to a user whose session just expired or is missing
+        // SAPISIDHASH — the anonymous catalog is always available.
+        return try {
+            withRetry {
+                httpClient.post("browse") {
+                    ytClient(client, setLogin = wantsLogin)
+                    setBody(
+                        BrowseBody(
+                            context = client.toContext(
+                                locale,
+                                visitorData,
+                                if (wantsLogin) dataSyncId else null
+                            ),
+                            browseId = browseId,
+                            params = params,
+                            continuation = continuation
+                        )
+                    )
+                }
+            }
+        } catch (e: ClientRequestException) {
+            val is401 = e.response.status == HttpStatusCode.Unauthorized
+            val hadCookie = cookie != null
+            if (is401 && wantsLogin && hadCookie) {
+                // Retry once anonymously — public catalog pages (New releases,
+                // Explore, Mood & genres…) are always available without a
+                // session. No global state is touched (race-safe): we just
+                // build the anonymous request directly.
+                return withRetry {
+                    httpClient.post("browse") {
+                        ytClient(client, setLogin = false)
+                        setBody(
+                            BrowseBody(
+                                context = client.toContext(locale, visitorData, null),
+                                browseId = browseId,
+                                params = params,
+                                continuation = continuation
+                            )
+                        )
+                    }
+                }
+            } else {
+                throw e
+            }
         }
     }
 

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.51-alpha] - 2026-09-09
+
+### Fixed
+- [DE] **Browse pages no longer fail with 401 `BROWSE_UNAUTHENTICATED` (E1031)**: `POST music.youtube.com/youtubei/v1/browse → 401 Request is missing required authentication credential` — e.g. opening *New release albums* (`FEmusic_new_releases_albums`) — came from two causes that were both fixed. (a) When the session cookie missed an APISID token (`SAPISID` / `__Secure-3PAPISID`), the client sent a partial auth (cookie without `SAPISIDHASH`) which is rejected more strictly than an anonymous request — it now falls back to anonymous for that call, so public catalog pages always load. (b) When a real authed session expired mid-use, browse retried the same authed request once and still hit 401 — it now retries once **anonymously**, so public pages stay available even with an expired session. E1031 remains in `ERRORS.md` for truly private browse calls.
+
 ## [6.0.6.3_DE-1.50.50-alpha] - 2026-09-09
 
 ### Fixed
