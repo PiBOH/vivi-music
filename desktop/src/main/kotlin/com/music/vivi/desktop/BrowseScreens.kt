@@ -737,7 +737,24 @@ fun BrowseScreen(
     LaunchedEffect(browseId, params) {
         YouTube.browse(browseId, params).fold(
             onSuccess = { result = it; error = null },
-            onFailure = { error = it.message },
+            onFailure = { t ->
+                val raw = t.message.orEmpty()
+                val tagged = if (raw.contains("401") && raw.contains("browse", ignoreCase = true)) {
+                    "E1031 $raw"
+                } else {
+                    raw.ifBlank { t.javaClass.simpleName }
+                }
+                // Visible to the user (covers the unreadable 401 JSON).
+                error = tagged
+                // Always land in the session logs — the support zip was missing
+                // this failure completely, leaving nothing to debug.
+                runCatching {
+                    AppLog.log(
+                        "browse",
+                        "browse failed E1031 — browseId=$browseId params=${params?.take(64)} loggedIn=${LoginManager.isLoggedIn()} cookie=${YouTube.cookie?.length ?: 0}b visitorData=${!YouTube.visitorData.isNullOrBlank()} dataSyncId=${!YouTube.dataSyncId.isNullOrBlank()} — $tagged — ${t.javaClass.name}"
+                    )
+                }
+            },
         )
     }
 

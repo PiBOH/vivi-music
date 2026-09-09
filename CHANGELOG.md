@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.50-alpha] - 2026-09-09
+
+### Fixed
+- [DE] **Browse failures are no longer invisible in the logs and the app**: `POST music.youtube.com/youtubei/v1/browse → 401 UNAUTHENTICATED (E1031)` failures — e.g. opening *New release albums* — now land in `~/.vivimusic/logs/<ts>/browse.log` (with `browseId`/`params`/`loggedIn`/`cookie`/`visitorData`/`dataSyncId` context and a prefixed `E1031 …`) and surface their code-text in the browse error card (instead of a blank JSON), so the support zip is never empty for this error.
+- [DE] **Every log file now exists from the first launch**: each session `logs/<ts>/` now creates all 9 category logs (`actions`, `browse`, `cache`, `lyrics`, `nav`, `playback`, `queue`, `settings`, `volume`) — even when empty — so the support zip is always complete and a session's `browse.log` is never missing.
+
 ## [6.0.6.3_DE-1.50.49-alpha] - 2026-09-09
 
 ### Fixed
