@@ -240,7 +240,7 @@
 
 <div align="center">
 
-  <h2>🙏 Special Thanks &amp; Credits</h2>
+  <h2>🙏 Special Thanks &amp; Credits </h2>
 
   <p>VIVI Music DE is built upon the foundation of amazing open-source projects and developers:</p>
   <br>
