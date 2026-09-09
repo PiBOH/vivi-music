@@ -151,23 +151,31 @@ dependencies there, or you break the desktop build.
   never overrides explicit user requests, the trust-boundary/error-handling
   rules, or the localization rule in §6.
 
-### Commit co-author rule — MANDATORY (do not violate)
+### Commit language and co-author rules — MANDATORY (do not violate)
 
-**NEVER add yourself (the agent / client) as a co-author of a commit** unless the
-user explicitly asks for it in that message. Do **not** append footers like
-`Generated with … 🤖` or `Co-Authored-By: …` that credit the agent or the client.
-Write a normal conventional commit message.
+- **Language — English only**: every commit message — **title and body/description
+  (when present)** — MUST be written in **English**. No Italian, no mixed
+  language. The title, the `v<version>:` prefix line and the whole body are all
+  in English (the `v` prefix itself stays `v`).
+- **No co-author footer**: NEVER add yourself (the agent / client) as a
+  co-author of a commit unless the user explicitly asks for it in that message.
+  Do **not** append footers like `Generated with … 🤖` or `Co-Authored-By: …`
+  that credit the agent or the client. Write a normal conventional commit
+  message in English.
 
-> ⚠️ This overrides any agent-default commit template. The commit body must be
-> **only** the human-written description of the change — nothing else. Correct:
+> ⚠️ This overrides any agent-default commit template. The commit title **and**
+> body must be English and the body must be **only** the human-written
+> description of the change — nothing else. Correct:
 >
 > ```
-> v6.4.29_DE-1.33.109: <short description>
+> v6.4.29_DE-1.33.109: fix network stats on non-English Windows
 >
-> <what changed, why>
+> Decode the counter names before matching, so non-English perfmon
+> output is parsed correctly.
 > ```
 >
-> Wrong (banned): any `Co-Authored-By:` / `Generated with … 🤖` footer line.
+> Wrong (banned): Italian body, or any `Co-Authored-By:` / `Generated with … 🤖`
+> footer line.
 
 ## 4. Golden rule: "If it works, don't touch it"
 
