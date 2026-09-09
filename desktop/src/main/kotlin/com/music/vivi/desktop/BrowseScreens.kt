@@ -751,14 +751,14 @@ fun BrowseScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                result!!.items.forEach { section ->
+                result!!.items.forEachIndexed { secIdx, section ->
                     if (!section.title.isNullOrBlank()) {
-                        item(key = "header-${section.title}", span = { GridItemSpan(maxLineSpan) }) {
+                        item(key = "header-$secIdx-${section.title}", span = { GridItemSpan(maxLineSpan) }) {
                             SectionHeader(title = section.title!!, language = language)
                         }
                     }
-                    section.items.forEach { ytItem ->
-                        item(key = ytItem.id) {
+                    section.items.forEachIndexed { itemIdx, ytItem ->
+                        item(key = "browse-$secIdx-$itemIdx-${ytItem.id}") {
                             YtItemCard(
                                 item = ytItem,
                                 width = null,

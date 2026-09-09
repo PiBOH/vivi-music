@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.49-alpha] - 2026-09-09
+
+### Fixed
+- [DE] **Browsing no longer crashes with duplicate keys**: `BrowseScreen` (`LazyVerticalGrid` for mood/genre or New-releases pages) keyed every card by `ytItem.id` alone — when YouTube returns the same album/playlist/song in more than one section the duplicate `RDCLAK…` / playlist id appeared twice and Compose crashed with `Key "…" was already used`. Keys are now scoped by section + position (`browse-$section-$position-$id`), so duplicates no longer collide.
+- [DOCS] **New error code E1031 — `BROWSE_UNAUTHENTICATED`**: a `POST music.youtube.com/youtubei/v1/browse → 401 UNAUTHENTICATED (Request is missing required authentication credential)` — e.g. opening *New release albums* — now has its own documented code in `ERRORS.md` with the cause (expired / missing `__Secure-3PAPISID` / `VISITOR_DATA` / `SAPISIDHASH`) and the fix (sign in again from **Settings → Account**).
+
 ## [6.0.6.3_DE-1.50.48-alpha] - 2026-09-08
 
 ### Fixed

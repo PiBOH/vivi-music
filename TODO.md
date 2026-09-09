@@ -287,4 +287,6 @@ Opt-in style: extends the existing `spotifyLayout` toggle. When ON → Spotify p
 
 - [x] DE 1.50.42 (PATCH): Inno Setup uninstall crash fixed (try/except on TNewMemo during uninstall); metadata corrected (PiBOH author, "VIVI Music" display…
 
+- [x] DE 1.50.49 (PATCH): `BrowseScreen` crash fixed — `LazyVerticalGrid` keyed cards by `ytItem.id` alone, so a duplicate album/playlist/song appearing in two sections produced `Key "RDCLAK…" was already used`; keys are now scoped by `browse-$section-$position-$id`. New error code **E1031 `BROWSE_UNAUTHENTICATED`** added to `ERRORS.md` for `POST …/youtubei/v1/browse → 401 UNAUTHENTICATED` (New release albums, etc. — missing/expired `__Secure-3PAPISID`).
+
 - [x] DE 1.50.44 (PATCH): Home screen no longer crashes (NPE) when clicking any button — the Home LazyColumn content now bails out to an empty list while a…
