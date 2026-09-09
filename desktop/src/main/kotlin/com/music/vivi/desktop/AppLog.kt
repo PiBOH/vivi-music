@@ -36,6 +36,11 @@ object AppLog {
     private const val MAX_LINES = 4000
     private const val MAX_FILE_BYTES = 2L * 1024 * 1024 // 2 MB cap before trimming
 
+    /** Every category that must always have a file in the session folder, even when empty. */
+    private val KNOWN_CATEGORIES = listOf(
+        "actions", "browse", "cache", "lyrics", "nav", "playback", "queue", "settings", "volume"
+    )
+
     private val vivimusicDir: File
         get() = File(System.getProperty("user.home"), ".vivimusic")
 
@@ -72,6 +77,17 @@ object AppLog {
             runCatching {
                 legacy.copyTo(File(sessionDir, "actions.log"), overwrite = true)
                 legacy.delete()
+            }
+        }
+        // Guarantee that every known category has a file in this session from
+        // the start — even when nothing was logged to it yet — so the support
+        // zip is always complete and an empty file is still exported.
+        runCatching {
+            for (cat in KNOWN_CATEGORIES) {
+                val f = categoryFile(cat)
+                if (!f.exists()) {
+                    f.createNewFile()
+                }
             }
         }
     }
