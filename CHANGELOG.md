@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.53-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **Seek bar stuck at ~19 s for some tracks (persisted)**: when a stream carried no duration, the player derived the length from the sample table — which only held the first ~256 KB scan window (~19 s) when the whole file was already on disk. Complete cached tracks were then misjudged as "truncated" (thrown away and re-downloaded on every play), while genuinely truncated cache files played their first ~19 s and "ended" — the seek bar of the player and mini player never moving past ~19 s. The player now scans the entire file when it is already on disk, so the duration is correct immediately, the truncation guard only fires for really truncated files, and cached tracks are reused instead of re-downloaded.
+
+### Changed
+- [DE] De-duplicated `formatBytes`/`formatSpeed` (three `formatBytes` + two `formatSpeed` copies with slightly different behaviour in `Main.kt`, `DevTools.kt` and `LogExporter.kt`) into shared helpers, and centralized the 9 copy-pasted `Json { ignoreUnknownKeys = true }` codecs into shared `sharedJson*` values — no behaviour change.
+
 ## [6.0.6.3_DE-1.50.52-alpha] - 2026-09-10
 
 ### Fixed

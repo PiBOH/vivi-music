@@ -624,6 +624,20 @@ class AudioPlayer {
                 Thread.sleep(DOWNLOAD_POLL_MS)
                 scanMore()
             }
+            // The whole file is already on disk: scan it ALL before deriving the
+            // duration or judging truncation. Otherwise the sample table only
+            // holds the first ~256 KB window (~19 s), so a complete cached track
+            // is misjudged as "truncated" (thrown away and re-downloaded on
+            // every play) and a genuinely truncated cache file plays its first
+            // ~19 s and "ends" — the seek bar never moving past ~19 s.
+            if (handle.complete) {
+                while (scannedTo < handle.downloadedBytes) {
+                    scannedTo = walkAtoms(
+                        channel, trackId, scannedTo,
+                        minOf(handle.downloadedBytes, scannedTo + SCAN_WINDOW_BYTES), samples,
+                    )
+                }
+            }
             if (samples.isEmpty()) {
                 throw if (handle.failed) IOException(handle.failure ?: "Audio download failed")
                 else IOException("No audio frames to decode")

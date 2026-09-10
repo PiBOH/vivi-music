@@ -23,7 +23,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import java.net.DatagramSocket
 import java.net.Inet4Address
 import java.net.InetAddress
@@ -46,7 +45,7 @@ import kotlin.random.Random
  */
 class LanSyncRelay {
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = sharedJsonEncodeDefaults
 
     // deviceId -> live WebSocket session
     private val sockets = ConcurrentHashMap<String, WebSocketSession>()

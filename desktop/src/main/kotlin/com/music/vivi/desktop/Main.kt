@@ -239,7 +239,6 @@ import coil3.compose.AsyncImage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
  * Ensures Skiko can render on this machine. On Linux the default render API is
@@ -5618,8 +5617,6 @@ private fun openFile(file: File): Boolean {
     }.getOrDefault(false)
 }
 
-private fun formatSpeed(bps: Long): String =
-    if (bps <= 0) "0 B/s" else "${formatBytes(bps)}/s"
 
 /**
  * Runs the optional "backup before update" (if enabled) and then opens the
@@ -6308,13 +6305,6 @@ private fun audioQualityLabel(language: String, quality: String): String = when 
 private fun dirSize(dir: File): Long =
     dir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    return "%.1f MB".format(kb / 1024.0)
-}
-
 @Composable
 fun StorageSection(language: String) {
     val scope = rememberCoroutineScope()
@@ -6347,10 +6337,10 @@ fun StorageSection(language: String) {
 }
 
 /** JSON codec for persisting the queue between sessions. */
-private val queueJson = Json { ignoreUnknownKeys = true }
+private val queueJson = sharedJson
 
 /** JSON codec for the bundled `contributorsde.json` (ignores `_guide` etc.). */
-private val contributorsJson = Json { ignoreUnknownKeys = true }
+private val contributorsJson = sharedJson
 
 /** Key used to detect discrete playback changes worth syncing (no per-frame pushes). */
 private data class PlaybackSyncKey(

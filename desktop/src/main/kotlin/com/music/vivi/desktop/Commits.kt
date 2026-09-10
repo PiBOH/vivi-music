@@ -41,7 +41,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.time.ZonedDateTime
@@ -92,7 +91,7 @@ data class GitHubCommitUser(
  * `UpdateSource.repo()/branch()` so the DE shows its own branch history.
  */
 object CommitFetcher {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = sharedJson
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)

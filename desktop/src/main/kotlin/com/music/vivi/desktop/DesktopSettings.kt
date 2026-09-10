@@ -2,7 +2,6 @@ package com.music.vivi.desktop
 
 import com.music.vivi.sync.LibrarySnapshot
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -245,7 +244,7 @@ data class DesktopSyncState(
 )
 
 object DesktopSettings {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
+    private val json = sharedJsonPretty
 
     /** Serializes load/save so concurrent writers can't clobber each other. */
     private val lock = Any()

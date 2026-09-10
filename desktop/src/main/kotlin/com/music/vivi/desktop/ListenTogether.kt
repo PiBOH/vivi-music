@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import okhttp3.OkHttpClient
@@ -331,7 +330,7 @@ data class LtLogEntry(val level: String, val message: String, val detail: String
 class ListenTogetherClient(
     private val serverUrlProvider: () -> String = { DesktopSettings.load().listenTogetherServerUrl },
 ) {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; isLenient = true }
+    private val json = sharedJsonLenient
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val http = OkHttpClient.Builder()

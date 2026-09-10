@@ -379,17 +379,6 @@ object SystemMonitor {
 // UI
 // ---------------------------------------------------------------------------
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 0) return "—"
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    if (kb / 1024.0 < 1024) return "%.1f MB".format(kb / 1024.0)
-    return "%.2f GB".format(kb / 1024.0 / 1024.0)
-}
-
-private fun formatSpeed(bps: Long): String = if (bps < 0) "—" else "${formatBytes(bps)}/s"
-
 private fun pct(x: Double): String = if (x < 0) "—" else "%.1f%%".format(x * 100)
 
 private fun formatUptime(ms: Long): String {

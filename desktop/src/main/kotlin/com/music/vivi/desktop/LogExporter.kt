@@ -82,18 +82,6 @@ object LogExporter {
         }
     }
 
-    private fun formatBytes(bytes: Long): String {
-        if (bytes <= 0) return "0 B"
-        val units = listOf("B", "KB", "MB", "GB", "TB")
-        var v = bytes.toDouble()
-        var u = 0
-        while (v >= 1024 && u < units.lastIndex) {
-            v /= 1024
-            u++
-        }
-        return "%.1f %s".format(v, units[u])
-    }
-
     /** Redacted copy of the persisted settings (cookie/account fields stripped). */
     fun buildSettingsSummary(): String {
         val s = DesktopSettings.load()
