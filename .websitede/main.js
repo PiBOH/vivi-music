@@ -343,7 +343,10 @@
     var RAW = 'https://raw.githubusercontent.com/' + REPO + '/vivi-music-de/.websitede/images/screenshots/';
 
     function pretty(name) {
-            return name.replace(/\.(webp|png|jpe?g|gif)$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+            /* "000.foo.webp" -> "Foo": the leading 3-digit + dot prefix only
+               orders the shots (human-friendly order), it is not part of the
+               caption. */
+            return name.replace(/^\d{3}\./, '').replace(/\.(webp|png|jpe?g|gif)$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
     }
     function empty() {
       container.innerHTML = '<p class="hnote" style="grid-column:1/-1">' + (opts.emptyText || 'No screenshots here yet.') + '</p>';
