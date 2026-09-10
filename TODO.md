@@ -294,3 +294,5 @@ Opt-in style: extends the existing `spotifyLayout` toggle. When ON → Spotify p
 - [x] DE 1.50.50 (PATCH): browse 401 E1031 failures now logged at browse time (logs/<ts>/browse.log with browseId/loggedIn/cookie context + prefixed E1031 in the error card) and every session now creates all 9 category logs even when empty — fixes the empty/missing-browse-log report (see vivi-de-logs-...ERROR E1031.zip).
 
 - [x] DE 1.50.44 (PATCH): Home screen no longer crashes (NPE) when clicking any button — the Home LazyColumn content now bails out to an empty list while a…
+
+- [x] DE 1.50.52 (PATCH): tracks no longer show a ~19 s duration (AudioPlayer derived the length from the first ~256 KB scan window and froze it; now the metadata duration is used as fallback and the AAC-derived length grows with the sample table). Listen Together: leaving a room forces a clean socket reconnect so create/join work again after a leave, and the lobby has a single morphing Create/Join room button like the mobile app.

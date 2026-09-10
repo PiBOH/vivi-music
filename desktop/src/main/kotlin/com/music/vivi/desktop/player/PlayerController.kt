@@ -930,6 +930,11 @@ class PlayerController {
                 startAtMs = effectiveStartAt,
                 startAtFraction = startFraction,
                 startPaused = startPaused,
+                // The queue item carries the real track length (search, browse,
+                // playlists, LT guest sync); the NewPipe/cache resolution paths
+                // return URLs without one, so this keeps the seek range and the
+                // truncation guard correct (no more "every track is ~19 s").
+                fallbackDurationMs = track.durationMs,
                 onError = { msg ->
                     AppLog.log("playback", "playback error: $msg")
                     // Evict the cached resolution: a stale, single-use
@@ -1155,6 +1160,7 @@ class PlayerController {
                 cacheKey = nextTrack.videoId,
                 startAtMs = 0L,
                 startPaused = true,
+                fallbackDurationMs = nextTrack.durationMs,
                 onError = { msg ->
                     AppLog.log("playback", "crossfade error for '${nextTrack.title}': $msg — normal advance")
                     if (crossfadeScheduledToken == token) {

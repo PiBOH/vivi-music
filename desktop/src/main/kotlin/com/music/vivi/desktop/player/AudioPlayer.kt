@@ -148,6 +148,9 @@ class AudioPlayer {
 
     @Volatile private var currentStreams: List<StreamResolver.ResolvedStream>? = null
     @Volatile private var currentCacheKey: String? = null
+    /** Metadata duration of the track currently loaded (see [play]). Kept
+     *  across [seekTo] so a seek preserves the authoritative length. */
+    @Volatile private var currentFallbackDurationMs: Long = 0L
 
     /**
      * Called with the buffered fraction (0..1) of the current track: how much
@@ -183,6 +186,13 @@ class AudioPlayer {
          *  metadata carried no length). Resolved against the stream duration
          *  inside the decode thread, where it becomes available. */
         startAtFraction: Float? = null,
+        /** Track length from the caller's metadata (queue/search/browse/LT
+         *  always carry it). Used as the authoritative duration when the
+         *  resolved stream did not (the NewPipe fast path and the cache path
+         *  return URLs without a length), so the seek range and the truncation
+         *  guard stay correct instead of falling back to the ~19 s first
+         *  fragment. */
+        fallbackDurationMs: Long = 0L,
         onPosition: (Long) -> Unit,
         onDuration: (Long) -> Unit,
         onError: (String) -> Unit,
@@ -192,7 +202,7 @@ class AudioPlayer {
         this.onDuration = onDuration
         this.onError = onError
         this.onComplete = onComplete
-        startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction)
+        startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction, fallbackDurationMs)
     }
 
     /** Seeks to [ms] by restarting decode from the cached file, preserving the
@@ -200,7 +210,7 @@ class AudioPlayer {
     fun seekTo(ms: Long) {
         val streams = currentStreams ?: return
         val key = currentCacheKey ?: return
-        startDecode(streams, key, ms.coerceAtLeast(0L), startPaused = paused)
+        startDecode(streams, key, ms.coerceAtLeast(0L), startPaused = paused, fallbackDurationMs = currentFallbackDurationMs)
     }
 
     /** Sets playback volume in the 0f..1f range. */
@@ -234,6 +244,7 @@ class AudioPlayer {
         startAtMs: Long,
         startPaused: Boolean,
         startAtFraction: Float? = null,
+        fallbackDurationMs: Long = 0L,
     ) {
         // Invalidate any running thread and reset the play flags.
         val gen = ++generation
@@ -246,13 +257,18 @@ class AudioPlayer {
         stopped = false
         currentStreams = streams
         currentCacheKey = cacheKey
+        currentFallbackDurationMs = fallbackDurationMs
 
-        // Authoritative duration from the player response, used by
-        // [decodeAndPlay] for the seek range and the truncation guard. It is
+        // Authoritative duration, used by [decodeAndPlay] for the seek range
+        // and the truncation guard. Priority: the player response's
+        // `lengthSeconds` when the resolution carried one, then the caller's
+        // metadata duration (queue/search/browse/LT always know the real
+        // length), then 0 = derive it from the decoded sample count. It is
         // deliberately NOT reported through [onDuration] here: the UI state
         // already carries the track duration, and firing it immediately would
         // clear the "downloading" phase before any audio is actually ready.
-        val knownDurationMs = streams.firstNotNullOfOrNull { it.durationMs }?.takeIf { it > 0 } ?: 0L
+        val knownDurationMs = streams.firstNotNullOfOrNull { it.durationMs }?.takeIf { it > 0 }
+            ?: fallbackDurationMs.takeIf { it > 0 } ?: 0L
 
         thread = Thread {
             var failed = false
@@ -649,12 +665,31 @@ class AudioPlayer {
             val firstFrameSeconds = buffer.length.coerceAtLeast(0.0)
             val metaDurationMs = runCatching { track.meta.totalDuration }
                 .getOrNull()?.takeIf { it > 0 }?.let { (it * 1000).toLong() } ?: 0L
-            val derivedDurationMs = (firstFrameSeconds * samples.size * 1000).toLong()
-            // Prefer the player-response duration (accurate); the AAC derivation
-            // is only a fallback for streams that didn't carry a lengthSeconds.
-            val durationMs = if (knownDurationMs > 0) knownDurationMs
-                else maxOf(derivedDurationMs, metaDurationMs)
-            if (gen == generation) onDuration?.invoke(durationMs)
+            // The AAC derivation is a fallback for streams that carried no
+            // duration (NewPipe fast path, cached files, LT guest tracks): it is
+            // computed from the sample table, which holds only the first
+            // ~256 KB scan window when playback starts (~19 s of audio). It must
+            // therefore GROW as fragments arrive instead of freezing at that
+            // first-window value — otherwise every track looks ~19 s long, the
+            // position clamps there and (with crossfade on) the next track
+            // starts after ~19 s.
+            fun currentDerivedDurationMs(): Long =
+                (firstFrameSeconds * samples.size * 1000).toLong()
+            fun currentDurationMs(): Long =
+                if (knownDurationMs > 0) knownDurationMs
+                else maxOf(currentDerivedDurationMs(), metaDurationMs)
+            // Report the duration as soon as it is known, and re-report when it
+            // grows (more fragments scanned), so the seek range follows the real
+            // track length instead of the first fragment.
+            var reportedDurationMs = 0L
+            fun reportDuration() {
+                val dur = currentDurationMs()
+                if (dur > reportedDurationMs && gen == generation) {
+                    reportedDurationMs = dur
+                    onDuration?.invoke(dur)
+                }
+            }
+            reportDuration()
 
             // Truncated-cache guard for files already fully on disk when playback
             // started (a stale/interrupted cache holds only a fraction of the
@@ -663,10 +698,10 @@ class AudioPlayer {
             // partial scan at this point is expected, and the end-of-track check
             // below covers that case.
             if (handle.complete && scannedTo >= handle.downloadedBytes && knownDurationMs > 0 &&
-                derivedDurationMs < knownDurationMs * 0.6
+                currentDerivedDurationMs() < knownDurationMs * 0.6
             ) {
                 throw IOException(
-                    "Cached audio is truncated (only ${derivedDurationMs / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
+                    "Cached audio is truncated (only ${currentDerivedDurationMs() / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
                 )
             }
 
@@ -752,8 +787,11 @@ class AudioPlayer {
                 }
                 // Never report past the end of the track, so the seek slider can't
                 // get stuck at the end while playing (or push a past-end position
-                // to the synced device).
-                if (durationMs > 0) posMs = posMs.coerceAtMost(durationMs)
+                // to the synced device). Uses the CURRENT (growing) duration so a
+                // derived length doesn't freeze the playhead at the first
+                // fragment.
+                val dur = currentDurationMs()
+                if (dur > 0) posMs = posMs.coerceAtMost(dur)
                 if (posMs - lastReportMs >= POSITION_REPORT_INTERVAL_MS) {
                     lastReportMs = posMs
                     onPosition?.invoke(posMs)
@@ -767,11 +805,12 @@ class AudioPlayer {
             var lastBufferedReportAt = -BUFFERED_POLL_MS
             fun reportBuffered() {
                 if (gen != generation) return
+                val dur = currentDurationMs()
                 val frac = if (handle.complete) {
                     1f
-                } else if (durationMs > 0 && frameSeconds > 0.0) {
+                } else if (dur > 0 && frameSeconds > 0.0) {
                     val decodedMs = samples.size * frameSeconds * 1000
-                    (decodedMs / durationMs.toDouble()).toFloat().coerceIn(0f, 1f)
+                    (decodedMs / dur.toDouble()).toFloat().coerceIn(0f, 1f)
                 } else {
                     1f // unknown duration: nothing meaningful to show
                 }
@@ -857,6 +896,7 @@ class AudioPlayer {
                         lock.wait(BUFFERED_POLL_MS)
                         scanMore()
                         reportBuffered()
+                        reportDuration()
                     }
                 }
                 if (stopped || gen != generation) break
@@ -872,11 +912,13 @@ class AudioPlayer {
                     emit()
                     scanMore()
                     reportBuffered()
+                    reportDuration()
                 } else {
                     // No next sample yet: grow the sample table as fragments
                     // arrive, then poll until the download catches up.
                     scanMore()
                     reportBuffered()
+                    reportDuration()
                     if (index + 1 < samples.size) continue
                     if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
                     if (!handle.complete) {

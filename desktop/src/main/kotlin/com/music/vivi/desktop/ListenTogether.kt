@@ -555,6 +555,22 @@ class ListenTogetherClient(
         _pendingSuggestions.value = emptyList()
         _chatMessages.value = emptyList()
         clearSession()
+        // The relay may close its side after LEAVE_ROOM (or keep a half-dead
+        // socket on which the next CREATE_ROOM/JOIN_ROOM is silently dropped),
+        // which showed up as "after leaving a room I can't leave or re-enter
+        // one": the lobby buttons did nothing and the spinner never cleared.
+        // Force a clean reconnect so the next create/join always starts from a
+        // fresh, open connection (the pending message queue is flushed on
+        // open, so a click right after leaving is not lost either).
+        reconnectJob?.cancel()
+        socket?.close(1000, "Left room")
+        socket = null
+        _connectionState.value = LtConnectionState.DISCONNECTED
+        manualClose = false
+        scope.launch {
+            delay(200)
+            connect()
+        }
     }
 
     fun approveJoin(userId: String) {

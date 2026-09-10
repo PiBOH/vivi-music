@@ -295,18 +295,17 @@ private fun Lobby(
                 Switch(checked = autoApprove, onCheckedChange = onAutoApprove)
             }
             error?.let { SelectionContainer { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) } }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    enabled = username.isNotBlank() && !busy,
-                    onClick = onCreate,
-                ) {
-                    if (busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text(Localization.get(language, "create"))
-                }
-                OutlinedButton(
-                    enabled = username.isNotBlank() && roomCode.isNotBlank() && !busy,
-                    onClick = onJoin,
-                ) { Text(Localization.get(language, "connect")) }
+            // Single morphing action button, like the mobile app: it CREATES a
+            // room when no code is entered and JOINS the typed code when it is
+            // complete, so there is no ambiguity about which action fires.
+            val joinMode = roomCode.length == 8
+            Button(
+                enabled = username.isNotBlank() && !busy,
+                onClick = { if (joinMode) onJoin() else onCreate() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                else Text(Localization.get(language, if (joinMode) "join_room" else "create_room"))
             }
         }
     }

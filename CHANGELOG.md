@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.52-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **[CRITICAL] Tracks no longer appear to last ~19 seconds**: when a stream carried no duration (NewPipe fast path, cached files, Listen Together guest tracks), the player derived the length from the sample table — which only holds the first ~256 KB scan window (~19 s) when playback starts — and froze it there, so the seek bar showed every track as ~19 s, the position clamped at that value and (with crossfade on) the next track started after ~19 s. The duration now comes from the track metadata when the stream has none (`fallbackDurationMs`), and the AAC-derived fallback GROWS as fragments are scanned and is re-reported, so the seek range follows the real track length.
+- [DE] Listen Together: leaving a room now forces a clean socket reconnect, so the next Create/Join is no longer silently dropped on the old (possibly server-closed) connection — the "after leaving a room I can't leave or re-enter one" lock-up with a stuck spinner is fixed.
+
+### Changed
+- [DE] Listen Together lobby now has a single morphing action button like the mobile app: **Create room** when no code is typed, **Join room** when the 8-character code is complete.
+
 ## [6.0.6.3_DE-1.50.51-alpha] - 2026-09-09
 
 ### Fixed
