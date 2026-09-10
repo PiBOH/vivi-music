@@ -50,6 +50,7 @@ DIR_TO_LANG = {
     "-es": "es",
     "-et": "et",
     "-eu": "eu",
+    "-fa": "fa",
     "-fi": "fi",
     "-fil": "fil",
     "-fr": "fr",
@@ -58,6 +59,7 @@ DIR_TO_LANG = {
     "-hu": "hu",
     "-in": "id",
     "-it": "it",
+    "-iw": "iw",
     "-ja": "ja",
     "-km": "km",
     "-ko": "ko",
@@ -69,6 +71,7 @@ DIR_TO_LANG = {
     "-pa": "pa",
     "-pl": "pl",
     "-pt": "pt",
+    "-pt-rBR": "pt-rBR",
     "-ro": "ro",
     "-ru": "ru",
     "-sk": "sk",
@@ -183,6 +186,7 @@ MAPPING = {
     "player_design_v2": "V2",
     "player_design_expressive": "Expressive",
     "player_background": "Player background",
+    "player_background_visualizer": "Visualizer",
     "player_background_desc": "Animated style behind the player.",
     "canvas": "Canvas",
     "player_background_gradient": "Gradient",
@@ -1554,12 +1558,13 @@ from desktop_extra_translations_63 import EXTRA_TRANSLATIONS as _EXTRA_63
 from desktop_extra_translations_64 import EXTRA_TRANSLATIONS as _EXTRA_64
 from desktop_extra_translations_65 import EXTRA_TRANSLATIONS as _EXTRA_65
 from desktop_extra_translations_66 import EXTRA_TRANSLATIONS as _EXTRA_66
+from desktop_extra_translations_67 import EXTRA_TRANSLATIONS as _EXTRA_67
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
@@ -1707,6 +1712,17 @@ def main():
     # Ensure no two options in the same selection list share a label in any
     # language (e.g. slider styles both translated as "Ondulato" in Italian).
     _disambiguate_duplicates(languages)
+
+    # Alias locale tags used by the mobile app for the same language: copy any
+    # key the alias table is missing from its twin, so those tags (which the
+    # phone sends during sync) never fall back to English or, worse, hit the
+    # "first dictionary" safety net (e.g. the Arabic table).
+    for alias, twin in (("in", "id"), ("nb-rNO", "nb"), ("pt-rBR", "pt")):
+        if twin not in languages:
+            continue
+        alias_map = languages.setdefault(alias, {})
+        for key, text in languages[twin].items():
+            alias_map.setdefault(key, text)
 
     # Ensure the default also contributes any translated fallback values, so
     # the "en" table uses the Android English wording for the mapped keys.

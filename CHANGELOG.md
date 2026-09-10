@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.54-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **Player background "Visualizer" no longer shows in Arabic**: the desktop-only key `player_background_visualizer` was missing from the English table (the generator only shipped it via the non-English extra batch), so with the default/English language the fallback safety net picked the first dictionary that had the key — the Arabic one. The key is now mapped in the generator (`en` = "Visualizer"), so every language falls back to English instead.
+- [DE] **Completed the missing desktop translations (batch 67)**: all 47 selectable languages now carry the `tooltip_*` strings (derived from the already-translated base keys), `create_room` / `join_room` (reusing the Android wording), the remaining `auto_load_more` / `auto_skip_next_on_error` / `skip_silence` / `forgotten_favorites` / `similar_to` / `recommended` subsets and the device-sync tooltips — `scripts/check_localization.py` reports 0 missing keys for every selectable language (plus the `in` / `nb-rNO` / `pt-rBR` locale aliases now copy their twin `id` / `nb` / `pt` tables, and `fa` / `iw` / `pt-rBR` Android resources are imported instead of skipped).
+
 ## [6.0.6.3_DE-1.50.53-alpha] - 2026-09-10
 
 ### Fixed
