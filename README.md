@@ -25,7 +25,7 @@
   </p>
 
   <p>
-    <b>Windows</b> · <b>Linux</b> · <b>macOS</b> — the desktop edition of VIVI Music,<br>
+    <b>Windows</b> · <b>Linux</b> · <b>macOS</b> — the Desktop Edition of VIVI Music,<br>
     synced with your phone.
   </p>
 </div>
