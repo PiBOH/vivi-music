@@ -3,7 +3,7 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
-- [x] DE 1.50.54 (FIX): `player_background_visualizer` missing from the English table made the fallback pick the Arabic dictionary — now mapped in the generator; batch 67 completes every missing key for all 47 selectable languages (tooltips from base keys, create_room/join_room from Android wording, remaining port #42 subsets + device-sync tooltips); alias tags in/nb-rNO/pt-rBR copy id/nb/pt, fa/iw/pt-rBR Android resources imported — check_localization reports 0 missing for every selectable language.
+- [x] DE 1.50.55 (FIX): Persian (fa) and Hebrew (iw) tables completed — the last 2 languages with keys falling back to English (592 keys, batch 68). `scripts/check_localization.py` now reports 100% coverage: every language table contains every English key (all 52 + English).
 - [x] Convert the 7 network modules (`innertube`, `spotify`, `lastfm`, `kizzy`, `shazamkit`, `lyricsProvider`, `jiosaavn`) from `com.android.library` to `kotlin("jvm")`.
 - [x] `desktop` module (Compose Multiplatform) with a search PoC via `innertube`.
 - [x] Native icons: Windows `.ico`, macOS `.icns`, Linux `.png`, all regenerated from the official `desktop/icons/logo_vmde_official.jpg` source.

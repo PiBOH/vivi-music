@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.55-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **Persian (fa) and Hebrew (iw) tables completed (batch 68)**: those locale tags arrive on the desktop only via device-sync from the Android app and were the last two languages with keys falling back to English — 592 keys translated into Persian and Hebrew, so `scripts/check_localization.py` now reports **every language table contains every English key** (100% coverage, all 52 languages + English).
+
 ## [6.0.6.3_DE-1.50.54-alpha] - 2026-09-10
 
 ### Fixed
