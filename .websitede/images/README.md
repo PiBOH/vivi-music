@@ -6,8 +6,10 @@ name — you never edit that page to add one.
 
 ## Mandatory rules
 
-1. **Format: `.webp`** — anything else (`.png`, `.jpg`, …) is ignored by the
-   gallery. Please convert before uploading.
+1. **Format: `.webp`, `.png` or `.jpg`** (also `.jpeg`) — all three are shown
+   by the gallery. `.webp` is preferred (smallest), but you can upload any of
+   them directly, no conversion needed. If the same shot exists in several
+   formats, the gallery shows the best one once (`.webp` > `.png` > `.jpg`).
 2. **Aspect ratio: 16:9, exactly** (that is the only ratio accepted).
 3. Recommended resolutions (16:9):
    - **1920 × 1080** — best quality (full screen),
@@ -18,7 +20,8 @@ name — you never edit that page to add one.
 
 ## How to add one
 
-1. Take the screenshot, crop it to **16:9** and export it as **`.webp`**.
+1. Take the screenshot, crop it to **16:9** and export it as **`.webp`**
+   (or `.png` / `.jpg` — all are supported).
 2. Name it with a short, descriptive name, e.g. `full-player.webp`,
    `library.webp`, `synced-lyrics.webp`, `device-sync.webp`.
 3. Put the file in `images/screenshots/` and push it on `vivi-music-de`.
@@ -26,7 +29,7 @@ name — you never edit that page to add one.
 
 ## Tips
 
-- Filenames become the captions (`full-player.webp` → “Full Player”).
+- Filenames become the captions (`full-player.webp`, `library.png`, `device-sync.jpg` → “Full Player”, “Library”, “Device Sync”).
 - Want to hide a shot? Just delete the file.
 - The little previews on the home page are CSS mockups — they never need
   updating and are not related to these files.

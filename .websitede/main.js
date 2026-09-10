@@ -255,9 +255,10 @@
   /* ---------- footer year ---------- */
   $$("[data-year]").forEach(function (el) { el.textContent = new Date().getFullYear(); });
   /* ---------- screenshot gallery helper ----------
-     Lists .webp files in images/screenshots via the GitHub contents API and
-     renders 16:9 cards into `container`. Freshly pushed images may not be on
-     Pages yet, so every <img> falls back to raw.githubusercontent.com once. */
+     Lists .webp / .png / .jpg files in images/screenshots via the GitHub
+     contents API and renders 16:9 cards into `container`. Freshly pushed
+     images may not be on Pages yet, so every <img> falls back to
+     raw.githubusercontent.com once. */
   function vmShotsLightbox(container) {
     var doc = container.ownerDocument;
     var lb = doc.createElement('div');
@@ -342,7 +343,7 @@
     var RAW = 'https://raw.githubusercontent.com/' + REPO + '/vivi-music-de/.websitede/images/screenshots/';
 
     function pretty(name) {
-            return name.replace(/\.webp$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+            return name.replace(/\.(webp|png|jpe?g)$/i, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
     }
     function empty() {
       container.innerHTML = '<p class="hnote" style="grid-column:1/-1">' + (opts.emptyText || 'No screenshots here yet.') + '</p>';
@@ -354,8 +355,21 @@
 
     return window.vmGH.json(API)
       .then(function (files) {
-                var shots = (files || []).filter(function (f) { return f.type === 'file' && /\.webp$/i.test(f.name); })
+                var shots = (files || []).filter(function (f) { return f.type === 'file' && /\.(webp|png|jpe?g)$/i.test(f.name); })
           .sort(function (a, b) { return a.name.localeCompare(b.name); });
+        /* Same shot in two formats (e.g. shot.webp + shot.png) shows once,
+           preferring .webp, then .png, then .jpg. */
+        var best = {};
+        shots.forEach(function (f) {
+          var stem = f.name.replace(/\.(webp|png|jpe?g)$/i, '').toLowerCase();
+          var rank = { webp: 0, png: 1, jpg: 2, jpeg: 2 }[f.name.split('.').pop().toLowerCase()];
+          if (best[stem] === undefined || rank < best[stem]) best[stem] = rank;
+        });
+        shots = shots.filter(function (f) {
+          var stem = f.name.replace(/\.(webp|png|jpe?g)$/i, '').toLowerCase();
+          var rank = { webp: 0, png: 1, jpg: 2, jpeg: 2 }[f.name.split('.').pop().toLowerCase()];
+          return rank === best[stem];
+        });
         if (opts.max > 0) shots = shots.slice(0, opts.max);
         if (!shots.length) { empty(); return []; }
         var html = '';
