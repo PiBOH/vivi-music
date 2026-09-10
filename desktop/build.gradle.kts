@@ -163,8 +163,8 @@ compose.desktop {
             )
             packageName = "VIVIMusic"
             packageVersion = numericPackageVersion
-            description = "VIVI Music — desktop client"
-            vendor = "VIVI Music"
+            description = "VIVI Music Desktop Edition"
+            vendor = "PiBOH"
 
             windows {
                 menuGroup = "VIVI Music"
