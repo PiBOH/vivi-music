@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ====================================================================
+       GitHub Pages 404 handler.
+       This file is served for any path that is not a real file, which lets
+       the site answer clean URLs (e.g. /privacy, /downloads) with no ".html"
+       in the address bar. When the missing path matches a known page, the
+       page is fetched and rendered in place (history.replaceState keeps the
+       clean URL); otherwise a styled "page not found" is shown.
+       Nothing here is SEO-facing: the canonical/og URLs in each page still
+       point at the real .html files.
+       ==================================================================== -->
+  <meta name="robots" content="noindex">
+  <title>Page not found — VIVI Music DE</title>
+  <link rel="icon" type="image/png" href="images/logo_vmde.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/fonts.css">
+  <link rel="stylesheet" href="assets/tpl.css">
+  <link rel="stylesheet" href="assets/site-chrome.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .nf-404 { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 22px; }
+    .nf-404 h1 { font-size: clamp(30px, 6vw, 54px); margin: 12px 0 10px; }
+    .nf-404 p { color: var(--muted, #b9bfd6); max-width: 60ch; margin: 0 0 22px; }
+    .nf-404 .nf-code { font: 700 13px var(--font-mono, monospace); letter-spacing: 0.18em; color: var(--faint, #8d93a8); text-transform: uppercase; }
+    .nf-404 img { width: 56px; height: 56px; border-radius: 14px; }
+  </style>
+</head>
+<body class="bg-transparent text-white font-sora selection:bg-white/20 overflow-x-hidden">
+  <div id="page-background"></div>
+  <main class="nf-404" id="vm-404">
+    <img src="images/logo_vmde.png" alt="VIVI Music DE logo">
+    <p class="nf-code">404 — not found</p>
+    <h1>This page isn't here.</h1>
+    <p>The link may be old, or the page moved. Everything VIVI Music DE lives on the pages below.</p>
+    <p>
+      <a class="btn" href="index">Home</a>
+      <a class="btn ghost" href="downloads">Downloads</a>
+      <a class="btn ghost" href="install-guide">Install guide</a>
+    </p>
+  </main>
+  <script>
+    (function () {
+      'use strict';
+      // Real pages that can be answered at a clean URL (no ".html").
+      var PAGES = ['index', 'downloads', 'screenshots', 'install-guide', 'sync',
+                   'changelog', 'errors', 'about', 'privacy', 'terms'];
+      var path = location.pathname.replace(/\/+$/, '');
+      var name = (path.split('/').pop() || 'index').replace(/\.html$/i, '');
+      if (PAGES.indexOf(name) === -1) return; // unknown path: keep the styled 404
+      // Keep the clean URL in the address bar (no redirect, no ".html").
+      try { history.replaceState(null, '', path + (location.hash || '')); } catch (e) {}
+      fetch(name + '.html', { cache: 'no-cache' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+        .then(function (html) {
+          document.open();
+          document.write(html);
+          document.close();
+        })
+        .catch(function () { /* network hiccup: the styled 404 already shows */ });
+    })();
+  </script>
+</body>
+</html>
