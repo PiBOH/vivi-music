@@ -310,6 +310,28 @@
       else if (e.key === 'ArrowLeft') prev();
       else if (e.key === 'ArrowRight') next();
     });
+
+    /* Touch swipe (phones/tablets/touch laptops): a horizontal drag switches
+       to the next/previous screenshot, matching the arrow buttons and the
+       Arrow keys. Vertical drags are ignored so the page can still scroll. */
+    var touchX = null, touchY = null;
+    lb.addEventListener('touchstart', function (e) {
+      if (!lb.classList.contains('open') || e.touches.length !== 1) { touchX = touchY = null; return; }
+      touchX = e.touches[0].clientX;
+      touchY = e.touches[0].clientY;
+    }, { passive: true });
+    lb.addEventListener('touchend', function (e) {
+      if (touchX === null || !lb.classList.contains('open')) { touchX = touchY = null; return; }
+      var t = e.changedTouches[0];
+      var dx = t.clientX - touchX;
+      var dy = t.clientY - touchY;
+      touchX = touchY = null;
+      // 40 px threshold + mostly-horizontal so a scroll/zoom never navigates.
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) next();
+        else prev();
+      }
+    }, { passive: true });
   }
 
   window.vmShots = function (container, opts) {

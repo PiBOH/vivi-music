@@ -51,14 +51,14 @@
   <!-- BEGIN: Navigation -->
   <nav id="top-navbar" class="fixed top-0 w-full z-[100] py-5 px-6 md:px-12 flex justify-between items-center transition-all duration-300 ease-in-out animate-nav" data-purpose="TopNavBar">
     <div class="flex items-center gap-2">
-      <a href="index.html" class="flex items-center gap-2">
+      <a href="index" class="flex items-center gap-2">
         <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" decoding="async">
         <span class="text-xl font-bold tracking-tight text-white font-geist">VIVI Music <span class="text-[#afbeff]">DE</span></span>
       </a>
     </div>
     <div class="flex items-center gap-4">
       <div class="hidden md:flex items-center gap-1 text-sm font-medium">
-        <a class="nav-link active-nav" href="index.html">Home</a><a class="nav-link" href="downloads.html">Downloads</a><a class="nav-link" href="screenshots.html">Screenshots</a><a class="nav-link" href="install-guide.html">Guide</a><a class="nav-link" href="sync.html">Sync</a><a class="nav-link" href="changelog.html">Changelog</a><a class="nav-link" href="errors.html">Errors</a><a class="nav-link" href="about.html">About</a>
+        <a class="nav-link active-nav" href="index">Home</a><a class="nav-link" href="downloads">Downloads</a><a class="nav-link" href="screenshots">Screenshots</a><a class="nav-link" href="install-guide">Guide</a><a class="nav-link" href="sync">Sync</a><a class="nav-link" href="changelog">Changelog</a><a class="nav-link" href="errors">Errors</a><a class="nav-link" href="about">About</a>
         <a class="nav-link" href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram</a>
         <a class="nav-link" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub</a>
       </div>
@@ -71,7 +71,7 @@
       </button>
     </div>
     <div id="mobile-menu" class="absolute right-6 md:right-12 top-full mt-2 z-[90] flex flex-col items-end gap-4 transform -translate-y-4 opacity-0 transition-all duration-300 pointer-events-none md:hidden">
-      <a class="mobile-menu-link" href="index.html">Home</a><a class="mobile-menu-link" href="downloads.html">Downloads</a><a class="mobile-menu-link" href="screenshots.html">Screenshots</a><a class="mobile-menu-link" href="install-guide.html">Guide</a><a class="mobile-menu-link" href="sync.html">Sync</a><a class="mobile-menu-link" href="changelog.html">Changelog</a><a class="mobile-menu-link" href="errors.html">Errors</a><a class="mobile-menu-link" href="about.html">About</a>
+      <a class="mobile-menu-link" href="index">Home</a><a class="mobile-menu-link" href="downloads">Downloads</a><a class="mobile-menu-link" href="screenshots">Screenshots</a><a class="mobile-menu-link" href="install-guide">Guide</a><a class="mobile-menu-link" href="sync">Sync</a><a class="mobile-menu-link" href="changelog">Changelog</a><a class="mobile-menu-link" href="errors">Errors</a><a class="mobile-menu-link" href="about">About</a>
       <a class="mobile-menu-link" href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram</a>
       <a class="mobile-menu-link" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub</a>
       <button class="trigger-download-modal flex items-center justify-center gap-2 bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/85 transition-colors shadow-md select-none">
@@ -109,7 +109,7 @@
         <div>
           <h2 style="margin-top:0">What it is</h2>
           <p class="prose">VIVI Music is a modern music player that streams from YouTube Music. The Android version is the original — created and maintained by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>. VIVI Music DE is the desktop port: it reuses the same screens and the same pure-JVM network modules (innerTube, Spotify, Last.fm, Kizzy, ShazamKit, JioSaavn, lyrics) on top of Compose Multiplatform, and re-lays them out for a resizable window with a collapsible sidebar.</p>
-          <p class="prose">The part people actually come for is cross-device sync: pair it with the app on your phone and playback, seek position, settings and library follow you from one device to the other — over the same Wi-Fi, or anywhere, through a cloud relay. Details on the <a href="sync.html">sync page</a>.</p>
+          <p class="prose">The part people actually come for is cross-device sync: pair it with the app on your phone and playback, seek position, settings and library follow you from one device to the other — over the same Wi-Fi, or anywhere, through a cloud relay. Details on the <a href="sync">sync page</a>.</p>
 
           <h2>Built on</h2>
           <div class="chiprow">
@@ -148,11 +148,11 @@
           </details>
           <details class="qa">
             <summary>Which systems are supported?</summary>
-            <div class="a">Windows 10+, Linux (x86-64) and macOS 10.15+. The <a href="install-guide.html">install guide</a> has the package for every one of them.</div>
+            <div class="a">Windows 10+, Linux (x86-64) and macOS 10.15+. The <a href="install-guide">install guide</a> has the package for every one of them.</div>
           </details>
           <details class="qa">
             <summary>Can I sync with my phone?</summary>
-            <div class="a">Yes — pair the Android app over LAN (same Wi-Fi) or the cloud relay. Queue, playback, volume, playlists and settings stay in sync. See <a href="sync.html">Sync</a>.</div>
+            <div class="a">Yes — pair the Android app over LAN (same Wi-Fi) or the cloud relay. Queue, playback, volume, playlists and settings stay in sync. See <a href="sync">Sync</a>.</div>
           </details>
           <details class="qa">
             <summary>Is it a fork of VIVI Music?</summary>
@@ -160,7 +160,7 @@
           </details>
           <details class="qa">
             <summary>How do I report a bug?</summary>
-            <div class="a">Open an issue on <a href="https://github.com/PiBOH/vivi-music/issues" target="_blank" rel="noopener">GitHub</a> or ask in the <a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel</a>. Include the version and, if you can, the error log from <code>~/.vivimusic/</code> — the <a href="errors.html">error codes page</a> will help you decode it.</div>
+            <div class="a">Open an issue on <a href="https://github.com/PiBOH/vivi-music/issues" target="_blank" rel="noopener">GitHub</a> or ask in the <a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel</a>. Include the version and, if you can, the error log from <code>~/.vivimusic/</code> — the <a href="errors">error codes page</a> will help you decode it.</div>
           </details>
 
           <p class="muted" style="font-size:13px;margin-top:26px">VIVI Music DE is not affiliated with, funded, authorized or endorsed by YouTube or Google LLC. Any trademark used here belongs to its owner; this is an independent project for personal and educational use.</p>
@@ -195,7 +195,7 @@
       <div>
         <h4 class="font-bold mb-6 text-base text-white tracking-tight">Site</h4>
         <ul class="space-y-3 text-sm text-[#afbeff]/70 font-geist">
-          <li><a class="hover:text-white transition-colors" href="index.html">Home</a></li><li><a class="hover:text-white transition-colors" href="downloads.html">Downloads</a></li><li><a class="hover:text-white transition-colors" href="screenshots.html">Screenshots</a></li><li><a class="hover:text-white transition-colors" href="install-guide.html">Guide</a></li><li><a class="hover:text-white transition-colors" href="sync.html">Sync</a></li><li><a class="hover:text-white transition-colors" href="changelog.html">Changelog</a></li><li><a class="hover:text-white transition-colors" href="errors.html">Errors</a></li><li><a class="hover:text-white transition-colors" href="about.html">About</a></li>
+          <li><a class="hover:text-white transition-colors" href="index">Home</a></li><li><a class="hover:text-white transition-colors" href="downloads">Downloads</a></li><li><a class="hover:text-white transition-colors" href="screenshots">Screenshots</a></li><li><a class="hover:text-white transition-colors" href="install-guide">Guide</a></li><li><a class="hover:text-white transition-colors" href="sync">Sync</a></li><li><a class="hover:text-white transition-colors" href="changelog">Changelog</a></li><li><a class="hover:text-white transition-colors" href="errors">Errors</a></li><li><a class="hover:text-white transition-colors" href="about">About</a></li><li><a class="hover:text-white transition-colors" href="privacy">Privacy</a></li><li><a class="hover:text-white transition-colors" href="terms">Terms</a></li>
         </ul>
       </div>
       <div>
@@ -260,7 +260,7 @@
       </div>
 
       <div id="dl-variant" class="hidden w-full flex-col gap-2 mb-1"></div>
-      <a id="dl-all" href="downloads.html" class="text-xs font-geist text-[#afbeff]/70 hover:text-white transition-colors underline underline-offset-2">All downloads &amp; channels</a>
+      <a id="dl-all" href="downloads" class="text-xs font-geist text-[#afbeff]/70 hover:text-white transition-colors underline underline-offset-2">All downloads &amp; channels</a>
       <button id="close-download-modal" class="helium-dialog-btn-close">Close</button>
     </div>
   </dialog>

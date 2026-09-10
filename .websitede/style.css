@@ -1317,6 +1317,28 @@ input.err-search:focus { outline: none; border-color: var(--accent); }
 .err .fix { color: var(--text); }
 .err .fix b { color: var(--accent2); font-family: var(--font-mono); font-size: 12px; }
 .err-empty { display: none; padding: 40px 0; text-align: center; color: var(--faint); font-family: var(--font-mono); font-size: 13.5px; }
+/* Clickable error cards: clicking one puts #CODE in the address bar so the
+   exact error can be shared; the deep-linked card is highlighted. */
+.err { cursor: pointer; }
+.err .code { transition: background 0.2s ease, color 0.2s ease; }
+.err:hover .code { background: var(--accent-soft); color: var(--accent); }
+.err.err-target {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft), 0 18px 40px rgba(0,0,0,0.45);
+  animation: errPop 0.6s ease;
+}
+.err .err-link {
+  font: 600 10.5px var(--font-mono);
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-left: auto;
+}
+.err:hover .err-link { color: var(--accent); }
+@keyframes errPop {
+  0% { transform: translateY(4px); }
+  100% { transform: translateY(0); }
+}
 
 /* ---------- about ---------- */
 .about-grid { display: grid; grid-template-columns: 330px 1fr; gap: 44px; align-items: start; }
@@ -1504,6 +1526,10 @@ code {
   transition: opacity 0.25s ease;
 }
 .vm-lightbox.open { opacity: 1; pointer-events: auto; }
+/* Touch swipe: let the browser scroll vertically but deliver horizontal
+   gestures to the lightbox navigation. */
+.vm-lightbox { touch-action: pan-y; }
+.vm-lightbox .vm-lb-img { -webkit-user-drag: none; user-select: none; }
 .vm-lightbox .vm-lb-img {
   max-width: 92vw;
   max-height: 90vh;
