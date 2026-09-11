@@ -44,7 +44,30 @@ import androidx.compose.ui.window.rememberWindowState
 import com.music.vivi.desktop.player.PlayerController
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import java.awt.GraphicsEnvironment
+import java.awt.Rectangle
 import kotlin.math.roundToInt
+
+private const val WIDGET_WIDTH_DP = 340
+private const val WIDGET_HEIGHT_DP = 92
+
+/**
+ * Union of every attached screen, in window coordinates, so the widget can be
+ * clamped on multi-monitor setups too. Falls back to a 1080p box if AWT cannot
+ * report any display.
+ */
+private fun virtualScreenBounds(): Rectangle =
+    GraphicsEnvironment.getLocalGraphicsEnvironment().screenDevices
+        .map { it.defaultConfiguration.bounds }
+        .fold<Rectangle, Rectangle?>(null) { acc, b -> acc?.union(b) ?: Rectangle(b) }
+        ?: Rectangle(0, 0, 1920, 1080)
+
+/** Keeps the widget fully inside [bounds], never letting it be dragged away (issue #64). */
+private fun clampToScreen(x: Int, y: Int, w: Int, h: Int, bounds: Rectangle): Pair<Int, Int> {
+    val maxX = (bounds.x + bounds.width - w).coerceAtLeast(bounds.x)
+    val maxY = (bounds.y + bounds.height - h).coerceAtLeast(bounds.y)
+    return x.coerceIn(bounds.x, maxX) to y.coerceIn(bounds.y, maxY)
+}
 
 /**
  * Cider-style floating \"Now Playing\" widget: a small always-on-top, draggable
@@ -68,15 +91,21 @@ fun NowPlayingWidgetWindow(
 
     val saved = remember { DesktopSettings.load() }
     val density = LocalDensity.current
+    val screenBounds = remember { virtualScreenBounds() }
     val winState = rememberWindowState(
         placement = WindowPlacement.Floating,
         position = if (saved.widgetX >= 0 && saved.widgetY >= 0) {
-            WindowPosition(saved.widgetX.dp, saved.widgetY.dp)
+            // A position saved on a screen that is gone (monitor unplugged,
+            // different resolution) must not throw the widget off screen.
+            val w = with(density) { WIDGET_WIDTH_DP.dp.roundToPx() }
+            val h = with(density) { WIDGET_HEIGHT_DP.dp.roundToPx() }
+            val (cx, cy) = clampToScreen(saved.widgetX, saved.widgetY, w, h, screenBounds)
+            WindowPosition(cx.dp, cy.dp)
         } else {
             WindowPosition(Alignment.TopEnd)
         },
-        width = 340.dp,
-        height = 92.dp,
+        width = WIDGET_WIDTH_DP.dp,
+        height = WIDGET_HEIGHT_DP.dp,
     )
 
     // Persist the widget position (debounced) so a drag doesn't hammer the
@@ -92,9 +121,17 @@ fun NowPlayingWidgetWindow(
                 // it crashed the whole app ~0.5s after the widget appeared, on
                 // every launch (issue #63).
                 if (!pos.isSpecified) return@collect
+                val w = with(density) { WIDGET_WIDTH_DP.dp.roundToPx() }
+                val h = with(density) { WIDGET_HEIGHT_DP.dp.roundToPx() }
                 val px = with(density) { pos.x.toPx().roundToInt() }
                 val py = with(density) { pos.y.toPx().roundToInt() }
-                DesktopSettings.update { it.copy(widgetX = px, widgetY = py) }
+                val (cx, cy) = clampToScreen(px, py, w, h, screenBounds)
+                // The window is drag-droppable: if it is released partly off
+                // screen, snap it back so it can never be lost (issue #64).
+                if (cx != px || cy != py) {
+                    winState.position = WindowPosition(cx.dp, cy.dp)
+                }
+                DesktopSettings.update { it.copy(widgetX = cx, widgetY = cy) }
             }
     }
 

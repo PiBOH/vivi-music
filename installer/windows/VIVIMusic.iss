@@ -168,6 +168,8 @@ end;
 procedure CreateUninstallDetailsMemo();
 begin
   if UninstallDetailsMemo <> nil then Exit;
+  if UninstallProgressForm = nil then Exit;
+  if UninstallProgressForm.InstallingPage = nil then Exit;
   UninstallDetailsMemo := TNewMemo.Create(UninstallProgressForm);
   UninstallDetailsMemo.Parent := UninstallProgressForm.InstallingPage;
   UninstallDetailsMemo.Left := 0;
@@ -329,22 +331,24 @@ end;
 
 procedure InitializeUninstallProgressForm();
 begin
-  try
-    CreateUninstallDetailsMemo();
-  except
-    { TNewMemo.Create may fail during uninstall on some Inno Setup versions
-      because UninstallProgressForm.InstallingPage is not always available.
-      The cleanup still runs fine without the log box. }
-  end;
+  { Deliberately empty: at this point the uninstall progress page is created
+    but NOT displayed yet, so it has no window handle. Parenting a TNewMemo to
+    it here leaves an orphaned window, and the uninstaller then aborts while
+    freeing its controls - "Control 'TNewMemo' has no parent window" - on every
+    single uninstall. The box is created in CurUninstallStepChanged(usUninstall)
+    instead, once the page is really on screen. }
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   CleanupOk: Boolean;
 begin
-  if CurUninstallStep = usUninstall then
-    AddUninstallLine('Removing application files…')
+  if CurUninstallStep = usUninstall then begin
+    CreateUninstallDetailsMemo();
+    AddUninstallLine('Removing application files…');
+  end
   else if CurUninstallStep = usPostUninstall then begin
+    CreateUninstallDetailsMemo();
     // Never let the data cleanup abort the uninstall itself.
     CleanupOk := True;
     try

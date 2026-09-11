@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.59-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The floating "Now Playing" widget can no longer be dragged off screen**: the window position was saved as-is, so dropping the widget past an edge (or plugging out the monitor its saved position belonged to) pushed it where it could not be grabbed again. The position is now clamped to the union of every attached screen — both when it is restored at launch and after each drag, where an off-screen drop snaps it back to the nearest fully visible spot. (Closes [#64](https://github.com/PiBOH/vivi-music/issues/64))
+- [DE] **The Windows uninstaller no longer aborts with 'Control has no parent window'**: the details box of the uninstall progress page was created in `InitializeUninstallProgressForm`, but the progress page is not displayed yet at that point, so it has no window handle — the memo was left orphaned and the uninstaller died while freeing its controls (`Control 'TNewMemo' has no parent window`), aborting the uninstall before any cleanup ran. The box is now created in `CurUninstallStepChanged(usUninstall)`, once the page is really on screen, which is what the installer side already did. (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+
+### Changed
+- [WEBSITE] **Motion is now forced on every page and on every device**: card lifts and most of the polish were hover-driven, so phones and iPhones had no motion at all, and the reveal observer's 12% visibility threshold never triggered for blocks taller than a small viewport (which is exactly what happens on a phone). Every page now auto-tags its sections, cards, rows and article paragraphs for the scroll reveal (threshold 0, staggered, with a fallback that never leaves a block invisible), a slow ambient gradient drifts in the page background everywhere, tapping a card gives the same response hover gives on desktop, and the body fades in on load. There is no `prefers-reduced-motion` opt-out: motion is part of the brand.
+
 ## [6.0.6.3_DE-1.50.58-alpha] - 2026-09-11
 
 ### Fixed
