@@ -3,6 +3,8 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.56 (FIX): floating "Now Playing" widget no longer crashes the app on launch — the aligned default position (`WindowPosition(Alignment.TopEnd)`) has unspecified x/y (NaN), and rounding that NaN threw (`Cannot round NaN value`) ~0.5 s after the widget appeared. Unspecified positions are ignored now (#63).
+- [x] DE 1.50.56 (FIX): Windows uninstall no longer aborts with 'Type Mismatch' — `GetDateTimeString('yyyymmdd_hhnnss', '', '')` passed an empty string for its `Char` separators (compiles, fails at runtime); now `#0`, plus the whole cleanup is wrapped in `try/except` so the uninstall always completes (#52).
 - [x] DE 1.50.55 (FIX): Persian (fa) and Hebrew (iw) tables completed — the last 2 languages with keys falling back to English (592 keys, batch 68). `scripts/check_localization.py` now reports 100% coverage: every language table contains every English key (all 52 + English).
 - [x] Convert the 7 network modules (`innertube`, `spotify`, `lastfm`, `kizzy`, `shazamkit`, `lyricsProvider`, `jiosaavn`) from `com.android.library` to `kotlin("jvm")`.
 - [x] `desktop` module (Compose Multiplatform) with a search PoC via `innertube`.

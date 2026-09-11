@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.56-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The floating "Now Playing" widget no longer crashes the app on launch**: until the widget is dragged for the first time it uses an aligned position (the default `WindowPosition(Alignment.TopEnd)`), whose x/y are unspecified (NaN). The debounced position save ran `roundToInt()` on that NaN and threw `IllegalArgumentException: Cannot round NaN value` about half a second after the widget appeared — on every start, so the widget could never be dragged to save a real position. Unspecified positions are now ignored (the widget still remembers the position as soon as it is moved). (Closes [#63](https://github.com/PiBOH/vivi-music/issues/63))
+- [DE] **Windows uninstall no longer aborts with 'Type Mismatch'**: the uninstall cleanup built the backup folder name with `GetDateTimeString('yyyymmdd_hhnnss', '', '')` — passing an empty string for the two `Char` parameters compiled fine but made the uninstaller stop with `Runtime error: Type Mismatch`, so the uninstall never completed and the user data was never backed up. The separators are now the documented `#0`, and the whole cleanup runs inside a `try/except` so no cleanup failure can abort the uninstall (the closing dialog then states that the data was left untouched). (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+
 ## [6.0.6.3_DE-1.50.55-alpha] - 2026-09-10
 
 ### Fixed

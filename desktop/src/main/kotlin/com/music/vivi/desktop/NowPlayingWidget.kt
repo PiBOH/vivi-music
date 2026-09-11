@@ -82,10 +82,16 @@ fun NowPlayingWidgetWindow(
     // Persist the widget position (debounced) so a drag doesn't hammer the
     // settings file with one write per pixel.
     @OptIn(FlowPreview::class)
-    LaunchedEffect(winState.position) {
+    LaunchedEffect(Unit) {
         snapshotFlow { winState.position }
             .debounce(500)
             .collect { pos ->
+                // Until the widget is dragged for the first time it sits at an
+                // *aligned* position (WindowPosition(Alignment.TopEnd)), whose x/y
+                // are unspecified (NaN). roundToInt() throws on NaN, so persisting
+                // it crashed the whole app ~0.5s after the widget appeared, on
+                // every launch (issue #63).
+                if (!pos.isSpecified) return@collect
                 val px = with(density) { pos.x.toPx().roundToInt() }
                 val py = with(density) { pos.y.toPx().roundToInt() }
                 DesktopSettings.update { it.copy(widgetX = px, widgetY = py) }

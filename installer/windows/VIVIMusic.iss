@@ -202,7 +202,11 @@ begin
     Exit;
   end;
 
-  Ts := GetDateTimeString('yyyymmdd_hhnnss', '', '');
+  // GetDateTimeString takes two Char parameters: passing an empty string made the
+  // uninstaller abort with "Runtime error: Type Mismatch" (issue #52). #0 is the
+  // documented value for "no separator" and the format above has no separators at
+  // all, so this only needs to be a valid Char.
+  Ts := GetDateTimeString('yyyymmdd_hhnnss', #0, #0);
   BackupsDir := ViviDir + '\backups';
   BackupDir := BackupsDir + '\uninstall-' + Ts;
   if not DirExists(BackupsDir) then
@@ -321,15 +325,31 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  CleanupOk: Boolean;
 begin
   if CurUninstallStep = usUninstall then
     AddUninstallLine('Removing application files…')
   else if CurUninstallStep = usPostUninstall then begin
-    BackupAndCleanUserData();
-    MsgBox(
-      '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
-      'A final backup of your settings, playlists and fonts was kept at:' + #13#10 +
-      GetEnv('USERPROFILE') + '\.vivimusic\backups',
-      mbInformation, MB_OK);
+    // Never let the data cleanup abort the uninstall itself.
+    CleanupOk := True;
+    try
+      BackupAndCleanUserData();
+    except
+      CleanupOk := False;
+      AddUninstallLine('Cleanup failed - user data left untouched.');
+    end;
+    if CleanupOk then
+      MsgBox(
+        '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
+        'A final backup of your settings, playlists and fonts was kept at:' + #13#10 +
+        GetEnv('USERPROFILE') + '\.vivimusic\backups',
+        mbInformation, MB_OK)
+    else
+      MsgBox(
+        '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
+        'The cache cleanup could not be completed, so your data was left untouched at:' + #13#10 +
+        GetEnv('USERPROFILE') + '\.vivimusic',
+        mbInformation, MB_OK);
   end;
 end;
