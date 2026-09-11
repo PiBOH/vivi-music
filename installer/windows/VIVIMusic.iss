@@ -87,6 +87,7 @@ var
   InstallDetailsMemo: TNewMemo;
   UninstallDetailsMemo: TNewMemo;
   LastInstallLine: String;
+  UninstallCleanupOk: Boolean;
 
 // Uninstall any previously-installed jpackage MSI of this app. The MSI and this
 // Inno Setup installer are two different installer technologies, so each
@@ -139,13 +140,31 @@ begin
   InstallDetailsMemo.Lines.Add(Line);
 end;
 
+// The uninstall details box is only usable while the uninstall progress page
+// exists: Inno Setup tears that page down as soon as the file-removal step is
+// over, and touching the memo afterwards raises "Control 'TNewMemo' has no
+// parent window". Every write is therefore guarded - a dead box must never
+// abort the uninstallation - and the line falls back to the uninstall log file
+// in %TEMP% so the record is never lost.
+function UninstallLogPath(): String;
+begin
+  Result := GetEnv('TEMP') + '\VIVIMusic-uninstall.log';
+end;
+
 procedure AddUninstallLine(const Line: String);
 begin
-  if UninstallDetailsMemo = nil then Exit;
   if Line = '' then Exit;
-  if UninstallDetailsMemo.Lines.Count > 2000 then
-    UninstallDetailsMemo.Lines.Clear;
-  UninstallDetailsMemo.Lines.Add(Line);
+  if UninstallDetailsMemo <> nil then begin
+    try
+      if UninstallDetailsMemo.Lines.Count > 2000 then
+        UninstallDetailsMemo.Lines.Clear;
+      UninstallDetailsMemo.Lines.Add(Line);
+      Exit;
+    except
+      { The details box is gone: keep the record on disk instead. }
+    end;
+  end;
+  SaveStringToFile(UninstallLogPath(), Line + #13#10, True);
 end;
 
 procedure CreateInstallDetailsMemo();
@@ -170,8 +189,13 @@ begin
   if UninstallDetailsMemo <> nil then Exit;
   if UninstallProgressForm = nil then Exit;
   if UninstallProgressForm.InstallingPage = nil then Exit;
-  UninstallDetailsMemo := TNewMemo.Create(UninstallProgressForm);
-  UninstallDetailsMemo.Parent := UninstallProgressForm.InstallingPage;
+  try
+    UninstallDetailsMemo := TNewMemo.Create(UninstallProgressForm);
+    UninstallDetailsMemo.Parent := UninstallProgressForm.InstallingPage;
+  except
+    { No box on this machine: AddUninstallLine writes to the log file instead. }
+    Exit;
+  end;
   UninstallDetailsMemo.Left := 0;
   UninstallDetailsMemo.Top := UninstallProgressForm.ProgressBar.Top + UninstallProgressForm.ProgressBar.Height + ScaleY(8);
   UninstallDetailsMemo.Width := UninstallProgressForm.InstallingPage.ClientWidth;
@@ -331,33 +355,35 @@ end;
 
 procedure InitializeUninstallProgressForm();
 begin
-  { Deliberately empty: at this point the uninstall progress page is created
-    but NOT displayed yet, so it has no window handle. Parenting a TNewMemo to
-    it here leaves an orphaned window, and the uninstaller then aborts while
-    freeing its controls - "Control 'TNewMemo' has no parent window" - on every
-    single uninstall. The box is created in CurUninstallStepChanged(usUninstall)
-    instead, once the page is really on screen. }
+  { Deliberately empty: at this point the uninstall progress page exists but is
+    not on screen yet, so it has no window handle and parenting a control to it
+    is unreliable. The details box is created in
+    CurUninstallStepChanged(usUninstall) instead, once the page is really up -
+    and that is the ONLY window in which the memo can be written, so the box is
+    created, filled and left alone inside that one step. }
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
-var
-  CleanupOk: Boolean;
 begin
   if CurUninstallStep = usUninstall then begin
     CreateUninstallDetailsMemo();
     AddUninstallLine('Removing application files…');
-  end
-  else if CurUninstallStep = usPostUninstall then begin
-    CreateUninstallDetailsMemo();
-    // Never let the data cleanup abort the uninstall itself.
-    CleanupOk := True;
+    { The user-data cleanup runs here - in the same step as the details box -
+      instead of in usPostUninstall. Two reasons: the progress page (and with it
+      the box) is destroyed as soon as the file-removal step is over, so a later
+      write would only be possible in the log file; and keeping it here means
+      every cleanup line is shown in the box while the page is still up. }
+    UninstallCleanupOk := True;
     try
       BackupAndCleanUserData();
     except
-      CleanupOk := False;
+      UninstallCleanupOk := False;
       AddUninstallLine('Cleanup failed - user data left untouched.');
+      AddUninstallLine('Details: ' + UninstallLogPath());
     end;
-    if CleanupOk then
+  end
+  else if CurUninstallStep = usPostUninstall then begin
+    if UninstallCleanupOk then
       MsgBox(
         '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
         'Only these two were kept - the newest backup and your settings:' + #13#10 +
@@ -368,7 +394,8 @@ begin
       MsgBox(
         '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
         'The cache cleanup could not be completed, so your data was left untouched at:' + #13#10 +
-        GetEnv('USERPROFILE') + '\.vivimusic',
+        GetEnv('USERPROFILE') + '\.vivimusic' + #13#10 + #13#10 +
+        'Log: ' + UninstallLogPath(),
         mbInformation, MB_OK);
   end;
 end;

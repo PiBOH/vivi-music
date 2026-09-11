@@ -3,6 +3,7 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.60 (FIX): Windows uninstall fixed for real — the details box of the uninstall progress page can only be written to while the page exists, so both the box and the user-data cleanup now run inside `usUninstall` (creating it in `usPostUninstall`/`InitializeUninstallProgressForm` raised `Control 'TNewMemo' has no parent window`, which killed the uninstaller before it cleaned anything); every write is guarded and falls back to `%TEMP%\VIVIMusic-uninstall.log`. Reproduced and verified locally with a real install/uninstall (#52).
 - [x] DE 1.50.59 (FIX): floating "Now Playing" widget can no longer leave the screen — the saved position is clamped to the union of every attached display on restore and after each drag (off-screen drop snaps back), so it can never be lost again (#64).
 - [x] DE 1.50.59 (FIX): Windows uninstall no longer aborts with `Control 'TNewMemo' has no parent window` — the uninstall details box was created before the progress page was displayed (no window handle), leaving an orphaned control that killed the uninstaller while freeing controls; it is now created in `CurUninstallStepChanged(usUninstall)` (#52).
 - [x] WEBSITE 1.50.59: motion forced on every page and every device — scroll reveals auto-tagged on all pages (threshold 0 + stagger + invisible-block fallback), ambient gradient drift in the background, tap feedback where hover used to be, body fade-in, no `prefers-reduced-motion` opt-out.

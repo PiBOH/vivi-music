@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.60-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The Windows uninstaller really is fixed this time - no `Control has no parent window` error and the user-data cleanup actually runs**: 1.50.59 moved the details box of the uninstall progress page into `CurUninstallStepChanged(usUninstall)`, but the cleanup (and every line it logs) still ran in `usPostUninstall`. By then Inno Setup has already torn the progress page down, so the very first write to the memo raised `Control 'TNewMemo' has no parent window`; the code then tried to log the failure in its own `except` handler, which raised the same error again - that uncaught second exception is the runtime error users saw - and because it aborted before doing any work, older backups and every cache were left behind on disk too. Verified by reproducing both on a real install/uninstall with Inno Setup locally. The box is now created, filled and left alone inside `usUninstall` (the only step in which the memo can be written) and the user-data cleanup moved there as well, so every cleanup line stays visible in the box; each write is additionally guarded, and if the box is ever unusable the line goes to `%TEMP%\VIVIMusic-uninstall.log` instead of stopping the uninstall. (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+
 ## [6.0.6.3_DE-1.50.59-alpha] - 2026-09-11
 
 ### Fixed
