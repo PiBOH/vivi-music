@@ -1586,3 +1586,63 @@ code {
 @media (max-width: 640px) {
   .shot-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   Motion — forced on every page and on every device
+   ------------------------------------------------------------
+   The card "lifts" and most of the polish were hover-driven, so
+   phones and iPhones (which have no hover) got no motion at all.
+   These rules add device-independent motion: an always-on drift
+   in the page background, press feedback for touch, and reveal
+   timing that also fires for blocks taller than the screen.
+   Motion is part of the brand here, so there is no
+   prefers-reduced-motion opt-out.
+   ============================================================ */
+#page-background { overflow: hidden; }
+
+/* ambient gradient drift — every page, every device */
+@keyframes vmAurora {
+  0%   { transform: translate3d(-4%, -3%, 0) scale(1); }
+  50%  { transform: translate3d(3%, 2%, 0) scale(1.07); }
+  100% { transform: translate3d(-2%, 3%, 0) scale(1.03); }
+}
+#page-background::after {
+  content: "";
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  background:
+    radial-gradient(closest-side, rgba(167, 139, 250, 0.30), transparent 70%) 18% 12% / 58% 58% no-repeat,
+    radial-gradient(closest-side, rgba(122, 162, 255, 0.26), transparent 70%) 82% 78% / 62% 62% no-repeat,
+    radial-gradient(closest-side, rgba(175, 190, 255, 0.18), transparent 70%) 50% 105% / 70% 55% no-repeat;
+  animation: vmAurora 16s ease-in-out infinite alternate;
+}
+
+/* page entrance — opacity only, so the fixed layers keep working */
+@keyframes vmPageIn { from { opacity: 0; } to { opacity: 1; } }
+.js main { animation: vmPageIn 0.5s ease both; }
+
+/* reveal timing shared by every auto-tagged block (see main.js) */
+.js .reveal {
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* touch press feedback: the same response everywhere in the page */
+.bcard:active,
+.dl:active,
+.news-item:active,
+.shot:active,
+.gshot:active,
+.os-banner:active,
+.tip:active {
+  transform: scale(0.985);
+}
+@media (hover: none) {
+  /* no hover on phones: rising on tap keeps the cards alive */
+  .bcard:active,
+  .dl:active,
+  .news-item:active,
+  .os-banner:active {
+    transform: translateY(-3px) scale(0.99);
+  }
+}

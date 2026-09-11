@@ -52,23 +52,61 @@
     });
   })();
 
-  /* ---------- scroll reveals ---------- */
+  /* ---------- scroll reveals (every page, every device) ----------
+     Most of the polish used to be hover-driven, and the old 12% visibility
+     threshold never fired for blocks taller than a phone screen, so mobile
+     and iPhone got no motion at all. Every page now tags its own blocks and
+     reveals them on scroll - on touch too - with a fallback that never leaves
+     a block invisible if the observer misbehaves. */
   (function initReveal() {
+    var AUTO = [
+      "main section", "main .sec-head", "main .bcard", "main .glance",
+      "main .row", "main .dl", "main .os-sec", "main .os-banner",
+      "main .news-item", "main .gshot", "main .shot", "main .err",
+      "main .tl-item", "main .qa", "main .tabs", "main .rel-head",
+      "main .err-tools", "main .pbody > h2", "main .pbody > p",
+      "main .wrap > h2", "main .wrap > .lead"
+    ].join(", ");
+
     var els = $$(".reveal");
+    $$(AUTO).forEach(function (el) {
+      if (els.indexOf(el) !== -1) return;
+      if (el.closest && (el.closest(".vm-lightbox") || el.closest(".dialog-backdrop"))) return;
+      /* a container whose children animate on their own would double-fade */
+      if (el.querySelector(".reveal")) return;
+      el.classList.add("reveal");
+      els.push(el);
+    });
     if (!els.length) return;
+
     if (!("IntersectionObserver" in window)) {
       els.forEach(function (el) { el.classList.add("in"); });
       return;
     }
+
     var io = new IntersectionObserver(function (entries) {
+      var batch = 0;
       entries.forEach(function (e) {
-        if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        if (!e.isIntersecting) return;
+        var el = e.target;
+        if (el.dataset.d) el.style.transitionDelay = el.dataset.d + "ms";
+        else if (batch < 6) el.style.transitionDelay = (batch * 60) + "ms";
+        batch++;
+        el.classList.add("in");
+        io.unobserve(el);
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    els.forEach(function (el) {
-      if (el.dataset.d) el.style.transitionDelay = el.dataset.d + "ms";
-      io.observe(el);
-    });
+    /* threshold 0: a block taller than the viewport can never reach a
+       fractional ratio on a phone, which is why it stayed hidden before */
+    }, { threshold: 0, rootMargin: "0px 0px -6% 0px" });
+    els.forEach(function (el) { io.observe(el); });
+
+    setTimeout(function () {
+      els.forEach(function (el) {
+        if (el.classList.contains("in")) return;
+        var r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight && r.bottom > 0) el.classList.add("in");
+      });
+    }, 1500);
   })();
 
   /* ---------- copy buttons ---------- */
