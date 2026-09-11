@@ -3,6 +3,7 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.57 (PATCH): uninstall keeps only the newest `.vivide.backup` (restore point: settings + playlists) and `~/.vivimusic/device-sync.json` on every OS — no more `backups\uninstall-<ts>\` folder; all older backups, playlists.json, fonts, updates/audio/video/canvas/lyrics caches, logs and artwork are deleted. Windows picks the newest backup by the `YYYYMMDD_HHMMSS` suffix (auto_backup_* vs vivimusic-de_*), shell hooks use `ls -1t`; verified by running the shared script against a fake home. INSTALL-GUIDE + website updated (#11).
 - [x] DE 1.50.56 (FIX): floating "Now Playing" widget no longer crashes the app on launch — the aligned default position (`WindowPosition(Alignment.TopEnd)`) has unspecified x/y (NaN), and rounding that NaN threw (`Cannot round NaN value`) ~0.5 s after the widget appeared. Unspecified positions are ignored now (#63).
 - [x] DE 1.50.56 (FIX): Windows uninstall no longer aborts with 'Type Mismatch' — `GetDateTimeString('yyyymmdd_hhnnss', '', '')` passed an empty string for its `Char` separators (compiles, fails at runtime); now `#0`, plus the whole cleanup is wrapped in `try/except` so the uninstall always completes (#52).
 - [x] DE 1.50.55 (FIX): Persian (fa) and Hebrew (iw) tables completed — the last 2 languages with keys falling back to English (592 keys, batch 68). `scripts/check_localization.py` now reports 100% coverage: every language table contains every English key (all 52 + English).

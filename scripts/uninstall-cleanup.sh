@@ -2,21 +2,22 @@
 # VIVI Music DE — uninstall cleanup for Linux/macOS.
 #
 # On uninstall, the app's user data directory (~/.vivimusic) is a mix of real
-# user data (settings, playlists, imported fonts) and disposable caches
-# (downloaded updates, audio/video/canvas/lyrics caches, logs, extracted helper
-# libraries, artwork). This script keeps exactly ONE final backup of the user
-# data and deletes everything else, so a reinstall starts from a clean slate
-# without losing settings/playlists.
+# user data (settings, playlists, imported fonts), the backup history
+# (backups/*.vivide.backup) and disposable caches (downloaded updates,
+# audio/video/canvas/lyrics caches, logs, extracted helper libraries, artwork).
+# This script keeps exactly two things - the NEWEST *.vivide.backup (a full
+# restore point with settings and playlists) and device-sync.json - and deletes
+# everything else, so a reinstall starts from a clean slate without losing
+# settings/playlists.
 #
 # Usage:
 #   uninstall-cleanup.sh                 # uses $HOME/.vivimusic
 #   uninstall-cleanup.sh /home/alice     # uses /home/alice/.vivimusic
 #
-# The backup is stored at:
-#   <home>/.vivimusic/backups/uninstall-<timestamp>/
-# containing device-sync.json, playlists.json and fonts/ (when present).
-# Only the most recent backup survives; all older backups and every cache are
-# removed.
+# What survives an uninstall:
+#   <home>/.vivimusic/device-sync.json                  (settings + sync state)
+#   <home>/.vivimusic/backups/<newest>.vivide.backup    (restore point)
+# Every other file - older backups included - and every cache are removed.
 
 set -u
 
@@ -29,43 +30,39 @@ cleanup_dir() {
     return 0
   fi
 
-  TS="$(date +%Y%m%d_%H%M%S 2>/dev/null || date +%Y%m%d)"
   BACKUPS_DIR="$VIVI_DIR/backups"
-  BACKUP_DIR="$BACKUPS_DIR/uninstall-$TS"
 
-  echo "VIVI Music DE: creating final backup at $BACKUP_DIR"
-  mkdir -p "$BACKUP_DIR" || { echo "error: cannot create $BACKUP_DIR" >&2; return 1; }
-
-  # Copy the real user data (best effort per file).
-  [ -f "$VIVI_DIR/device-sync.json" ] && cp -f "$VIVI_DIR/device-sync.json" "$BACKUP_DIR/" 2>/dev/null
-  [ -f "$VIVI_DIR/playlists.json" ] && cp -f "$VIVI_DIR/playlists.json" "$BACKUP_DIR/" 2>/dev/null
-  if [ -d "$VIVI_DIR/fonts" ]; then
-    mkdir -p "$BACKUP_DIR/fonts"
-    cp -rf "$VIVI_DIR"/fonts/* "$BACKUP_DIR/fonts/" 2>/dev/null
+  # The newest *.vivide.backup wins: `ls -1t` sorts by modification time, so no
+  # filename parsing is needed (auto_backup_* and vivimusic-de_* both carry their
+  # timestamp as the last 15 characters before the extension).
+  KEEP_BACKUP=""
+  if [ -d "$BACKUPS_DIR" ]; then
+    KEEP_BACKUP="$(ls -1t "$BACKUPS_DIR"/*.vivide.backup 2>/dev/null | head -n 1)"
+    if [ -n "$KEEP_BACKUP" ]; then
+      echo "VIVI Music DE: keeping the newest backup: $(basename "$KEEP_BACKUP")"
+    fi
   fi
 
-  # Delete everything under ~/.vivimusic except the backups folder.
+  # Delete everything under ~/.vivimusic except device-sync.json and backups/.
   for entry in "$VIVI_DIR"/* "$VIVI_DIR"/.[!.]*; do
     [ -e "$entry" ] || continue
     case "$(basename "$entry")" in
-      backups) continue ;;
+      backups|device-sync.json) continue ;;
     esac
     rm -rf "$entry"
     echo "VIVI Music DE: removed $entry"
   done
 
-  # Inside backups/, keep only the backup we just created.
+  # Inside backups/, keep only the newest backup.
   if [ -d "$BACKUPS_DIR" ]; then
     for entry in "$BACKUPS_DIR"/* "$BACKUPS_DIR"/.[!.]*; do
       [ -e "$entry" ] || continue
-      case "$(basename "$entry")" in
-        "uninstall-$TS") continue ;;
-      esac
+      [ "$entry" = "$KEEP_BACKUP" ] && continue
       rm -rf "$entry"
     done
   fi
 
-  echo "VIVI Music DE: uninstall cleanup complete. Only the final backup remains."
+  echo "VIVI Music DE: uninstall cleanup complete. Only the newest backup and device-sync.json remain."
 }
 
 # Clean the invoking user, plus every other home directory when running as

@@ -78,30 +78,26 @@ def main():
     # and wipe every cache (updates, audio, video/canvas, lyrics, logs) — same
     # behavior as the Windows uninstaller. pacman runs post_remove() from the
     # package's .install file.
-    install_script = """\
-post_remove() {{
-    # VIVI Music DE uninstall cleanup — keep one final backup, wipe caches.
+    install_script = """post_remove() {{
+    # VIVI Music DE uninstall cleanup: keep only the newest .vivide.backup and
+    # device-sync.json, wipe every other file and cache.
     for h in /home/*; do
         [ -d "$h/.vivimusic" ] || continue
         vivi="$h/.vivimusic"
-        ts="$(date +%Y%m%d_%H%M%S 2>/dev/null || date +%Y%m%d)"
-        bk="$vivi/backups/uninstall-$ts"
-        mkdir -p "$bk"
-        [ -f "$vivi/device-sync.json" ] && cp -f "$vivi/device-sync.json" "$bk/" 2>/dev/null
-        [ -f "$vivi/playlists.json" ] && cp -f "$vivi/playlists.json" "$bk/" 2>/dev/null
-        if [ -d "$vivi/fonts" ]; then
-            mkdir -p "$bk/fonts"
-            cp -rf "$vivi"/fonts/* "$bk/fonts/" 2>/dev/null
+        keep=""
+        if [ -d "$vivi/backups" ]; then
+            keep="$(ls -1t "$vivi/backups"/*.vivide.backup 2>/dev/null | head -n 1)"
         fi
         for entry in "$vivi"/* "$vivi"/.[!.]*; do
             [ -e "$entry" ] || continue
             [ "$(basename "$entry")" = "backups" ] && continue
+            [ "$(basename "$entry")" = "device-sync.json" ] && continue
             rm -rf "$entry"
         done
         if [ -d "$vivi/backups" ]; then
             for entry in "$vivi/backups"/* "$vivi/backups"/.[!.]*; do
                 [ -e "$entry" ] || continue
-                [ "$(basename "$entry")" = "uninstall-$ts" ] && continue
+                [ "$entry" = "$keep" ] && continue
                 rm -rf "$entry"
             done
         fi

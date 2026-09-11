@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.57-alpha] - 2026-09-11
+
+### Changed
+- [DE] **Uninstall now keeps only the newest `.vivide.backup` plus `device-sync.json`**: instead of building a new `backups\uninstall-<timestamp>\` folder out of raw `device-sync.json` / `playlists.json` / fonts, the Windows uninstaller, the shared Linux/macOS/AppImage `scripts/uninstall-cleanup.sh` and the AUR `post_remove` hook now keep the app's newest `.vivide.backup` (a real restore point - settings + playlists - that the app can import back) and `~/.vivimusic/device-sync.json`, deleting every other file: older backups, `playlists.json`, fonts, updates/audio/video/canvas/lyrics caches, logs and artwork. Windows picks the newest backup from the `YYYYMMDD_HHMMSS` timestamp at the end of the file name (the prefixes differ: `auto_backup_*` vs `vivimusic-de_*`), the shell hooks use `ls -1t`. INSTALL-GUIDE and the website install guide updated for every OS. (Closes [#11](https://github.com/PiBOH/vivi-music/issues/11))
+
 ## [6.0.6.3_DE-1.50.56-alpha] - 2026-09-11
 
 ### Fixed

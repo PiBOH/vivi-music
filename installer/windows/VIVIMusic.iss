@@ -182,62 +182,67 @@ begin
 end;
 
 // ---------------------------------------------------------------------------
-// Uninstall cleanup: keep exactly ONE final backup, delete everything else
+// Uninstall cleanup: keep the newest *.vivide.backup and device-sync.json,
+// delete everything else
 // ---------------------------------------------------------------------------
-// The app keeps its user data under `%USERPROFILE%\.vivimusic` (settings,
-// playlists, imported fonts, plus all the caches: downloaded updates, audio,
+// The app keeps its user data under `%USERPROFILE%\.vivimusic`: settings
+// (device-sync.json), playlists, imported fonts, the backup history
+// (`backups\*.vivide.backup`) and every cache (downloaded updates, audio,
 // video/canvas, lyrics, logs, extracted helper libraries and artwork). On
-// uninstall we copy the real user data (device-sync.json, playlists.json,
-// fonts) into `backups\uninstall-<timestamp>\` and then delete EVERYTHING
-// else, including old backups — only the last backup remains on disk.
+// uninstall exactly two things survive: the NEWEST .vivide.backup - a full
+// restore point with settings and playlists - and device-sync.json. Every other
+// file, older backups included, and every cache are deleted.
+
+{ "prefix_YYYYMMDD_HHMMSS.vivide.backup" -> "YYYYMMDD_HHMMSS". The timestamp is
+  always the last 15 characters before the extension, so comparing those
+  strings is chronological even when the prefixes differ (auto_backup_* vs
+  vivimusic-de_*). }
+function BackupTimestamp(const FileName: String): String;
+var
+  Base: String;
+begin
+  Base := Copy(FileName, 1, Length(FileName) - 14);
+  if Length(Base) < 15 then
+    Result := ''
+  else
+    Result := Copy(Base, Length(Base) - 14, 15);
+end;
 
 procedure BackupAndCleanUserData();
 var
-  ViviDir, BackupsDir, BackupDir, Ts, Entry, ItemPath, FontSrc, FontDst: String;
+  ViviDir, BackupsDir, Entry, ItemPath, KeepBackup, KeepKey, Key: String;
   FindRec: TFindRec;
 begin
   ViviDir := GetEnv('USERPROFILE') + '\.vivimusic';
   if not DirExists(ViviDir) then begin
-    AddUninstallLine('No user data found at ' + ViviDir + ' — nothing to clean.');
+    AddUninstallLine('No user data found at ' + ViviDir + ' - nothing to clean.');
     Exit;
   end;
 
-  // GetDateTimeString takes two Char parameters: passing an empty string made the
-  // uninstaller abort with "Runtime error: Type Mismatch" (issue #52). #0 is the
-  // documented value for "no separator" and the format above has no separators at
-  // all, so this only needs to be a valid Char.
-  Ts := GetDateTimeString('yyyymmdd_hhnnss', #0, #0);
   BackupsDir := ViviDir + '\backups';
-  BackupDir := BackupsDir + '\uninstall-' + Ts;
-  if not DirExists(BackupsDir) then
-    CreateDir(BackupsDir);
-  CreateDir(BackupDir);
-  AddUninstallLine('Creating final backup: ' + BackupDir);
 
-  if FileExists(ViviDir + '\device-sync.json') then
-    FileCopy(ViviDir + '\device-sync.json', BackupDir + '\device-sync.json', False);
-  if FileExists(ViviDir + '\playlists.json') then
-    FileCopy(ViviDir + '\playlists.json', BackupDir + '\playlists.json', False);
-
-  if DirExists(ViviDir + '\fonts') then begin
-    CreateDir(BackupDir + '\fonts');
-    if FindFirst(ViviDir + '\fonts\*', FindRec) then begin
-      try
-        repeat
-          if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0 then begin
-            FontSrc := ViviDir + '\fonts\' + FindRec.Name;
-            FontDst := BackupDir + '\fonts\' + FindRec.Name;
-            FileCopy(FontSrc, FontDst, False);
-          end;
-        until not FindNext(FindRec);
-      finally
-        FindClose(FindRec);
-      end;
+  { Keep the newest backup: the largest timestamp wins. }
+  KeepBackup := '';
+  KeepKey := '';
+  if FindFirst(BackupsDir + '\*.vivide.backup', FindRec) then begin
+    try
+      repeat
+        Key := BackupTimestamp(FindRec.Name);
+        if (Key <> '') and (Key > KeepKey) then begin
+          KeepKey := Key;
+          KeepBackup := FindRec.Name;
+        end;
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
     end;
   end;
-  AddUninstallLine('Backup done.');
+  if KeepBackup = '' then
+    AddUninstallLine('No .vivide.backup found - nothing to keep.')
+  else
+    AddUninstallLine('Keeping the newest backup: ' + KeepBackup);
 
-  // Delete everything under ~/.vivimusic except the "backups" folder.
+  { Delete everything under ~/.vivimusic except device-sync.json and backups. }
   if FindFirst(ViviDir + '\*', FindRec) then begin
     try
       repeat
@@ -250,8 +255,10 @@ begin
             AddUninstallLine('Removed cache: ' + Entry);
           end;
         end else begin
-          DeleteFile(ItemPath);
-          AddUninstallLine('Removed file: ' + Entry);
+          if CompareText(Entry, 'device-sync.json') <> 0 then begin
+            DeleteFile(ItemPath);
+            AddUninstallLine('Removed file: ' + Entry);
+          end;
         end;
       until not FindNext(FindRec);
     finally
@@ -259,20 +266,27 @@ begin
     end;
   end;
 
-  // Inside backups/, keep only the backup we just created.
+  { Inside backups/, only the newest .vivide.backup survives. }
   if FindFirst(BackupsDir + '\*', FindRec) then begin
     try
       repeat
         Entry := FindRec.Name;
         if (Entry = '.') or (Entry = '..') then Continue;
-        if CompareText(Entry, 'uninstall-' + Ts) <> 0 then
-          DelTree(BackupsDir + '\' + Entry, True, True, True);
+        if CompareText(Entry, KeepBackup) <> 0 then begin
+          ItemPath := BackupsDir + '\' + Entry;
+          if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+            DelTree(ItemPath, True, True, True)
+          else
+            DeleteFile(ItemPath);
+          AddUninstallLine('Removed old backup: ' + Entry);
+        end;
       until not FindNext(FindRec);
     finally
       FindClose(FindRec);
     end;
   end;
-  AddUninstallLine('Uninstall cleanup complete. Only the final backup remains.');
+
+  AddUninstallLine('Uninstall cleanup complete. Only the newest backup and device-sync.json remain.');
 end;
 
 // ---------------------------------------------------------------------------
