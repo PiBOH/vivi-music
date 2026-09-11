@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.58-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The Windows uninstaller's closing message matches the new retention rule**: it still said "a final backup of your settings, playlists and fonts was kept", but since 1.50.57 the only survivors are the newest `.vivide.backup` and `device-sync.json` (fonts and `playlists.json` are inside the backup, not next to it). It now lists exactly the two paths that were kept. [#11](https://github.com/PiBOH/vivi-music/issues/11)
+
 ## [6.0.6.3_DE-1.50.57-alpha] - 2026-09-11
 
 ### Changed

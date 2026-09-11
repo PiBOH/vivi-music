@@ -356,8 +356,9 @@ begin
     if CleanupOk then
       MsgBox(
         '{#AppName} was successfully uninstalled.' + #13#10 + #13#10 +
-        'A final backup of your settings, playlists and fonts was kept at:' + #13#10 +
-        GetEnv('USERPROFILE') + '\.vivimusic\backups',
+        'Only these two were kept - the newest backup and your settings:' + #13#10 +
+        GetEnv('USERPROFILE') + '\.vivimusic\backups' + #13#10 +
+        GetEnv('USERPROFILE') + '\.vivimusic\device-sync.json',
         mbInformation, MB_OK)
     else
       MsgBox(
