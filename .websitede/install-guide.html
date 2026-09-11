@@ -134,7 +134,7 @@
             <p>Open <b>Settings → Apps → Installed apps</b>, find <b>VIVI Music</b> and choose <em>Uninstall</em> — or run the uninstaller from <code>C:\Program Files\VIVIMusic</code>. Downloaded updates are cached under <code>~/.vivimusic/updates/</code> and cleaned up automatically after 7 days.</p>
             <div class="callout">
               <span aria-hidden="true">💾</span>
-              <span><b>On uninstall, the app keeps exactly one final backup</b> of your settings, playlists and imported fonts at <code>%USERPROFILE%\.vivimusic\backups\uninstall-…</code> and deletes <b>everything else</b> in <code>~/.vivimusic</code> — downloaded updates, audio, video/canvas and lyrics caches, logs and any other leftover. Only that last backup remains on disk.</span>
+              <span><b>On uninstall, only two things survive</b>: the <b>newest <code>.vivide.backup</code></b> (a full restore point with your settings and playlists) and <code>%USERPROFILE%\.vivimusic\device-sync.json</code>. Everything else in <code>~/.vivimusic</code> is deleted — downloaded updates, audio, video/canvas and lyrics caches, logs, imported fonts, playlists.json and every older backup.</span>
             </div>
           </section>
 
@@ -166,7 +166,7 @@ makepkg -si</code></pre>
             </div>
             <h3 id="linux-uninstall">Uninstall (Linux)</h3>
             <ul>
-              <li><b>.deb</b>: uninstall normally with <code>sudo apt remove vivimusic</code> / <code>sudo dpkg -r</code>. The package's <code>postrm</code> hook keeps exactly one final backup of your settings, playlists and fonts at <code>~/.vivimusic/backups/uninstall-…</code> and deletes every cache (<code>~/.vivimusic/updates</code>, audio, video/canvas, lyrics, logs) — only that last backup remains.</li>
+              <li><b>.deb</b>: uninstall normally with <code>sudo apt remove vivimusic</code> / <code>sudo dpkg -r</code>. The package's <code>postrm</code> hook keeps only the newest <code>~/.vivimusic/backups/*.vivide.backup</code> (a full restore point with settings and playlists) plus <code>~/.vivimusic/device-sync.json</code>, and deletes everything else (<code>~/.vivimusic/updates</code>, audio, video/canvas and lyrics caches, logs, fonts, playlists.json, older backups).</li>
               <li><b>AppImage</b>: delete the file. To clean your user data the same way, run <code>sh scripts/uninstall-cleanup.sh</code> from this repo (or the script shipped in the release).</li>
               <li><b>AUR</b>: <code>pacman -R vivi-music-de</code> runs the same cleanup automatically via the package's <code>post_remove</code> hook.</li>
             </ul>
@@ -188,9 +188,9 @@ makepkg -si</code></pre>
               <li>Follow the installer steps; the app lands in <b>Applications</b>.</li>
             </ol>
             <h3 id="mac-uninstall">Uninstall</h3>
-            <p>Drag <code>VIVI Music.app</code> from <b>Applications</b> to the Trash, then clean your user data the same way Windows/Linux do — keep exactly one final backup of settings, playlists and fonts and delete every cache:</p>
+            <p>Drag <code>VIVI Music.app</code> from <b>Applications</b> to the Trash, then clean your user data the same way Windows/Linux do — keep only the newest <code>.vivide.backup</code> (settings + playlists) and <code>device-sync.json</code>, and delete everything else:</p>
             <pre class="code"><code>sh scripts/uninstall-cleanup.sh   # from this repo (or the release assets)</code></pre>
-            <p>The backup is kept at <code>~/.vivimusic/backups/uninstall-…</code>; everything else (updates, audio, video/canvas, lyrics caches, logs) is removed.</p>
+            <p>What remains: <code>~/.vivimusic/device-sync.json</code> and the newest <code>~/.vivimusic/backups/*.vivide.backup</code>; all caches (updates, audio, video/canvas, lyrics, logs), fonts, playlists.json and older backups are removed.</p>
           </section>
 
           <h2 id="requirements">System requirements</h2>

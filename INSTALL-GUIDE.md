@@ -73,11 +73,11 @@ Open **Settings → Apps → Installed apps**, find **VIVI Music**, and choose
 > Installed updates are cached under `~/.vivimusic/updates/` and cleaned up
 > automatically after 7 days.
 >
-> **On uninstall, the app keeps exactly one final backup** of your settings,
-> playlists and imported fonts at `%USERPROFILE%\.vivimusic\backups\uninstall-…`
-> and deletes **everything else** in `~/.vivimusic` — downloaded updates, audio,
-> video/canvas and lyrics caches, logs and any other leftover. Only that last
-> backup remains on disk.
+**On uninstall, only two things survive**: the **newest `.vivide.backup`** (a
+full restore point with your settings and playlists) and
+`%USERPROFILE%\.vivimusic\device-sync.json`. Everything else in
+`~/.vivimusic` is deleted — downloaded updates, audio, video/canvas and lyrics
+caches, logs, imported fonts, playlists.json and every older backup.
 
 ---
 
@@ -120,10 +120,11 @@ If your system blocks AppImages (no FUSE), extract and run it instead:
 ### Uninstall (Linux)
 
 - **.deb**: uninstall normally with `sudo apt remove vivimusic` / `sudo dpkg -r`.
-  The package's `postrm` hook keeps exactly one final backup of your settings,
-  playlists and fonts at `~/.vivimusic/backups/uninstall-…` and deletes every
-  cache (`~/.vivimusic/updates`, audio, video/canvas, lyrics, logs) — only that
-  last backup remains.
+  The package's `postrm` hook keeps only the newest
+  `~/.vivimusic/backups/*.vivide.backup` (a full restore point with settings and
+  playlists) plus `~/.vivimusic/device-sync.json`, and deletes everything else
+  (`~/.vivimusic/updates`, audio, video/canvas and lyrics caches, logs, fonts,
+  playlists.json, older backups).
 - **AppImage**: delete the file. To clean your user data the same way, run:
   `sh scripts/uninstall-cleanup.sh` from this repo (or the script shipped in
   the release).
@@ -178,15 +179,16 @@ Two formats are published (Intel and Apple Silicon builds separately).
 ### Uninstall
 
 Drag `VIVI Music.app` from **Applications** to the Trash, then clean your user
-data the same way Windows/Linux do — keep exactly one final backup of settings,
-playlists and fonts and delete every cache:
+data the same way Windows/Linux do — keep only the newest `.vivide.backup`
+(settings + playlists) and `device-sync.json`, and delete everything else:
 
 ```bash
 sh scripts/uninstall-cleanup.sh        # from this repo (or the release assets)
 ```
 
-The backup is kept at `~/.vivimusic/backups/uninstall-…`; everything else
-(updates, audio, video/canvas, lyrics caches, logs) is removed.
+What remains: `~/.vivimusic/device-sync.json` and the newest
+`~/.vivimusic/backups/*.vivide.backup`; all caches (updates, audio,
+video/canvas, lyrics, logs), fonts, playlists.json and older backups are removed.
 
 ---
 
