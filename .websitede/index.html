@@ -41,7 +41,7 @@
   <link rel="stylesheet" href="assets/site-chrome.css">
   <link rel="stylesheet" href="style.css">
   <script>document.documentElement.classList.add("js");try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
-  <script src="assets/tpl.js"></script>
+  <script src="assets/tpl.js" defer></script>
 </head>
 <body class="bg-transparent text-white font-sora selection:bg-white/20 overflow-x-hidden">
 
@@ -52,7 +52,7 @@
   <nav id="top-navbar" class="fixed top-0 w-full z-[100] py-5 px-6 md:px-12 flex justify-between items-center transition-all duration-300 ease-in-out animate-nav" data-purpose="TopNavBar">
     <div class="flex items-center gap-2">
       <a href="index" class="flex items-center gap-2">
-        <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" decoding="async">
+        <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" width="512" height="512" fetchpriority="high" decoding="async">
         <span class="text-xl font-bold tracking-tight text-white font-geist">VIVI Music <span class="text-[#afbeff]">DE</span></span>
       </a>
     </div>
@@ -85,7 +85,7 @@
 
     <!-- ============ hero (template style) ============ -->
     <section class="container mx-auto px-6 text-center relative z-10 pt-10" data-purpose="hero-content">
-      <img src="assets/logo.png" alt="VIVI Music DE Logo" class="w-16 h-16 mx-auto mb-8 invert" decoding="async">
+      <img src="assets/logo.png" alt="VIVI Music DE Logo" class="w-16 h-16 mx-auto mb-8 invert" width="512" height="512" fetchpriority="high" decoding="async">
       <h1 class="text-4xl md:text-[48px] font-medium mb-6 tracking-tight md:tracking-[-0.04em] text-white font-geist leading-[1.1] max-w-[720px] mx-auto">
         The player that follows you.
       </h1>
@@ -263,7 +263,7 @@
     <div class="container mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
       <div class="col-span-1 flex flex-col gap-6">
         <div class="flex items-center gap-3">
-          <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" loading="lazy" decoding="async">
+          <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" width="512" height="512" loading="lazy" decoding="async">
           <span class="text-lg font-bold tracking-tight text-white font-geist">VIVI Music DE</span>
         </div>
         <p class="text-[#afbeff]/70 font-geist text-sm leading-relaxed max-w-xs pr-4">
