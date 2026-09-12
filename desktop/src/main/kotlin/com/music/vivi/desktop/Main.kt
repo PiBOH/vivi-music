@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -609,10 +610,10 @@ fun main(args: Array<String>) {
                             saveTheme()
                         },
                         accentIntensity = accentIntensity,
-                        onAccentIntensityChange = {
-                            accentIntensity = it
-                            saveTheme()
-                        },
+                        // Live state during the drag; the file is written once the
+                        // pointer is released (issue #65).
+                        onAccentIntensityChange = { accentIntensity = it },
+                        onAccentIntensityChangeFinished = { saveTheme() },
                         customAccents = customAccents,
                         onAddCustomAccent = { argb ->
                             customAccents = (customAccents + argb).distinct()
@@ -725,6 +726,7 @@ fun WindowScope.App(
     onAccentChange: (Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    onAccentIntensityChangeFinished: () -> Unit = {},
     customAccents: List<Int> = emptyList(),
     onAddCustomAccent: (Int) -> Unit = {},
     onRemoveCustomAccent: (Int) -> Unit = {},
@@ -768,44 +770,42 @@ fun WindowScope.App(
 
     // Cider-style desktop integrations: global media keys (Windows hook),
     // tray right-click menu and tray tooltip with the current track.
-    val isWindows = System.getProperty("os.name", "").lowercase().contains("win")
     val isMac = System.getProperty("os.name", "").lowercase().contains("mac")
-    // macOS: JNativeHook only registers once the Accessibility permission is
-    // granted (MediaKeys polls and activates on its own). This state drives
-    // the truthful switch/hint on the Desktop features screen.
-    var macAccessibilityTrusted by remember {
-        mutableStateOf(isMac && MediaKeys.isAccessibilityTrusted())
-    }
-    LaunchedEffect(Unit) {
-        if (!isMac) return@LaunchedEffect
-        while (true) {
-            macAccessibilityTrusted = MediaKeys.isAccessibilityTrusted()
-            delay(1500)
-        }
-    }
+    // macOS no longer uses JNativeHook at all: the MediaPlayer session (system
+    // "Now Playing" tile + media keys) is an OS-level integration that needs NO
+    // Accessibility permission (issue #67). The session is therefore always
+    // registered — the switch below only enables/disables its remote commands.
     LaunchedEffect(mediaKeysEnabled) {
-        if (mediaKeysEnabled) {
-            if (isMac) {
-                // macOS: the native MediaPlayer session (issue #5) answers the
-                // physical media keys AND registers the app as the system
-                // "Now Playing" source — no Accessibility permission needed.
-                MacMediaSession.start(
-                    appName = "VIVI Music",
-                    onPlayPause = { player.toggle() },
-                    onNext = { player.next() },
-                    onPrevious = { player.previous() },
-                    onSeek = { ms -> player.seekTo(ms) },
-                )
-            } else {
-                MediaKeys.start(
-                    onPlayPause = { player.toggle() },
-                    onNext = { player.next() },
-                    onPrevious = { player.previous() },
-                )
-            }
-        } else if (isMac) {
-            MacMediaSession.stop()
+        if (isMac) {
+            MacMediaSession.start(
+                appName = "VIVI Music",
+                onPlayPause = { player.toggle() },
+                onNext = { player.next() },
+                onPrevious = { player.previous() },
+                onSeek = { ms -> player.seekTo(ms) },
+            )
+            MacMediaSession.setCommandsEnabled(mediaKeysEnabled)
+        } else if (mediaKeysEnabled) {
+            MediaKeys.start(
+                onPlayPause = { player.toggle() },
+                onNext = { player.next() },
+                onPrevious = { player.previous() },
+            )
+        } else {
+            MediaKeys.stop()
         }
+    }
+
+    // macOS only: the native window chrome (title bar, native menus and
+    // dialogs) follows the app's own Light/Dark mode instead of the OS one,
+    // which used to leave a white title bar over a dark VIVI (issue #66).
+    val appDark = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    LaunchedEffect(appDark) {
+        if (isMac) MacMediaSession.setWindowAppearance(appDark)
     }
 
     // macOS only: keep the system "Now Playing" tile in sync with the current
@@ -2165,6 +2165,7 @@ fun WindowScope.App(
                         onAccentChange = onAccentChange,
                         accentIntensity = accentIntensity,
                         onAccentIntensityChange = onAccentIntensityChange,
+                        onAccentIntensityChangeFinished = onAccentIntensityChangeFinished,
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
                         customAccents = customAccents,
@@ -2438,10 +2439,6 @@ fun WindowScope.App(
                     is Screen.SettingsDesktop -> SettingsDesktopScreen(
                         language = language,
                         onBack = goBack,
-                        isWindows = isWindows,
-                        isMac = isMac,
-                        macAccessibilityTrusted = macAccessibilityTrusted,
-                        onOpenAccessibilitySettings = { MediaKeys.openAccessibilitySettings() },
                         showWidget = showWidget,
                         onShowWidgetChange = { v ->
                             showWidget = v

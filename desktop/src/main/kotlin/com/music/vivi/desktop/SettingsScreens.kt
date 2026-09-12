@@ -503,6 +503,7 @@ fun SettingsThemeScreen(
     onAccentChange: (androidx.compose.ui.graphics.Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    onAccentIntensityChangeFinished: () -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     customAccents: List<Int> = emptyList(),
@@ -518,6 +519,7 @@ fun SettingsThemeScreen(
             onAccentChange = onAccentChange,
             accentIntensity = accentIntensity,
             onAccentIntensityChange = onAccentIntensityChange,
+            onAccentIntensityChangeFinished = onAccentIntensityChangeFinished,
             pureBlack = pureBlack,
             onPureBlackChange = onPureBlackChange,
             customAccents = customAccents,
@@ -2036,16 +2038,17 @@ fun SettingsIntegrationsScreen(
 
 /**
  * Cider-style desktop features: floating Now Playing widget, global media keys
- * (Windows) and the tray icon menu. Everything is a simple toggle.
+ * and the tray icon menu. Everything is a simple toggle.
+ *
+ * The media-keys switch needs no OS permission on any platform: Windows/Linux
+ * use the low-level hook, macOS uses the native MediaPlayer session (issue #67),
+ * which is an OS-level integration and therefore never blocked by the
+ * Accessibility permission.
  */
 @Composable
 fun SettingsDesktopScreen(
     language: String,
     onBack: () -> Unit,
-    isWindows: Boolean,
-    isMac: Boolean = false,
-    macAccessibilityTrusted: Boolean = false,
-    onOpenAccessibilitySettings: (() -> Unit)? = null,
     showWidget: Boolean,
     onShowWidgetChange: (Boolean) -> Unit,
     mediaKeysEnabled: Boolean,
@@ -2086,42 +2089,16 @@ fun SettingsDesktopScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(Localization.get(language, "media_keys"), style = MaterialTheme.typography.bodyLarge)
-                    // On Windows/Linux the hook needs no OS permission; on
-                    // macOS it is only active once the Accessibility
-                    // permission is granted, which is reflected by the switch.
-                    if (isMac && !macAccessibilityTrusted) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            Localization.get(language, "requires_accessibility"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
+                Text(Localization.get(language, "media_keys"), style = MaterialTheme.typography.bodyLarge)
                 Text(
                     Localization.get(language, "media_keys_desc"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (isMac && !macAccessibilityTrusted && onOpenAccessibilitySettings != null) {
-                    OutlinedButton(
-                        onClick = onOpenAccessibilitySettings,
-                        modifier = Modifier.padding(top = 4.dp),
-                    ) {
-                        Text(Localization.get(language, "open_system_settings"))
-                    }
-                }
             }
-            // macOS: usable only once the Accessibility permission is granted
-            // (MediaKeys activates as soon as the OS reports trust). Windows
-            // and Linux need no permission.
-            val keysUsable = isWindows || isMac && macAccessibilityTrusted || !isWindows && !isMac
             Switch(
-                checked = mediaKeysEnabled && keysUsable,
-                onCheckedChange = { onMediaKeysChange(it && keysUsable) },
-                enabled = keysUsable,
+                checked = mediaKeysEnabled,
+                onCheckedChange = onMediaKeysChange,
             )
         }
 

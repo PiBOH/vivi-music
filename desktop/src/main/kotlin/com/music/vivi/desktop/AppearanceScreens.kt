@@ -3,8 +3,8 @@ package com.music.vivi.desktop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -49,12 +49,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -234,6 +237,7 @@ fun ThemeSection(
     onAccentChange: (Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    onAccentIntensityChangeFinished: () -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     customAccents: List<Int> = emptyList(),
@@ -373,6 +377,10 @@ fun ThemeSection(
             Slider(
                 value = accentIntensity,
                 onValueChange = onAccentIntensityChange,
+                // The drag itself only updates the in-memory state (issue #65:
+                // persisting on every frame made the thumb stutter); the file
+                // is written once, when the pointer is released.
+                onValueChangeFinished = onAccentIntensityChangeFinished,
                 valueRange = 0f..1f,
                 steps = 18,
                 modifier = Modifier.weight(1f),
@@ -457,6 +465,16 @@ fun ThemeSection(
         )
 
         Spacer(Modifier.height(16.dp))
+        // Live-updating HEX field (issue #65): typing a 6-digit value applies it
+        // to the picker immediately, so a color can be pasted from anywhere.
+        val liveHex = "%06X".format(java.util.Locale.US, colorToArgbInt(customColor) and 0xFFFFFF)
+        var hexInput by remember { mutableStateOf(liveHex) }
+        var hexFocused by remember { mutableStateOf(false) }
+        // While the field is not focused it mirrors the color picked with the
+        // gradient bars; typing in it drives hue/saturation/brightness instead.
+        LaunchedEffect(hexFocused, liveHex) {
+            if (!hexFocused) hexInput = liveHex
+        }
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -469,10 +487,29 @@ fun ThemeSection(
                     .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), CircleShape),
             )
             Spacer(Modifier.width(12.dp))
-            Text(
-                "#%06X".format(java.util.Locale.US, colorToArgbInt(customColor) and 0xFFFFFF),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            OutlinedTextField(
+                value = hexInput,
+                onValueChange = { raw ->
+                    val cleaned = raw.uppercase()
+                        .filter { it.isDigit() || it in 'A'..'F' }
+                        .take(6)
+                    hexInput = cleaned
+                    if (cleaned.length == 6) {
+                        cleaned.toIntOrNull(16)?.let { rgb ->
+                            val hsv = colorToHsv(Color(0xFF000000.toInt() or rgb))
+                            hue = hsv[0]
+                            saturation = hsv[1]
+                            brightness = hsv[2]
+                        }
+                    }
+                },
+                singleLine = true,
+                isError = hexInput.length != 6,
+                placeholder = { Text("#RRGGBB") },
+                textStyle = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .width(150.dp)
+                    .onFocusChanged { hexFocused = it.isFocused },
             )
             Spacer(Modifier.weight(1f))
             Button(
@@ -505,14 +542,23 @@ private fun GradientBar(
             .onSizeChanged { barWidthPx = it.width.toFloat() }
             .pointerInput(barWidthPx) {
                 fun pick(x: Float) = onFractionChange((x / barWidthPx).coerceIn(0f, 1f))
-                detectTapGestures { pick(it.x) }
-                detectDragGestures(
-                    onDragStart = { pick(it.x) },
-                    onDrag = { change, _ ->
-                        change.consume()
+                // ISSUE #65: `detectTapGestures` never returns (it loops
+                // forever), so the `detectDragGestures` call after it was dead
+                // code and the bar only reacted on mouse release. A single
+                // gesture loop tracks the press AND every drag movement, so the
+                // thumb and the previews follow the pointer in real time.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    pick(down.position.x)
+                    down.consume()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
                         pick(change.position.x)
-                    },
-                )
+                        change.consume()
+                    }
+                }
             },
     ) {
         val thumbX = (fraction * maxWidth.value).dp.coerceIn(0.dp, maxWidth)

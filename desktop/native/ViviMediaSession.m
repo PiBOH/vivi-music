@@ -35,6 +35,10 @@ static vivi_artwork_cb g_artwork = NULL;
 void viviRegisterSeekCallback(vivi_seek_cb cb);   // defined below
 void viviDispatchSeek(double positionMs);         // defined below
 
+// Display name of the app (set by viviSetAppIdentity). The system tile shows
+// the app name on its own, so this must NOT be pushed as the track title.
+static NSString *g_appName = nil;
+
 // Current now-playing state (kept so a late metadata push re-applies it).
 static NSString *g_title = nil;
 static NSString *g_artist = nil;
@@ -80,6 +84,9 @@ static NSImage *LoadImageSafely(NSString *path) {
 }
 
 static void PushNowPlayingInfo(void) {
+    // Nothing to advertise yet: publishing an empty dictionary would put a
+    // title-less tile in Control Center before the first track starts.
+    if (g_title.length == 0 && g_artworkPath.length == 0) return;
     NSMutableDictionary *info = [NSMutableDictionary dictionary];
     if (g_title.length > 0) info[MPMediaItemPropertyTitle] = g_title;
     if (g_artist.length > 0) info[MPMediaItemPropertyArtist] = g_artist;
@@ -153,14 +160,15 @@ void viviRegisterCallbacks(vivi_play_pause_cb pp, vivi_next_cb nx, vivi_previous
     });
 }
 
-// Sets the app identity shown in the system tile.
+// Sets the app identity shown in the system tile. The tile takes the visible
+// name from the bundle, so this only records it for diagnostics (previously it
+// overwrote the track title, so the tile could show "VIVI Music" as the song).
 void viviSetAppIdentity(const char *appNameUtf8) {
     NSString *name = appNameUtf8
                          ? [NSString stringWithUTF8String:appNameUtf8]
                          : @"VIVI Music";
     dispatch_async(dispatch_get_main_queue(), ^{
-        g_title = name;
-        PushNowPlayingInfo();
+        g_appName = name;
     });
 }
 
@@ -197,6 +205,28 @@ void viviSetNowPlaying(const char *titleUtf8, const char *artistUtf8, const char
         }
         PushNowPlayingInfo();
         if (g_artwork) g_artwork();
+    });
+}
+
+// Enables or disables the remote commands (media keys / Control Center
+// buttons). Disabling it also drops the tile, because a tile whose controls do
+// nothing is worse than no tile. Used by the "Media keys" switch on macOS,
+// which no longer depends on the Accessibility permission.
+void viviSetCommandsEnabled(int enabled) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        BOOL on = enabled != 0;
+        MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+        center.playCommand.enabled = on;
+        center.pauseCommand.enabled = on;
+        center.togglePlayPauseCommand.enabled = on;
+        center.nextTrackCommand.enabled = on;
+        center.previousTrackCommand.enabled = on;
+        center.changePlaybackPositionCommand.enabled = on;
+        if (!on) {
+            [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
+        } else {
+            PushNowPlayingInfo();
+        }
     });
 }
 
@@ -248,6 +278,25 @@ void viviNotify(const char *titleUtf8, const char *messageUtf8) {
                                                  trigger:trigger];
         [[UNUserNotificationCenter currentNotificationCenter]
             addNotificationRequest:request withCompletionHandler:nil];
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Native window chrome (issue #66)
+// ---------------------------------------------------------------------------
+
+// Forces the native window chrome (title bar, native menus and dialogs) to the
+// app's own Light/Dark mode instead of the OS appearance, so a dark VIVI on a
+// light macOS desktop no longer shows a white title bar.
+void viviSetWindowAppearance(int dark) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSString *name = dark ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua;
+        NSAppearance *appearance = [NSAppearance appearanceNamed:name];
+        if (!appearance) return;
+        [NSApp setAppearance:appearance];
+        for (NSWindow *window in [NSApp windows]) {
+            window.appearance = appearance;
+        }
     });
 }
 

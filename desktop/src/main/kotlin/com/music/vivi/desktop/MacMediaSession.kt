@@ -56,6 +56,8 @@ object MacMediaSession {
         fun viviEndSession()
         fun viviRequestNotificationPermission()
         fun viviNotify(title: String?, message: String?)
+        fun viviSetCommandsEnabled(enabled: Int)
+        fun viviSetWindowAppearance(dark: Int)
     }
 
     private val native: ViviMediaLib? by lazy {
@@ -89,8 +91,18 @@ object MacMediaSession {
                 Native.load(dylib.absolutePath, ViviMediaLib::class.java)
             }.onFailure { t ->
                 println("[mac-media] native helper load failed: $t")
+                log("native helper load failed: $t")
             }.getOrNull()
         }
+    }
+
+    /**
+     * Diagnostics (issue #67): mirrors the helper's lifecycle in the session
+     * playback log so a user report can show whether the system session was
+     * registered at all.
+     */
+    private fun log(message: String) {
+        runCatching { AppLog.log("playback", "[mac-media] $message") }
     }
 
     private val nativeApi: ViviMediaLib?
@@ -132,6 +144,10 @@ object MacMediaSession {
     @Volatile
     private var metadata = Metadata()
 
+    /** Title of the last logged track (avoids one log line per position tick). */
+    @Volatile
+    private var lastLoggedTitle: String? = null
+
     /** Guards against launching a second download for the same track. */
     private val downloadingUrl = AtomicReference<String?>(null)
 
@@ -155,7 +171,10 @@ object MacMediaSession {
         this.onPrevious = onPrevious
         this.onSeek = onSeek
         if (!isMac) return
-        val api = nativeApi ?: return
+        val api = nativeApi ?: run {
+            log("session NOT started: native helper unavailable")
+            return
+        }
         if (started.compareAndSet(false, true)) {
             try {
                 val cbs = NativeCallbacks(
@@ -167,14 +186,38 @@ object MacMediaSession {
                 callbacks = cbs
                 api.viviRegisterCallbacks(cbs.playPause, cbs.next, cbs.previous, cbs.seek, VoidCb {})
                 api.viviSetAppIdentity(appName)
+                log("system Now Playing session registered (app=\"$appName\")")
             } catch (t: Throwable) {
                 println("[mac-media] start failed: $t")
+                log("session registration failed: $t")
                 started.set(false)
                 return
             }
         }
         // Re-apply the latest metadata (the tile may have been cleared).
         syncMetadata()
+    }
+
+    /**
+     * Enables/disables the system media keys and Control Center buttons
+     * (macOS). No Accessibility permission involved — MPRemoteCommandCenter is
+     * an OS-level integration. No-op on other platforms or without the helper.
+     */
+    fun setCommandsEnabled(enabled: Boolean) {
+        if (!isMac) return
+        val api = nativeApi ?: return
+        runCatching { api.viviSetCommandsEnabled(if (enabled) 1 else 0) }
+        log(if (enabled) "media keys enabled" else "media keys disabled (tile cleared)")
+    }
+
+    /**
+     * Forces the native window chrome to the app's own Light/Dark mode
+     * (issue #66). Safe to call before [start] and on every theme change.
+     */
+    fun setWindowAppearance(dark: Boolean) {
+        if (!isMac) return
+        val api = nativeApi ?: return
+        runCatching { api.viviSetWindowAppearance(if (dark) 1 else 0) }
     }
 
     /** Stops the session (clears the tile) but keeps the handlers registered. */
@@ -265,6 +308,10 @@ object MacMediaSession {
         if (!started.get()) return
         val api = nativeApi ?: return
         val m = metadata
+        if (m.title != lastLoggedTitle) {
+            lastLoggedTitle = m.title
+            if (m.title.isNotEmpty()) log("now playing: \"${m.title}\" — ${m.artist}")
+        }
         try {
             api.viviStartSession()
             api.viviSetNowPlaying(
@@ -363,6 +410,7 @@ object MacMediaSession {
             }
         } catch (t: Throwable) {
             println("[mac-media] artwork download failed: $t")
+            log("artwork download failed: ${t.message}")
             null
         }
     }
