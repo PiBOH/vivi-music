@@ -297,16 +297,31 @@
 }
 
 
-/* Material Symbols Outlined (self-hosted variable font).
-   `font-display: swap` instead of `block`: the icon font is a large variable
-   font (the full glyph set), and `block` made every page render-block on it for
-   up to 3 s (blank text) while it downloaded - the single worst FCP/LCP cost on
-   the site. With `swap` the text renders immediately and the glyphs appear as
-   soon as the font arrives. */
+/* Material Symbols Outlined - SUBSET to the icons this site actually uses.
+
+   The full icon font was 3.97 MB and every page loaded it, which alone put the
+   PageSpeed "avoid enormous network payloads" audit in the red. Only ten icons
+   are referenced anywhere (`block`, `desktop_windows`, `download`,
+   `expand_more`, `laptop_mac`, `menu_book`, `open_in_new`, `smartphone`,
+   `star`, `terminal`) plus the ASCII letters and `_` that spell them, so the
+   file shipped here is a 2.6 KB subset (32 glyphs, same outlines, same
+   ligatures).
+
+   To regenerate it after adding a NEW icon name to the site:
+     python3 -m pip install fonttools brotli
+     python3 scripts/subset_material_symbols.py \
+         .websitede/assets/fonts/material-symbols-outlined.woff2 \
+         block desktop_windows download expand_more laptop_mac menu_book \
+         open_in_new smartphone star terminal
+   (it starts from the ORIGINAL full font, so always keep a copy or pull the
+   previous revision before re-running it.)
+
+   `font-display: swap` (not `block`): with `block` every page rendered nothing
+   for up to 3 s waiting for the icon font before the first paint. */
 @font-face {
   font-family: 'Material Symbols Outlined';
   font-style: normal;
-  font-weight: 100 700;
+  font-weight: 400;
   font-display: swap;
   src: url('fonts/material-symbols-outlined.woff2') format('woff2');
 }
