@@ -127,6 +127,7 @@
     <string name="remove_from_playlist">Remove from playlist</string>
     <string name="remove_from_queue">Remove from queue</string>
     <string name="search_online">Search online</string>
+    <string name="search_listen_history">Jump back in</string>
     <string name="action_sync">Sync</string>
     <string name="advanced">Advanced</string>
     <string name="tempo_and_pitch">Tempo and Pitch</string>
@@ -292,6 +293,8 @@
     <string name="action_logout">Log out</string>
     <string name="action_login">Log in</string>
     <string name="login">Login</string>
+    <string name="login_confirm">Confirm login</string>
+    <string name="login_brand_account_hint">If you want to use a Brand Account, switch to it using the account menu above, then tap the check mark to confirm.</string>
     <string name="show_audio_quality_badge">Show audio quality badge</string>
     <string name="not_logged_in">Not logged in</string>
     <string name="login_failed">Login failed</string>

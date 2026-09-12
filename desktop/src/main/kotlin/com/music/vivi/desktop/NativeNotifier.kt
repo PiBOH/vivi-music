@@ -9,6 +9,7 @@ import java.awt.RenderingHints
 import java.awt.SystemTray
 import java.awt.TrayIcon
 import java.awt.image.BufferedImage
+import java.util.concurrent.TimeUnit
 
 /**
  * Unified notification dispatcher. All app notifications (update available,
@@ -24,7 +25,22 @@ object DesktopNotifier {
     val events: SharedFlow<Notice> = _events.asSharedFlow()
 
     fun notify(title: String, message: String, section: String? = null) {
-        val mode = if (DesktopSettings.load().notificationMode == "native") "native" else "in_app"
+        val state = DesktopSettings.load()
+        val native = state.notificationMode == "native"
+        val mode = if (native) "native" else "in_app"
+        // When the OS is suppressing notifications (Do Not Disturb / Focus
+        // Assist), a native toast would be silently dropped. Fall back to an
+        // in-app notice that explains WHY it appears in-app instead (and why
+        // the native one was skipped), so the user is never left wondering
+        // where their notification went.
+        if (native && DoNotDisturb.isActive()) {
+            val language = state.language
+            val whyTitle = Localization.get(language, "notif_dnd_title")
+            val whyBody = Localization.get(language, "notif_dnd_body")
+            NotificationHistory.record(whyTitle, "$whyBody\n\n$title\n$message", "in_app")
+            _events.tryEmit(Notice(whyTitle, "$whyBody\n\n$title\n$message"))
+            return
+        }
         NotificationHistory.record(title, message, mode)
         if (mode == "native") {
             NativeNotifier.notify(title, message, section)
@@ -72,6 +88,82 @@ object NotificationHistory {
 }
 
 /**
+ * Best-effort check for an active OS-level "Do Not Disturb" / Focus Assist
+ * state. When the OS silences notifications, a native toast would be sent but
+ * never shown, so [DesktopNotifier] falls back to an in-app notice explaining
+ * why (see [DesktopNotifier.notify]). Detection is best-effort per platform:
+ *  - Windows: Focus Assist / quiet hours + the global toast master switch in
+ *    the registry.
+ *  - macOS: the Focus/Do Not Disturb mode state files under
+ *    `~/Library/DoNotDisturb/DB` (ModeConfigurations.json on newer macOS,
+ *    Assertions.json on older ones).
+ *  - Linux: GNOME's `show-banners` gsettings key (other desktops: false).
+ * Unsupported or unreadable states report false (no DND), so a normal native
+ * notification is still attempted.
+ */
+object DoNotDisturb {
+    private val os = System.getProperty("os.name", "").lowercase()
+
+    /** True when the OS is currently suppressing notifications. */
+    fun isActive(): Boolean = when {
+        os.contains("win") -> windowsDndActive()
+        os.contains("mac") -> macDndActive()
+        os.contains("linux") -> linuxDndActive()
+        else -> false
+    }
+
+    /** Windows: Focus Assist / quiet hours + global toast master switch. */
+    private fun windowsDndActive(): Boolean = runCatching {
+        // Focus Assist "quiet hours" — value 1 means notifications are on hold.
+        val quiet = regQuery("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\QuietHours", "Enabled")
+        if (quiet.contains("0x1", ignoreCase = true)) return true
+        // Global toast master switch (1 = toasts allowed).
+        val toasts = regQuery(
+            "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings",
+            "NOC_GLOBAL_SETTING_TOASTS_ENABLED",
+        )
+        if (toasts.contains("0x0", ignoreCase = true)) return true
+        false
+    }.getOrDefault(false)
+
+    private fun regQuery(key: String, value: String): String = runCatching {
+        val p = ProcessBuilder("reg", "query", key, "/v", value)
+            .redirectErrorStream(true)
+            .start()
+        val out = p.inputStream.bufferedReader().readText()
+        p.waitFor(5, TimeUnit.SECONDS)
+        out
+    }.getOrDefault("")
+
+    /**
+     * macOS: DND is on when any Focus mode is enabled. The state lives in
+     * `~/Library/DoNotDisturb/DB/` — ModeConfigurations.json (macOS 13+),
+     * Assertions.json (older). Parse leniently: if the file lists an enabled
+     * mode/assertion, treat DND as active.
+     */
+    private fun macDndActive(): Boolean = runCatching {
+        val home = System.getProperty("user.home") ?: return false
+        val dbDir = java.io.File(home, "Library/DoNotDisturb/DB")
+        if (!dbDir.isDirectory) return false
+        val modes = java.io.File(dbDir, "ModeConfigurations.json")
+        if (modes.isFile && modes.readText().contains("\"enabled\" : true")) return true
+        val assertions = java.io.File(dbDir, "Assertions.json")
+        if (assertions.isFile && assertions.readText().contains("\"endDate\" : null")) return true
+        false
+    }.getOrDefault(false)
+
+    /** Linux: GNOME "show banners" must be false for DND to be active. */
+    private fun linuxDndActive(): Boolean = runCatching {
+        val p = ProcessBuilder("gsettings", "get", "org.gnome.desktop.notifications", "show-banners")
+            .redirectErrorStream(true)
+            .start()
+        val out = p.inputStream.bufferedReader().readText().trim()
+        p.waitFor(5, TimeUnit.SECONDS)
+        out == "false"
+    }.getOrDefault(false)
+}
+
+/**
  * Best-effort native OS notification.
  *
  * On a packaged Windows build this uses a WinRT toast ([WindowsToast]) so the
@@ -106,8 +198,21 @@ object NativeNotifier {
     /** Shows a native system notification with [title] and [message]. */
     fun notify(title: String, message: String, section: String? = null) {
         runCatching {
+            val osName = System.getProperty("os.name").orEmpty().lowercase()
+            WindowsToast.log("NativeNotifier.notify: os=$osName title=\"$title\"")
+            // macOS: SystemTray balloons are unreliable there, so use the
+            // native UNUserNotificationCenter helper (bundled with the
+            // media-session dylib) when available — real Notification Center
+            // banners attributed to the app, working on Intel and Apple
+            // Silicon. Fall back to `osascript` when the helper isn't loaded.
+            if (osName.startsWith("mac")) {
+                MacMediaSession.requestNotificationPermissionOnce()
+                if (MacMediaSession.notify(title, message)) return
+                WindowsToast.log("NativeNotifier: mac helper unavailable, falling back to osascript")
+                if (macOsNotify(title, message)) return
+                WindowsToast.log("NativeNotifier: osascript failed, falling back to SystemTray")
+            }
             val winToast = WindowsToast.isAvailable()
-            WindowsToast.log("NativeNotifier.notify: winToast=$winToast os=${System.getProperty("os.name")} title=\"$title\"")
             if (winToast) {
                 WindowsToast.show(title, message, section)
                 return
@@ -121,6 +226,21 @@ object NativeNotifier {
             icon.displayMessage(title, message, TrayIcon.MessageType.INFO)
         }
     }
+
+    /**
+     * Shows a macOS Notification Center banner via `osascript` (built into
+     * every macOS). Returns true when the notification was actually posted.
+     */
+    private fun macOsNotify(title: String, message: String): Boolean = runCatching {
+        fun esc(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
+        val script = "display notification \"${esc(message)}\" with title \"${esc(title)}\""
+        val p = ProcessBuilder("osascript", "-e", script)
+            .redirectErrorStream(false)
+            .start()
+        val finished = p.waitFor(10, TimeUnit.SECONDS)
+        if (finished) p.destroyForcibly()
+        finished && p.exitValue() == 0
+    }.getOrDefault(false)
 
     /**
      * Creates the tray icon eagerly (no notification needed) and (re)builds its
@@ -142,10 +262,21 @@ object NativeNotifier {
         runCatching { trayIcon?.toolTip = text }
     }
 
-    /** Removes the right-click menu from the tray icon (toggle off). */
+    /**
+     * Removes the right-click menu AND the tray icon itself (toggle off),
+     * so the setting applies live without a restart. The icon is recreated
+     * lazily by [ensureIcon] when a notification needs it or the menu is
+     * turned back on.
+     */
     fun clearTrayMenu() {
         trayActions = null
-        runCatching { trayIcon?.popupMenu = null }
+        runCatching {
+            val icon = trayIcon
+            if (icon != null && SystemTray.isSupported()) {
+                SystemTray.getSystemTray().remove(icon)
+                trayIcon = null
+            }
+        }
     }
 
     private fun buildMenu(icon: TrayIcon, a: TrayActions) {

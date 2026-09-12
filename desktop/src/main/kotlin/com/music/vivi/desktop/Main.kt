@@ -8,7 +8,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +58,18 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.PlaylistAddCheck
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.PlaylistPlay
@@ -78,6 +89,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SpeakerGroup
@@ -110,6 +124,8 @@ import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.CompareArrows
+import androidx.compose.material.icons.filled.DiscFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.QueueMusic
@@ -197,12 +213,12 @@ import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 import com.music.innertube.YouTubeExtractor
 import com.music.innertube.models.SongItem
-import com.music.lrclib.LrcLib
 import com.music.vivi.desktop.player.PlayerController
 import com.music.vivi.desktop.player.RepeatMode
 import com.music.vivi.desktop.player.StreamResolver
 import com.music.vivi.sync.LibrarySnapshot
 import com.music.vivi.sync.PlaybackSnapshot
+import com.music.vivi.sync.SyncConnectionState
 import com.music.vivi.sync.SyncServer
 import com.music.vivi.sync.SyncedSong
 import com.music.vivi.sync.TrackRef
@@ -219,9 +235,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import coil3.compose.AsyncImage
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 /**
  * Ensures Skiko can render on this machine. On Linux the default render API is
@@ -316,6 +333,7 @@ fun main(args: Array<String>) {
     var themeMode by remember { mutableStateOf(ThemeMode.from(DesktopSettings.load().darkMode)) }
     var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
     var accentIntensity by remember { mutableStateOf(DesktopSettings.load().accentIntensity) }
+    var customAccents by remember { mutableStateOf(DesktopSettings.load().customAccents) }
     var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
     var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
     var customFontPath by remember { mutableStateOf(DesktopSettings.load().customFontPath) }
@@ -549,7 +567,11 @@ fun main(args: Array<String>) {
             // hierarchy" on pointer events (see Compose CMP-2326). Use targeted
             // SelectionContainer wrappers on individual text instead.
             var showIntro by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
-            Crossfade(targetState = showIntro, animationSpec = tween(400), label = "intro") { intro ->
+            Crossfade(
+                targetState = showIntro,
+                animationSpec = if (DesktopSettings.load().animationsEnabled) tween(400) else tween(0),
+                label = "intro",
+            ) { intro ->
                 when {
                     intro -> IntroSplash(
                         language = language,
@@ -559,13 +581,17 @@ fun main(args: Array<String>) {
                     )
                     language.isBlank() -> LanguageSelectionScreen { selected ->
                         language = selected
-                        DesktopSettings.update { it.copy(language = selected) }
+                        DesktopSettings.update {
+                            it.copy(language = selected, languageSeq = it.languageSeq + 1)
+                        }
                     }
                     else -> App(
                         language = language,
                         onLanguageChange = { selected ->
                             language = selected
-                            DesktopSettings.update { it.copy(language = selected) }
+                            DesktopSettings.update {
+                                it.copy(language = selected, languageSeq = it.languageSeq + 1)
+                            }
                         },
                         font = selectedFont,
                         onFontChange = { f ->
@@ -586,6 +612,15 @@ fun main(args: Array<String>) {
                         onAccentIntensityChange = {
                             accentIntensity = it
                             saveTheme()
+                        },
+                        customAccents = customAccents,
+                        onAddCustomAccent = { argb ->
+                            customAccents = (customAccents + argb).distinct()
+                            DesktopSettings.update { it.copy(customAccents = customAccents) }
+                        },
+                        onRemoveCustomAccent = { argb ->
+                            customAccents = customAccents - argb
+                            DesktopSettings.update { it.copy(customAccents = customAccents) }
                         },
                         customFontPath = customFontPath,
                         onImportFont = importFont,
@@ -690,6 +725,9 @@ fun WindowScope.App(
     onAccentChange: (Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    customAccents: List<Int> = emptyList(),
+    onAddCustomAccent: (Int) -> Unit = {},
+    onRemoveCustomAccent: (Int) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     spotifyLayout: Boolean = false,
@@ -708,9 +746,20 @@ fun WindowScope.App(
     var backStack by remember { mutableStateOf(listOf<Screen>(Screen.Home)) }
     val player = remember { PlayerController() }
     val playerState by player.state.collectAsState()
+    // Recently started tracks, used as seeds for the Home "Recommended" section.
+    val recentSeedTracks by player.recentTracks.collectAsState()
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
     val audioLevel by player.audioLevel.collectAsState()
+
+    // Restore the active EQ profile (Settings → Player & audio → Equalizer) on
+    // startup so the saved equalization applies from the first track.
+    LaunchedEffect(Unit) {
+        val s = DesktopSettings.load()
+        if (s.activeEqProfileId.isNotEmpty()) {
+            player.setEqualizer(s.eqProfiles.find { it.id == s.activeEqProfileId })
+        }
+    }
 
     // Cider-style desktop features state (floating widget, media keys, tray menu).
     var showWidget by remember { mutableStateOf(DesktopSettings.load().showNowPlayingWidget) }
@@ -720,13 +769,72 @@ fun WindowScope.App(
     // Cider-style desktop integrations: global media keys (Windows hook),
     // tray right-click menu and tray tooltip with the current track.
     val isWindows = System.getProperty("os.name", "").lowercase().contains("win")
+    val isMac = System.getProperty("os.name", "").lowercase().contains("mac")
+    // macOS: JNativeHook only registers once the Accessibility permission is
+    // granted (MediaKeys polls and activates on its own). This state drives
+    // the truthful switch/hint on the Desktop features screen.
+    var macAccessibilityTrusted by remember {
+        mutableStateOf(isMac && MediaKeys.isAccessibilityTrusted())
+    }
+    LaunchedEffect(Unit) {
+        if (!isMac) return@LaunchedEffect
+        while (true) {
+            macAccessibilityTrusted = MediaKeys.isAccessibilityTrusted()
+            delay(1500)
+        }
+    }
     LaunchedEffect(mediaKeysEnabled) {
-        if (mediaKeysEnabled && isWindows) {
-            MediaKeys.start(
-                onPlayPause = { player.toggle() },
-                onNext = { player.next() },
-                onPrevious = { player.previous() },
-            )
+        if (mediaKeysEnabled) {
+            if (isMac) {
+                // macOS: the native MediaPlayer session (issue #5) answers the
+                // physical media keys AND registers the app as the system
+                // "Now Playing" source — no Accessibility permission needed.
+                MacMediaSession.start(
+                    appName = "VIVI Music",
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                    onSeek = { ms -> player.seekTo(ms) },
+                )
+            } else {
+                MediaKeys.start(
+                    onPlayPause = { player.toggle() },
+                    onNext = { player.next() },
+                    onPrevious = { player.previous() },
+                )
+            }
+        } else if (isMac) {
+            MacMediaSession.stop()
+        }
+    }
+
+    // macOS only: keep the system "Now Playing" tile in sync with the current
+    // track. Gated by the same "Media keys" toggle as the session above (so
+    // disabling it clears the tile; re-enabling re-pushes the current state).
+    // Runs once per track (and again when playback pauses) and pushes a
+    // position update every 500 ms while playing. Artwork is downloaded in the
+    // background by MacMediaSession itself.
+    if (isMac && mediaKeysEnabled) {
+        LaunchedEffect(nowPlaying?.videoId, isPlaying) {
+            val np = nowPlaying
+            if (np == null) {
+                MacMediaSession.endSession()
+                return@LaunchedEffect
+            }
+            while (true) {
+                MacMediaSession.setNowPlaying(
+                    title = np.title,
+                    artist = np.artist,
+                    durationMs = playerState.durationMs,
+                    positionMs = playerState.positionMs,
+                    playing = playerState.isPlaying,
+                    artworkUrl = np.thumbnail?.takeIf {
+                        it.startsWith("http://") || it.startsWith("https://")
+                    },
+                )
+                if (!playerState.isPlaying) break
+                delay(500)
+            }
         }
     }
     LaunchedEffect(language, trayMenuEnabled) {
@@ -773,15 +881,42 @@ fun WindowScope.App(
 
     var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
+    var autoLoadMore by remember { mutableStateOf(DesktopSettings.load().autoLoadMore) }
+    player.autoLoadMore = autoLoadMore
+    var preventDuplicateTracksInQueue by remember { mutableStateOf(DesktopSettings.load().preventDuplicateTracksInQueue) }
+    player.preventDuplicateTracksInQueue = preventDuplicateTracksInQueue
+    var autoSkipNextOnError by remember { mutableStateOf(DesktopSettings.load().autoSkipNextOnError) }
+    player.autoSkipNextOnError = autoSkipNextOnError
+    var pauseWhenMediaMuted by remember { mutableStateOf(DesktopSettings.load().pauseWhenMediaMuted) }
+    var keepScreenOnWhenPlayerExpanded by remember { mutableStateOf(DesktopSettings.load().keepScreenOnWhenPlayerExpanded) }
+
+    var persistentShuffle by remember { mutableStateOf(DesktopSettings.load().persistentShuffle) }
+    player.persistentShuffleAcrossQueues = persistentShuffle
+    var progressiveSeek by remember { mutableStateOf(DesktopSettings.load().progressiveSeek) }
+    var historyDurationSeconds by remember { mutableStateOf(DesktopSettings.load().historyDurationSeconds) }
+    var autoDownloadOnLike by remember { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
+    var skipSilence by remember { mutableStateOf(DesktopSettings.load().skipSilence) }
+    var skipSilenceInstant by remember { mutableStateOf(DesktopSettings.load().skipSilenceInstant) }
+    var crossfade by remember { mutableStateOf(DesktopSettings.load().crossfade) }
+    var crossfadeDurationSeconds by remember { mutableStateOf(DesktopSettings.load().crossfadeDurationSeconds) }
+    var disableCrossfadeGapless by remember { mutableStateOf(DesktopSettings.load().disableCrossfadeGapless) }
+
+    // "Auto download on like": cache a song into the audio cache the moment it
+    // is liked (the setting is read live when the like happens).
+    LaunchedEffect(player) {
+        SongActions.onSongLiked = { id, _ ->
+            if (DesktopSettings.load().autoDownloadOnLike) player.downloadToCache(id)
+        }
+    }
 
     var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
     var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
     var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
+    var animationsEnabled by remember { mutableStateOf(DesktopSettings.load().animationsEnabled) }
     var sliderStyle by remember { mutableStateOf(DesktopSettings.load().sliderStyle) }
     var playerDesign by remember { mutableStateOf(PlayerDesign.from(DesktopSettings.load().playerDesign)) }
     var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(DesktopSettings.load().playerBackground)) }
     var rotatingThumbnail by remember { mutableStateOf(DesktopSettings.load().rotatingThumbnail) }
-    var miniPlayerStyle by remember { mutableStateOf(DesktopSettings.load().miniPlayerStyle) }
     var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
     var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
     var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
@@ -959,13 +1094,25 @@ fun WindowScope.App(
 
     val current = backStack.last()
 
+    // "Keep screen on when player is expanded": hold a keep-awake request
+    // while the full player screen is open (desktop adaptation of the mobile
+    // window flag). Independent of the pairing keep-awake, which uses its own
+    // request name.
+    LaunchedEffect(keepScreenOnWhenPlayerExpanded, current) {
+        KeepAwake.request("expanded-player", keepScreenOnWhenPlayerExpanded && current is Screen.Player)
+    }
+
     // Undo/redo stacks for keyboard navigation history (Ctrl+Z / Ctrl+Y).
     var undoStack by remember { mutableStateOf(listOf<Screen>()) }
     var redoStack by remember { mutableStateOf(listOf<Screen>()) }
+    fun screenLabel(s: Screen): String = s::class.simpleName ?: s.toString()
+
     val navigate: (Screen) -> Unit = navigate@{ target ->
         // Never push a duplicate of the screen already on top (double-clicks
         // or a stale click handler must not create [X, X] entries).
         if (backStack.last() == target) return@navigate
+        AppLog.click("open ${screenLabel(target)}")
+        AppLog.log("nav", "open ${screenLabel(target)}")
         redoStack = emptyList()
         undoStack = undoStack + backStack.last()
         backStack = backStack + target
@@ -973,16 +1120,21 @@ fun WindowScope.App(
     val openRoot: (Screen) -> Unit = { screen ->
         // Keep Home at the base so "back" from a root (e.g. Settings) returns
         // to Home instead of getting stuck with nothing to pop.
+        AppLog.click("root ${screenLabel(screen)}")
+        AppLog.log("nav", "root → ${screenLabel(screen)}")
         backStack = if (screen == Screen.Home) listOf(Screen.Home) else listOf(Screen.Home, screen)
     }
     val goBack: () -> Unit = {
         if (backStack.size > 1) {
+            AppLog.click("back ← ${screenLabel(backStack.last())}")
+            AppLog.log("nav", "back ← ${screenLabel(backStack.last())}")
             undoStack = undoStack + backStack.last()
             backStack = backStack.dropLast(1)
         }
     }
     val undo: () -> Unit = {
         if (undoStack.isNotEmpty()) {
+            AppLog.log("nav", "undo to ${screenLabel(undoStack.last())}")
             redoStack = redoStack + backStack.last()
             backStack = backStack + undoStack.last()
             undoStack = undoStack.dropLast(1)
@@ -990,6 +1142,7 @@ fun WindowScope.App(
     }
     val redo: () -> Unit = {
         if (redoStack.isNotEmpty()) {
+            AppLog.log("nav", "redo to ${screenLabel(redoStack.last())}")
             undoStack = undoStack + backStack.last()
             backStack = backStack + redoStack.last()
             redoStack = redoStack.dropLast(1)
@@ -1035,6 +1188,9 @@ fun WindowScope.App(
         artist = song.artists.joinToString(", ") { it.name },
         thumbnail = song.thumbnail,
         durationMs = (song.duration ?: 0) * 1000L,
+        // Album name (when known): feeds the "disable crossfade for gapless
+        // albums" rule on the player.
+        album = song.album?.name,
     )
 
     val playSong: (SongItem) -> Unit = { song -> player.play(songToNowPlaying(song)) }
@@ -1181,6 +1337,10 @@ fun WindowScope.App(
     // ---- Device sync (Android <-> desktop) ----
     val syncManager = remember { DesktopSyncManager() }
 
+    // ---- Listen Together (shared rooms over the relay) ----
+    val listenTogetherManager = remember { ListenTogetherManager(player) }
+    LaunchedEffect(listenTogetherManager) { listenTogetherManager.initialize() }
+
     // Echo guards: when we apply a remote volume, we must not push the
     // resulting local change straight back to the peer.
     val systemVolumeGuard = remember { VolumeGuard() }
@@ -1202,7 +1362,7 @@ fun WindowScope.App(
             // Keep the display/system awake while paired so the OS sleeping
             // the screen can't tear down the sync socket and unpair the two
             // devices.
-            KeepAwake.setEnabled(paired)
+            KeepAwake.request("paired", paired)
             if (paired != wasPaired) {
                 wasPaired = paired
                 if (paired) {
@@ -1223,30 +1383,59 @@ fun WindowScope.App(
         }
     }
 
-    // Look-ahead prefetch: cache the next few tracks' audio and lyrics in the
+    // Look-ahead prefetch: cache the tracks around the current one in the
     // background so they start instantly when skipped to. Runs regardless of
-    // play/pause, so pausing still fills the cache for the upcoming tracks.
+    // play/pause, so pausing still fills the cache. Order: the current track
+    // first (a restored queue has nothing loaded, so it must be ready the
+    // moment the user presses play), then the 3 next + 3 previous tracks,
+    // then the rest of the queue, one download at a time, so with "cache
+    // forever" the whole queue ends up on disk.
     LaunchedEffect(player) {
+        var prefetchJob: kotlinx.coroutines.Job? = null
         player.state
             .map { it.queue to it.index }
             .distinctUntilChanged()
             .collect { (queue, index) ->
-                for (track in queue.drop(index + 1).take(3)) {
-                    // Audio: resolve + download to the on-disk cache (no play).
-                    if (!player.isCached(track.videoId)) {
-                        launch(Dispatchers.IO) {
-                            val streams = StreamResolver.resolveAacStream(
-                                track.videoId,
-                                StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
-                            )
-                            if (streams.isNotEmpty()) player.prefetch(streams, track.videoId)
-                        }
-                    }
-                    // Lyrics: fetch + keep in the persistent cache.
-                    if (LyricsCache.get(track.videoId) == null) {
-                        launch(Dispatchers.IO) {
-                            LrcLib.getLyrics(title = track.title, artist = track.artist, duration = -1)
-                                .onSuccess { LyricsCache.put(track.videoId, it) }
+                if (queue.isEmpty() || index !in queue.indices) return@collect
+
+                val upcoming = queue.drop(index + 1)
+                val nearestFirst = (upcoming.take(3) +
+                    queue.take(index).takeLast(3).asReversed())
+                    .distinctBy { it.videoId }
+                val restOfQueue = upcoming.drop(3)
+                // The current track goes FIRST: at startup (queue restored
+                // from the persistent queue) it is not playing yet, so by the
+                // time the user presses play it is already on disk and starts
+                // instantly instead of resolving + downloading.
+                val currentTrack = queue.getOrNull(index)
+
+                // Lyrics for the upcoming tracks used to be pre-fetched here
+                // with a fake duration (-1). Without a real duration the
+                // community server can return the WRONG recording of a title
+                // and, because the result was cached forever, the mistake
+                // stuck. Lyrics are fetched on demand (with the real duration,
+                // through [DesktopLyrics]) when each song actually plays, so
+                // this poisoning pre-fetch is intentionally gone.
+
+                // A queue/index change restarts the pass on the new window
+                // (an old pass must not keep downloading stale tracks).
+                prefetchJob?.cancel()
+                prefetchJob = launch(Dispatchers.IO) {
+                    val order = (listOfNotNull(currentTrack) + nearestFirst + restOfQueue).distinctBy { it.videoId }
+                    for (track in order) {
+                        if (player.isCached(track.videoId)) continue
+                        val streams = StreamResolver.resolveAacStream(
+                            track.videoId,
+                            StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                        )
+                        if (streams.isEmpty()) continue
+                        player.prefetch(streams, track.videoId)
+                        // Wait for the `.part` to be promoted to the final
+                        // cache name before moving on (best-effort: failures
+                        // time out and are skipped).
+                        val deadline = System.currentTimeMillis() + 120_000L
+                        while (!player.isCached(track.videoId) && System.currentTimeMillis() < deadline) {
+                            delay(750)
                         }
                     }
                 }
@@ -1325,6 +1514,9 @@ fun WindowScope.App(
     // Poll the OS system volume and push changes to the peer (so changing the
     // Windows/Linux/mac volume controls the phone's system volume, and vice
     // versa). Echo-suppressed so a locally-applied remote value isn't bounced.
+    // The native OS volume is its own channel: it syncs whenever paired,
+    // independent of the "Sync VIVI volume" toggle (which only gates the
+    // in-app VIVI volume slider).
     LaunchedEffect(syncManager) {
         while (true) {
             val sv = SystemVolume.get()
@@ -1340,6 +1532,41 @@ fun WindowScope.App(
                         systemVolumeGuard.lastPushed = sv
                     }
                 }
+            }
+            delay(800L)
+        }
+    }
+
+    // "Pause music when media is muted": when the OS output volume is muted
+    // (or at zero) while VIVI is playing, pause; resume when it comes back.
+    // Only reacts to state transitions (like the mobile volume listener), so a
+    // manual play while muted is not fought.
+    LaunchedEffect(Unit) {
+        var lastMuted: Boolean? = null
+        var pausedForMute = false
+        while (true) {
+            val enabled = DesktopSettings.load().pauseWhenMediaMuted
+            if (enabled) {
+                val muted = SystemVolume.isMuted() == true
+                val volume = SystemVolume.get()
+                val nowMuted = muted || (volume != null && volume <= 0.001f)
+                if (nowMuted != lastMuted) {
+                    lastMuted = nowMuted
+                    if (nowMuted) {
+                        if (player.state.value.isPlaying) {
+                            pausedForMute = true
+                            AppLog.log("playback", "OS output muted — pausing (pause when media is muted)")
+                            player.toggle()
+                        }
+                    } else if (pausedForMute && !player.state.value.isPlaying) {
+                        pausedForMute = false
+                        AppLog.log("playback", "OS output unmuted — resuming")
+                        player.toggle()
+                    }
+                }
+            } else {
+                lastMuted = null
+                pausedForMute = false
             }
             delay(800L)
         }
@@ -1378,6 +1605,9 @@ fun WindowScope.App(
                 }
             }
             // Native OS system volume sync: mirror the peer's system volume.
+            // Independent channel: it syncs whenever paired, so turning
+            // "Sync VIVI volume" off (which only gates the in-app slider)
+            // does not stop the OS volume from following the peer.
             pb.systemVolume?.let { v ->
                 systemVolumeGuard.echoUntil = System.currentTimeMillis() + 1500L
                 systemVolumeGuard.echoValue = v
@@ -1502,7 +1732,29 @@ fun WindowScope.App(
             settings["appLanguage"]?.let { lang ->
                 val normalized = Languages.fromMobileCode(lang)
                 if (lang != "SYSTEM_DEFAULT" && Languages.all.any { it.code == normalized }) {
-                    onLanguageChange(normalized)
+                    // Bidirectional language sync, pair-hijack-proof: the peer's
+                    // snapshot only carries a language that *its user* changed,
+                    // identified by (deviceId, per-device sequence). Stale or
+                    // echoed values (our own deviceId, an older sequence, or a
+                    // legacy peer that sends no sequence at all) never override
+                    // the desktop's own choice — that is what kept forcing
+                    // English back on every fresh pair.
+                    val peerId = settings["languageDeviceId"].orEmpty()
+                    val peerSeq = settings["languageSeq"]?.toLongOrNull() ?: 0L
+                    if (peerId.isNotBlank() && peerSeq > 0L) {
+                        val s = DesktopSettings.load()
+                        val staleEcho = peerId == s.deviceId ||
+                            (peerId == s.languagePeerId && peerSeq <= s.languagePeerSeq)
+                        if (!staleEcho) {
+                            // Remember which peer change we accepted (so a repeat
+                            // push of the same change is ignored), then adopt the
+                            // language through the normal change path.
+                            DesktopSettings.update {
+                                it.copy(languagePeerId = peerId, languagePeerSeq = peerSeq)
+                            }
+                            onLanguageChange(normalized)
+                        }
+                    }
                 }
             }
             settings["selectedThemeColor"]?.toIntOrNull()?.let { argb ->
@@ -1535,15 +1787,20 @@ fun WindowScope.App(
 
     // UI density scale: multiply the density so every dp-based measurement
     // zooms (200% down to 55%), matching the Android density setting.
+    // CALIBRATION: the desktop layout is drawn generously, so the "100%"
+    // preset would look oversized next to the phone; scale 100% down to the
+    // size the mobile UI has at 75% (0.75x), keeping the relative presets.
     val baseDensity = LocalDensity.current
     CompositionLocalProvider(
-        LocalDensity provides Density(baseDensity.density * densityScale, baseDensity.fontScale)
+        LocalDensity provides Density(baseDensity.density * densityScale * DENSITY_CALIBRATION, baseDensity.fontScale)
     ) {
     CompositionLocalProvider(
         LocalPlayback provides PlaybackContext(
             videoId = nowPlaying?.videoId,
             isPlaying = isPlaying,
             audioLevel = player.audioLevel,
+            bufferedFraction = player.bufferedFraction,
+            pendingSeekFraction = player.pendingSeekFraction,
         )
     ) {
     Row(
@@ -1659,11 +1916,15 @@ fun WindowScope.App(
                         AnimatedContent(
                             targetState = current,
                             transitionSpec = {
-                                when (screenTransition) {
-                                    "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
-                                        (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
-                                    "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
-                                    else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                if (!animationsEnabled) {
+                                    fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
+                                } else {
+                                    when (screenTransition) {
+                                        "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
+                                            (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
+                                        "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
+                                        else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                    }
                                 }
                             },
                             label = "screenTransition",
@@ -1696,6 +1957,7 @@ fun WindowScope.App(
                             topSongCount = sessionTopCount,
                         ),
                         showWrapped = showWrappedOnHome,
+                        recentSeedTracks = recentSeedTracks,
                     )
                     is Screen.Search -> SearchScreen(
                         language = language,
@@ -1794,16 +2056,18 @@ fun WindowScope.App(
                     is Screen.SettingsAppearance -> SettingsAppearanceScreen(
                         language = language,
                         onBack = goBack,
-                        selectedFont = font,
-                        densityScale = densityScale,
-                        screenTransition = screenTransition,
+                        animationsEnabled = animationsEnabled,
+                        onAnimationsEnabledChange = { v ->
+                            animationsEnabled = v
+                            DesktopSettings.update { it.copy(animationsEnabled = v) }
+                        },
                         onOpenTheme = { navigate(Screen.SettingsTheme) },
                         onOpenFont = { navigate(Screen.SettingsFont) },
                         onOpenCanvas = { navigate(Screen.SettingsCanvas) },
                         onOpenDensity = { navigate(Screen.SettingsDensity) },
                         onOpenTransitions = { navigate(Screen.SettingsTransitions) },
-                        onOpenIntro = { navigate(Screen.SettingsIntro) },
                         onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
+                        onOpenIntro = { navigate(Screen.SettingsIntro) },
                         nativeTitleBar = nativeTitleBar,
                         onNativeTitleBarChange = onNativeTitleBarChange,
                         showRightSidebar = showRightSidebar,
@@ -1812,41 +2076,6 @@ fun WindowScope.App(
                             DesktopSettings.update { it.copy(showRightSidebar = v) }
                         },
                         onRestart = onRestart,
-                    )
-                    is Screen.SettingsTransitions -> SettingsTransitionsScreen(
-                        language = language,
-                        onBack = goBack,
-                        screenTransition = screenTransition,
-                        onScreenTransitionChange = { t ->
-                            screenTransition = t
-                            DesktopSettings.update { it.copy(screenTransition = t) }
-                        },
-                    )
-                    is Screen.SettingsDensity -> SettingsDensityScreen(
-                        language = language,
-                        onBack = goBack,
-                        densityScale = densityScale,
-                        onDensityScaleChange = { s ->
-                            densityScale = s
-                            DesktopSettings.update { it.copy(densityScale = s) }
-                        },
-                        gridItemSize = gridItemSize,
-                        onGridItemSizeChange = { g ->
-                            gridItemSize = g
-                            DesktopSettings.update { it.copy(gridItemSize = g) }
-                        },
-                    )
-                    is Screen.SettingsTheme -> SettingsThemeScreen(
-                        language = language,
-                        onBack = goBack,
-                        themeMode = themeMode,
-                        accent = accent,
-                        onThemeModeChange = onThemeModeChange,
-                        onAccentChange = onAccentChange,
-                        accentIntensity = accentIntensity,
-                        onAccentIntensityChange = onAccentIntensityChange,
-                        pureBlack = pureBlack,
-                        onPureBlackChange = onPureBlackChange,
                     )
                     is Screen.SettingsFont -> SettingsFontScreen(
                         language = language,
@@ -1870,6 +2099,83 @@ fun WindowScope.App(
                             DesktopSettings.update { it.copy(canvasSource = s.key) }
                         },
                     )
+                    is Screen.SettingsDensity -> SettingsDensityScreen(
+                        language = language,
+                        onBack = goBack,
+                        densityScale = densityScale,
+                        onDensityScaleChange = { s ->
+                            densityScale = s
+                            DesktopSettings.update { it.copy(densityScale = s) }
+                        },
+                        gridItemSize = gridItemSize,
+                        onGridItemSizeChange = { g ->
+                            gridItemSize = g
+                            DesktopSettings.update { it.copy(gridItemSize = g) }
+                        },
+                    )
+                    is Screen.SettingsTransitions -> SettingsTransitionsScreen(
+                        language = language,
+                        onBack = goBack,
+                        screenTransition = screenTransition,
+                        onScreenTransitionChange = { t ->
+                            screenTransition = t
+                            DesktopSettings.update { it.copy(screenTransition = t) }
+                        },
+                    )
+                    is Screen.SettingsPlayerDesign -> SettingsPlayerDesignScreen(
+                        language = language,
+                        onBack = goBack,
+                        design = playerDesign,
+                        onDesignChange = { d ->
+                            playerDesign = d
+                            DesktopSettings.update { it.copy(playerDesign = d.key) }
+                        },
+                        background = playerBackground,
+                        onBackgroundChange = { b ->
+                            playerBackground = b
+                            DesktopSettings.update { it.copy(playerBackground = b.key) }
+                        },
+                        rotatingThumbnail = rotatingThumbnail,
+                        onRotatingThumbnailChange = { r ->
+                            rotatingThumbnail = r
+                            DesktopSettings.update { it.copy(rotatingThumbnail = r) }
+                        },
+                        miniPlayerDesign = miniPlayerDesign,
+                        onMiniPlayerDesignChange = { d ->
+                            miniPlayerDesign = d
+                            DesktopSettings.update { it.copy(miniPlayerDesign = d.key) }
+                        },
+                        miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+                        onMiniPlayerBackgroundStyleChange = { b ->
+                            miniPlayerBackgroundStyle = b
+                            DesktopSettings.update { it.copy(miniPlayerBackgroundStyle = b.key) }
+                        },
+                        pureBlackMiniPlayer = pureBlackMiniPlayer,
+                        onPureBlackMiniPlayerChange = { p ->
+                            pureBlackMiniPlayer = p
+                            DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
+                        },
+                    )
+                    is Screen.SettingsTheme -> SettingsThemeScreen(
+                        language = language,
+                        onBack = goBack,
+                        themeMode = themeMode,
+                        accent = accent,
+                        onThemeModeChange = onThemeModeChange,
+                        onAccentChange = onAccentChange,
+                        accentIntensity = accentIntensity,
+                        onAccentIntensityChange = onAccentIntensityChange,
+                        pureBlack = pureBlack,
+                        onPureBlackChange = onPureBlackChange,
+                        customAccents = customAccents,
+                        // Forward the stateful callbacks from the window level
+                        // (they update the live list AND persist it); duplicating
+                        // them here with DesktopSettings.update only persisted
+                        // the change, so new swatches appeared only after
+                        // leaving and re-entering the screen.
+                        onAddCustomAccent = onAddCustomAccent,
+                        onRemoveCustomAccent = onRemoveCustomAccent,
+                    )
                     is Screen.SettingsPlayer -> SettingsPlayerScreen(
                         language = language,
                         onBack = goBack,
@@ -1877,6 +2183,87 @@ fun WindowScope.App(
                         onToggleAutoPlayNext = { checked ->
                             autoPlayNext = checked
                             DesktopSettings.update { it.copy(autoPlayNext = checked) }
+                        },
+                        autoLoadMore = autoLoadMore,
+                        onToggleAutoLoadMore = { checked ->
+                            autoLoadMore = checked
+                            player.autoLoadMore = checked
+                            DesktopSettings.update { it.copy(autoLoadMore = checked) }
+                        },
+                        preventDuplicateTracksInQueue = preventDuplicateTracksInQueue,
+                        onTogglePreventDuplicateTracksInQueue = { checked ->
+                            preventDuplicateTracksInQueue = checked
+                            player.preventDuplicateTracksInQueue = checked
+                            DesktopSettings.update { it.copy(preventDuplicateTracksInQueue = checked) }
+                        },
+                        autoSkipNextOnError = autoSkipNextOnError,
+                        onToggleAutoSkipNextOnError = { checked ->
+                            autoSkipNextOnError = checked
+                            player.autoSkipNextOnError = checked
+                            DesktopSettings.update { it.copy(autoSkipNextOnError = checked) }
+                        },
+                        pauseWhenMediaMuted = pauseWhenMediaMuted,
+                        onTogglePauseWhenMediaMuted = { checked ->
+                            pauseWhenMediaMuted = checked
+                            DesktopSettings.update { it.copy(pauseWhenMediaMuted = checked) }
+                        },
+                        keepScreenOnWhenPlayerExpanded = keepScreenOnWhenPlayerExpanded,
+                        onToggleKeepScreenOnWhenPlayerExpanded = { checked ->
+                            keepScreenOnWhenPlayerExpanded = checked
+                            DesktopSettings.update { it.copy(keepScreenOnWhenPlayerExpanded = checked) }
+                        },
+                        persistentShuffle = persistentShuffle,
+                        onTogglePersistentShuffle = { checked ->
+                            persistentShuffle = checked
+                            player.persistentShuffleAcrossQueues = checked
+                            DesktopSettings.update { it.copy(persistentShuffle = checked) }
+                        },
+                        progressiveSeek = progressiveSeek,
+                        onToggleProgressiveSeek = { checked ->
+                            progressiveSeek = checked
+                            DesktopSettings.update { it.copy(progressiveSeek = checked) }
+                        },
+                        autoDownloadOnLike = autoDownloadOnLike,
+                        onToggleAutoDownloadOnLike = { checked ->
+                            autoDownloadOnLike = checked
+                            DesktopSettings.update { it.copy(autoDownloadOnLike = checked) }
+                        },
+                        historyDurationSeconds = historyDurationSeconds,
+                        onHistoryDurationSecondsChange = { v ->
+                            historyDurationSeconds = v
+                            DesktopSettings.update { it.copy(historyDurationSeconds = v) }
+                        },
+                        skipSilence = skipSilence,
+                        onToggleSkipSilence = { checked ->
+                            skipSilence = checked
+                            // The "Instantly skip silence" option is a derivative of
+                            // the master toggle: turning the master off disables it too.
+                            if (!checked) {
+                                skipSilenceInstant = false
+                                DesktopSettings.update { it.copy(skipSilence = false, skipSilenceInstant = false) }
+                            } else {
+                                DesktopSettings.update { it.copy(skipSilence = true) }
+                            }
+                        },
+                        skipSilenceInstant = skipSilenceInstant,
+                        onToggleSkipSilenceInstant = { checked ->
+                            skipSilenceInstant = checked
+                            DesktopSettings.update { it.copy(skipSilenceInstant = checked) }
+                        },
+                        crossfade = crossfade,
+                        onToggleCrossfade = { checked ->
+                            crossfade = checked
+                            DesktopSettings.update { it.copy(crossfade = checked) }
+                        },
+                        crossfadeDurationSeconds = crossfadeDurationSeconds,
+                        onCrossfadeDurationSecondsChange = { v ->
+                            crossfadeDurationSeconds = v
+                            DesktopSettings.update { it.copy(crossfadeDurationSeconds = v) }
+                        },
+                        disableCrossfadeGapless = disableCrossfadeGapless,
+                        onToggleDisableCrossfadeGapless = { checked ->
+                            disableCrossfadeGapless = checked
+                            DesktopSettings.update { it.copy(disableCrossfadeGapless = checked) }
                         },
                         audioQuality = audioQuality,
                         onAudioQualityChange = { q ->
@@ -1904,51 +2291,123 @@ fun WindowScope.App(
                             DesktopSettings.update { it.copy(sliderStyle = s) }
                         },
                         onOpenPlayerDesign = { navigate(Screen.SettingsPlayerDesign) },
+                        onOpenEqualizer = { navigate(Screen.SettingsEqualizer) },
                         streamCacheMinutes = streamCacheMinutes,
                         onStreamCacheMinutesChange = { m ->
                             streamCacheMinutes = m
                             DesktopSettings.update { it.copy(streamCacheMinutes = m) }
                         },
                     )
-                    is Screen.SettingsPlayerDesign -> SettingsPlayerDesignScreen(
-                        language = language,
-                        onBack = goBack,
-                        design = playerDesign,
-                        onDesignChange = { d ->
-                            playerDesign = d
-                            DesktopSettings.update { it.copy(playerDesign = d.key) }
-                        },
-                        background = playerBackground,
-                        onBackgroundChange = { b ->
-                            playerBackground = b
-                            DesktopSettings.update { it.copy(playerBackground = b.key) }
-                        },
-                        rotatingThumbnail = rotatingThumbnail,
-                        onRotatingThumbnailChange = { r ->
-                            rotatingThumbnail = r
-                            DesktopSettings.update { it.copy(rotatingThumbnail = r) }
-                        },
-                        miniPlayerStyle = miniPlayerStyle,
-                        onMiniPlayerStyleChange = { s ->
-                            miniPlayerStyle = s
-                            DesktopSettings.update { it.copy(miniPlayerStyle = s) }
-                        },
-                        miniPlayerDesign = miniPlayerDesign,
-                        onMiniPlayerDesignChange = { d ->
-                            miniPlayerDesign = d
-                            DesktopSettings.update { it.copy(miniPlayerDesign = d.key) }
-                        },
-                        miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
-                        onMiniPlayerBackgroundStyleChange = { b ->
-                            miniPlayerBackgroundStyle = b
-                            DesktopSettings.update { it.copy(miniPlayerBackgroundStyle = b.key) }
-                        },
-                        pureBlackMiniPlayer = pureBlackMiniPlayer,
-                        onPureBlackMiniPlayerChange = { p ->
-                            pureBlackMiniPlayer = p
-                            DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
-                        },
-                    )
+                    is Screen.SettingsEqualizer -> {
+                        val s = DesktopSettings.load()
+                        SettingsEqualizerScreen(
+                            language = language,
+                            onBack = goBack,
+                            profiles = s.eqProfiles,
+                            activeProfileId = s.activeEqProfileId,
+                            onSelectProfile = { id ->
+                                DesktopSettings.update { it.copy(activeEqProfileId = id ?: "") }
+                                player.setEqualizer(s.eqProfiles.find { p -> p.id == id })
+                            },
+                            onImportProfile = { name, eq ->
+                                val profile = SavedEQProfile(
+                                    id = "custom_${System.currentTimeMillis()}",
+                                    name = name,
+                                    deviceModel = name,
+                                    bands = eq.bands,
+                                    preamp = eq.preamp,
+                                    isCustom = true,
+                                    addedTimestamp = System.currentTimeMillis(),
+                                )
+                                DesktopSettings.update { state ->
+                                    val profiles = state.eqProfiles + profile
+                                    // Auto-activate the freshly imported profile, like the mobile screen.
+                                    state.copy(eqProfiles = profiles, activeEqProfileId = profile.id)
+                                }
+                                player.setEqualizer(profile)
+                            },
+                            onDeleteProfile = { id ->
+                                DesktopSettings.update { state ->
+                                    val profiles = state.eqProfiles.filterNot { it.id == id }
+                                    val active = if (state.activeEqProfileId == id) "" else state.activeEqProfileId
+                                    state.copy(eqProfiles = profiles, activeEqProfileId = active)
+                                }
+                                if (DesktopSettings.load().activeEqProfileId.isEmpty()) player.setEqualizer(null)
+                            },
+                            onAddExampleProfile = {
+                                val profile = exampleEQProfile()
+                                DesktopSettings.update { state ->
+                                    val existing = state.eqProfiles.any { it.id == profile.id }
+                                    val profiles = if (existing) state.eqProfiles else state.eqProfiles + profile
+                                    state.copy(eqProfiles = profiles, activeEqProfileId = profile.id)
+                                }
+                                player.setEqualizer(profile)
+                            },
+                            onUpdateProfile = { id, bands, preamp ->
+                                DesktopSettings.update { state ->
+                                    val profiles = state.eqProfiles.map {
+                                        if (it.id == id) it.copy(bands = bands, preamp = preamp) else it
+                                    }
+                                    state.copy(eqProfiles = profiles)
+                                }
+                                player.setEqualizer(DesktopSettings.load().eqProfiles.find { it.id == id })
+                            },
+                        )
+                    }
+                    is Screen.SettingsDataSaver -> {
+                        // Local observable state: DesktopSettings.load() is a plain
+                        // file read, so without this the Switch would only reflect
+                        // the change after leaving and re-entering the screen.
+                        var dataSaver by remember { mutableStateOf(DesktopSettings.load().dataSaver) }
+                        SettingsDataSaverScreen(
+                            language = language,
+                            onBack = goBack,
+                            dataSaver = dataSaver,
+                            onToggleDataSaver = { enabled ->
+                                dataSaver = enabled
+                                DesktopSettings.update { state ->
+                                    if (enabled) {
+                                        state.copy(
+                                            dataSaver = true,
+                                            dataSaverBackupCanvas = state.canvasEnabled,
+                                            dataSaverBackupRotating = state.rotatingThumbnail,
+                                            canvasEnabled = false,
+                                            rotatingThumbnail = false,
+                                        )
+                                    } else {
+                                        state.copy(
+                                            dataSaver = false,
+                                            canvasEnabled = state.dataSaverBackupCanvas,
+                                            rotatingThumbnail = state.dataSaverBackupRotating,
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    is Screen.SettingsAi -> {
+                        val s = DesktopSettings.load()
+                        SettingsAiScreen(
+                            language = language,
+                            onBack = goBack,
+                            aiProvider = s.aiProvider,
+                            aiApiKey = s.aiApiKey,
+                            aiBaseUrl = s.aiBaseUrl,
+                            aiModel = s.aiModel,
+                            translateLanguage = s.translateLanguage,
+                            translateMode = s.translateMode,
+                            deeplApiKey = s.deeplApiKey,
+                            deeplFormality = s.deeplFormality,
+                            onAiProviderChange = { v -> DesktopSettings.update { it.copy(aiProvider = v) } },
+                            onAiApiKeyChange = { v -> DesktopSettings.update { it.copy(aiApiKey = v) } },
+                            onAiBaseUrlChange = { v -> DesktopSettings.update { it.copy(aiBaseUrl = v) } },
+                            onAiModelChange = { v -> DesktopSettings.update { it.copy(aiModel = v) } },
+                            onTranslateLanguageChange = { v -> DesktopSettings.update { it.copy(translateLanguage = v) } },
+                            onTranslateModeChange = { v -> DesktopSettings.update { it.copy(translateMode = v) } },
+                            onDeeplApiKeyChange = { v -> DesktopSettings.update { it.copy(deeplApiKey = v) } },
+                            onDeeplFormalityChange = { v -> DesktopSettings.update { it.copy(deeplFormality = v) } },
+                        )
+                    }
                     is Screen.SettingsAccount -> SettingsAccountScreen(
                         language = language,
                         onBack = goBack,
@@ -1980,6 +2439,9 @@ fun WindowScope.App(
                         language = language,
                         onBack = goBack,
                         isWindows = isWindows,
+                        isMac = isMac,
+                        macAccessibilityTrusted = macAccessibilityTrusted,
+                        onOpenAccessibilitySettings = { MediaKeys.openAccessibilitySettings() },
                         showWidget = showWidget,
                         onShowWidgetChange = { v ->
                             showWidget = v
@@ -2127,6 +2589,11 @@ fun WindowScope.App(
                         onBack = goBack,
                     )
                     is Screen.SettingsAbout -> SettingsAboutScreen(
+                        language = language,
+                        onBack = goBack,
+                        onOpenContributors = { navigate(Screen.SettingsContributors) },
+                    )
+                    is Screen.SettingsContributors -> SettingsContributorsScreen(
                         language = language,
                         onBack = goBack,
                     )
@@ -2287,6 +2754,7 @@ fun WindowScope.App(
                         accent = accent,
                         audioLevel = audioLevel,
                         onBack = goBack,
+                        progressiveSeek = progressiveSeek,
                     )
                     is Screen.LyricsFocus -> LyricsFocusScreen(
                         nowPlaying = nowPlaying,
@@ -2330,7 +2798,7 @@ fun WindowScope.App(
                     is Screen.ListenTogether -> ListenTogetherScreen(
                         language = language,
                         onBack = goBack,
-                        onPlaySong = playSong,
+                        manager = listenTogetherManager,
                     )
                     is Screen.ArtistItems -> BrowseScreen(
                         browseId = screen.browseId,
@@ -2482,6 +2950,7 @@ fun WindowScope.App(
         miniPlayerDesign = miniPlayerDesign,
         miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
         pureBlackMiniPlayer = pureBlackMiniPlayer,
+        sliderStyle = ViviSliderStyle.from(sliderStyle),
     )
         }
     }
@@ -2502,6 +2971,7 @@ fun WindowScope.App(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp),
             ) {
                 WindowControls(
+                    language = language,
                     isMaximized = isMaximized,
                     onMinimize = onMinimize,
                     onMaximize = onMaximize,
@@ -2531,6 +3001,31 @@ fun WindowScope.App(
                 SelectionContainer {
                     DevToolsPanel(syncManager = syncManager, language = language)
                 }
+            }
+        }
+    }
+
+    // Live activity log in a dedicated window (Settings → System →
+    // "Open live log", always available). Shows playback/actions/errors in
+    // real time.
+    if (DeveloperOptions.logWindowVisible.collectAsState().value) {
+        Window(
+            onCloseRequest = { DeveloperOptions.setLogWindowVisible(false) },
+            title = "VIVI Music DE — Live log",
+        ) {
+            AppTheme(
+                mode = themeMode,
+                accent = accent,
+                pureBlack = pureBlack,
+                font = font,
+                spotify = spotifyLayout,
+                accentIntensity = accentIntensity,
+                customFontPath = customFontPath,
+            ) {
+                LiveLogWindowContent(
+                    language = language,
+                    onClose = { DeveloperOptions.setLogWindowVisible(false) },
+                )
             }
         }
     }
@@ -2636,7 +3131,7 @@ fun Sidebar(
 
     Surface(
         color = if (spotify) {
-            if (isSystemInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
+            if (isAppInDarkTheme()) Color(0xFF000000) else MaterialTheme.colorScheme.surface
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }
@@ -2650,14 +3145,14 @@ fun Sidebar(
             // Collapsed: menu button to expand the rail (works in both the
             // Spotify layout and the classic layout).
             if (collapsed) {
-                Tooltip("Menu") {
+                Tooltip(Localization.get(language, "tooltip_expand_sidebar")) {
                     IconButton(
                         onClick = onToggleCollapsed,
                         modifier = Modifier.padding(bottom = 8.dp),
                     ) {
                         Icon(
                             Icons.Filled.Menu,
-                            contentDescription = "Menu",
+                            contentDescription = Localization.get(language, "tooltip_expand_sidebar"),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
@@ -2676,7 +3171,7 @@ fun Sidebar(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.weight(1f))
-                    Tooltip("Collapse sidebar") {
+                    Tooltip(Localization.get(language, "tooltip_collapse_sidebar")) {
                         IconButton(onClick = onToggleCollapsed) {
                             Icon(
                                 Icons.AutoMirrored.Filled.MenuOpen,
@@ -2849,12 +3344,14 @@ fun Sidebar(
 
                 Spacer(Modifier.height(12.dp))
 
-                // Playlists Section Header (Collapsible)
+                // Playlists Section Header: clicking the label opens the full
+                // playlist list screen; only the chevron arrow expands/collapses
+                // the inline playlist list in the sidebar.
                 if (!collapsed) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { playlistsExpanded = !playlistsExpanded }
+                            .clickable { onSelect(Screen.LocalPlaylists) }
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -2864,14 +3361,25 @@ fun Sidebar(
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Expand Playlists",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // Larger invisible touch target so the arrow is easy to
+                        // hit; the nested clickable consumes the tap, so it never
+                        // triggers the row's navigation.
+                        Box(
                             modifier = Modifier
-                                .size(18.dp)
-                                .rotate(playlistsChevronRotation),
-                        )
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable { playlistsExpanded = !playlistsExpanded },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Expand Playlists",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .rotate(playlistsChevronRotation),
+                            )
+                        }
                     }
                 }
 
@@ -3167,7 +3675,7 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Tooltip("Menu") {
+                Tooltip(Localization.get(language, "tooltip_menu")) {
                     IconButton(
                         onClick = { /* overflow menu */ },
                         modifier = Modifier.size(32.dp),
@@ -3180,7 +3688,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "back")) {
+                Tooltip(Localization.get(language, "tooltip_back")) {
                     IconButton(
                         onClick = onBack,
                         enabled = canGoBack,
@@ -3194,7 +3702,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip("Forward") {
+                Tooltip(Localization.get(language, "tooltip_forward")) {
                     IconButton(
                         onClick = { /* forward */ },
                         enabled = false,
@@ -3208,14 +3716,14 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip("Toggle sidebar") {
+                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
                     IconButton(
                         onClick = onToggleSidebar,
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
                             Icons.Filled.ViewColumn,
-                            contentDescription = "Toggle sidebar",
+                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
                             tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp),
                         )
@@ -3228,7 +3736,7 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Tooltip(Localization.get(language, "home")) {
+                Tooltip(Localization.get(language, "tooltip_home")) {
                     IconButton(
                         onClick = onOpenHome,
                         modifier = Modifier.size(36.dp),
@@ -3295,7 +3803,7 @@ fun WindowScope.SpotifyTopHeader(
                             )
                         }
                         if (searchQuery.isNotEmpty()) {
-                            Tooltip("Clear") {
+                            Tooltip(Localization.get(language, "tooltip_clear")) {
                                 IconButton(
                                     onClick = { onSearchQueryChange("") },
                                     modifier = Modifier.size(24.dp),
@@ -3435,7 +3943,7 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Tooltip("Output device") {
+                Tooltip(Localization.get(language, "tooltip_output_device")) {
                     IconButton(
                         onClick = { /* output device */ },
                         modifier = Modifier.size(32.dp),
@@ -3448,7 +3956,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "lyrics")) {
+                Tooltip(Localization.get(language, "tooltip_lyrics")) {
                     IconButton(
                         onClick = onOpenLyrics,
                         modifier = Modifier.size(32.dp),
@@ -3461,7 +3969,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "queue")) {
+                Tooltip(Localization.get(language, "tooltip_queue")) {
                     IconButton(
                         onClick = onOpenQueue,
                         modifier = Modifier.size(32.dp),
@@ -3474,7 +3982,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "history")) {
+                Tooltip(Localization.get(language, "tooltip_history")) {
                     IconButton(
                         onClick = onOpenHistory,
                         modifier = Modifier.size(32.dp),
@@ -3487,7 +3995,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "wrapped_title")) {
+                Tooltip(Localization.get(language, "tooltip_wrapped")) {
                     IconButton(
                         onClick = onOpenStats,
                         modifier = Modifier.size(32.dp),
@@ -3500,7 +4008,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "listen_together_title")) {
+                Tooltip(Localization.get(language, "tooltip_listen_together")) {
                     IconButton(
                         onClick = onOpenListenTogether,
                         modifier = Modifier.size(32.dp),
@@ -3513,7 +4021,7 @@ fun WindowScope.SpotifyTopHeader(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "settings")) {
+                Tooltip(Localization.get(language, "tooltip_settings")) {
                     IconButton(
                         onClick = onOpenSettings,
                         modifier = Modifier.size(32.dp),
@@ -3529,6 +4037,7 @@ fun WindowScope.SpotifyTopHeader(
                 Spacer(Modifier.width(4.dp))
                 if (showWindowControls) {
                     WindowControls(
+                        language = language,
                         isMaximized = isMaximized,
                         onMinimize = onMinimize,
                         onMaximize = onMaximize,
@@ -3546,6 +4055,7 @@ fun WindowScope.SpotifyTopHeader(
  * Spotify header when it is visible and overlaid at the top-right otherwise. */
 @Composable
 private fun WindowControls(
+    language: String,
     isMaximized: Boolean,
     onMinimize: () -> Unit,
     onMaximize: () -> Unit,
@@ -3556,7 +4066,7 @@ private fun WindowControls(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Tooltip("Minimize") {
+        Tooltip(Localization.get(language, "tooltip_minimize")) {
             IconButton(
                 onClick = onMinimize,
                 modifier = Modifier.size(32.dp),
@@ -3569,20 +4079,20 @@ private fun WindowControls(
                 )
             }
         }
-        Tooltip(if (isMaximized) "Restore" else "Maximize") {
+        Tooltip(Localization.get(language, if (isMaximized) "tooltip_restore" else "tooltip_maximize")) {
             IconButton(
                 onClick = onMaximize,
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
                     if (isMaximized) Icons.Filled.FilterNone else Icons.Filled.CropSquare,
-                    contentDescription = if (isMaximized) "Restore" else "Maximize",
+                    contentDescription = Localization.get(language, if (isMaximized) "tooltip_restore" else "tooltip_maximize"),
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                     modifier = Modifier.size(if (isMaximized) 13.dp else 14.dp),
                 )
             }
         }
-        Tooltip("Close") {
+        Tooltip(Localization.get(language, "close")) {
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.size(32.dp),
@@ -3601,6 +4111,7 @@ private fun WindowControls(
 
 @Composable
 fun MiniPlayer(
+    language: String,
     nowPlaying: NowPlaying?,
     isPlaying: Boolean,
     isLoading: Boolean,
@@ -3706,7 +4217,7 @@ fun MiniPlayer(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    Tooltip(if (isPlaying) "Pause" else "Play") {
+                    Tooltip(Localization.get(language, if (isPlaying) "pause" else "play")) {
                         IconButton(onClick = onTogglePlay) {
                             if (isLoading) {
                                 CircularProgressIndicator(
@@ -3717,14 +4228,14 @@ fun MiniPlayer(
                             } else {
                                 Icon(
                                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    contentDescription = Localization.get(language, if (isPlaying) "pause" else "play"),
                                     tint = if (pureBlack) Color.White else LocalContentColor.current,
                                     modifier = Modifier.size(22.dp),
                                 )
                             }
                         }
                     }
-                    Tooltip("Next") {
+                    Tooltip(Localization.get(language, "tooltip_next")) {
                         IconButton(onClick = onNext) {
                             Icon(
                                 Icons.Filled.SkipNext,
@@ -3734,7 +4245,7 @@ fun MiniPlayer(
                             )
                         }
                     }
-                    Tooltip("Queue") {
+                    Tooltip(Localization.get(language, "tooltip_queue")) {
                         IconButton(onClick = onOpenQueue) {
                             Icon(
                                 Icons.AutoMirrored.Filled.QueueMusic,
@@ -3750,12 +4261,6 @@ fun MiniPlayer(
     }
 }
 
-private data class SettingsRowSpec(
-    val title: String,
-    val subtitle: String?,
-    val icon: ImageVector,
-    val onClick: () -> Unit,
-)
 
 @Composable
 fun SettingsScreen(
@@ -3776,32 +4281,195 @@ fun SettingsScreen(
         ThemeMode.LIGHT -> Localization.get(language, "theme_light")
         ThemeMode.DARK -> Localization.get(language, "theme_dark")
     }
-    val rows = listOf(
-        SettingsRowSpec(Localization.get(language, "language"), Languages.name(language), Icons.Filled.Translate) { onOpen(Screen.SettingsLanguage) },
-        SettingsRowSpec(Localization.get(language, "updates"), if (updateStatus is UpdateStatus.Available) Localization.get(language, "update_available") else AppInfo.FULL_VERSION, Icons.Filled.Refresh) { onOpen(Screen.SettingsUpdates) },
-        SettingsRowSpec(Localization.get(language, "notifications"), Localization.get(language, if (DesktopSettings.load().notificationMode == "native") "notification_native" else "notification_main_window"), Icons.Filled.Notifications) { onOpen(Screen.SettingsNotifications) },
-        SettingsRowSpec(Localization.get(language, "appearance"), themeLabel, Icons.Filled.Palette) { onOpen(Screen.SettingsAppearance) },
-        SettingsRowSpec(Localization.get(language, "player_audio"), null, Icons.Filled.GraphicEq) { onOpen(Screen.SettingsPlayer) },
-        SettingsRowSpec(Localization.get(language, "account"), if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in"), Icons.Filled.Person) { onOpen(Screen.SettingsAccount) },
-        SettingsRowSpec(Localization.get(language, "device_sync"), null, Icons.Filled.Devices) { onOpen(Screen.SettingsDevices) },
-        SettingsRowSpec(Localization.get(language, "content"), null, Icons.Filled.Language) { onOpen(Screen.SettingsContent) },
-        SettingsRowSpec(Localization.get(language, "lyrics"), null, Icons.Filled.Lyrics) { onOpen(Screen.SettingsLyrics) },
-        SettingsRowSpec(Localization.get(language, "privacy"), null, Icons.Filled.Security) { onOpen(Screen.SettingsPrivacy) },
-        SettingsRowSpec(Localization.get(language, "storage"), null, Icons.Filled.Storage) { onOpen(Screen.SettingsStorage) },
-        SettingsRowSpec(Localization.get(language, "wrapped_title"), "${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}", Icons.Filled.AutoAwesome) { onOpen(Screen.SettingsWrapped) },
-        SettingsRowSpec(Localization.get(language, "integrations"), if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"), Icons.Filled.Tune) { onOpen(Screen.SettingsIntegrations) },
-        SettingsRowSpec(Localization.get(language, "backup_restore"), null, Icons.Filled.SettingsBackupRestore) { onOpen(Screen.SettingsBackup) },
-        SettingsRowSpec(Localization.get(language, "desktop_features"), null, Icons.Filled.DesktopWindows) { onOpen(Screen.SettingsDesktop) },
-        SettingsRowSpec(Localization.get(language, "system"), if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"), Icons.Filled.Build) { onOpen(Screen.SettingsSystem) },
-        SettingsRowSpec(Localization.get(language, "about"), null, Icons.Filled.Info) { onOpen(Screen.SettingsAbout) },
+    val generalItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Translate,
+            title = { Text(Localization.get(language, "language")) },
+            description = { Text(Languages.name(language)) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsLanguage) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Refresh,
+            title = { Text(Localization.get(language, "updates")) },
+            description = {
+                Text(if (updateStatus is UpdateStatus.Available) Localization.get(language, "update_available") else AppInfo.FULL_VERSION)
+            },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsUpdates) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Notifications,
+            title = { Text(Localization.get(language, "notifications")) },
+            description = {
+                Text(Localization.get(language, if (DesktopSettings.load().notificationMode == "native") "notification_native" else "notification_main_window"))
+            },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsNotifications) },
+        ),
+    )
+    val appearanceItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Palette,
+            title = { Text(Localization.get(language, "appearance")) },
+            description = { Text(themeLabel) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAppearance) },
+        ),
+    )
+    val playerItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.GraphicEq,
+            title = { Text(Localization.get(language, "player_audio")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsPlayer) },
+        ),
+    )
+    val accountItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Person,
+            title = { Text(Localization.get(language, "account")) },
+            description = { Text(if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAccount) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Devices,
+            title = { Text(Localization.get(language, "device_sync")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDevices) },
+        ),
+    )
+    val contentItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Language,
+            title = { Text(Localization.get(language, "content")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsContent) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.AutoAwesome,
+            title = { Text(Localization.get(language, "ai_lyrics_translation")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAi) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Lyrics,
+            title = { Text(Localization.get(language, "lyrics")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsLyrics) },
+        ),
+    )
+    val privacyItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Security,
+            title = { Text(Localization.get(language, "privacy")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsPrivacy) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.EnergySavingsLeaf,
+            title = { Text(Localization.get(language, "data_saver")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDataSaver) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Storage,
+            title = { Text(Localization.get(language, "storage")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsStorage) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.SettingsBackupRestore,
+            title = { Text(Localization.get(language, "backup_restore")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsBackup) },
+        ),
+    )
+    val aboutItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.AutoAwesome,
+            title = { Text(Localization.get(language, "wrapped_title")) },
+            description = { Text("${wrappedStats.trackStarts} ${Localization.get(language, "wrapped_tracks")}") },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsWrapped) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Tune,
+            title = { Text(Localization.get(language, "integrations")) },
+            description = {
+                Text(if (DesktopSettings.load().discordRpcEnabled || DesktopSettings.load().lastfmEnabled) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"))
+            },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsIntegrations) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.DesktopWindows,
+            title = { Text(Localization.get(language, "desktop_features")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDesktop) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Build,
+            title = { Text(Localization.get(language, "system")) },
+            description = { Text(if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsSystem) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Info,
+            title = { Text(Localization.get(language, "about")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAbout) },
+        ),
+    )
+
+    val allRows = listOf(
+        "language" to Localization.get(language, "language"),
+        "updates" to Localization.get(language, "updates"),
+        "notifications" to Localization.get(language, "notifications"),
+        "appearance" to Localization.get(language, "appearance"),
+        "player_audio" to Localization.get(language, "player_audio"),
+        "account" to Localization.get(language, "account"),
+        "device_sync" to Localization.get(language, "device_sync"),
+        "content" to Localization.get(language, "content"),
+        "ai_lyrics_translation" to Localization.get(language, "ai_lyrics_translation"),
+        "lyrics" to Localization.get(language, "lyrics"),
+        "privacy" to Localization.get(language, "privacy"),
+        "data_saver" to Localization.get(language, "data_saver"),
+        "storage" to Localization.get(language, "storage"),
+        "backup_restore" to Localization.get(language, "backup_restore"),
+        "wrapped_title" to Localization.get(language, "wrapped_title"),
+        "integrations" to Localization.get(language, "integrations"),
+        "desktop_features" to Localization.get(language, "desktop_features"),
+        "system" to Localization.get(language, "system"),
+        "about" to Localization.get(language, "about"),
+    )
+
+    val rowSearchTerms: Map<String, List<String>> = mapOf(
+        "language" to listOf("choose_language", "content_language", "language"),
+        "updates" to listOf("update_available", "up_to_date", "check_updates", "update_check_interval", "include_prereleases", "update_source", "changelog", "commits", "latest_release", "install_now", "restart_now", "open_release_page"),
+        "notifications" to listOf("notification_duration", "notification_duration_desc", "notification_history", "notification_main_window", "notification_mode", "notification_mode_desc", "notification_native", "notifications", "save_notification_history", "test_notification"),
+        "appearance" to listOf("animations", "animations_desc", "app_font", "appearance", "density_and_grid", "intro", "native_title_bar", "native_title_bar_desc", "native_title_bar_desc_hint", "player_design", "restart_required", "restart_required_title", "right_panel", "right_panel_desc", "screen_transitions", "show_intro_on_startup", "theme_colors", "vivimusic_canvas", "accent_intensity", "add_to_palette", "brightness", "color_palette", "custom_color", "custom_colors", "hue", "pure_black", "remove_custom_color", "saturation", "theme_dark", "theme_light", "theme_mode", "theme_system", "custom_font", "font_google_sans", "font_outfit", "font_plus_jakarta_sans", "font_sans_flex", "font_selection", "font_system", "import_font", "preview_text_quote", "typography_preview", "canvas_source", "vivimusic_canvas_desc", "grid_item_size", "transition_fade", "transition_off", "transition_slide", "mini_player_background", "mini_player_design", "player_background", "pure_black_mini", "pure_black_mini_desc", "rotating_thumbnail", "rotating_thumbnail_desc", "intro_background", "intro_desc", "intro_style", "preview_intro"),
+        "player_audio" to listOf("add_example_profile", "band_count", "delete_profile_confirmation", "delete_profile_desc", "eq_band", "eq_disabled", "eq_edit_profile", "eq_gain", "eq_preamp", "eq_q_factor", "equalizer_header", "import_error_title", "import_profile", "no_profiles", "mini_player_background", "mini_player_design", "player_background", "player_design", "pure_black_mini", "pure_black_mini_desc", "rotating_thumbnail", "rotating_thumbnail_desc", "autoplay_next", "audio_quality", "audio_quality_auto", "audio_quality_high", "audio_quality_low", "persistent_queue", "remember_shuffle_repeat", "sync_vivi_volume", "stream_cache_minutes", "stream_cache_minutes_desc", "stream_cache_forever", "eq_range_sub_bass", "eq_range_bass", "eq_range_low_mid", "eq_range_mid", "eq_range_high_mid", "eq_range_treble"),
+        "account" to listOf("clear_session", "logout", "login", "login_google", "login_manual_title", "logged_in_as", "not_logged_in", "account", "cookie_label", "visitor_data_label", "data_sync_id_label"),
+        "device_sync" to listOf("connection_method", "method_relay", "method_lan", "relay_server", "lan_sync", "connect", "generate_code", "regenerate_pair_code", "code_expires_in", "code_hint", "lan_hint", "pair", "unpair", "scan_qr", "connected", "disconnected", "status", "download_mobile_apk", "how_to_connect", "waiting_for_pairing"),
+        "content" to listOf("content", "content_country", "content_language", "system_default"),
+        "ai_lyrics_translation" to listOf("ai_api_key", "ai_base_url", "ai_deepl_formality", "ai_deepl_formality_default", "ai_deepl_formality_less", "ai_deepl_formality_more", "ai_lyrics_translation", "ai_model", "ai_provider", "ai_target_language", "ai_translation_literal", "ai_translation_mode", "ai_translation_transcribed", "not_set", "ai_setup_guide"),
+        "lyrics" to listOf("lyrics", "lyrics_line_spacing", "lyrics_text_size", "synced_lyrics", "synced_lyrics_desc", "lyrics_focus"),
+        "privacy" to listOf("clear_search_history", "pause_listen_history", "pause_search_history", "privacy", "privacy_desc"),
+        "data_saver" to listOf("data_saver", "data_saver_desc", "data_saver_turns_off_header", "data_saver_album_canvas", "data_saver_player_canvas", "data_saver_artist_video", "data_saver_artist_bg_video", "data_saver_high_quality_images"),
+        "storage" to listOf("storage", "cache_size", "clear_cache", "cache_cleared", "delete_installers", "installers_deleted"),
+        "backup_restore" to listOf("action_backup", "action_restore", "auto_backup", "automatic_backup_desc", "backup_desc", "backup_restore", "backup_restore_desc", "backups_empty", "delete_backup_confirm", "restore_backup_confirm", "restore_desc", "restore_failed", "restore_success", "restore_success_title", "stored_backups"),
+        "wrapped_title" to listOf("wrapped_desc", "wrapped_show_on_home", "wrapped_show_on_home_desc", "wrapped_title"),
+        "integrations" to listOf("discord_client_id", "discord_presence", "lastfm", "lastfm_session", "discord_presence_desc", "lastfm_enable", "lastfm_now_playing"),
+        "desktop_features" to listOf("desktop_features", "desktop_features_desc", "media_keys", "media_keys_desc", "now_playing_widget", "now_playing_widget_desc", "requires_accessibility", "tray_menu", "tray_menu_desc"),
+        "system" to listOf("system", "developer_options", "dev_tools_live_monitor", "dev_tools_mode", "dev_tools_movable", "dev_tools_overlay", "dev_tools_window", "dev_tools_profile", "dev_tools_title_bar", "developer_options_enabled", "dev_tools_disabled", "intro", "show_intro_on_startup", "intro_style", "intro_background", "intro_desc", "preview_intro", "dev_open_live_log", "dev_open_live_log_desc", "dev_logs_export", "dev_logs_export_desc", "dev_unlocked_title", "dev_unlocked_desc", "dev_unlocked_open", "tap_version_code_hint"),
+        "about" to listOf("about", "version_code", "current_version", "app_developer", "developer_section", "community_section", "license", "github_repository", "telegram_channel", "website", "changelog", "contributors_section", "app_info_section", "installed_date_title"),
     )
 
     val query = searchQuery.trim()
-    val visible = rows.filter { row ->
-        query.isEmpty() ||
-            row.title.contains(query, ignoreCase = true) ||
-            (row.subtitle?.contains(query, ignoreCase = true) == true)
-    }
+    val searching = query.isNotEmpty()
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
@@ -3838,16 +4506,83 @@ fun SettingsScreen(
         }
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
-        visible.forEach { row ->
-            SettingsEntryRow(
-                language = language,
-                icon = row.icon,
-                title = row.title,
-                subtitle = row.subtitle,
-                onClick = row.onClick,
+        // The query matches a row when either its own label or any of the
+        // localized labels of the options inside its sub-screen(s) contains it,
+        // so every setting is reachable from the settings search bar.
+        val rowTermsText = { key: String ->
+            (rowSearchTerms[key].orEmpty()).joinToString(" ") { Localization.get(language, it) }
+        }
+        val matches = { key: String ->
+            query.isEmpty() ||
+                allRows.any { it.first == key && it.second.contains(query, ignoreCase = true) } ||
+                rowTermsText(key).contains(query, ignoreCase = true)
+        }
+
+        if (!searching || matches("language") || matches("updates") || matches("notifications")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "general"),
+                items = listOfNotNull(
+                    generalItems[0].takeIf { !searching || matches("language") },
+                    generalItems[1].takeIf { !searching || matches("updates") },
+                    generalItems[2].takeIf { !searching || matches("notifications") },
+                ),
             )
         }
-        if (query.isNotEmpty() && visible.isEmpty()) {
+        if (!searching || matches("appearance")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "appearance"),
+                items = listOfNotNull(appearanceItems[0].takeIf { !searching || matches("appearance") }),
+            )
+        }
+        if (!searching || matches("player_audio")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "player_audio"),
+                items = listOfNotNull(playerItems[0].takeIf { !searching || matches("player_audio") }),
+            )
+        }
+        if (!searching || matches("account") || matches("device_sync")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "account"),
+                items = listOfNotNull(
+                    accountItems[0].takeIf { !searching || matches("account") },
+                    accountItems[1].takeIf { !searching || matches("device_sync") },
+                ),
+            )
+        }
+        if (!searching || matches("content") || matches("ai_lyrics_translation") || matches("lyrics")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "content"),
+                items = listOfNotNull(
+                    contentItems[0].takeIf { !searching || matches("content") },
+                    contentItems[1].takeIf { !searching || matches("ai_lyrics_translation") },
+                    contentItems[2].takeIf { !searching || matches("lyrics") },
+                ),
+            )
+        }
+        if (!searching || matches("privacy") || matches("data_saver") || matches("storage") || matches("backup_restore")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "privacy"),
+                items = listOfNotNull(
+                    privacyItems[0].takeIf { !searching || matches("privacy") },
+                    privacyItems[1].takeIf { !searching || matches("data_saver") },
+                    privacyItems[2].takeIf { !searching || matches("storage") },
+                    privacyItems[3].takeIf { !searching || matches("backup_restore") },
+                ),
+            )
+        }
+        if (!searching || matches("wrapped_title") || matches("integrations") || matches("desktop_features") || matches("system") || matches("about")) {
+            M3SettingsGroup(
+                title = if (searching) null else Localization.get(language, "about"),
+                items = listOfNotNull(
+                    aboutItems[0].takeIf { !searching || matches("wrapped_title") },
+                    aboutItems[1].takeIf { !searching || matches("integrations") },
+                    aboutItems[2].takeIf { !searching || matches("desktop_features") },
+                    aboutItems[3].takeIf { !searching || matches("system") },
+                    aboutItems[4].takeIf { !searching || matches("about") },
+                ),
+            )
+        }
+        if (searching && !allRows.any { r -> r.second.contains(query, ignoreCase = true) || rowTermsText(r.first).contains(query, ignoreCase = true) }) {
             Text(
                 Localization.get(language, "no_results_found"),
                 style = MaterialTheme.typography.bodyMedium,
@@ -3858,6 +4593,7 @@ fun SettingsScreen(
     }
 }
 
+
 @Composable
 fun SettingsSystemScreen(
     language: String,
@@ -3867,57 +4603,107 @@ fun SettingsSystemScreen(
     onOpenIntro: () -> Unit,
 ) {
     val devEnabled by DeveloperOptions.enabled.collectAsState()
+
+    // Log export (moved here from Developer options: it belongs under System).
+    var logExporting by remember { mutableStateOf(false) }
+    var logExportDone by remember { mutableStateOf(false) }
+    var logExportPath by remember { mutableStateOf<String?>(null) }
+    val logScope = rememberCoroutineScope()
+
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "system"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Build,
-            title = Localization.get(language, "developer_options"),
-            subtitle = if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"),
-            onClick = onOpenDeveloper,
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Build,
+                    title = { Text(Localization.get(language, "developer_options")) },
+                    description = {
+                        Text(if (devEnabled) Localization.get(language, "developer_options_enabled") else Localization.get(language, "dev_tools_disabled"))
+                    },
+                    trailing = { SettingsChevron() },
+                    onClick = onOpenDeveloper,
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Movie,
+                    title = { Text(Localization.get(language, "intro")) },
+                    description = {
+                        Text(if (showIntroSplash) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"))
+                    },
+                    trailing = { SettingsChevron() },
+                    onClick = onOpenIntro,
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Info,
+                    title = { Text(Localization.get(language, "dev_open_live_log")) },
+                    description = { Text(Localization.get(language, "dev_open_live_log_desc")) },
+                    trailing = { SettingsChevron() },
+                    onClick = { DeveloperOptions.setLogWindowVisible(true) },
+                ),
+            ),
         )
-        SettingsEntryRow(
-            language = language,
-            icon = Icons.Filled.Movie,
-            title = Localization.get(language, "intro"),
-            subtitle = if (showIntroSplash) Localization.get(language, "integrations_active") else Localization.get(language, "integrations_inactive"),
-            onClick = onOpenIntro,
-        )
-    }
-}
 
-@Composable
-private fun SettingsEntryRow(
-    language: String,
-    icon: ImageVector,
-    title: String,
-    subtitle: String? = null,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Spacer(Modifier.height(16.dp))
+
+        // Export logs (for support requests)
+        M3SettingsGroup(
+            title = Localization.get(language, "dev_logs_export"),
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Download,
+                    title = { Text(Localization.get(language, "dev_logs_export_desc")) },
+                    trailing = {
+                        Button(
+                            onClick = {
+                                logExporting = true
+                                logExportDone = false
+                                logExportPath = null
+                                logScope.launch {
+                                    val target = withContext(Dispatchers.IO) {
+                                        val dialog = java.awt.FileDialog(
+                                            null as java.awt.Frame?,
+                                            Localization.get(language, "dev_logs_export"),
+                                            java.awt.FileDialog.SAVE,
+                                        )
+                                        dialog.file = LogExporter.defaultFileName()
+                                        dialog.isVisible = true
+                                        val dir = dialog.directory
+                                        val name = dialog.file
+                                        dialog.dispose()
+                                        if (dir != null && name != null) java.io.File(dir, name) else null
+                                    }
+                                    if (target != null) {
+                                        val ok = withContext(Dispatchers.IO) {
+                                            runCatching { LogExporter.export(target); true }.getOrDefault(false)
+                                        }
+                                        if (ok) {
+                                            logExportDone = true
+                                            logExportPath = target.absolutePath
+                                        }
+                                    }
+                                    logExporting = false
+                                }
+                            },
+                            enabled = !logExporting,
+                        ) {
+                            Text(
+                                if (logExporting) Localization.get(language, "dev_logs_exporting")
+                                else Localization.get(language, "dev_logs_export")
+                            )
+                        }
+                    },
+                    onClick = {},
+                ),
+            ),
         )
+        logExportPath?.let { path ->
+            Text(
+                if (logExportDone) "${Localization.get(language, "dev_logs_exported")}: $path"
+                else Localization.get(language, "dev_logs_export_failed"),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (logExportDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 16.dp, top = 6.dp),
+            )
+        }
     }
 }
 
@@ -3956,18 +4742,50 @@ fun DeviceSyncSection(
     }
     val remainingMs = (pairCodeExpiresAt - nowMs).coerceAtLeast(0L)
 
-    // The QR code carries both the LAN relay address and the current 6-digit
-    // pairing code (when available), so the phone can auto-fill the code and
-    // the user only has to verify it before tapping Pair.
-    val qrContent = if (lanAddress.isNotEmpty() && pairCode.isNotEmpty()) {
-        "vivimusic://pair?addr=${URLEncoder.encode(lanAddress, "UTF-8")}&code=$pairCode"
-    } else {
-        lanAddress
-    }
-
     Text(Localization.get(language, "device_sync"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
-    DeviceSyncHowTo(language)
+    // Connection method selector: the relay (recommended, works from any
+    // network) or the local LAN server (same Wi-Fi). The how-to steps and the
+    // shown controls follow the chosen method.
+    var connectionMethod by remember { mutableStateOf("relay") }
+    val relayMode = connectionMethod == "relay"
+    var methodExpanded by remember { mutableStateOf(false) }
+
+    // The QR code carries the active connection address (relay server or LAN
+    // relay) plus the current 6-digit pairing code (when available), so the
+    // phone can auto-fill both and the user only has to verify before pairing.
+    // Shown for both connection methods.
+    val qrAddr = if (relayMode) serverUrl.trim() else lanAddress
+    val qrContent = if (qrAddr.isNotEmpty() && pairCode.isNotEmpty()) {
+        "vivimusic://pair?addr=${URLEncoder.encode(qrAddr, "UTF-8")}&code=$pairCode"
+    } else {
+        qrAddr
+    }
+    Box(Modifier.padding(top = 8.dp)) {
+        Tooltip(Localization.get(language, "tooltip_connection_method")) {
+            OutlinedButton(onClick = { methodExpanded = true }) {
+                Text(Localization.get(language, if (relayMode) "method_relay" else "method_lan"))
+            }
+        }
+        DropdownMenu(expanded = methodExpanded, onDismissRequest = { methodExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text(Localization.get(language, "method_relay")) },
+                onClick = {
+                    methodExpanded = false
+                    connectionMethod = "relay"
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(Localization.get(language, "method_lan")) },
+                onClick = {
+                    methodExpanded = false
+                    connectionMethod = "lan"
+                },
+            )
+        }
+    }
+
+    DeviceSyncHowTo(language, relayMode)
 
     // Download link for the mobile version of VIVI (the Android APK), so the
     // phone runs the matching build before pairing. The APK URL is fetched
@@ -4019,25 +4837,95 @@ fun DeviceSyncSection(
         onCheckedChange = onToggleSyncViviVolume,
     )
 
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    val connecting = connectionState == SyncConnectionState.CONNECTING
+    // Connected to the relay from the field above (not via the LAN server).
+    val relayConnected = connectionState == SyncConnectionState.CONNECTED && !lanRunning
+
+    if (relayMode) {
         OutlinedTextField(
             value = serverUrl,
             onValueChange = { serverUrl = it },
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             singleLine = true,
             label = { Text(Localization.get(language, "relay_server")) },
         )
-        Button(onClick = { syncManager.connect(serverUrl) }) { Text(Localization.get(language, "connect")) }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            when {
+                connecting -> Button(onClick = {}, enabled = false) {
+                    Text(Localization.get(language, "lt_connecting"))
+                }
+                // Already on the relay: the same button now just re-issues the
+                // pairing code (pair another phone, or replace an expired one).
+                relayConnected -> {
+                    Button(onClick = { syncManager.requestPairingCode() }) {
+                        Text(Localization.get(language, "regenerate_pair_code"))
+                    }
+                    OutlinedButton(onClick = { syncManager.disconnect() }) {
+                        Text(Localization.get(language, "disconnect"))
+                    }
+                }
+                else -> Button(onClick = {
+                    syncManager.connect(serverUrl)
+                    // A pairing code can only be issued once the socket is up:
+                    // connect, then request it as soon as the relay reports
+                    // CONNECTED (same retry pattern as the LAN server start).
+                    syncScope.launch {
+                        repeat(8) {
+                            if (syncManager.pairCode.value.isNotEmpty()) return@launch
+                            if (syncManager.connectionState.value == SyncConnectionState.CONNECTED) {
+                                syncManager.requestPairingCode()
+                            }
+                            delay(1_000L)
+                        }
+                    }
+                }) {
+                    Text(Localization.get(language, "connect_and_generate_code"))
+                }
+            }
+        }
+        // The first connect to a sleeping free-tier relay can take a while: it
+        // has to wake the server before the WebSocket handshake completes.
+        if (connecting || connectionState == SyncConnectionState.ERROR) {
+            Text(
+                Localization.get(language, "connect_hint"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        // Auto-issue the pairing code whenever the relay is up, unpaired and no
+        // code is pending, so pairing never stalls behind a hidden button.
+        LaunchedEffect(relayMode, relayConnected, paired, pairCode) {
+            if (relayMode && relayConnected && !paired && pairCode.isEmpty()) {
+                syncManager.requestPairingCode()
+            }
+        }
+    } else {
+        Text(Localization.get(language, "lan_sync"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+        Button(
+            onClick = { if (lanRunning) syncManager.stopLan() else syncManager.startLan() },
+            modifier = Modifier.padding(top = 4.dp),
+        ) {
+            Text(Localization.get(language, if (lanRunning) "stop_lan" else "start_lan"))
+        }
+        if (lanRunning && lanAddress.isNotEmpty()) {
+            Text(
+                Localization.get(language, "lan_hint"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
     }
 
-    Text(Localization.get(language, "lan_sync"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
-    Button(
-        onClick = { if (lanRunning) syncManager.stopLan() else syncManager.startLan() },
-        modifier = Modifier.padding(top = 4.dp),
-    ) {
-        Text(Localization.get(language, if (lanRunning) "stop_lan" else "start_lan"))
-    }
-    if (lanRunning && lanAddress.isNotEmpty()) {
+    // Relay mode: code generation lives in the single action button above, so
+    // the panel here only shows the code + expiry (no duplicate button). LAN
+    // mode keeps its own Generate button as before.
+    val showQr = pairCode.isNotEmpty() && qrAddr.isNotEmpty()
+    if (showQr) {
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -4049,7 +4937,7 @@ fun DeviceSyncSection(
             ) {
                 QrCode(qrContent, size = 180.dp)
                 Text(
-                    "${Localization.get(language, "lan_address")}: $lanAddress",
+                    "${Localization.get(language, if (relayMode) "relay_server" else "lan_address")}: $qrAddr",
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -4068,23 +4956,17 @@ fun DeviceSyncSection(
                 pairCode = pairCode,
                 remainingMs = remainingMs,
                 onGenerate = { syncManager.requestPairingCode() },
+                showGenerate = !relayMode,
                 modifier = Modifier.weight(1f),
             )
         }
-        Text(
-            Localization.get(language, "lan_hint"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-    } else {
-        // When the LAN server is off, the code can still be generated against
-        // the relay configured in the field above.
+    } else if (!relayMode || pairCode.isNotEmpty()) {
         PairingCodePanel(
             language = language,
             pairCode = pairCode,
             remainingMs = remainingMs,
             onGenerate = { syncManager.requestPairingCode() },
+            showGenerate = !relayMode,
             modifier = Modifier.padding(top = 8.dp),
         )
     }
@@ -4103,7 +4985,15 @@ fun DeviceSyncSection(
         )
     }
 
-    Text("${Localization.get(language, "status")}: $connectionState — $status", modifier = Modifier.padding(top = 8.dp))
+    // Honest status: CONNECTED only means the relay socket is open. Until a
+    // device is actually paired, say it is waiting instead of implying that
+    // sync is already active.
+    val statusText = if (connectionState == SyncConnectionState.CONNECTED && !paired) {
+        Localization.get(language, "waiting_for_pairing")
+    } else {
+        status
+    }
+    Text("${Localization.get(language, "status")}: $connectionState — $statusText", modifier = Modifier.padding(top = 8.dp))
 
     if (syncedSettings.isNotEmpty()) {
         Text(Localization.get(language, "synced_settings"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
@@ -4116,7 +5006,7 @@ fun DeviceSyncSection(
 }
 
 @Composable
-private fun DeviceSyncHowTo(language: String) {
+private fun DeviceSyncHowTo(language: String, relayMode: Boolean) {
     Surface(
         tonalElevation = 2.dp,
         shape = RoundedCornerShape(12.dp),
@@ -4129,10 +5019,16 @@ private fun DeviceSyncHowTo(language: String) {
                 fontWeight = FontWeight.SemiBold,
             )
             Spacer(Modifier.height(8.dp))
-            HowToStep(1, Localization.get(language, "how_to_step1"))
-            HowToStep(2, Localization.get(language, "how_to_step2"))
-            HowToStep(3, Localization.get(language, "how_to_step3"))
-            HowToStep(4, Localization.get(language, "how_to_step4"))
+            if (relayMode) {
+                HowToStep(1, Localization.get(language, "how_to_relay_step1"))
+                HowToStep(2, Localization.get(language, "how_to_relay_step2"))
+                HowToStep(3, Localization.get(language, "how_to_relay_step3"))
+            } else {
+                HowToStep(1, Localization.get(language, "how_to_step1"))
+                HowToStep(2, Localization.get(language, "how_to_step2"))
+                HowToStep(3, Localization.get(language, "how_to_step3"))
+                HowToStep(4, Localization.get(language, "how_to_step4"))
+            }
         }
     }
 }
@@ -4162,11 +5058,16 @@ private fun PairingCodePanel(
     remainingMs: Long,
     onGenerate: () -> Unit,
     modifier: Modifier = Modifier,
+    showGenerate: Boolean = true,
 ) {
     Column(modifier) {
         // The desktop is the code generator: the phone only enters this code.
-        Button(onClick = onGenerate) {
-            Text(Localization.get(language, if (pairCode.isNotEmpty()) "generate_new_code" else "generate_code"))
+        // In relay mode the action button above already covers generation, so
+        // the panel hides its own to avoid two identical buttons.
+        if (showGenerate) {
+            Button(onClick = onGenerate) {
+                Text(Localization.get(language, if (pairCode.isNotEmpty()) "generate_new_code" else "generate_code"))
+            }
         }
         if (pairCode.isNotEmpty()) {
             // Selectable so the user can copy the code if the QR scan fails.
@@ -4251,28 +5152,69 @@ fun LanguageSection(language: String, onLanguageChange: (String) -> Unit) {
 }
 
 @Composable
-fun LanguageSelectionScreen(onSelect: (String) -> Unit) {
+fun LanguageSelectionScreen(
+    language: String = "en",
+    onSelect: (String) -> Unit,
+) {
+    var selected by remember { mutableStateOf("en") }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Choose your language", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "VIVI Music DE is available in the following languages. You can change this later from the Language menu.",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(top = 8.dp),
-        )
-        Column(Modifier.padding(top = 16.dp)) {
-            Languages.all.forEach { lang ->
-                Text(
-                    lang.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect(lang.code) }
-                        .padding(vertical = 8.dp),
-                )
-            }
+        Spacer(Modifier.height(32.dp))
+        val logo = remember { loadLogo() }
+        if (logo != null) {
+            Image(
+                bitmap = logo,
+                contentDescription = "VIVI Music DE",
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(24.dp)),
+            )
         }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            Localization.get(language, "welcome_title"),
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            Localization.get(language, "welcome_desc"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        )
+        Spacer(Modifier.height(24.dp))
+        M3SettingsGroup(
+            items = Languages.all.map { lang ->
+                M3SettingsItem(
+                    icon = null,
+                    title = { Text(lang.name) },
+                    trailing = {
+                        if (selected == lang.code) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
+                    onClick = { selected = lang.code },
+                )
+            },
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = { onSelect(selected) },
+            modifier = Modifier.fillMaxWidth().height(48.dp),
+        ) {
+            Text(Localization.get(language, "continue"))
+        }
+        Spacer(Modifier.height(32.dp))
     }
 }
 
@@ -4612,16 +5554,18 @@ fun UpdateSection(
                 }
             }
         }
-        is UpdateStatus.Failed -> Text(
-            "${Localization.get(language, "update_failed")}: ${status.message}",
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 8.dp),
-        )
+        is UpdateStatus.Failed -> SelectionContainer {
+            Text(
+                "${Localization.get(language, "update_failed")}: ${status.message}",
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
         is UpdateStatus.Idle -> Unit
     }
 
     openError?.let {
-        Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+        SelectionContainer { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
     }
 
     // Downloaded installer management.
@@ -4673,8 +5617,6 @@ private fun openFile(file: File): Boolean {
     }.getOrDefault(false)
 }
 
-private fun formatSpeed(bps: Long): String =
-    if (bps <= 0) "0 B/s" else "${formatBytes(bps)}/s"
 
 /**
  * Runs the optional "backup before update" (if enabled) and then opens the
@@ -4729,11 +5671,19 @@ private val GithubIcon: ImageVector by lazy {
     }.build()
 }
 
+/**
+ * Density calibration factor: the desktop layout is drawn generously, so
+ * the "100%" preset would look oversized next to the phone. Scaling 100%
+ * down to 0.75x makes it match the size the mobile UI has at 75%, while
+ * keeping the relative presets (200% still zooms in, 55% zooms out).
+ */
+private const val DENSITY_CALIBRATION = 0.75f
+
 private const val GITHUB_MARK_PATH =
     "M12,2A10,10 0,0 0,2 12c0,4.42 2.87,8.17 6.84,9.5c0.5,0.08 0.66,-0.23 0.66,-0.5c0,-0.23 0,-0.86 0,-1.69c-2.77,0.6 -3.36,-1.34 -3.36,-1.34c-0.46,-1.16 -1.11,-1.47 -1.11,-1.47c-0.91,-0.62 0.07,-0.6 0.07,-0.6c1,0.07 1.53,1.03 1.53,1.03c0.87,1.52 2.34,1.07 2.91,0.83c0.09,-0.65 0.35,-1.09 0.63,-1.34c-2.22,-0.25 -4.55,-1.11 -4.55,-4.92c0,-1.11 0.38,-2 1.03,-2.71c-0.1,-0.25 -0.45,-1.29 0.1,-2.64c0,0 0.84,-0.27 2.75,1.02c0.79,-0.22 1.65,-0.33 2.5,-0.33c0.85,0 1.71,0.11 2.5,0.33c1.91,-1.29 2.75,-1.02 2.75,-1.02c0.55,1.35 0.2,2.39 0.1,2.64c0.65,0.71 1.03,1.6 1.03,2.71c0,3.82 -2.34,4.66 -4.57,4.91c0.36,0.31 0.69,0.92 0.69,1.85c0,1.34 0,2.42 0,2.74c0,0.27 0.16,0.59 0.67,0.5C19.14,20.16 22,16.42 22,12A10,10 0,0 0,12 2Z"
 
 @Composable
-fun AboutSection(language: String) {
+fun AboutSection(language: String, onOpenContributors: () -> Unit) {
     val firstLaunchDate = remember { DesktopSettings.load().firstLaunchDate }
     var versionCodeTaps by remember { mutableStateOf(0) }
     val devEnabled by DeveloperOptions.enabled.collectAsState()
@@ -4768,6 +5718,13 @@ fun AboutSection(language: String) {
         title = "PiBOH",
         description = Localization.get(language, "app_developer") + " (DE)",
         onClick = { openUrl("https://github.com/PiBOH") },
+    )
+    // Contributors live on their own dedicated sub-screen (the list would
+    // crowd this page once it grows past a handful of people).
+    AboutInfoRow(
+        icon = Icons.Filled.Group,
+        title = Localization.get(language, "contributors_section"),
+        onClick = onOpenContributors,
     )
     AboutInfoRow(
         icon = Icons.Filled.Public,
@@ -4822,8 +5779,30 @@ fun AboutSection(language: String) {
     AboutInfoRow(
         icon = Icons.Filled.Description,
         title = Localization.get(language, "license"),
-        onClick = { openUrl("https://github.com/PiBOH/vivi-music/blob/main/LICENSE") },
+        onClick = { openUrl("https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE") },
     )
+}
+
+/**
+ * Dedicated Contributors sub-screen (Settings → About → Contributors). The list
+ * is always read live from the repository when the screen opens, so it stays
+ * current without an app update; the bundled copy is only the offline fallback.
+ */
+@Composable
+fun ContributorsSection(language: String) {
+    // Refresh silently on every open; never falls back to a local user file —
+    // the only sources are the repository (online) and the bundled copy (offline).
+    var contributors by remember { mutableStateOf(loadContributors()) }
+    LaunchedEffect(Unit) {
+        val fresh = withContext(Dispatchers.IO) { fetchContributorsFromGitHub() }
+        if (fresh.isNotEmpty()) {
+            contributors = fresh
+        }
+    }
+    AboutSectionHeader(Localization.get(language, "contributors_section"))
+    contributors.forEach { contributor ->
+        ContributorRow(contributor)
+    }
 }
 
 @Composable
@@ -4880,6 +5859,150 @@ private fun AboutInfoRow(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Contributors (About → Contributors) — the list is read LIVE from the
+// repository (`contributorsde.json` on the `vivi-music-de` branch) every time
+// the screen opens, so people can be added/edited in the repo without an app
+// update; the bundled classpath copy is only the offline fallback. No local
+// user copy is created or read anymore. Descriptions are intentionally neutral
+// English (not localized). The GitHub avatar is fetched from
+// https://github.com/<username>.png (GitHub's public avatar redirect).
+// ---------------------------------------------------------------------------
+
+@Serializable
+private data class ContributorsFile(val contributors: List<ContributorEntry> = emptyList())
+
+@Serializable
+private data class ContributorEntry(
+    val username: String = "",
+    val description: String = "",
+    val name: String? = null,
+    val url: String? = null,
+)
+
+/**
+ * Reads the contributor list bundled as a classpath resource (the shipped
+ * default). This is ONLY the offline fallback: the live list is fetched from
+ * the repository every time the Contributors screen opens (see
+ * [fetchContributorsFromGitHub]). A stale `~/.vivimusic/contributorsde.json`
+ * from older builds (when the file was user-editable) is removed best-effort,
+ * because the repository is now the single source of truth.
+ */
+private fun loadContributors(): List<ContributorEntry> {
+    runCatching {
+        val stale = File(System.getProperty("user.home"), ".vivimusic/contributorsde.json")
+        if (stale.exists()) stale.delete()
+    }
+    return runCatching {
+        val stream = AppInfo::class.java.getResourceAsStream("/contributorsde.json") ?: return emptyList()
+        stream.use {
+            contributorsJson.decodeFromString<ContributorsFile>(it.readBytes().decodeToString()).contributors
+        }.filter { it.username.isNotBlank() }
+    }.getOrDefault(emptyList())
+}
+
+/**
+ * Fetches the live contributor list from the repository
+ * (`contributorsde.json` on branch `vivi-music-de`, raw.githubusercontent.com).
+ * Returns an empty list when offline/unreachable — the caller then keeps the
+ * locally cached/bundled list, so the About screen degrades gracefully.
+ */
+private fun fetchContributorsFromGitHub(): List<ContributorEntry> = runCatching {
+    val url = URI("https://raw.githubusercontent.com/PiBOH/vivi-music/vivi-music-de/contributorsde.json").toURL()
+    val conn = url.openConnection() as java.net.HttpURLConnection
+    try {
+        conn.connectTimeout = 8000
+        conn.readTimeout = 8000
+        conn.setRequestProperty("User-Agent", "VIVI-Music-DE/${AppInfo.FULL_VERSION}")
+        conn.setRequestProperty("Accept", "application/json")
+        if (conn.responseCode == 200) {
+            conn.inputStream.use { input ->
+                val text = input.readBytes().decodeToString()
+                contributorsJson.decodeFromString<ContributorsFile>(text).contributors
+                    .filter { it.username.isNotBlank() }
+            }
+        } else {
+            emptyList()
+        }
+    } finally {
+        conn.disconnect()
+    }
+}.getOrDefault(emptyList())
+
+@Composable
+private fun ContributorRow(contributor: ContributorEntry) {
+    val username = contributor.username
+    // Show the person's real name first with the GitHub handle in parentheses
+    // ("Name (@username)"); without a name only the handle is shown.
+    val realName = contributor.name?.takeIf { it.isNotBlank() }
+    val displayTitle = if (realName != null) "$realName (@$username)" else "@$username"
+    val profileUrl = contributor.url?.takeIf { it.isNotBlank() } ?: "https://github.com/$username"
+    Row(
+        Modifier.fillMaxWidth()
+            .clickable(onClick = { openUrl(profileUrl) })
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Circular GitHub avatar with an initials-colored fallback underneath:
+        // while the image streams in (or offline) the colored disc + initial
+        // show; once loaded, AsyncImage paints over it (Crop inside the circle).
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(contributorAvatarColor(username)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    (realName ?: username).take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                )
+            }
+            AsyncImage(
+                model = "https://github.com/$username.png?size=96",
+                contentDescription = displayTitle,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(displayTitle, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            if (contributor.description.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    contributor.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Stable per-username avatar disc color (deterministic, theme-independent). */
+private fun contributorAvatarColor(username: String): Color {
+    val palette = listOf(
+        Color(0xFF6750A4), Color(0xFF00696D), Color(0xFF006D3A), Color(0xFF7D5260),
+        Color(0xFF9A6700), Color(0xFF00639B), Color(0xFF704214), Color(0xFFB3261E),
+    )
+    val hash = username.fold(0) { acc, c -> (acc * 31 + c.code) and 0x7fffffff }
+    return palette[hash % palette.size]
+}
+
 /** Loads a bundled classpath image from `desktop/src/main/resources/images`. */
 private fun loadResourceImage(name: String): ImageBitmap? = runCatching {
     val stream = AppInfo::class.java.getResourceAsStream("/images/$name") ?: return null
@@ -4900,6 +6023,34 @@ fun PlayerSection(
     language: String,
     autoPlayNext: Boolean,
     onToggleAutoPlayNext: (Boolean) -> Unit,
+    autoLoadMore: Boolean,
+    onToggleAutoLoadMore: (Boolean) -> Unit,
+    preventDuplicateTracksInQueue: Boolean,
+    onTogglePreventDuplicateTracksInQueue: (Boolean) -> Unit,
+    autoSkipNextOnError: Boolean,
+    onToggleAutoSkipNextOnError: (Boolean) -> Unit,
+    pauseWhenMediaMuted: Boolean,
+    onTogglePauseWhenMediaMuted: (Boolean) -> Unit,
+    keepScreenOnWhenPlayerExpanded: Boolean,
+    onToggleKeepScreenOnWhenPlayerExpanded: (Boolean) -> Unit,
+    persistentShuffle: Boolean,
+    onTogglePersistentShuffle: (Boolean) -> Unit,
+    progressiveSeek: Boolean,
+    onToggleProgressiveSeek: (Boolean) -> Unit,
+    autoDownloadOnLike: Boolean,
+    onToggleAutoDownloadOnLike: (Boolean) -> Unit,
+    historyDurationSeconds: Int,
+    onHistoryDurationSecondsChange: (Int) -> Unit,
+    skipSilence: Boolean,
+    onToggleSkipSilence: (Boolean) -> Unit,
+    skipSilenceInstant: Boolean,
+    onToggleSkipSilenceInstant: (Boolean) -> Unit,
+    crossfade: Boolean,
+    onToggleCrossfade: (Boolean) -> Unit,
+    crossfadeDurationSeconds: Int,
+    onCrossfadeDurationSecondsChange: (Int) -> Unit,
+    disableCrossfadeGapless: Boolean,
+    onToggleDisableCrossfadeGapless: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -4910,82 +6061,221 @@ fun PlayerSection(
     onToggleSyncViviVolume: (Boolean) -> Unit,
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
-    onOpenPlayerDesign: () -> Unit,
+    onOpenPlayerDesign: () -> Unit = {},
+    onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
 ) {
-    var qualityExpanded by remember { mutableStateOf(false) }
-    var sliderExpanded by remember { mutableStateOf(false) }
-
     Text(Localization.get(language, "player_audio"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
-    Text(Localization.get(language, "audio_quality"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-    Box(Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = { qualityExpanded = true }) {
-            Text(audioQualityLabel(language, audioQuality))
-        }
-        DropdownMenu(expanded = qualityExpanded, onDismissRequest = { qualityExpanded = false }) {
-            listOf("auto", "high", "low").forEach { q ->
-                DropdownMenuItem(
-                    text = { Text(audioQualityLabel(language, q)) },
-                    onClick = { qualityExpanded = false; onAudioQualityChange(q) },
-                )
-            }
-        }
-    }
-
-    Row(
-        Modifier.fillMaxWidth().padding(top = 12.dp).clickable(onClick = onOpenPlayerDesign),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(Localization.get(language, "player_design"), style = MaterialTheme.typography.bodyLarge)
-        Spacer(Modifier.weight(1f))
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-    }
-
-    SettingSwitch(language, "autoplay_next", autoPlayNext, onToggleAutoPlayNext)
-    SettingSwitch(language, "remember_shuffle_repeat", rememberShuffleRepeat, onToggleRememberShuffleRepeat)
-    SettingSwitch(language, "persistent_queue", persistentQueue, onTogglePersistentQueue)
-    SettingSwitch(language, "sync_vivi_volume", syncViviVolume, onToggleSyncViviVolume)
-
-    Text(
-        "${Localization.get(language, "stream_cache_minutes")}: " +
-            if (streamCacheMinutes <= 0) Localization.get(language, "stream_cache_forever")
-            else "${streamCacheMinutes} min",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 16.dp),
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.MusicNote,
+                title = { Text(Localization.get(language, "player_design")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenPlayerDesign,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.GraphicEq,
+                title = { Text(Localization.get(language, "vivi_equalizer")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenEqualizer,
+            ),
+        ),
     )
-    Text(
-        Localization.get(language, "stream_cache_minutes_desc"),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.GraphicEq,
+        title = Localization.get(language, "audio_quality"),
+        value = audioQualityLabel(language, audioQuality),
+        options = listOf("auto", "high", "low").map { it to audioQualityLabel(language, it) },
+        onSelect = onAudioQualityChange,
+    )
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.SwapHoriz,
+        title = Localization.get(language, "slider_style"),
+        value = sliderStyleLabel(language, sliderStyle),
+        options = listOf("slim", "squiggly", "wavy").map { it to sliderStyleLabel(language, it) },
+        onSelect = onSliderStyleChange,
+    )
+
+    M3SettingsGroup(
+        items = listOfNotNull(
+            M3SettingsItem(
+                icon = Icons.Filled.PlayArrow,
+                title = { Text(Localization.get(language, "autoplay_next")) },
+                trailing = { Switch(checked = autoPlayNext, onCheckedChange = onToggleAutoPlayNext) },
+                onClick = { onToggleAutoPlayNext(!autoPlayNext) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Repeat,
+                title = { Text(Localization.get(language, "remember_shuffle_repeat")) },
+                trailing = { Switch(checked = rememberShuffleRepeat, onCheckedChange = onToggleRememberShuffleRepeat) },
+                onClick = { onToggleRememberShuffleRepeat(!rememberShuffleRepeat) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.QueueMusic,
+                title = { Text(Localization.get(language, "persistent_queue")) },
+                trailing = { Switch(checked = persistentQueue, onCheckedChange = onTogglePersistentQueue) },
+                onClick = { onTogglePersistentQueue(!persistentQueue) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VolumeUp,
+                title = { Text(Localization.get(language, "sync_vivi_volume")) },
+                trailing = { Switch(checked = syncViviVolume, onCheckedChange = onToggleSyncViviVolume) },
+                onClick = { onToggleSyncViviVolume(!syncViviVolume) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Autorenew,
+                title = { Text(Localization.get(language, "auto_load_more")) },
+                description = { Text(Localization.get(language, "auto_load_more_desc")) },
+                trailing = { Switch(checked = autoLoadMore, onCheckedChange = onToggleAutoLoadMore) },
+                onClick = { onToggleAutoLoadMore(!autoLoadMore) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.ContentCopy,
+                title = { Text(Localization.get(language, "prevent_duplicate_tracks")) },
+                description = { Text(Localization.get(language, "prevent_duplicate_tracks_desc")) },
+                trailing = { Switch(checked = preventDuplicateTracksInQueue, onCheckedChange = onTogglePreventDuplicateTracksInQueue) },
+                onClick = { onTogglePreventDuplicateTracksInQueue(!preventDuplicateTracksInQueue) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FastForward,
+                title = { Text(Localization.get(language, "auto_skip_next_on_error")) },
+                description = { Text(Localization.get(language, "auto_skip_next_on_error_desc")) },
+                trailing = { Switch(checked = autoSkipNextOnError, onCheckedChange = onToggleAutoSkipNextOnError) },
+                onClick = { onToggleAutoSkipNextOnError(!autoSkipNextOnError) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VolumeOff,
+                title = { Text(Localization.get(language, "pause_music_when_media_muted")) },
+                trailing = { Switch(checked = pauseWhenMediaMuted, onCheckedChange = onTogglePauseWhenMediaMuted) },
+                onClick = { onTogglePauseWhenMediaMuted(!pauseWhenMediaMuted) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.BrightnessHigh,
+                title = { Text(Localization.get(language, "keep_screen_on_player_expanded")) },
+                trailing = { Switch(checked = keepScreenOnWhenPlayerExpanded, onCheckedChange = onToggleKeepScreenOnWhenPlayerExpanded) },
+                onClick = { onToggleKeepScreenOnWhenPlayerExpanded(!keepScreenOnWhenPlayerExpanded) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Shuffle,
+                title = { Text(Localization.get(language, "persistent_shuffle")) },
+                description = { Text(Localization.get(language, "persistent_shuffle_desc")) },
+                trailing = { Switch(checked = persistentShuffle, onCheckedChange = onTogglePersistentShuffle) },
+                onClick = { onTogglePersistentShuffle(!persistentShuffle) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.TouchApp,
+                title = { Text(Localization.get(language, "progressive_seek")) },
+                description = { Text(Localization.get(language, "progressive_seek_desc")) },
+                trailing = { Switch(checked = progressiveSeek, onCheckedChange = onToggleProgressiveSeek) },
+                onClick = { onToggleProgressiveSeek(!progressiveSeek) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Favorite,
+                title = { Text(Localization.get(language, "auto_download_on_like")) },
+                description = { Text(Localization.get(language, "auto_download_on_like_desc")) },
+                trailing = { Switch(checked = autoDownloadOnLike, onCheckedChange = onToggleAutoDownloadOnLike) },
+                onClick = { onToggleAutoDownloadOnLike(!autoDownloadOnLike) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FastRewind,
+                title = { Text(Localization.get(language, "skip_silence")) },
+                description = { Text(Localization.get(language, "skip_silence_desc")) },
+                trailing = { Switch(checked = skipSilence, onCheckedChange = onToggleSkipSilence) },
+                onClick = { onToggleSkipSilence(!skipSilence) },
+            ),
+            // "Instantly skip silence" is a derivative of the master toggle:
+            // it only shows (and only has an effect) when "Skip silence" is on.
+            if (skipSilence) M3SettingsItem(
+                icon = Icons.Filled.FlashOn,
+                title = { Text(Localization.get(language, "skip_silence_instant")) },
+                description = { Text(Localization.get(language, "skip_silence_instant_desc")) },
+                trailing = { Switch(checked = skipSilenceInstant, onCheckedChange = onToggleSkipSilenceInstant) },
+                onClick = { onToggleSkipSilenceInstant(!skipSilenceInstant) },
+            ) else null,
+            M3SettingsItem(
+                icon = Icons.Filled.CompareArrows,
+                title = { Text(Localization.get(language, "crossfade")) },
+                description = { Text(Localization.get(language, "crossfade_desc")) },
+                trailing = { Switch(checked = crossfade, onCheckedChange = onToggleCrossfade) },
+                onClick = { onToggleCrossfade(!crossfade) },
+            ),
+            if (crossfade) M3SettingsItem(
+                icon = Icons.Filled.DiscFull,
+                title = { Text(Localization.get(language, "disable_crossfade_gapless")) },
+                description = { Text(Localization.get(language, "disable_crossfade_gapless_desc")) },
+                trailing = { Switch(checked = disableCrossfadeGapless, onCheckedChange = onToggleDisableCrossfadeGapless) },
+                onClick = { onToggleDisableCrossfadeGapless(!disableCrossfadeGapless) },
+            ) else null,
+        ),
+    )
+
+    if (crossfade) {
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.CompareArrows,
+                    title = { Text("${Localization.get(language, "crossfade_duration")}: $crossfadeDurationSeconds s") },
+                    description = { Text(Localization.get(language, "crossfade_duration_desc")) },
+                ),
+            ),
+        )
+        Slider(
+            value = crossfadeDurationSeconds.coerceIn(1, 12).toFloat(),
+            onValueChange = { onCrossfadeDurationSecondsChange(it.roundToInt().coerceIn(1, 12)) },
+            valueRange = 1f..12f,
+            steps = 10,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+    }
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Schedule,
+                title = { Text("${Localization.get(language, "history_duration")}: $historyDurationSeconds s") },
+                description = { Text(Localization.get(language, "history_duration_desc")) },
+            ),
+        ),
+    )
+    Slider(
+        value = historyDurationSeconds.coerceIn(1, 100).toFloat(),
+        onValueChange = { onHistoryDurationSecondsChange(it.roundToInt().coerceIn(1, 100)) },
+        valueRange = 1f..100f,
+        steps = 98,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.History,
+                title = {
+                    Text(
+                        "${Localization.get(language, "stream_cache_minutes")}: " +
+                            if (streamCacheMinutes <= 0) Localization.get(language, "stream_cache_forever")
+                            else "${streamCacheMinutes} min",
+                    )
+                },
+                description = { Text(Localization.get(language, "stream_cache_minutes_desc")) },
+            ),
+        ),
     )
     Slider(
         value = if (streamCacheMinutes <= 0) 61f else streamCacheMinutes.toFloat(),
         onValueChange = {
             val v = it.roundToInt()
-            onStreamCacheMinutesChange(if (v >= 61) 0 else v.coerceIn(1, 60))
+            // Minimum is 10 minutes (issue #26): anything below means "forever" only at 61+.
+            onStreamCacheMinutesChange(if (v >= 61) 0 else v.coerceIn(10, 60))
         },
-        valueRange = 1f..61f,
-        steps = 59,
-        modifier = Modifier.fillMaxWidth(),
+        valueRange = 10f..61f,
+        steps = 50,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
-
-    Text(Localization.get(language, "slider_style"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
-    Box(Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = { sliderExpanded = true }) {
-            Text(sliderStyleLabel(language, sliderStyle))
-        }
-        DropdownMenu(expanded = sliderExpanded, onDismissRequest = { sliderExpanded = false }) {
-            listOf("slim", "squiggly", "wavy").forEach { s ->
-                DropdownMenuItem(
-                    text = { Text(sliderStyleLabel(language, s)) },
-                    onClick = { sliderExpanded = false; onSliderStyleChange(s) },
-                )
-            }
-        }
-    }
 }
 
 private fun sliderStyleLabel(language: String, style: String): String = when (style) {
@@ -5014,13 +6304,6 @@ private fun audioQualityLabel(language: String, quality: String): String = when 
 
 private fun dirSize(dir: File): Long =
     dir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
-
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kb = bytes / 1024.0
-    if (kb < 1024) return "%.1f KB".format(kb)
-    return "%.1f MB".format(kb / 1024.0)
-}
 
 @Composable
 fun StorageSection(language: String) {
@@ -5054,7 +6337,10 @@ fun StorageSection(language: String) {
 }
 
 /** JSON codec for persisting the queue between sessions. */
-private val queueJson = Json { ignoreUnknownKeys = true }
+private val queueJson = sharedJson
+
+/** JSON codec for the bundled `contributorsde.json` (ignores `_guide` etc.). */
+private val contributorsJson = sharedJson
 
 /** Key used to detect discrete playback changes worth syncing (no per-frame pushes). */
 private data class PlaybackSyncKey(
@@ -5092,7 +6378,9 @@ private fun PlayerController.toPlaybackSnapshot(): PlaybackSnapshot? {
         isResolving = s.isResolving,
         isPlaying = s.isPlaying,
         volume = if (DesktopSettings.load().syncViviVolume) s.volume else null,
-        systemVolume = SystemVolume.get(),
+        // Same toggle as the in-app channel: the OS volume must not leave this
+        // device when volume sync is disabled.
+        systemVolume = if (DesktopSettings.load().syncViviVolume) SystemVolume.get() else null,
         repeatMode = s.repeatMode.name,
         isShuffle = s.isShuffle,
         queue = s.queue.map { np ->
@@ -5108,8 +6396,16 @@ private fun desktopSettingsMap(
     themeMode: ThemeMode,
     accent: Color,
     syncViviVolume: Boolean,
-): Map<String, String> = mapOf(
+): Map<String, String> {
+    val s = DesktopSettings.load()
+    return mapOf(
     "appLanguage" to Languages.toMobileCode(language).ifBlank { "SYSTEM_DEFAULT" },
+    // Source markers for bidirectional language sync: (deviceId, seq) where
+    // seq grows on every manual language change on THIS device. The peer only
+    // applies the language when the markers prove it is a newer manual change
+    // (never an echo or a stale stored value pushed at pair time).
+    "languageDeviceId" to s.deviceId,
+    "languageSeq" to s.languageSeq.toString(),
     "darkMode" to when (themeMode) {
         ThemeMode.SYSTEM -> "AUTO"
         ThemeMode.LIGHT -> "OFF"
@@ -5119,4 +6415,5 @@ private fun desktopSettingsMap(
     "pureBlack" to "false",
     "dynamicTheme" to "false",
     "syncViviVolume" to syncViviVolume.toString(),
-)
+    )
+}

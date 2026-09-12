@@ -56,10 +56,17 @@ object LoginWebView {
         val hasFullSession: Boolean,
     )
 
+    /** What the window hands back after a sign-in attempt. */
+    data class Capture(
+        val cookie: String?,
+        val dataSyncId: String?,
+        val visitorData: String?,
+    )
+
     fun isWindowOpen(): Boolean = windowOpen
 
     /** Starts JavaFX once, then creates the embedded login Stage. */
-    fun openEmbedded(language: String, onCaptured: (String?) -> Unit): Boolean {
+    fun openEmbedded(language: String, onCaptured: (Capture?) -> Unit): Boolean {
         if (unavailable || windowOpen) return !unavailable
         return try {
             if (CookieHandler.getDefault() !is CookieManager) {
@@ -73,7 +80,7 @@ object LoginWebView {
         } catch (_: Throwable) {
             windowOpen = false
             unavailable = true
-            deliver(null, onCaptured)
+            deliver(null, null, null, onCaptured)
             false
         }
     }
@@ -124,13 +131,13 @@ object LoginWebView {
         }
     }
 
-    private fun deliver(cookie: String?, callback: (String?) -> Unit) {
+    private fun deliver(cookie: String?, dataSyncId: String?, visitorData: String?, callback: (Capture?) -> Unit) {
         if (delivered) return
         delivered = true
-        runCatching { callback(cookie) }
+        runCatching { callback(Capture(cookie, dataSyncId, visitorData)) }
     }
 
-    private fun createWindow(language: String, callback: (String?) -> Unit) {
+    private fun createWindow(language: String, callback: (Capture?) -> Unit) {
         try {
             val stage = Stage()
             val status = Label(Localization.get(language, "login_waiting"))
@@ -169,7 +176,7 @@ object LoginWebView {
             stage.scene = Scene(root, 1000.0, 720.0)
             stage.setOnCloseRequest {
                 windowOpen = false
-                deliver(capture().header, callback)
+                deliver(capture().header, null, null, callback)
             }
             stage.show()
 
@@ -201,12 +208,18 @@ object LoginWebView {
                         }
                         // Reload music.youtube.com WITH the session cookie so
                         // every youtube.com session cookie is set, then settle
-                        // and re-capture the full header before closing.
+                        // and re-capture the full header before closing. The ids
+                        // come from the page itself (ytcfg), right there.
                         FxPlatform.runLater { browser.engine.load("https://music.youtube.com/") }
                         Thread.sleep(4500)
+                        val ids = extractPageIds(browser)
                         val finalCap = capture()
-                        logDebug("delivering full session: ${finalCap.names.size} cookies, missing=${finalCap.missing}")
-                        deliver(finalCap.header ?: cap.header, callback)
+                        logDebug(
+                            "delivering full session: ${finalCap.names.size} cookies, missing=" +
+                                "${finalCap.missing}, dataSyncId=${if (ids.first != null) "ok" else "MISSING"}, " +
+                                "visitorData=${if (ids.second != null) "ok" else "MISSING"}"
+                        )
+                        deliver(finalCap.header ?: cap.header, ids.first, ids.second, callback)
                         FxPlatform.runLater { stage.close() }
                         break
                     }
@@ -220,7 +233,7 @@ object LoginWebView {
                             spinner.isVisible = false
                             status.text = Localization.get(language, "login_saving")
                         }
-                        deliver(cap.header, callback)
+                        deliver(cap.header, null, null, callback)
                         FxPlatform.runLater { stage.close() }
                         break
                     }
@@ -234,17 +247,49 @@ object LoginWebView {
         } catch (t: Throwable) {
             windowOpen = false
             unavailable = true
-            deliver(null, callback)
+            deliver(null, null, null, callback)
         }
     }
 
     /**
-     * Reads the cookies stored for youtube/google domains. The full set is
-     * required: SAPISID alone authenticates nothing — the innertube
-     * account_menu validation answers as guest (NPE) when the critical
-     * HttpOnly session cookies (SID, HSID, SSID, APISID, __Secure-3PSID, …)
-     * are missing, which is exactly the "Login validation failed" the user
-     * saw after the window closed.
+     * Reads `DATASYNC_ID` and `VISITOR_DATA` straight from the loaded page's
+     * ytcfg while the WebView is sitting on music.youtube.com with the session
+     * — the same values that appear in the page source. These two are
+     * mandatory (without them the account validation answers as guest), so
+     * this is the authoritative source; the shell-fetch fallback in
+     * [LoginManager] only runs when this capture comes back empty.
+     */
+    private fun extractPageIds(browser: WebView): Pair<String?, String?> {
+        val result = arrayOfNulls<String>(2)
+        val latch = CountDownLatch(1)
+        FxPlatform.runLater {
+            try {
+                val getter = "(function(k){ try { if (window.ytcfg && window.ytcfg.get) { return window.ytcfg.get(k) || ''; } if (window.ytcfg && window.ytcfg.data_) { return window.ytcfg.data_[k] || ''; } return ''; } catch (e) { return ''; } })"
+                result[0] = sanitizeDataSyncId(
+                    (browser.engine.executeScript("$getter('DATASYNC_ID')") as? String)
+                )
+                result[1] = (browser.engine.executeScript("$getter('VISITOR_DATA')") as? String)
+                    ?.takeIf { it.isNotBlank() }
+                if (result[0] == null || result[1] == null) {
+                    logDebug("ytcfg ids incomplete: dataSyncId=${result[0] != null}, visitorData=${result[1] != null}")
+                }
+            } catch (t: Throwable) {
+                logDebug("ytcfg extraction failed: $t")
+            }
+            latch.countDown()
+        }
+        runCatching { latch.await(5, TimeUnit.SECONDS) }
+        return result[0] to result[1]
+    }
+
+    /**
+     * Reads the cookies for youtube/google domains. The authoritative header
+     * is the one the cookie handler itself would send to music.youtube.com —
+     * the same domain/path/secure matching a browser applies when it builds
+     * the Cookie header the manual method pastes (which is why manual paste
+     * kept working while the WebView capture failed). SAPISID alone
+     * authenticates nothing: the innertube account_menu validation answers
+     * as guest (NPE) when the critical HttpOnly session cookies are missing.
      */
     private fun capture(): SessionCapture {
         val store = (CookieHandler.getDefault() as? CookieManager)?.cookieStore
@@ -253,28 +298,63 @@ object LoginWebView {
             domain.endsWith("youtube.com") || domain.endsWith("google.com")
         }
         // A cookie name can exist on several domains (e.g. SAPISID on .google.com
-        // and .youtube.com). Keep the most specific domain (longest) per name so
-        // the Authorization hash is computed with the session cookie that
-        // actually authenticates the music.youtube.com API.
+        // and .youtube.com). Keep the most specific domain per name, preferring
+        // the youtube.com variant on ties: the domains have equal length, and
+        // only the .youtube.com session authenticates the music.youtube.com API.
         val byName = cookies
             .groupBy { it.name }
-            .mapValues { (_, list) -> list.maxByOrNull { it.domain.length } }
+            .mapValues { (_, list) ->
+                list.maxByOrNull { (if ("youtube" in it.domain) 1 else 0) * 1000 + it.domain.length }
+            }
             .mapNotNull { (_, c) -> c }
             .associateBy { it.name }
-        val names = cookies.map { it.name }.distinct().sorted()
+        // Primary header: ask the cookie handler which cookies it would send
+        // to the API host. This applies the same domain/path/secure rules a
+        // browser does, so the result matches the manually pasted header
+        // exactly; a plain store dump mixes in cookies scoped to other
+        // Google properties.
+        val scopedHeader = runCatching {
+            CookieHandler.getDefault()
+                .get(URI("https://music.youtube.com/"), emptyMap<String, List<String>>())["Cookie"]
+                ?.firstOrNull()
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+        val scopedNames = scopedHeader.orEmpty().split(";")
+            .mapNotNull { part -> part.substringBefore('=').trim().takeIf { n -> n.isNotEmpty() } }
+            .toSet()
+        val names = (scopedNames + cookies.map { it.name }).distinct().sorted()
         val critical = listOf("SID", "HSID", "SSID", "APISID", "__Secure-3PSID", "LOGIN_INFO")
-        val missing = critical.filter { it !in byName }
-        val hasSession = byName.containsKey("SAPISID") ||
-            byName.containsKey("__Secure-1PAPISID") ||
-            byName.containsKey("__Secure-3PAPISID")
-        // A complete session has at least the SAPISID pair AND the HttpOnly
-        // session id (SID / __Secure-3PSID).
-        val hasFullSession = hasSession && byName.containsKey("SID") && byName.containsKey("__Secure-3PSID")
+        val missing = critical.filter { it !in byName && it !in scopedNames }
+        val authNames = listOf("SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID")
+        val hasSession = authNames.any { it in scopedNames } || authNames.any { byName.containsKey(it) }
+        // A complete session has the SAPISID pair AND a session id cookie:
+        // the legacy SID or either Secure PSID variant. Modern Google logins
+        // often never issue the legacy SID — requiring it blocked the
+        // full-session hand-over and made the WebView fail while the manual
+        // paste of the very same session succeeded.
+        val sessionIds = listOf("SID", "__Secure-1PSID", "__Secure-3PSID")
+        val hasFullSession = hasSession &&
+            (sessionIds.any { it in scopedNames } || sessionIds.any { byName.containsKey(it) })
         if (hasSession) {
-            logDebug("captured ${cookies.size} cookies: $names | missing critical: $missing")
+            logDebug("captured ${cookies.size} cookies: $names | missing critical: $missing | scoped=${scopedNames.size}")
+        }
+        // Backfill: keep critical auth cookies the scoped lookup did not
+        // return (store quirks), without duplicating names.
+        val backfillNames = setOf(
+            "SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID",
+            "SID", "__Secure-1PSID", "__Secure-3PSID",
+            "HSID", "SSID", "APISID", "LOGIN_INFO",
+        )
+        val backfill = byName.values
+            .filter { it.name in backfillNames && it.name !in scopedNames }
+            .joinToString("; ") { "${it.name}=${it.value}" }
+        val header = when {
+            !hasSession -> null
+            scopedHeader == null -> byName.values.joinToString("; ") { "${it.name}=${it.value}" }
+            backfill.isEmpty() -> scopedHeader
+            else -> "$scopedHeader; $backfill"
         }
         return SessionCapture(
-            header = if (hasSession) byName.values.joinToString("; ") { "${it.name}=${it.value}" } else null,
+            header = header,
             names = names,
             missing = missing,
             hasSession = hasSession,

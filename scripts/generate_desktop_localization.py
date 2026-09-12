@@ -50,6 +50,7 @@ DIR_TO_LANG = {
     "-es": "es",
     "-et": "et",
     "-eu": "eu",
+    "-fa": "fa",
     "-fi": "fi",
     "-fil": "fil",
     "-fr": "fr",
@@ -58,6 +59,7 @@ DIR_TO_LANG = {
     "-hu": "hu",
     "-in": "id",
     "-it": "it",
+    "-iw": "iw",
     "-ja": "ja",
     "-km": "km",
     "-ko": "ko",
@@ -69,6 +71,7 @@ DIR_TO_LANG = {
     "-pa": "pa",
     "-pl": "pl",
     "-pt": "pt",
+    "-pt-rBR": "pt-rBR",
     "-ro": "ro",
     "-ru": "ru",
     "-sk": "sk",
@@ -104,6 +107,16 @@ MAPPING = {
     "albums": "albums",
     "artists": "artists",
     "playlists": "playlists",
+    # Ported Player & audio options that exist verbatim in the Android strings
+    # (used by the desktop and the mobile app alike), so every language is
+    # translated straight from the mobile resources.
+    "auto_load_more": "auto_load_more",
+    "auto_load_more_desc": "auto_load_more_desc",
+    "auto_skip_next_on_error": "auto_skip_next_on_error",
+    "auto_skip_next_on_error_desc": "auto_skip_next_on_error_desc",
+    "retry": "retry",
+    "skip_silence": "skip_silence",
+    "undo": "undo",
     "songs": "songs",
     "play": "play",
     "pause": "pause",
@@ -112,12 +125,16 @@ MAPPING = {
     "about": "about",
     "download": "action_download",
     "appearance": "appearance",
+    "general": "general",
     "theme_mode": "theme_mode",
     "theme": "theme",
     "theme_colors": "theme_colors",
     "color_palette": "color_palette",
     "accent_intensity": "Accent color intensity",
     "quick_picks": "quick_picks",
+    "similar_to": "similar_to",
+    "forgotten_favorites": "forgotten_favorites",
+    "recommended": "Recommended",
     "search_history": "search_history",
     "listen_history": "listen_history",
     "clear_search_history": "clear_search_history",
@@ -169,7 +186,9 @@ MAPPING = {
     "player_design_v2": "V2",
     "player_design_expressive": "Expressive",
     "player_background": "Player background",
+    "player_background_visualizer": "Visualizer",
     "player_background_desc": "Animated style behind the player.",
+    "canvas": "Canvas",
     "player_background_gradient": "Gradient",
     "player_background_blur": "Blur",
     "player_background_glow": "Glow",
@@ -192,10 +211,54 @@ MAPPING = {
     "wrapped_top_song": "top song",
     "wrapped_show_on_home": "Show on Home",
     "wrapped_show_on_home_desc": "Show the VIVI Wrapped card on the Home screen.",
-    "download_mobile_apk": "Download VIVI for Android (APK)",
+    "download_mobile_apk": "Download the adapted VIVI Music for Android (APK)",
     "opening_download": "Opening download…",
     "native_title_bar": "Native system title bar",
+    "home_greeting_morning": "Good morning",
+    "home_greeting_afternoon": "Good afternoon",
+    "home_greeting_evening": "Good evening",
+    "your_artists_feed": "Your Artists Feed",
+    "made_for_you": "Made For You",
+    "see_all": "See all",
+    "view_section": "View section",
+    "tooltip_menu": "Open menu",
+    "tooltip_back": "Go back",
+    "tooltip_forward": "Go forward",
+    "tooltip_home": "Go to home",
+    "tooltip_settings": "Open settings",
+    "tooltip_queue": "Open queue",
+    "tooltip_lyrics": "Show lyrics",
+    "tooltip_history": "Open history",
+    "tooltip_notifications": "Open notifications",
+    "tooltip_more": "Show more options",
+    "tooltip_next": "Skip to next",
+    "tooltip_previous": "Skip to previous",
+    "tooltip_wrapped": "Open VIVI Wrapped",
+    "tooltip_listen_together": "Start Listen Together",
+    "tooltip_collapse_sidebar": "Collapse sidebar",
+    "tooltip_expand_sidebar": "Expand sidebar",
+    "tooltip_toggle_sidebar": "Toggle sidebar",
+    "tooltip_clear": "Clear",
+    "tooltip_connection_method": "Select connection method",
+    "tooltip_output_device": "Select output device",
+    "tooltip_minimize": "Minimize",
+    "tooltip_queue_options": "Show queue options",
+    "tooltip_autoplay": "Toggle autoplay",
+    "tooltip_open_full_player": "Open full player",
+    "tooltip_favorite": "Add to favorites",
+    "tooltip_show_right_panel": "Show right panel",
+    "tooltip_hide_right_panel": "Hide right panel",
+    "tooltip_maximize": "Maximize",
+    "tooltip_restore": "Restore",
     "native_title_bar_desc": "Use the operating system's title bar instead of VIVI's custom one; VIVI's bar then hides its own window buttons. Applies after a restart.",
+    "native_title_bar_desc_hint": "Turn it on if you have compatibility issues (window/rendering problems).",
+    "dev_open_live_log": "Open live log",
+    "dev_open_live_log_desc": "Open a dedicated window showing VIVI's activity log (playback, navigation, errors) in real time.",
+    "dev_logs_export": "Export logs (.zip)",
+    "dev_logs_export_desc": "Package VIVI's diagnostic logs (system info, settings summary, error logs) into a .zip file.",
+    "dev_logs_exporting": "Exporting…",
+    "dev_logs_exported": "Logs exported",
+    "dev_logs_export_failed": "Export failed — the archive could not be written.",
     "restart_required_title": "Restart required",
     "restart_required": "This setting takes effect after restarting VIVI Music DE.",
     "pause_listen_history_desc": "Hides the History screen from the sidebar.",
@@ -226,6 +289,17 @@ MAPPING = {
     "mini_player_apple": "Apple",
     "mini_player_outline": "Outline",
     "mini_player_pure_black": "Pure black",
+    "mini_player_design": "Mini-player design",
+    "mini_player_classic": "Classic",
+    "mini_player_new": "New",
+    "mini_player_background": "Mini-player background",
+    "mini_player_bg_follow_theme": "Follow theme",
+    "mini_player_bg_gradient": "Gradient",
+    "mini_player_bg_blur": "Blur",
+    "mini_player_bg_glow_motion": "Glow motion",
+    "mini_player_bg_live_mesh": "Live mesh",
+    "pure_black_mini": "Pure black mini-player",
+    "pure_black_mini_desc": "Use a true black background for the mini-player in dark mode.",
     "density_and_grid": "display_density",
     "use_canvas": "use_canvas",
     "canvas_source": "canvas_source",
@@ -265,6 +339,24 @@ MAPPING = {
     "listen_together_desc": "listen_together_desc",
     "listen_together_description": "listen_together_description",
     "listen_together_title": "Listen Together",
+    "lt_connecting": "Connecting…",
+    "lt_reconnecting": "Reconnecting…",
+    "lt_kicked": "You were kicked from the room",
+    "lt_copy_code": "Copy code",
+    "lt_auto_approve": "Auto-approve join requests",
+    "lt_buffering": "Buffering",
+    "lt_sync_volume": "Sync volume",
+    "lt_request_sync": "Request sync",
+    "lt_reconnect": "Reconnect",
+    "lt_you": "You",
+    "lt_transfer_host": "Transfer host",
+    "lt_kick": "Kick",
+    "lt_join_requests": "Join requests",
+    "lt_no_suggestions": "No suggestions yet",
+    "lt_suggest_placeholder": "Paste a YouTube link or video ID",
+    "lt_suggest": "Suggest",
+    "lt_suggestion_approved": "Suggestion approved and added to the queue",
+    "lt_suggestion_rejected": "Suggestion rejected",
     "search_hint": "What do you want to play?",
     "up_next": "Up next",
     "close": "Close",
@@ -396,6 +488,19 @@ MAPPING = {
     "accent_brown": "Brown",
     "accent_grey": "Grey",
     "accent_blue_grey": "Blue Grey",
+    "accent_magenta": "Magenta",
+    "accent_turquoise": "Turquoise",
+    "accent_coral": "Coral",
+    "accent_lavender": "Lavender",
+    "accent_gold": "Gold",
+    "accent_navy": "Navy",
+    "custom_colors": "Custom colors",
+    "custom_color": "Custom color",
+    "hue": "Hue",
+    "saturation": "Saturation",
+    "brightness": "Brightness",
+    "add_to_palette": "Add to palette",
+    "remove_custom_color": "Remove custom color",
     "right_panel": "Right panel",
     "right_panel_desc": "Show the Now Playing panel on the right side of the window.",
     "open_vivi": "Open VIVI Music",
@@ -410,6 +515,70 @@ MAPPING = {
     "tray_menu": "Tray menu",
     "tray_menu_desc": "Show playback controls in the system tray.",
     "windows_only": "Windows only",
+    # Phase 10: Equalizer / Data saver / AI translation (vivi_strings.xml)
+    "equalizer_header": "equalizer_header",
+    "no_profiles": "no_profiles",
+    "import_profile": "import_profile",
+    "system_equalizer": "system_equalizer",
+    "eq_disabled": "eq_disabled",
+    "delete_profile_desc": "delete_profile_desc",
+    "delete_profile_confirmation": "delete_profile_confirmation",
+    "animations": "Animations",
+    "animations_desc": "Enable UI animations (screen transitions, etc.). Turn off for instant switching.",
+    "notification_mode": "Notification mode",
+    "welcome_title": "Welcome to VIVI Music DE",
+    "welcome_desc": "Choose your language to get started. You can change it later from Settings → Language.",
+    "continue": "Continue",
+    "add_example_profile": "Add example profile",
+    "eq_edit_profile": "Edit profile",
+    "eq_preamp": "Preamp",
+    "eq_gain": "Gain",
+    "eq_q_factor": "Q factor",
+    "eq_band": "Band",
+    "eq_range_sub_bass": "Sub-bass",
+    "eq_range_bass": "Bass",
+    "eq_range_low_mid": "Low mid",
+    "eq_range_mid": "Mid",
+    "eq_range_high_mid": "High mid",
+    "eq_range_treble": "Treble",
+    "import_error_title": "import_error_title",
+    "error_eq_apply_failed": "error_eq_apply_failed",
+    "vivi_equalizer": "vivi_equalizer",
+    "vivi_equalizer_desc": "vivi_equalizer_desc",
+    "data_saver": "data_saver",
+    "data_saver_desc": "data_saver_desc",
+    "data_saver_turns_off_header": "data_saver_turns_off_header",
+    "data_saver_player_canvas": "data_saver_player_canvas",
+    "data_saver_artist_video": "data_saver_artist_video",
+    "data_saver_artist_bg_video": "data_saver_artist_bg_video",
+    "data_saver_album_canvas": "data_saver_album_canvas",
+    "data_saver_high_quality_images": "data_saver_high_quality_images",
+    "ai_lyrics_translation": "ai_lyrics_translation",
+    "ai_provider": "ai_provider",
+    "ai_base_url": "ai_base_url",
+    "ai_api_key": "ai_api_key",
+    "ai_model": "ai_model",
+    "ai_translation_mode": "ai_translation_mode",
+    "ai_target_language": "ai_target_language",
+    "ai_setup_guide": "ai_setup_guide",
+    "ai_provider_help": "ai_provider_help",
+    "ai_deepl_formality": "ai_deepl_formality",
+    "ai_deepl_formality_default": "ai_deepl_formality_default",
+    "ai_deepl_formality_more": "ai_deepl_formality_more",
+    "ai_deepl_formality_less": "ai_deepl_formality_less",
+    "ai_translation_literal": "ai_translation_literal",
+    "ai_translation_transcribed": "ai_translation_transcribed",
+    "ai_translation_literal_desc": "ai_translation_literal_desc",
+    "ai_translation_transcribed_desc": "ai_translation_transcribed_desc",
+    "ai_provider_openrouter_help": "ai_provider_openrouter_help",
+    "ai_provider_openai_help": "ai_provider_openai_help",
+    "ai_provider_perplexity_help": "ai_provider_perplexity_help",
+    "ai_provider_claude_help": "ai_provider_claude_help",
+    "ai_provider_gemini_help": "ai_provider_gemini_help",
+    "ai_provider_xai_help": "ai_provider_xai_help",
+    "ai_provider_mistral_help": "ai_provider_mistral_help",
+    "ai_provider_deepl_help": "ai_provider_deepl_help",
+    "not_set": "not_set",
 }
 
 # Full desktop English table (source language).
@@ -438,6 +607,24 @@ ENGLISH = {
     "lan_address": "Phone connects to",
     "scan_qr": "Scan to connect",
     "lan_hint": "On your phone, open Settings → Devices, set the relay server to the address above, then enter the code.",
+    "waiting_for_pairing": "Waiting for a device to pair…",
+    "connect_hint": "This can take a few seconds — up to 2 minutes if the relay server needs to wake up.",
+    "retry": "Retry",
+    "charts_empty": "Nothing to show here yet.",
+    "home_empty": "The home feed came back empty — check your connection and try again.",
+    "notif_dnd_title": "Notification silenced",
+    "notif_dnd_body": "Do Not Disturb is active on your system, so the native notification was skipped. This notice appears in-app instead.",
+    "connect_and_generate_code": "Connect & Generate Pair Code",
+    "contributors_section": "CONTRIBUTORS",
+    "regenerate_pair_code": "Regenerate Pair Code",
+    "requires_accessibility": "Requires Accessibility permission",
+    "open_system_settings": "Open System Settings…",
+    "connection_method": "Connection method",
+    "method_relay": "Server relay (recommended)",
+    "method_lan": "Local LAN server",
+    "how_to_relay_step1": "Press Connect to reach the relay server — the default (wss://vivimusic-device-sync.onrender.com) works from any network.",
+    "how_to_relay_step2": "On your phone, open Settings → Devices and scan the QR code below — the relay address and the 6-digit code fill in automatically.",
+    "how_to_relay_step3": "Check the code and tap Pair. The two devices stay synchronized over the internet.",
     "how_to_connect": "How to connect your phone",
     "how_to_step1": "Connect your phone and this computer to the same Wi-Fi network.",
     "how_to_step2": "Tap \"Start LAN server\" — a QR code and a 6-digit code appear (recommended).",
@@ -529,6 +716,34 @@ ENGLISH = {
     "history_empty": "No history yet",
     "player_audio": "Player & audio",
     "autoplay_next": "Autoplay next track",
+    "auto_load_more": "Auto load more songs",
+    "auto_load_more_desc": "Automatically add more songs when the end of the queue is reached, if possible",
+    "enable_similar_content": "Enable similar content",
+    "similar_content_desc": "Automatically add more similar songs when the end of the queue is reached",
+    "prevent_duplicate_tracks": "Prevent duplicate tracks in queue",
+    "prevent_duplicate_tracks_desc": "When adding a track to queue, remove it from its previous position if already present",
+    "auto_skip_next_on_error": "Auto skip to next song when error occurs",
+    "auto_skip_next_on_error_desc": "Ensure your continuous playback experience",
+    "pause_music_when_media_muted": "Pause music when media is muted",
+    "keep_screen_on_player_expanded": "Keep screen on when player is expanded",
+    "persistent_shuffle": "Persistent shuffle",
+    "persistent_shuffle_desc": "Keep shuffle enabled when starting new songs or playlists",
+    "progressive_seek": "Progressive seek",
+    "progressive_seek_desc": "Double-click the left/right half of the artwork to skip 5 seconds; when enabled, each rapid repeat adds 5 extra seconds",
+    "history_duration": "History duration",
+    "history_duration_desc": "Seconds a track must play before it is recorded in your listen history",
+    "auto_download_on_like": "Auto download on like",
+    "auto_download_on_like_desc": "Automatically download (cache) songs when you like them",
+    "skip_silence": "Skip silence",
+    "skip_silence_desc": "Fast forward through silent parts of songs",
+    "skip_silence_instant": "Instantly skip silence",
+    "skip_silence_instant_desc": "Cut the leading silence right away and jump ahead during silent moments",
+    "crossfade": "Crossfade",
+    "crossfade_desc": "Overlap tracks with a short fade at the end of each song",
+    "crossfade_duration": "Crossfade duration",
+    "crossfade_duration_desc": "How long the fade between songs lasts (1 to 12 seconds)",
+    "disable_crossfade_gapless": "Disable for gapless albums",
+    "disable_crossfade_gapless_desc": "Skip the crossfade between tracks of the same album so they flow seamlessly",
     "storage": "Storage",
     "cache_size": "Cache size",
     "clear_cache": "Clear cache",
@@ -574,9 +789,9 @@ ENGLISH = {
     "previous": "Previous",
     "next": "Next",
     "mood_and_genres": "Mood & genres",
-    "data_sync_id_label": "DATASYNC_ID (optional)",
-    "visitor_data_label": "VISITOR_DATA (optional)",
-    "advanced_login_hint": "Optional: if auto-detection fails, paste DATASYNC_ID and VISITOR_DATA from the music.youtube.com page source.",
+    "data_sync_id_label": "DATASYNC_ID (required)",
+    "visitor_data_label": "VISITOR_DATA (required)",
+    "advanced_login_hint": "Required: if auto-detection fails, paste DATASYNC_ID and VISITOR_DATA from the music.youtube.com page source.",
     "open_failed": "Could not open the installer. Find it in ~/.vivimusic/updates and open it manually.",
     "content": "Content",
     "content_language": "Content language",
@@ -645,6 +860,7 @@ ENGLISH = {
     "new_playlist": "New playlist",
     "no_playlists": "No playlists yet",
     "song_count": "%d songs",
+    "band_count": "%d bands",
     "rename": "Rename",
     "save": "Save",
     "delete": "Delete",
@@ -705,6 +921,56 @@ ENGLISH = {
 # the MAPPING-derived values, so an existing Android translation always wins.
 # Key -> {desktop language code -> translation}.
 TRANSLATIONS = {
+    "recommended": {
+        "ar": "مقترحات لك",
+        "as": "পৰামৰ্শিত",
+        "az": "Tövsiyə olunur",
+        "be": "Рэкамендаванае",
+        "bg": "Препоръчано",
+        "bn": "প্রস্তাবিত",
+        "bs": "Preporučeno",
+        "ca": "Recomanat",
+        "cs": "Doporučeno",
+        "de": "Empfohlen",
+        "el": "Προτεινόμενα",
+        "es": "Recomendado",
+        "et": "Soovitatav",
+        "eu": "Gomendatua",
+        "fa": "پیشنهادی",
+        "fi": "Suositukset",
+        "fil": "Inirerekomenda",
+        "fr": "Recommandé",
+        "hi": "अनुशंसित",
+        "hr": "Preporučeno",
+        "hu": "Ajánlott",
+        "in": "Direkomendasikan",
+        "it": "Consigliati",
+        "iw": "מומלץ",
+        "ja": "おすすめ",
+        "km": "អនុសាសន៍",
+        "ko": "추천",
+        "lt": "Rekomenduojama",
+        "ms": "Disyorkan",
+        "nb-rNO": "Anbefalt",
+        "nl": "Aanbevolen",
+        "pa": "ਸਿਫ਼ਾਰਸ਼ ਕੀਤਾ",
+        "pl": "Polecane",
+        "pt": "Recomendado",
+        "pt-rBR": "Recomendado",
+        "ro": "Recomandate",
+        "ru": "Рекомендации",
+        "sk": "Odporúčané",
+        "sl": "Priporočeno",
+        "sv": "Rekommenderas",
+        "ta": "பரிந்துரைக்கப்பட்டவை",
+        "te": "సిఫార్సు చేయబడింది",
+        "th": "แนะนำ",
+        "tr": "Önerilen",
+        "uk": "Рекомендовані",
+        "vi": "Đề xuất",
+        "zh-rCN": "推荐",
+        "zh-rTW": "推薦",
+    },
     "add_to_playlist": {
         "as": "প্লে'লিষ্টত যোগ কৰক",
         "az": "Pleylistə əlavə et",
@@ -1265,14 +1531,76 @@ from desktop_extra_translations_36 import EXTRA_TRANSLATIONS as _EXTRA_36
 from desktop_extra_translations_37 import EXTRA_TRANSLATIONS as _EXTRA_37
 from desktop_extra_translations_38 import EXTRA_TRANSLATIONS as _EXTRA_38
 from desktop_extra_translations_39 import EXTRA_TRANSLATIONS as _EXTRA_39
+from desktop_extra_translations_40 import EXTRA_TRANSLATIONS as _EXTRA_40
+from desktop_extra_translations_41 import EXTRA_TRANSLATIONS as _EXTRA_41
+from desktop_extra_translations_42 import EXTRA_TRANSLATIONS as _EXTRA_42
+from desktop_extra_translations_43 import EXTRA_TRANSLATIONS as _EXTRA_43
+from desktop_extra_translations_44 import EXTRA_TRANSLATIONS as _EXTRA_44
+from desktop_extra_translations_45 import EXTRA_TRANSLATIONS as _EXTRA_45
+from desktop_extra_translations_46 import EXTRA_TRANSLATIONS as _EXTRA_46
+from desktop_extra_translations_47 import EXTRA_TRANSLATIONS as _EXTRA_47
+from desktop_extra_translations_48 import EXTRA_TRANSLATIONS as _EXTRA_48
+from desktop_extra_translations_49 import EXTRA_TRANSLATIONS as _EXTRA_49
+from desktop_extra_translations_50 import EXTRA_TRANSLATIONS as _EXTRA_50
+from desktop_extra_translations_51 import EXTRA_TRANSLATIONS as _EXTRA_51
+from desktop_extra_translations_52 import EXTRA_TRANSLATIONS as _EXTRA_52
+from desktop_extra_translations_53 import EXTRA_TRANSLATIONS as _EXTRA_53
+from desktop_extra_translations_54 import EXTRA_TRANSLATIONS as _EXTRA_54
+from desktop_extra_translations_55 import EXTRA_TRANSLATIONS as _EXTRA_55
+from desktop_extra_translations_56 import EXTRA_TRANSLATIONS as _EXTRA_56
+from desktop_extra_translations_57 import EXTRA_TRANSLATIONS as _EXTRA_57
+from desktop_extra_translations_58 import EXTRA_TRANSLATIONS as _EXTRA_58
+from desktop_extra_translations_59 import EXTRA_TRANSLATIONS as _EXTRA_59
+from desktop_extra_translations_60 import EXTRA_TRANSLATIONS as _EXTRA_60
+from desktop_extra_translations_61 import EXTRA_TRANSLATIONS as _EXTRA_61
+from desktop_extra_translations_62 import EXTRA_TRANSLATIONS as _EXTRA_62
+from desktop_extra_translations_63 import EXTRA_TRANSLATIONS as _EXTRA_63
+from desktop_extra_translations_64 import EXTRA_TRANSLATIONS as _EXTRA_64
+from desktop_extra_translations_65 import EXTRA_TRANSLATIONS as _EXTRA_65
+from desktop_extra_translations_66 import EXTRA_TRANSLATIONS as _EXTRA_66
+from desktop_extra_translations_67 import EXTRA_TRANSLATIONS as _EXTRA_67
+from desktop_extra_translations_68 import EXTRA_TRANSLATIONS as _EXTRA_68
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
+
+# Disambiguate duplicate option labels within the same selection list.
+# Several languages translate `slider_squiggly` and `slider_wavy` to the same
+# word (e.g. Italian "Ondulato" for both), which makes two options in the
+# slider-style picker indistinguishable. When a known pair shares a label,
+# append " 1" / " 2" to the second/third entry so every option stays unique.
+_DISAMBIGUATION_PAIRS = [
+    ("slider_slim", "slider_squiggly", "slider_wavy"),
+]
+
+
+def _disambiguate_duplicates(tables):
+    """In-place: ensure the labels of a known option group are unique per lang.
+
+    When a label repeats inside the group (e.g. slider_squiggly and
+    slider_wavy both "Ondulato"), every occurrence gets a numbered suffix
+    ("Ondulato 1", "Ondulato 2", ...) so no two options look identical.
+    """
+    for group in _DISAMBIGUATION_PAIRS:
+        for lang, entries in tables.items():
+            if lang == "en":
+                continue
+            labels = [entries.get(k) for k in group]
+            seen = {}
+            for idx, label in enumerate(labels):
+                if label is None:
+                    continue
+                seen.setdefault(label, []).append(idx)
+            for label, indexes in seen.items():
+                if len(indexes) < 2:
+                    continue
+                for n, j in enumerate(indexes, start=1):
+                    entries[group[j]] = "%s %d" % (label, n)
 
 
 def android_unescape(s):
@@ -1382,6 +1710,21 @@ def main():
                 continue
             languages.setdefault(lang, {})[key] = text
 
+    # Ensure no two options in the same selection list share a label in any
+    # language (e.g. slider styles both translated as "Ondulato" in Italian).
+    _disambiguate_duplicates(languages)
+
+    # Alias locale tags used by the mobile app for the same language: copy any
+    # key the alias table is missing from its twin, so those tags (which the
+    # phone sends during sync) never fall back to English or, worse, hit the
+    # "first dictionary" safety net (e.g. the Arabic table).
+    for alias, twin in (("in", "id"), ("nb-rNO", "nb"), ("pt-rBR", "pt")):
+        if twin not in languages:
+            continue
+        alias_map = languages.setdefault(alias, {})
+        for key, text in languages[twin].items():
+            alias_map.setdefault(key, text)
+
     # Ensure the default also contributes any translated fallback values, so
     # the "en" table uses the Android English wording for the mapped keys.
     # Some desktop-only keys are mapped to an inline English literal (no
@@ -1435,8 +1778,19 @@ def main():
     for i, (lang, _entries) in enumerate(ordered):
         parts.append('        "%s" to strings_%d(),' % (lang, i))
     parts.append("    )")
-    parts.append("    fun get(language: String, key: String): String =")
-    parts.append('        strings[language]?.get(key) ?: strings["en"]?.get(key) ?: key')
+    parts.append("    fun get(language: String, key: String): String {")
+    parts.append("        val direct = strings[language]?.get(key)")
+    parts.append("        if (direct != null) return direct")
+    parts.append('        strings["en"]?.get(key)?.let { return it }')
+    parts.append("        // Safety net: a missing translation must never surface as a raw snake-")
+    parts.append("        // case key on screen. Fall back to the first dictionary that has a real")
+    parts.append("        // (non-key) translation, so even a gap in every map shows something")
+    parts.append("        // readable instead of \"player_background_visualizer\".")
+    parts.append("        for (map in strings.values) {")
+    parts.append("            map[key]?.takeIf { it != key }?.let { return it }")
+    parts.append("        }")
+    parts.append("        return key")
+    parts.append("    }")
     parts.append("}\n")
 
     with open(OUT, "w", encoding="utf-8") as f:

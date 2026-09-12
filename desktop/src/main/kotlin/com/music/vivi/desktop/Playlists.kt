@@ -49,7 +49,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.json.Json
 import java.io.File
 
 /**
@@ -61,7 +60,7 @@ import java.io.File
  * it is pruned, so deletions can propagate to the paired phone.
  */
 object PlaylistStore {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
+    private val json = sharedJsonPretty
 
     private val file = File(System.getProperty("user.home"), ".vivimusic/playlists.json").apply {
         parentFile?.mkdirs()

@@ -25,7 +25,7 @@
   </p>
 
   <p>
-    <b>Windows</b> · <b>Linux</b> · <b>macOS</b> — the desktop edition of VIVI Music,<br>
+    <b>Windows</b> · <b>Linux</b> · <b>macOS</b> — the Desktop Edition of VIVI Music,<br>
     synced with your phone.
   </p>
 </div>
@@ -66,7 +66,7 @@
     </td>
     <td width="33%" align="center">
       <b>🐧 Linux</b><br>
-      <small><code>.deb</code> (Debian/Ubuntu) and portable <code>.AppImage</code></small>
+      <small><code>.deb</code> (Debian/Ubuntu) and portable <code>.AppImage</code> and Arch (see install guide in each release)</small>
     </td>
     <td width="33%" align="center">
       <b>🍎 macOS 10.15+</b><br>
@@ -142,7 +142,7 @@
 
 <h2>🔗 Pairing with your phone</h2>
 
-<p>VIVI Music DE syncs with the <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a> Android app:</p>
+<p>VIVI Music DE syncs with the <a href="https://github.com/PiBOH/vivi-music/releases/latest">VIVI Music</a> Android app:</p>
 
 <ol>
   <li>On the desktop, open <strong>Settings → Device sync</strong> and tap <strong>Start LAN server</strong> (same Wi-Fi), or connect to a relay server.</li>
@@ -186,10 +186,6 @@
   <li>Open a Pull Request</li>
 </ol>
 
-<blockquote>
-  <b>⚠️ Testing note:</b> the lead developer (<a href="https://github.com/PiBOH">@PiBOH</a>) can only test <b>VIVI Music DE</b> on <b>Windows</b>, as he does not own a Mac or a Linux machine. The Linux and macOS builds are produced by CI and rely on community testing — bug reports for those platforms are especially appreciated.
-</blockquote>
-
 <hr>
 
 <h2>🛡️ Privacy &amp; Data Collection</h2>
@@ -215,7 +211,7 @@
 <hr>
 
 <h2>📄 License</h2>
-<p>This project is licensed under the terms specified in the <a href="LICENSE">LICENSE</a> (GPL-3.0) file.</p>
+<p>This project is licensed under the terms specified in the <a href="LICENSE">LICENSE</a> (modified GPL-3.0) file.</p>
 
 <hr>
 
@@ -244,7 +240,7 @@
 
 <div align="center">
 
-  <h2>🙏 Special Thanks &amp; Credits</h2>
+  <h2>🙏 Special Thanks &amp; Credits </h2>
 
   <p>VIVI Music DE is built upon the foundation of amazing open-source projects and developers:</p>
   <br>

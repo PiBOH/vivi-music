@@ -41,8 +41,8 @@ sealed interface Screen {
     data object SettingsCanvas : Screen
     data object SettingsDensity : Screen
     data object SettingsTransitions : Screen
-    data object SettingsPlayer : Screen
     data object SettingsPlayerDesign : Screen
+    data object SettingsPlayer : Screen
     data object SettingsAccount : Screen
     data object SettingsDevices : Screen
     data object SettingsContent : Screen
@@ -53,6 +53,7 @@ sealed interface Screen {
     data object SettingsUpdates : Screen
     data object SettingsCommits : Screen
     data object SettingsAbout : Screen
+    data object SettingsContributors : Screen
     data object SettingsDeveloper : Screen
     data object SettingsSystem : Screen
     data object SettingsIntro : Screen
@@ -61,6 +62,9 @@ sealed interface Screen {
     data object SettingsNotificationsHistory : Screen
     data object SettingsIntegrations : Screen
     data object SettingsDesktop : Screen
+    data object SettingsEqualizer : Screen
+    data object SettingsDataSaver : Screen
+    data object SettingsAi : Screen
 }
 
 /**
@@ -75,6 +79,8 @@ data class NowPlaying(
     val artist: String,
     val thumbnail: String? = null,
     val durationMs: Long = 0L,
+    /** Album name when known (used by the "disable crossfade for gapless albums" rule). */
+    val album: String? = null,
 )
 
 /** Session listening stats shown by the Home "VIVI Wrapped" card. */

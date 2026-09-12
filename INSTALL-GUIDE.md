@@ -72,6 +72,12 @@ Open **Settings → Apps → Installed apps**, find **VIVI Music**, and choose
 
 > Installed updates are cached under `~/.vivimusic/updates/` and cleaned up
 > automatically after 7 days.
+>
+**On uninstall, only two things survive**: the **newest `.vivide.backup`** (a
+full restore point with your settings and playlists) and
+`%USERPROFILE%\.vivimusic\device-sync.json`. Everything else in
+`~/.vivimusic` is deleted — downloaded updates, audio, video/canvas and lyrics
+caches, logs, imported fonts, playlists.json and every older backup.
 
 ---
 
@@ -111,9 +117,24 @@ If your system blocks AppImages (no FUSE), extract and run it instead:
 ./squashfs-root/AppRun
 ```
 
+### Uninstall (Linux)
+
+- **.deb**: uninstall normally with `sudo apt remove vivimusic` / `sudo dpkg -r`.
+  The package's `postrm` hook keeps only the newest
+  `~/.vivimusic/backups/*.vivide.backup` (a full restore point with settings and
+  playlists) plus `~/.vivimusic/device-sync.json`, and deletes everything else
+  (`~/.vivimusic/updates`, audio, video/canvas and lyrics caches, logs, fonts,
+  playlists.json, older backups).
+- **AppImage**: delete the file. To clean your user data the same way, run:
+  `sh scripts/uninstall-cleanup.sh` from this repo (or the script shipped in
+  the release).
+- **AUR**: `pacman -R vivi-music-de` runs the same cleanup automatically via
+  the package's `post_remove` hook.
+
 ### Option C — Arch Linux (AUR-style PKGBUILD)
 
-Every release also ships a **`PKGBUILD`** (plus `SRCINFO`) as a release asset.
+Every release also ships a **`PKGBUILD`** (plus `SRCINFO` and an uninstall
+hook `vivi-music-de.install`) as release assets.
 To build and install a proper system package:
 
 ```bash
@@ -157,7 +178,17 @@ Two formats are published (Intel and Apple Silicon builds separately).
 
 ### Uninstall
 
-Drag `VIVI Music.app` from **Applications** to the Trash.
+Drag `VIVI Music.app` from **Applications** to the Trash, then clean your user
+data the same way Windows/Linux do — keep only the newest `.vivide.backup`
+(settings + playlists) and `device-sync.json`, and delete everything else:
+
+```bash
+sh scripts/uninstall-cleanup.sh        # from this repo (or the release assets)
+```
+
+What remains: `~/.vivimusic/device-sync.json` and the newest
+`~/.vivimusic/backups/*.vivide.backup`; all caches (updates, audio,
+video/canvas, lyrics, logs), fonts, playlists.json and older backups are removed.
 
 ---
 
@@ -216,6 +247,6 @@ On Windows `~` is `C:\Users\<you>`, on Linux/macOS it's `/home/<you>` /
 
 ---
 
-*VIVI Music DE — free software under the
-[GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) license. The original
+*VIVI Music DE — free software under a
+[modified GPL-3.0](https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE) license. The original
 mobile app is created by [VIVIDH P ASHOKAN](https://github.com/vivizzz007).*

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -149,14 +150,18 @@ fun LoginContent(language: String, onLoggedIn: () -> Unit) {
                         waitingForWindow = true
                         val opened = LoginWebView.openEmbedded(language) { captured ->
                             waitingForWindow = false
-                            if (captured != null) {
+                            if (captured?.cookie != null) {
                                 // Auto-captured session: validate + persist exactly
                                 // like the manual flow, then hand back to the app.
                                 scope.launch {
                                     savingCookie = true
                                     try {
                                         val account = withContext(Dispatchers.IO) {
-                                            LoginManager.login(cookie = captured)
+                                            LoginManager.login(
+                                                cookie = captured.cookie,
+                                                dataSyncIdOverride = captured.dataSyncId,
+                                                visitorDataOverride = captured.visitorData,
+                                            )
                                         }
                                         status = "${Localization.get(language, "logged_in_as")}: ${account.name}"
                                         refreshAccount()
@@ -164,7 +169,9 @@ fun LoginContent(language: String, onLoggedIn: () -> Unit) {
                                     } catch (e: Exception) {
                                         // Keep the captured cookies in the manual field
                                         // so a retry is a single click.
-                                        cookie = captured
+                                        cookie = captured.cookie
+                                        dataSyncId = captured.dataSyncId.orEmpty()
+                                        visitorData = captured.visitorData.orEmpty()
                                         manualOpen = true
                                         error = e.message ?: (e::class.simpleName ?: "error")
                                     } finally {
@@ -195,10 +202,11 @@ fun LoginContent(language: String, onLoggedIn: () -> Unit) {
         }
 
         status?.let {
-            Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+            SelectionContainer { Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
         }
         error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+            // Selectable so a failed login (e.g. the E-code detail) can be copied for a report.
+            SelectionContainer { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
         }
 
         // Embedded window unavailable → offer the browser fallback right here.

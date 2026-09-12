@@ -50,13 +50,17 @@ object SystemVolume {
     }
 
     /**
-     * Windows master mute state (true = muted, false = unmuted, null = unknown).
-     * The app only controls the master volume when it is NOT muted; a muted
-     * master would swallow every volume write. Returns null on non-Windows or
-     * when the WASAPI call fails, so callers can no-op safely.
+     * OS output mute state (true = muted, false = unmuted, null = unknown).
+     * On Windows this is the master volume mute (a muted master would swallow
+     * every volume write); on macOS it comes from `get volume settings`; on
+     * Linux from `pactl get-sink-mute` (with an `amixer` fallback).
      */
-    fun isMuted(): Boolean? =
-        if (os.contains("win")) runCatching { WindowsVolume.isMuted() }.getOrNull() else null
+    fun isMuted(): Boolean? = when {
+        os.contains("win") -> runCatching { WindowsVolume.isMuted() }.getOrNull()
+        os.contains("mac") -> runCatching { MacVolume.isMuted() }.getOrNull()
+        os.contains("linux") -> runCatching { LinuxVolume.isMuted() }.getOrNull()
+        else -> null
+    }
 
     /** Best-effort mute/unmute of the Windows master volume. */
     fun setMuted(muted: Boolean) {
@@ -284,6 +288,11 @@ private object MacVolume {
         val pct = (v * 100f).toInt().coerceIn(0, 100)
         runCatching { exec("osascript", "-e", "set volume output volume $pct") }
     }
+
+    fun isMuted(): Boolean = runCatching {
+        val out = exec("osascript", "-e", "muted of (get volume settings)").trim()
+        out.equals("true", ignoreCase = true)
+    }.getOrDefault(false)
 }
 
 /** Linux system volume via PulseAudio/PipeWire, with an ALSA fallback. */
@@ -300,11 +309,29 @@ private object LinuxVolume {
             .onFailure { runCatching { exec("amixer", "sset", "Master", "$pct%") } }
     }
 
+    fun isMuted(): Boolean = runCatching {
+        val out = exec("pactl", "get-sink-mute", "@DEFAULT_SINK@")
+        when {
+            out.contains("yes") -> true
+            out.contains("no") -> false
+            else -> null
+        }
+    }.getOrNull() ?: amixerIsMuted()
+
     private fun amixerGet(): Float = runCatching {
         val out = exec("amixer", "sget", "Master")
         Regex("(\\d+)%").find(out)?.groupValues?.get(1)?.toFloatOrNull()?.div(100f)
             ?: 0.5f
     }.getOrDefault(0.5f)
+
+    private fun amixerIsMuted(): Boolean = runCatching {
+        val out = exec("amixer", "sget", "Master")
+        when {
+            out.contains("[off]") -> true
+            out.contains("[on]") -> false
+            else -> null
+        }
+    }.getOrNull() ?: false
 }
 
 private fun exec(vararg cmd: String): String =

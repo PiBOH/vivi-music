@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -161,10 +162,40 @@ data class PlaybackContext(
     val videoId: String? = null,
     val isPlaying: Boolean = false,
     val audioLevel: StateFlow<Float>? = null,
+    /** Buffered fraction (0..1) of the current track (1f = fully cached / not
+     *  streaming). Powers the YouTube-style secondary segment on seek bars. */
+    val bufferedFraction: StateFlow<Float>? = null,
+    /** Fraction (0..1) of the current track scrubbed while its duration was
+     *  still unknown (loaded from the restored queue but never played); null
+     *  when the duration is known or nothing was scrubbed. Keeps the seek bar
+     *  thumb at the scrubbed point until playback actually begins. */
+    val pendingSeekFraction: StateFlow<Float?>? = null,
 )
 
 /** Composition local exposing the current playback to list rows (SongRow etc.). */
 val LocalPlayback = compositionLocalOf { PlaybackContext() }
+
+/**
+ * Current buffered fraction for the seek bars, collected from [LocalPlayback].
+ * Returns 1f when the app root doesn't provide one (no stream loaded or the
+ * composable is rendered outside the provider): a full buffer means the
+ * secondary "buffered" segment stays hidden.
+ */
+@Composable
+fun playbackBufferedFraction(): Float {
+    val flow = LocalPlayback.current.bufferedFraction ?: return 1f
+    return flow.collectAsState().value
+}
+
+/**
+ * Current pending scrub fraction (0..1) for the seek bars, collected from
+ * [LocalPlayback]. Returns null when the duration is known (real seek range)
+ * or nothing was scrubbed yet.
+ */
+@Composable
+fun playbackPendingSeekFraction(): Float? {
+    return LocalPlayback.current.pendingSeekFraction?.collectAsState()?.value
+}
 
 /** Square-ish artwork with a neutral placeholder behind it while loading. */
 @Composable
@@ -212,7 +243,10 @@ private fun subtitleOf(item: YTItem): String = when (item) {
 @Composable
 fun YtItemCard(item: YTItem, onClick: () -> Unit, width: Dp? = 140.dp, modifier: Modifier = Modifier) {
     val root = if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()
-    Column(root.then(modifier).clickable(onClick = onClick)) {
+    Column(root.then(modifier).clickable(onClick = {
+        AppLog.click("card '${item.title}'")
+        onClick()
+    })) {
         Thumbnail(item.thumbnail, Modifier.fillMaxWidth().aspectRatio(1f))
         Text(
             item.title,
@@ -248,7 +282,10 @@ fun SongRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = {
+                AppLog.click("song '${song.title}'")
+                onClick()
+            })
             .padding(vertical = 6.dp)
             .let { if (isCurrent) it.background(accent.copy(alpha = 0.07f), RoundedCornerShape(8.dp)) else it }
             .padding(horizontal = 4.dp),
@@ -299,7 +336,10 @@ fun SongRow(
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .clickable { onAddToQueue() }
+                    .clickable {
+                        AppLog.click("add to queue '${song.title}'")
+                        onAddToQueue()
+                    }
                     .padding(horizontal = 10.dp, vertical = 4.dp),
             )
         }
@@ -360,7 +400,10 @@ fun LoadingBox(language: String) {
 @Composable
 fun ErrorBox(language: String, message: String?) {
     Box(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("${Localization.get(language, "error")}: $message", color = MaterialTheme.colorScheme.error)
+        // Selectable so every network/load error can be copied for a bug report.
+        SelectionContainer {
+            Text("${Localization.get(language, "error")}: $message", color = MaterialTheme.colorScheme.error)
+        }
     }
 }
 
@@ -370,7 +413,12 @@ fun BackButton(language: String, onClick: () -> Unit) {
         "‹ ${Localization.get(language, "back")}",
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.clickable(onClick = onClick).padding(vertical = 8.dp),
+        modifier = Modifier
+            .clickable {
+                AppLog.click("back")
+                onClick()
+            }
+            .padding(vertical = 8.dp),
     )
 }
 
@@ -409,7 +457,10 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clickable(enabled = onClick != null) { onClick?.invoke() }
+            .clickable(enabled = onClick != null) {
+                if (onClick != null) AppLog.click("section '${title.ifBlank { label.orEmpty() }}' see all")
+                onClick?.invoke()
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
@@ -433,7 +484,10 @@ fun SectionHeader(
 
         if (onPlayAll != null) {
             OutlinedButton(
-                onClick = onPlayAll,
+                onClick = {
+                    AppLog.click("section '${title.ifBlank { label.orEmpty() }}' play all")
+                    onPlayAll()
+                },
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
                 modifier = Modifier.height(28.dp),
@@ -461,7 +515,10 @@ fun MoodAndGenresButton(title: String, onClick: () -> Unit, modifier: Modifier =
             .height(48.dp)
             .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 8.dp, bottomEnd = 18.dp, bottomStart = 8.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
-            .clickable(onClick = onClick)
+            .clickable {
+                AppLog.click("mood/genre '$title'")
+                onClick()
+            }
             .padding(horizontal = 14.dp),
     ) {
         Text(
@@ -504,10 +561,21 @@ fun ViviSlider(
     onValueChangeFinished: (() -> Unit)? = null,
     style: ViviSliderStyle = ViviSliderStyle.SLIM,
     enabled: Boolean = true,
+    /** Optional buffered fraction (0..1) drawn as a fainter secondary segment
+     *  behind the played portion (YouTube-style). Null hides it entirely;
+     *  a full buffer (1f) draws it full-width behind the played fill, like a
+     *  fully loaded YouTube video. */
+    bufferedFraction: Float? = null,
     modifier: Modifier = Modifier,
 ) {
     val range = valueRange.endInclusive - valueRange.start
     val fraction = if (range == 0f) 0f else ((value - valueRange.start) / range).coerceIn(0f, 1f)
+    // The buffer segment stays visible like on YouTube: it grows while the
+    // stream downloads and remains full-width once fully loaded/cached (it is
+    // only hidden when the buffered fraction is null, i.e. no stream info).
+    val buffer = (bufferedFraction ?: 1f).coerceIn(0f, 1f)
+    val showBuffer = bufferedFraction != null && buffer > fraction + 0.002f
+    val bufferColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
     val primary = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val thumbColor = if (enabled) primary else MaterialTheme.colorScheme.outline
@@ -579,6 +647,14 @@ fun ViviSlider(
                     size = androidx.compose.ui.geometry.Size(size.width, 3f),
                     cornerRadius = CornerRadius(1.5f, 1.5f),
                 )
+                if (showBuffer) {
+                    drawRoundRect(
+                        color = bufferColor,
+                        topLeft = Offset(0f, cy - 1.5f),
+                        size = androidx.compose.ui.geometry.Size(size.width * buffer, 3f),
+                        cornerRadius = CornerRadius(1.5f, 1.5f),
+                    )
+                }
                 drawRoundRect(
                     color = primary,
                     topLeft = Offset(0f, cy - 1.5f),
@@ -594,6 +670,15 @@ fun ViviSlider(
                     size = androidx.compose.ui.geometry.Size(size.width, h),
                     cornerRadius = CornerRadius(h / 2f, h / 2f),
                 )
+                // Buffered portion (fainter, behind the played fill)
+                if (showBuffer) {
+                    drawRoundRect(
+                        color = bufferColor,
+                        topLeft = Offset(0f, cy - h / 2f),
+                        size = androidx.compose.ui.geometry.Size(size.width * buffer, h),
+                        cornerRadius = CornerRadius(h / 2f, h / 2f),
+                    )
+                }
                 // Active track (thick capsule fill)
                 if (fraction > 0f) {
                     drawRoundRect(
@@ -606,6 +691,9 @@ fun ViviSlider(
             } else {
                 val stroke = Stroke(width = trackHeight.toPx(), cap = StrokeCap.Round)
                 drawPath(buildPath(size.width), color = trackColor, style = stroke)
+                if (showBuffer) {
+                    drawPath(buildPath(size.width * buffer), color = bufferColor, style = stroke)
+                }
                 if (fraction > 0.001f) {
                     drawPath(buildPath(size.width * fraction), color = primary, style = stroke)
                 }

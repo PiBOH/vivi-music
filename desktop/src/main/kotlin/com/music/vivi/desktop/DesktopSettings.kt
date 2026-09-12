@@ -2,7 +2,11 @@ package com.music.vivi.desktop
 
 import com.music.vivi.sync.LibrarySnapshot
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.util.UUID
 
@@ -19,11 +23,27 @@ data class DesktopSyncState(
     val serverUrl: String = "",
     val settings: Map<String, String> = emptyMap(),
     val language: String = "",
+    /**
+     * Bidirectional language-sync bookkeeping (no wall clocks involved).
+     *
+     * [languageSeq] grows by one on every MANUAL language change made on this
+     * device. Settings snapshots carry (deviceId, languageSeq); the peer only
+     * applies the value when those markers prove it is a newer manual change
+     * from the other side — never an echo (same deviceId) and never a stale
+     * value a peer pushes at pair time with an old/absent sequence. The last
+     * applied peer change is remembered in [languagePeerId]/[languagePeerSeq]
+     * so re-pushes of the same peer change are ignored across restarts.
+     */
+    val languageSeq: Long = 0L,
+    val languagePeerId: String = "",
+    val languagePeerSeq: Long = 0L,
     val includePreReleases: Boolean = false,
     val darkMode: String = "system",
     val accentColor: Int = 0xFFED5564.toInt(),
     /** Accent saturation/vividness (0..1 scale, 1 = full). */
     val accentIntensity: Float = 1f,
+    /** User-saved custom accent colors (ARGB ints), shown as extra palette swatches. */
+    val customAccents: List<Int> = emptyList(),
     val selectedFont: String = "system",
     /** Path to a user-imported custom font file (empty = none). */
     val customFontPath: String = "",
@@ -33,6 +53,8 @@ data class DesktopSyncState(
     val gridItemSize: Int = 160,
     /** Screen transition style between navigations: off / fade / slide. */
     val screenTransition: String = "fade",
+    /** Master switch for UI animations; when off, screen transitions become instant. */
+    val animationsEnabled: Boolean = true,
     /** Player slider style: slim / squiggly / wavy. */
     val sliderStyle: String = "slim",
     /** Full-player layout variant: classic / new / v2 / expressive. */
@@ -47,7 +69,6 @@ data class DesktopSyncState(
     val playerArtTopOffset: Int = 33,
     /** Custom artwork corner radius in dp (0..36). */
     val playerArtCornerRadius: Int = 11,
-    val miniPlayerStyle: String = "standard",
     val miniPlayerDesign: String = "classic",
     val miniPlayerBackgroundStyle: String = "follow_theme",
     val pureBlackMiniPlayer: Boolean = false,
@@ -76,6 +97,34 @@ data class DesktopSyncState(
     val canvasEnabled: Boolean = true,
     val canvasSource: String = "AUTO",
     val autoPlayNext: Boolean = true,
+    /** Auto-fetch related/radio tracks when the queue reaches its end (recommendations). */
+    val autoLoadMore: Boolean = true,
+    /** Keep a single copy of a track in the queue: adding one already present removes the old copy. */
+    val preventDuplicateTracksInQueue: Boolean = false,
+    /** Auto-skip to the next track when the current one fails after all retries. */
+    val autoSkipNextOnError: Boolean = false,
+    /** Pause playback while the OS output volume is muted or at zero. */
+    val pauseWhenMediaMuted: Boolean = false,
+    /** Keep the display/system awake while the expanded player screen is open. */
+    val keepScreenOnWhenPlayerExpanded: Boolean = false,
+    /** Keep shuffle enabled when starting new songs or playlists. */
+    val persistentShuffle: Boolean = false,
+    /** Double-click artwork seek adds +5s incrementally per rapid double-tap. */
+    val progressiveSeek: Boolean = false,
+    /** Minimum listen time (seconds) before a track enters the listen history. */
+    val historyDurationSeconds: Int = 30,
+    /** Auto-cache (download) a song into the audio cache when it is liked. */
+    val autoDownloadOnLike: Boolean = false,
+    /** Drop silent runs while a track plays ("Skip silence"). */
+    val skipSilence: Boolean = false,
+    /** Also cut leading silence immediately at start/seek ("Instantly skip silence"). */
+    val skipSilenceInstant: Boolean = false,
+    /** "Crossfade": overlap tracks near the end of the current one (port of the mobile option). */
+    val crossfade: Boolean = false,
+    /** Crossfade overlap duration in seconds (mobile range 1–12). */
+    val crossfadeDurationSeconds: Int = 5,
+    /** "Disable for gapless albums": skip crossfade between tracks of the same album. */
+    val disableCrossfadeGapless: Boolean = false,
     val sidebarCollapsed: Boolean = false,
     /** Spotify-inspired 3-panel card layout & top navigation header. */
     val spotifyLayout: Boolean = true,
@@ -102,6 +151,8 @@ data class DesktopSyncState(
     val syncedLyrics: Boolean = true,
     val pureBlack: Boolean = false,
     val audioQuality: String = "auto",
+    /** In-app (VIVI) player volume (0..1), restored at startup. */
+    val playerVolume: Float = 1f,
     val rememberShuffleRepeat: Boolean = false,
     val isShuffle: Boolean = false,
     val repeatModeKey: String = "OFF",
@@ -137,6 +188,22 @@ data class DesktopSyncState(
     val syncViviVolume: Boolean = true,
     /** Last username used for Listen Together. */
     val listenTogetherUsername: String = "",
+    /** Listen Together relay server URL (default = mobile's Hugging Face relay). */
+    val listenTogetherServerUrl: String = "wss://devilmi-vivi-music-listen-together.hf.space",
+    /** Auto-approve join requests without asking the host. */
+    val listenTogetherAutoApproval: Boolean = false,
+    /** Host syncs its in-app volume to guests. */
+    val listenTogetherSyncVolume: Boolean = true,
+    /** Guest re-requests a fresh sync after a reconnect. */
+    val listenTogetherSmartResync: Boolean = true,
+    /** Persisted Listen Together session (resume after restart). */
+    val listenTogetherSessionToken: String = "",
+    val listenTogetherRoomCode: String = "",
+    val listenTogetherUserId: String = "",
+    val listenTogetherIsHost: Boolean = false,
+    val listenTogetherSessionTimestamp: Long = 0L,
+    /** Usernames blocked from joining/suggesting (persisted). */
+    val listenTogetherBlockedUsers: List<String> = emptyList(),
     /** Song recognition (Shazam) history, newest first. */
     val recognitionHistory: List<RecognitionHistoryItem> = emptyList(),
     /** Cider-style floating always-on-top "Now Playing" widget. */
@@ -148,10 +215,36 @@ data class DesktopSyncState(
     val mediaKeysEnabled: Boolean = true,
     /** Tray icon right-click menu (Play/Pause/Next/Prev/Open/Quit). */
     val trayMenuEnabled: Boolean = true,
+    /** Saved parametric-EQ profiles (port of the mobile equalizer). */
+    val eqProfiles: List<SavedEQProfile> = emptyList(),
+    /** Id of the currently active EQ profile (empty = equalization off). */
+    val activeEqProfileId: String = "",
+    /** Data saver: forces canvas/rotating artwork off and restores on disable. */
+    val dataSaver: Boolean = false,
+    /** Canvas value backed up while Data saver is active (restored on disable). */
+    val dataSaverBackupCanvas: Boolean = true,
+    /** Rotating-artwork value backed up while Data saver is active. */
+    val dataSaverBackupRotating: Boolean = false,
+    /** AI lyrics translation provider ("OpenRouter", "OpenAI", "DeepL", …). */
+    val aiProvider: String = "OpenRouter",
+    /** AI API key (or DeepL key when [aiProvider] is "DeepL"). */
+    val aiApiKey: String = "",
+    /** AI base URL (OpenAI-compatible chat-completions endpoint). */
+    val aiBaseUrl: String = "https://openrouter.ai/api/v1/chat/completions",
+    /** AI model id (e.g. google/gemini-2.5-flash-lite). */
+    val aiModel: String = "google/gemini-2.5-flash-lite",
+    /** Target language code for translated lyrics (e.g. "en"). */
+    val translateLanguage: String = "en",
+    /** Translation mode: "Literal" or "Transcribed". */
+    val translateMode: String = "Literal",
+    /** DeepL API key (used when [aiProvider] is "DeepL"). */
+    val deeplApiKey: String = "",
+    /** DeepL formality: "default" / "more" / "less". */
+    val deeplFormality: String = "default",
 )
 
 object DesktopSettings {
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
+    private val json = sharedJsonPretty
 
     /** Serializes load/save so concurrent writers can't clobber each other. */
     private val lock = Any()
@@ -190,7 +283,66 @@ object DesktopSettings {
      */
     fun update(transform: (DesktopSyncState) -> DesktopSyncState) {
         synchronized(lock) {
-            save(transform(load()))
+            val before = load()
+            val after = transform(before)
+            logChanges(before, after)
+            save(after)
+        }
+    }
+
+    /**
+     * Fields that change on their own (window/bookkeeping, playback state,
+     * history accumulators, sync bookkeeping) would only spam the activity
+     * log, so they are skipped by [logChanges].
+     */
+    private val volatileFields = setOf(
+        "windowX", "windowY", "windowWidth", "windowHeight", "windowMaximized",
+        "widgetX", "widgetY",
+        "queueJson", "queueIndex",
+        "library",
+        "notificationHistory", "recognitionHistory", "searchHistory",
+        "languageSeq", "languagePeerId", "languagePeerSeq",
+        "firstLaunchDate",
+    )
+
+    /** Secrets / personal data that must never be written to the activity log. */
+    private val redactedFields = setOf(
+        "cookie", "dataSyncId", "visitorData", "aiApiKey", "deeplApiKey",
+        "lastfmSession", "accountEmail", "accountChannelHandle",
+        "listenTogetherSessionToken",
+    )
+
+    private fun jsonSummary(el: kotlinx.serialization.json.JsonElement?): String = when (el) {
+        null -> "unset"
+        is JsonPrimitive -> {
+            val s = el.content
+            if (s.length > 60) s.take(34) + "…(" + s.length + " chars)" else s
+        }
+        is JsonArray -> "[${el.size} items]"
+        is JsonObject -> "{${el.size} fields}"
+        else -> el.toString()
+    }
+
+    /**
+     * Records every setting the user actually changed (field: old → new) into
+     * the activity log. Skipping [volatileFields] keeps the log readable;
+     * [redactedFields] are never dumped in clear text.
+     */
+    private fun logChanges(before: DesktopSyncState, after: DesktopSyncState) {
+        if (before == after) return
+        runCatching {
+            val a = json.encodeToJsonElement(after).jsonObject
+            val b = json.encodeToJsonElement(before).jsonObject
+            val parts = mutableListOf<String>()
+            for ((key, newValue) in a) {
+                if (key in volatileFields) continue
+                val oldValue = b[key]
+                if (oldValue == newValue) continue
+                val shownOld = if (key in redactedFields) "[redacted]" else jsonSummary(oldValue)
+                val shownNew = if (key in redactedFields) "[redacted]" else jsonSummary(newValue)
+                parts += "$key: $shownOld → $shownNew"
+            }
+            if (parts.isNotEmpty()) AppLog.log("settings", parts.joinToString(" | "))
         }
     }
 

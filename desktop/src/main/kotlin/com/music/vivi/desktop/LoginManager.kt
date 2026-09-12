@@ -63,13 +63,32 @@ object LoginManager {
         // Right after the embedded sign-in the session can still be settling
         // (the WebView now waits, but a retry costs little): try the whole
         // validation twice, refreshing the parsed ids on the retry.
+        //
+        // DATASYNC_ID and VISITOR_DATA are MANDATORY, not optional: innertube
+        // puts them in the API context (visitorData + onBehalfOfUser) and the
+        // account validation answers as guest (cryptic NPE or 5xx) without
+        // them. The ids come from the sign-in page itself (the WebView reads
+        // them from ytcfg) or from the music.youtube.com shell below; if both
+        // sources miss them the login fails fast with a readable E1030 instead
+        // of a confusing backend error.
         var lastError: Throwable? = null
         repeat(2) { attempt ->
             try {
                 YouTube.cookie = trimmed
                 val (extractedDataSyncId, extractedVisitorData) = extractAccountIds(trimmed)
-                val dataSyncId = dataSyncIdOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedDataSyncId
+                val dataSyncId = sanitizeDataSyncId(dataSyncIdOverride) ?: sanitizeDataSyncId(extractedDataSyncId)
                 val visitorData = visitorDataOverride?.trim()?.takeIf { it.isNotBlank() } ?: extractedVisitorData
+                val missingIds = listOfNotNull(
+                    if (dataSyncId.isNullOrBlank()) "DATASYNC_ID" else null,
+                    if (visitorData.isNullOrBlank()) "VISITOR_DATA" else null,
+                )
+                if (missingIds.isNotEmpty()) {
+                    throw IllegalStateException(
+                        "E1030 ${missingIds.joinToString(" and ")} could not be extracted and is " +
+                            "required for a valid session. Retry the sign-in, or paste the values " +
+                            "manually in the manual cookie section."
+                    )
+                }
                 YouTube.dataSyncId = dataSyncId
                 YouTube.visitorData = visitorData
                 YouTube.useLoginForBrowse = true
@@ -98,9 +117,18 @@ object LoginManager {
         }
 
         YouTube.cookie = null
-        val detail = lastError?.message?.takeIf { it.isNotBlank() }
+        val rawDetail = lastError?.message?.takeIf { it.isNotBlank() }
             ?: lastError?.javaClass?.simpleName
             ?: "unknown error"
+        // A Ktor server exception surfaces as "Server error(POST <url>: 5xx. Text: ...)".
+        // That is a Google backend error, not a credential problem — tag it with
+        // its own code (E1029, see ERRORS.md) so the user can look it up instead
+        // of assuming their cookie/session is broken.
+        val detail = if (rawDetail.startsWith("Server error") && Regex("\\b5\\d\\d\\b").containsMatchIn(rawDetail)) {
+            "E1029 $rawDetail"
+        } else {
+            rawDetail
+        }
         // Append the failure to the same debug file used by the WebView capture,
         // so the next user report tells us exactly what went wrong.
         runCatching {
@@ -132,26 +160,49 @@ object LoginManager {
     }
 
     /**
-     * Fetches the music.youtube.com shell with the session cookie and extracts
+     * Fetches the YouTube Music shell with the session cookie and extracts
      * `DATASYNC_ID` (delegated account id) and `VISITOR_DATA` from the page.
+     * Tries the music shell first, then the plain www shell — both embed the
+     * same ytcfg block when a session cookie is sent.
      */
     private suspend fun extractAccountIds(cookie: String): Pair<String?, String?> =
         withContext(Dispatchers.IO) {
-            runCatching {
-                val request = Request.Builder()
-                    .url("https://music.youtube.com/")
-                    .header("Cookie", cookie)
-                    .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
-                    .build()
-                client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@runCatching null to null
-                    val body = response.body.string()
-                    val dataSyncId = Regex("\"DATASYNC_ID\"\\s*:\\s*\"([^\"]+)\"")
-                        .find(body)?.groupValues?.get(1)
-                    val visitorData = Regex("\"VISITOR_DATA\"\\s*:\\s*\"([^\"]+)\"")
-                        .find(body)?.groupValues?.get(1)
-                    dataSyncId to visitorData
-                }
-            }.getOrElse { null to null }
+            for (url in listOf("https://music.youtube.com/", "https://www.youtube.com/")) {
+                val ids = fetchShellIds(url, cookie)
+                if (ids.first != null || ids.second != null) return@withContext ids
+            }
+            null to null
         }
+
+    private fun fetchShellIds(url: String, cookie: String): Pair<String?, String?> =
+        runCatching {
+            val request = Request.Builder()
+                .url(url)
+                .header("Cookie", cookie)
+                .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@runCatching null to null
+                val body = response.body.string()
+                val dataSyncId = Regex("\"DATASYNC_ID\"\\s*:\\s*\"([^\"]+)\"")
+                    .find(body)?.groupValues?.get(1)
+                val visitorData = Regex("\"VISITOR_DATA\"\\s*:\\s*\"([^\"]+)\"")
+                    .find(body)?.groupValues?.get(1)
+                sanitizeDataSyncId(dataSyncId) to visitorData
+            }
+        }.getOrElse { null to null }
+}
+
+/**
+ * The account delegated id that YouTube embeds in `ytcfg.DATASYNC_ID` is the
+ * plain numeric account id, but the raw page value can carry a trailing
+ * `||…` suffix (a stale/partially-set delegation token). Sent verbatim as
+ * `onBehalfOfUser` that suffix breaks the innertube calls (401/500, "Login
+ * validation failed") — the manual tests confirmed that removing the `||`
+ * (keeping only the numbers) makes the session validate. Keeps anything
+ * before the first `|` and trims whitespace; null when nothing is left.
+ */
+internal fun sanitizeDataSyncId(raw: String?): String? {
+    val clean = raw?.substringBefore('|')?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    return clean
 }

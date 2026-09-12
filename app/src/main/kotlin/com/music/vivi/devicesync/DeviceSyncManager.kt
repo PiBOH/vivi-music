@@ -10,6 +10,9 @@ import android.os.Build
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.music.vivi.constants.AppLanguageKey
+import com.music.vivi.constants.AppLanguagePeerDeviceKey
+import com.music.vivi.constants.AppLanguagePeerSeqKey
+import com.music.vivi.constants.AppLanguageSeqKey
 import com.music.vivi.constants.AudioNormalizationKey
 import com.music.vivi.constants.AudioQuality
 import com.music.vivi.constants.AudioQualityKey
@@ -30,7 +33,7 @@ import com.music.vivi.constants.EnableListenTogetherKey
 import com.music.vivi.constants.EnableLrcLibKey
 import com.music.vivi.constants.EnableMusixmatchKey
 import com.music.vivi.constants.EnablePaxsenixKey
-import com.music.vivi.constants.EnableSimpMusicKey
+import com.music.vivi.constants.EnableUnisonKey
 import com.music.vivi.constants.EnableYouLyPlusKey
 import com.music.vivi.constants.LyricsRomanizeChineseKey
 import com.music.vivi.constants.LyricsRomanizeJapaneseKey
@@ -111,6 +114,10 @@ class DeviceSyncManager @Inject constructor(
     @Volatile
     private var suppressPlaybackPushUntil = 0L
 
+    /** (deviceId, seq) language markers of the snapshot being applied. */
+    private var pendingLangPeerId: String = ""
+    private var pendingLangPeerSeq: Long = 0L
+
     /** Resolving state of the last snapshot we actually sent (for forcing the
      *  resolving/ready transition past the echo-suppression window). */
     private var lastPushedResolving: Boolean? = null
@@ -177,6 +184,19 @@ class DeviceSyncManager @Inject constructor(
             }
             _paired.value = false
             _peerDeviceName.value = ""
+        }
+    }
+
+    /**
+     * Persist the relay server URL with the app-lifetime scope so the value
+     * survives leaving the Devices screen (a screen-scoped coroutine is
+     * cancelled on exit, which made a cleared/changed URL snap back to the
+     * last-used one). A blank value is stored as-is: unpaired users then see
+     * the default cloud relay on the next visit.
+     */
+    fun saveServerUrl(value: String) {
+        scope.launch {
+            context.dataStore.edit { it[DeviceSyncServerUrlKey] = value }
         }
     }
 
@@ -339,7 +359,9 @@ class DeviceSyncManager @Inject constructor(
 
     private suspend fun ensureClient() {
         val prefs = context.dataStore.data.first()
-        val url = prefs[DeviceSyncServerUrlKey] ?: SyncServer.DEFAULT_URL
+        // A cleared (blank) URL means "not set": fall back to the default cloud
+        // relay instead of trying to connect to an empty address.
+        val url = prefs[DeviceSyncServerUrlKey]?.takeIf { it.isNotBlank() } ?: SyncServer.DEFAULT_URL
         val deviceId = resolveDeviceId(prefs)
 
         val existing = client
@@ -416,6 +438,10 @@ class DeviceSyncManager @Inject constructor(
         if (snapshot.deviceId == current.deviceId) return
 
         applyingRemote = true
+        // Language markers carried by the sender (see applySetting for why the
+        // phone never blindly adopts a language pushed at pair time).
+        pendingLangPeerId = snapshot.settings["languageDeviceId"].orEmpty()
+        pendingLangPeerSeq = snapshot.settings["languageSeq"]?.toLongOrNull() ?: 0L
         try {
             snapshot.settings.forEach { (key, value) -> applySetting(key, value) }
             snapshot.deviceName.takeIf { it.isNotBlank() }?.let { _peerDeviceName.value = it }
@@ -532,6 +558,11 @@ class DeviceSyncManager @Inject constructor(
         put(SelectedFontKey.name, prefs[SelectedFontKey] ?: "system")
         // Language / content
         put(AppLanguageKey.name, prefs[AppLanguageKey] ?: SYSTEM_DEFAULT)
+        // Source markers for bidirectional language sync: the desktop peer only
+        // applies a language whose (deviceId, seq) proves it is a newer manual
+        // change made on the phone — never an echo or a stale pair-time push.
+        put("languageDeviceId", prefs[DeviceSyncDeviceIdKey].orEmpty())
+        put("languageSeq", (prefs[AppLanguageSeqKey] ?: 0L).toString())
         put(ContentLanguageKey.name, prefs[ContentLanguageKey] ?: SYSTEM_DEFAULT)
         put(ContentCountryKey.name, prefs[ContentCountryKey] ?: SYSTEM_DEFAULT)
         put(SuggestionRegionKey.name, prefs[SuggestionRegionKey] ?: "system")
@@ -553,7 +584,7 @@ class DeviceSyncManager @Inject constructor(
         put(EnableKugouKey.name, (prefs[EnableKugouKey] ?: false).toString())
         put(EnableLrcLibKey.name, (prefs[EnableLrcLibKey] ?: false).toString())
         put(EnableMusixmatchKey.name, (prefs[EnableMusixmatchKey] ?: false).toString())
-        put(EnableSimpMusicKey.name, (prefs[EnableSimpMusicKey] ?: false).toString())
+        put(EnableUnisonKey.name, (prefs[EnableUnisonKey] ?: false).toString())
         put(EnableYouLyPlusKey.name, (prefs[EnableYouLyPlusKey] ?: false).toString())
         put(EnablePaxsenixKey.name, (prefs[EnablePaxsenixKey] ?: false).toString())
         // Integrations
@@ -570,7 +601,25 @@ class DeviceSyncManager @Inject constructor(
                 DarkModeKey.name -> prefs[DarkModeKey] = value
                 PureBlackKey.name -> prefs[PureBlackKey] = value.toBooleanStrictOrNull() ?: return@edit
                 SelectedFontKey.name -> prefs[SelectedFontKey] = value
-                AppLanguageKey.name -> prefs[AppLanguageKey] = value
+                AppLanguageKey.name -> {
+                    val ownId = prefs[DeviceSyncDeviceIdKey].orEmpty()
+                    val legacy = pendingLangPeerId.isEmpty() || pendingLangPeerSeq <= 0L
+                    val myEcho = !legacy && pendingLangPeerId == ownId
+                    val lastPeerId = prefs[AppLanguagePeerDeviceKey].orEmpty()
+                    val lastPeerSeq = prefs[AppLanguagePeerSeqKey] ?: 0L
+                    val stale = !legacy && pendingLangPeerId == lastPeerId && pendingLangPeerSeq <= lastPeerSeq
+                    if (legacy) {
+                        // Old desktop build that sends no markers: mirror its
+                        // explicit language only until a manual choice exists on
+                        // the phone (then the phone's own push wins on the DE).
+                        if ((prefs[AppLanguageSeqKey] ?: 0L) == 0L) prefs[AppLanguageKey] = value
+                        return@edit
+                    }
+                    if (myEcho || stale) return@edit
+                    prefs[AppLanguageKey] = value
+                    prefs[AppLanguagePeerDeviceKey] = pendingLangPeerId
+                    prefs[AppLanguagePeerSeqKey] = pendingLangPeerSeq
+                }
                 ContentLanguageKey.name -> prefs[ContentLanguageKey] = value
                 ContentCountryKey.name -> prefs[ContentCountryKey] = value
                 SuggestionRegionKey.name -> prefs[SuggestionRegionKey] = value
@@ -590,7 +639,7 @@ class DeviceSyncManager @Inject constructor(
                 EnableKugouKey.name -> prefs[EnableKugouKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableLrcLibKey.name -> prefs[EnableLrcLibKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableMusixmatchKey.name -> prefs[EnableMusixmatchKey] = value.toBooleanStrictOrNull() ?: return@edit
-                EnableSimpMusicKey.name -> prefs[EnableSimpMusicKey] = value.toBooleanStrictOrNull() ?: return@edit
+                EnableUnisonKey.name -> prefs[EnableUnisonKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableYouLyPlusKey.name -> prefs[EnableYouLyPlusKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnablePaxsenixKey.name -> prefs[EnablePaxsenixKey] = value.toBooleanStrictOrNull() ?: return@edit
                 EnableLastFMScrobblingKey.name -> prefs[EnableLastFMScrobblingKey] = value.toBooleanStrictOrNull() ?: return@edit

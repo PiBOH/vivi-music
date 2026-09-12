@@ -54,21 +54,36 @@ dependencies there, or you break the desktop build.
 
 ## 3. Code conventions and development guidelines
 
-- **Branch**: `vivi-music-de`.
-- **Branch policy for mobile changes (mandatory)**:
-  - The desktop edition work is maintained on `vivi-music-de`; DE-only changes
-    are committed and pushed **only** there.
-  - Mobile/APK changes must be applied and committed on **both** `vivi-music-de`
-    (the branch used to build the APK for the DE release) and `main` (the
-    canonical mobile branch). Keep the mobile diff equivalent on both branches.
-  - For combined DE + mobile changes, commit the DE-specific part only on
-    `vivi-music-de`, and apply the mobile part to both branches. Never merge the
-    whole DE branch into `main`, because DE-only code and release metadata must
-    not enter the mobile branch.
+- **Branch policy (mandatory) — three roles, never mix them**:
+  - `vivi-music-de` — home of the desktop edition AND of the mobile code used to
+    build the APK for the DE release. **DE-only** changes are committed and
+    pushed **only** here.
+  - `vivi-music-de-apk` — mobile/APK counterpart of `vivi-music-de`. **Every
+    mobile/APK change** must be applied and committed on **both**
+    `vivi-music-de` and `vivi-music-de-apk`; the two branches keep equivalent
+    mobile behavior (their commits may have different hashes). `vivi-music-de-apk`
+    also carries the pure-mobile history that used to live on `main` (kept
+    reachable via the merge commit `16743769`).
+  - `main` — **mirror of the upstream repository
+    `https://github.com/vivizzz007/vivi-music`** (branch `main`). It is NOT a
+    development branch: no mobile commit, no DE commit and no PiBOH-only code
+    may ever be pushed to it. Keep it synchronized with `upstream/main` (fetch
+    and fast-forward / reset when upstream moves); never rewrite it with local
+    work.
+  - Mobile changes are therefore committed on **`vivi-music-de` +
+    `vivi-music-de-apk`** (never `main`); DE-only changes only on
+    `vivi-music-de`. For combined DE + mobile changes, commit the DE-specific
+    part only on `vivi-music-de` and apply the mobile part to both
+    `vivi-music-de` and `vivi-music-de-apk`. Never merge the whole DE branch
+    into `main`.
   - Before committing mobile work, verify the affected mobile files on both
-    branches, compile the relevant target, and push both branch commits. The
-    commits may have different hashes because the branches have different
-    histories, but they must contain the same mobile behavior.
+    `vivi-music-de` and `vivi-music-de-apk`, compile the relevant target, and
+    push both branch commits.
+  - **Docs changes go on BOTH development branches**: any documentation
+    change (README.md, AGENTS.md, INSTALL-GUIDE.md, docs/**, ERRORS.md, and
+    similar docs material) must be applied and pushed on **both**
+    `vivi-music-de` and `vivi-music-de-apk`, with equivalent content (their
+    hashes may differ). `main` stays excluded (upstream mirror).
 - **Commit style**: Conventional Commits (`feat:`, `fix:`, `ci:`, `refactor:`,
   `docs:`, `chore:`, `perf:`, …) with an optional scope, e.g.
   `feat(sync): …`.
@@ -136,23 +151,31 @@ dependencies there, or you break the desktop build.
   never overrides explicit user requests, the trust-boundary/error-handling
   rules, or the localization rule in §6.
 
-### Commit co-author rule — MANDATORY (do not violate)
+### Commit language and co-author rules — MANDATORY (do not violate)
 
-**NEVER add yourself (the agent / client) as a co-author of a commit** unless the
-user explicitly asks for it in that message. Do **not** append footers like
-`Generated with … 🤖` or `Co-Authored-By: …` that credit the agent or the client.
-Write a normal conventional commit message.
+- **Language — English only**: every commit message — **title and body/description
+  (when present)** — MUST be written in **English**. No Italian, no mixed
+  language. The title, the `v<version>:` prefix line and the whole body are all
+  in English (the `v` prefix itself stays `v`).
+- **No co-author footer**: NEVER add yourself (the agent / client) as a
+  co-author of a commit unless the user explicitly asks for it in that message.
+  Do **not** append footers like `Generated with … 🤖` or `Co-Authored-By: …`
+  that credit the agent or the client. Write a normal conventional commit
+  message in English.
 
-> ⚠️ This overrides any agent-default commit template. The commit body must be
-> **only** the human-written description of the change — nothing else. Correct:
+> ⚠️ This overrides any agent-default commit template. The commit title **and**
+> body must be English and the body must be **only** the human-written
+> description of the change — nothing else. Correct:
 >
 > ```
-> v6.4.29_DE-1.33.109: <short description>
+> v6.4.29_DE-1.33.109: fix network stats on non-English Windows
 >
-> <what changed, why>
+> Decode the counter names before matching, so non-English perfmon
+> output is parsed correctly.
 > ```
 >
-> Wrong (banned): any `Co-Authored-By:` / `Generated with … 🤖` footer line.
+> Wrong (banned): Italian body, or any `Co-Authored-By:` / `Generated with … 🤖`
+> footer line.
 
 ## 4. Golden rule: "If it works, don't touch it"
 
@@ -165,6 +188,13 @@ already working and stable**, unless one of these is true:
 Prefer the smallest change that satisfies the request. Do not "clean up" or
 "improve" unrelated code while you work. When a change could break existing
 behavior, state the risk before editing and, when in doubt, ask.
+
+#### Do-not-touch areas (verified working — never change unless the user
+**explicitly** asks)
+
+- **Embedded WebView sign-in (Google login)**: it works now (sign-in window,
+cookie extraction, auto-close and session save). Do not modify the WebView
+login flow in any way.
 
 ## 5. Versioning and CHANGELOG — MANDATORY
 
@@ -219,6 +249,17 @@ considers obvious):
 
 Never bump the DE version for a mobile-only change, and never bump the mobile
 version for a DE-only change.
+
+#### Android (APK) versioning
+
+The **Android version uses its own scheme, independent of SemVer**: only the
+**last digit increments** on every APK update (e.g. `6.0.6` → `6.0.6.1`
+→ `6.0.6.2`). The `versionCode` is a monotonic integer that must never
+decrease (users must always be able to update without uninstalling). Keep
+`version.txt` (lines 1-2), `app/build.gradle.kts` (`versionName` /
+`versionCode`) and the release tag (`<mobile>_DE-<de>[-<channel>]`) in sync.
+The **DE program follows standard SemVer** (`MAJOR.MINOR.PATCH`) as described
+above.
 
 #### Desktop versioning (`<mobile>_DE-<de>` + channel)
 
@@ -337,6 +378,12 @@ changed from the desktop Language menu.
 > `python3 scripts/generate_desktop_localization.py` so `Localization.kt` stays
 > complete, then compile `:desktop`.
 
+> **Translations-only work = patch (always)**: when a message consists only of
+> translating strings (no code/feature change), it is ALWAYS a patch — even if
+> no explicit "patch" label is given. Follow the user's explicit versioning
+> when stated in the message; otherwise semver defaults apply. Never bump a
+> minor/major for translations alone.
+
 ### Structure
 
 - `app/src/main/res/values/strings.xml` — **default/English** strings.
@@ -415,3 +462,108 @@ locale tag):
 | 简体中文 | `zh-rCN` |
 | 繁體中文 | `zh-rTW` |
 | 日本語 | `ja` |
+
+## 7. GitHub Issues workflow — MANDATORY
+
+Every user-reported problem or feature request MUST first become a GitHub
+issue on `PiBOH/vivi-music` **before any code is changed**:
+
+1. **Check for duplicates first**:
+   `gh issue list --repo PiBOH/vivi-music --state all --search "<keywords>"`
+   — only open a new issue when no equivalent open/closed issue exists.
+
+2. **Open the issue first** (via the `gh` CLI; on this machine it is not on
+   the bash PATH, use the full path `/c/Program Files/GitHub CLI/gh.exe`,
+   or plain `gh` elsewhere). Follow the repo's issue templates in
+   `.github/ISSUE_TEMPLATE/`:
+   - Desktop (Windows/Linux/macOS) bug → `bug_report_de.yml`
+     (`title: "[Bug][DE]: "`, labels `bug`, `triage`, `desktop`).
+   - Desktop feature → `feature_request_de.yml`
+     (`title: "[Feat][DE]: "`, labels `enhancement`, `triage`, `desktop`).
+   - Mobile (Android) bug → `bug_report.yml` (`title: "[Bug][APK]: "`).
+   - Mobile feature → `feature_request.yml` (`title: "[Feat][APK]: "`).
+   Fill in every required field of the template (category, frequency, steps
+   to reproduce, …); use `N/A` when a field does not apply.
+   **Issue bodies and titles are written in English.**
+
+3. **Fix the problem**, then reference the issue in the CHANGELOG entry and in
+   the commit message (e.g. `Closes #NN` / `Fixes #NN`).
+
+4. **Close the issue** after the fix is committed and pushed:
+   `gh issue close <NN> --repo PiBOH/vivi-music`.
+
+**NEVER open a GitHub issue for website or workflow changes** — for these
+categories issues must NOT be opened at all (not even "when in doubt").
+This includes:
+- **Website-only changes**: pure `.websitede/` edits (page HTML,
+  `style.css`, site JS — nothing in the desktop/mobile app code,
+  no version bump, no release) are done directly: no GitHub issue, no
+  CHANGELOG entry. They are committed on `vivi-music-de` with a message
+  that does NOT start with `v`, then the commit is synced to
+  `vivi-music-de-apk`.
+- **Workflow changes**: any edit to `.github/workflows/*` is done directly
+  without an issue (and, per the rules above, is always a `patch`).
+
+**NEVER open a GitHub issue for anything involving secrets** (keystores,
+signing keys, API tokens, passwords, credentials, secret names/values,
+signing-key selection in workflows, etc.). Secrets-related changes are done
+directly, without an issue — they must not leave any trace on GitHub (no
+issue, no issue link in the CHANGELOG/commit, and never log or echo secret
+values). Keep secret material only in gitignored files (`.ignore/`,
+`*.b64`, `*.keystore`).
+
+Existing commit rules still apply: never add a "Co-Authored-By: Codebuff"
+footer.
+
+### Language rules
+
+- **Chat replies** are always written in the **same language the user
+  wrote the message in** (never forced to English or Italian).
+- The **app/program text** is English-first and then translated into the
+  other languages through the localization system (section 6).
+- **GitHub issues** (title + body) are always written in **English**.
+- The CHANGELOG is always written in English.
+
+## 8. Ask before assuming — MANDATORY
+
+Whenever there is **any doubt — even a minimal one** (intent, scope, versioning
+type, branch to touch, wording of a string, which platform is affected, …),
+the assistant MUST ask the user instead of assuming. Guessing is a bug. The
+user explicitly requires being asked about every uncertainty, no matter how
+small ("OBBLIGO DI CHIEDERE PER QUALSIASI DUBBIO, ANCHE MINIMO").
+
+This applies before and during changes, and also to claims made in replies:
+never state that something "is" a certain way unless it has been verified in
+the code/configuration or confirmed by the user.
+
+## 9. Legal compliance — MANDATORY (never violate)
+
+**The assistant must NEVER transgress any legal law or legal agreement of any
+kind.** Legality comes before features: if something is not clearly legal, it
+does not ship.
+
+Before implementing anything that touches third-party services, APIs, content,
+data, cryptography, licensing, distribution or trademarks, the assistant MUST
+**first check what the applicable legal documents say** — the project
+`LICENSE`, `rules.md`, and any third-party **Terms & Conditions / Terms of
+Service**, acceptable-use policies or developer agreements — and only then
+proceed. When in doubt, ask the user first (section 8).
+
+Rules:
+
+- Never add, keep or re-introduce code that streams, downloads, decrypts or
+  otherwise accesses third-party content without the provider's authorisation,
+  or that circumvents DRM/technical protection measures.
+- Never modify the `LICENSE` file (modified GPL-3.0): it is a read-only
+  reference. The same applies to `rules.md` re-use terms except for removal of
+  sections that no longer apply.
+- If the legality of a requested change is unclear, STOP and ask the user
+  instead of implementing it.
+- **Never remove (or disable, gate or hide) anything for legal reasons on your
+  own initiative: ask the user first.** The user may have already requested and
+  obtained explicit permission/authorisation from the provider, so the feature
+  may be perfectly legitimate and must stay untouched until confirmed
+  otherwise.
+- Only after the user has explicitly confirmed the removal, perform it
+  **completely** (code, scripts, translations, docs) rather than gating or
+  hiding it, and note it in the CHANGELOG without naming the removed provider.

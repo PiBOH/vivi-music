@@ -27,8 +27,13 @@ object KeepAwake {
         Thread(r, "VIVI-KeepAwake").apply { isDaemon = true }
     }
 
-    @Volatile
-    private var enabled = false
+    /**
+     * Named keep-awake requests (e.g. "paired" while device sync is active,
+     * "expanded-player" for the keep-screen-on option). The OS is kept awake
+     * while at least one request is active, so independent features can't
+     * cancel each other.
+     */
+    private val requests = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     private interface Kernel32 : StdCallLibrary {
         fun SetThreadExecutionState(esFlags: Int): Int
@@ -51,12 +56,16 @@ object KeepAwake {
         })
     }
 
-    /** Enable or disable keep-awake. Idempotent and non-blocking. */
-    fun setEnabled(value: Boolean) {
-        if (value == enabled) return
-        enabled = value
-        executor.submit { runCatching { apply(value) } }
+    /** Enable or disable the keep-awake request named [name]. Idempotent. */
+    fun request(name: String, value: Boolean) {
+        val changed = if (value) requests.add(name) else requests.remove(name)
+        if (!changed) return
+        val enabled = requests.isNotEmpty()
+        executor.submit { runCatching { apply(enabled) } }
     }
+
+    /** Enable or disable keep-awake (single unnamed request). */
+    fun setEnabled(value: Boolean) = request("default", value)
 
     private fun apply(value: Boolean) {
         when {

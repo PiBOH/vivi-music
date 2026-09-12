@@ -47,9 +47,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import com.music.vivi.utils.dataStore
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.datastore.preferences.core.edit
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -60,6 +63,7 @@ import androidx.navigation.NavController
 import com.music.vivi.LocalPlayerAwareWindowInsets
 import com.music.vivi.R
 import com.music.vivi.constants.AppLanguageKey
+import com.music.vivi.constants.AppLanguageSeqKey
 import com.music.vivi.constants.ContentCountryKey
 import com.music.vivi.constants.ContentLanguageKey
 import com.music.vivi.constants.SuggestionRegionKey
@@ -70,9 +74,9 @@ import com.music.vivi.constants.EnableBetterLyricsKey
 import com.music.vivi.constants.EnableMusixmatchKey
 import com.music.vivi.constants.EnableKugouKey
 import com.music.vivi.constants.EnableLrcLibKey
-import com.music.vivi.constants.EnableSimpMusicKey
 import com.music.vivi.constants.EnableYouLyPlusKey
 import com.music.vivi.constants.EnablePaxsenixKey
+import com.music.vivi.constants.EnableUnisonKey
 import com.music.vivi.constants.HideExplicitKey
 import com.music.vivi.constants.HideVideoSongsKey
 import com.music.vivi.constants.HideYoutubeShortsKey
@@ -97,7 +101,7 @@ import com.music.vivi.constants.ShowWrappedCardKey
 import com.music.vivi.constants.TopSize
 import com.music.vivi.ui.component.EnumDialog
 import com.music.vivi.ui.component.IconButton
-import com.music.vivi.ui.component.Material3SettingsGroup
+import com.music.vivi.ui.component.ExpressiveSettingGroup
 import com.music.vivi.ui.component.Material3SettingsItem
 import com.music.vivi.ui.utils.backToMain
 import com.music.vivi.utils.rememberEnumPreference
@@ -149,9 +153,9 @@ fun ContentSettings(
     val (enableLrclib, onEnableLrclibChange) = rememberPreference(key = EnableLrcLibKey, defaultValue = true)
     val (enableBetterLyrics, onEnableBetterLyricsChange) = rememberPreference(key = EnableBetterLyricsKey, defaultValue = true)
     val (enableMusixmatch, onEnableMusixmatchChange) = rememberPreference(key = EnableMusixmatchKey, defaultValue = true)
-    val (enableSimpMusic, onEnableSimpMusicChange) = rememberPreference(key = EnableSimpMusicKey, defaultValue = true)
     val (enableYouLyPlus, onEnableYouLyPlusChange) = rememberPreference(key = EnableYouLyPlusKey, defaultValue = true)
     val (enablePaxsenix, onEnablePaxsenixChange) = rememberPreference(key = EnablePaxsenixKey, defaultValue = true)
+    val (enableUnison, onEnableUnisonChange) = rememberPreference(key = EnableUnisonKey, defaultValue = true)
     val (lyricsProviderOrder, onLyricsProviderOrderChange) = rememberPreference(
         key = LyricsProviderOrderKey,
         defaultValue = "",
@@ -343,8 +347,15 @@ fun ContentSettings(
     if (showAppLanguageDialog) {
         EnumDialog(
             onDismiss = { showAppLanguageDialog = false },
-            onSelect = {
-                onAppLanguageChange(it)
+            onSelect = { selected ->
+                onAppLanguageChange(selected)
+                // Sync marker: this manual change must propagate to the desktop
+                // peer (the peer applies it only when its sequence grows).
+                scope.launch {
+                    context.dataStore.edit { prefs ->
+                        prefs[AppLanguageSeqKey] = (prefs[AppLanguageSeqKey] ?: 0L) + 1
+                    }
+                }
                 showAppLanguageDialog = false
             },
             title = stringResource(R.string.app_language),
@@ -361,15 +372,15 @@ fun ContentSettings(
     if (showProviderPriorityDialog) {
         val defaultOrder = LyricsProviderRegistry.getDefaultProviderOrder()
         // User-toggleable provider names (excludes always-on YouTube providers)
-        val userToggleable = setOf("YouLyPlus", "Paxsenix", "BetterLyrics", "Musixmatch", "SimpMusic", "LrcLib", "Kugou")
+        val userToggleable = setOf("YouLyPlus", "Paxsenix", "BetterLyrics", "Musixmatch", "LrcLib", "Kugou", "Unison")
         val enabledProviders = setOfNotNull(
             "LrcLib".takeIf { enableLrclib },
             "Kugou".takeIf { enableKugou },
             "BetterLyrics".takeIf { enableBetterLyrics },
             "Musixmatch".takeIf { enableMusixmatch },
-            "SimpMusic".takeIf { enableSimpMusic },
             "YouLyPlus".takeIf { enableYouLyPlus },
             "Paxsenix".takeIf { enablePaxsenix },
+            "Unison".takeIf { enableUnison },
         )
 
         // Build a normalized order: saved order first (only known providers), then any missing ones
@@ -607,41 +618,38 @@ fun ContentSettings(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
     ) {
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.general),
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.language),
                     title = { Text(stringResource(R.string.content_language)) },
-                    description = {
+                    trailingContent = {
                         Text(
                             LanguageCodeToName.getOrElse(contentLanguage) { stringResource(R.string.system_default) }
                         )
                     },
-                    onClick = { showContentLanguageDialog = true },
-                    isExpressive = true
+                    onClick = { showContentLanguageDialog = true }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.location_on),
                     title = { Text(stringResource(R.string.content_country)) },
-                    description = {
+                    trailingContent = {
                         Text(
                             CountryCodeToName.getOrElse(contentCountry) { stringResource(R.string.system_default) }
                         )
                     },
-                    onClick = { showContentCountryDialog = true },
-                    isExpressive = true
+                    onClick = { showContentCountryDialog = true }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.globe_location_pin),
                     title = { Text("Suggestions Region") },
-                    description = {
+                    trailingContent = {
                         Text(
                             SuggestionRegionSlugToName.getOrElse(suggestionRegion) { "Global Charts" }
                         )
                     },
-                    onClick = { showSuggestionSheet = true },
-                    isExpressive = true
+                    onClick = { showSuggestionSheet = true }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.explicit),
@@ -661,8 +669,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onHideExplicitChange(!hideExplicit) },
-                    isExpressive = true
+                    onClick = { onHideExplicitChange(!hideExplicit) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.slow_motion_video),
@@ -682,8 +689,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onHideVideoSongsChange(!hideVideoSongs) },
-                    isExpressive = true
+                    onClick = { onHideVideoSongsChange(!hideVideoSongs) }
                 ),
 
                 Material3SettingsItem(
@@ -704,15 +710,14 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) },
-                    isExpressive = true
+                    onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) }
                 )
             )
         )
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.artist_page_settings),
             items = listOf(
                 Material3SettingsItem(
@@ -733,8 +738,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onShowArtistDescriptionChange(!showArtistDescription) },
-                    isExpressive = true
+                    onClick = { onShowArtistDescriptionChange(!showArtistDescription) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.person),
@@ -754,8 +758,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onShowArtistSubscriberCountChange(!showArtistSubscriberCount) },
-                    isExpressive = true
+                    onClick = { onShowArtistSubscriberCountChange(!showArtistSubscriberCount) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.person),
@@ -775,8 +778,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onShowMonthlyListenersChange(!showMonthlyListeners) },
-                    isExpressive = true
+                    onClick = { onShowMonthlyListenersChange(!showMonthlyListeners) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.slow_motion_video),
@@ -797,9 +799,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onShowArtistVideoChange(!showArtistVideo) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onShowArtistVideoChange(!showArtistVideo) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.slow_motion_video),
@@ -820,14 +820,12 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onShowArtistBackgroundVideoChange(!showArtistBackgroundVideo) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onShowArtistBackgroundVideoChange(!showArtistBackgroundVideo) }
                 )
             )
         )
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.album_text),
             items = listOf(
                 Material3SettingsItem(
@@ -849,16 +847,14 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onAlbumCanvasEnabledChange(!albumCanvasEnabled) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onAlbumCanvasEnabledChange(!albumCanvasEnabled) }
                 )
             )
         )
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.app_language),
             items = listOf(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -872,8 +868,7 @@ fun ContentSettings(
                                     "package:${context.packageName}".toUri()
                                 )
                             )
-                        },
-                        isExpressive = true
+                        }
                     )
                 } else {
                     Material3SettingsItem(
@@ -884,8 +879,7 @@ fun ContentSettings(
                                 LanguageCodeToName.getOrElse(appLanguage) { stringResource(R.string.system_default) }
                             )
                         },
-                        onClick = { showAppLanguageDialog = true },
-                        isExpressive = true
+                        onClick = { showAppLanguageDialog = true }
                     )
                 }
             )
@@ -893,13 +887,13 @@ fun ContentSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.proxy),
             items = buildList {
                 add(Material3SettingsItem(
                     icon = painterResource(R.drawable.network_node),
                     title = { Text(stringResource(R.string.network_ip_version)) },
-                    description = {
+                    trailingContent = {
                         Text(
                             when (ipVersion) {
                                 IpVersion.AUTO -> stringResource(R.string.ip_version_auto)
@@ -908,8 +902,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { showIpVersionDialog = true },
-                    isExpressive = true
+                    onClick = { showIpVersionDialog = true }
                 ))
                 add(
                     Material3SettingsItem(
@@ -930,8 +923,7 @@ fun ContentSettings(
                                 }
                             )
                         },
-                        onClick = { onProxyEnabledChange(!proxyEnabled) },
-                        isExpressive = true
+                        onClick = { onProxyEnabledChange(!proxyEnabled) }
                     )
                 )
                 if (proxyEnabled) {
@@ -939,8 +931,7 @@ fun ContentSettings(
                         Material3SettingsItem(
                             icon = painterResource(R.drawable.settings),
                             title = { Text(stringResource(R.string.config_proxy)) },
-                            onClick = { showProxyConfigurationDialog = true },
-                            isExpressive = true
+                            onClick = { showProxyConfigurationDialog = true }
                         )
                     )
                 }
@@ -949,7 +940,7 @@ fun ContentSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.lyrics),
             items = listOf(
                 Material3SettingsItem(
@@ -970,8 +961,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onEnableLrclibChange(!enableLrclib) },
-                    isExpressive = true
+                    onClick = { onEnableLrclibChange(!enableLrclib) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
@@ -991,8 +981,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onEnableKugouChange(!enableKugou) },
-                    isExpressive = true
+                    onClick = { onEnableKugouChange(!enableKugou) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
@@ -1013,9 +1002,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onEnableBetterLyricsChange(!enableBetterLyrics) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onEnableBetterLyricsChange(!enableBetterLyrics) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
@@ -1036,32 +1023,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onEnableMusixmatchChange(!enableMusixmatch) },
-                    isExpressive = true,
-                    descriptionBelow = true
-                ),
-                Material3SettingsItem(
-                    icon = painterResource(R.drawable.lyrics),
-                    title = { Text(stringResource(R.string.enable_simpmusic)) },
-                    description = { Text(stringResource(R.string.enable_simpmusic_desc)) },
-                    trailingContent = {
-                        Switch(
-                            checked = enableSimpMusic,
-                            onCheckedChange = onEnableSimpMusicChange,
-                            thumbContent = {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (enableSimpMusic) R.drawable.check else R.drawable.close
-                                    ),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                )
-                            }
-                        )
-                    },
-                    onClick = { onEnableSimpMusicChange(!enableSimpMusic) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onEnableMusixmatchChange(!enableMusixmatch) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
@@ -1082,9 +1044,7 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onEnableYouLyPlusChange(!enableYouLyPlus) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onEnableYouLyPlusChange(!enableYouLyPlus) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
@@ -1105,29 +1065,45 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onEnablePaxsenixChange(!enablePaxsenix) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onEnablePaxsenixChange(!enablePaxsenix) }
+                ),
+                Material3SettingsItem(
+                    icon = painterResource(R.drawable.lyrics),
+                    title = { Text("Unison") },
+                    description = { Text("Crowdsourced community lyrics with voting & confidence scores") },
+                    trailingContent = {
+                        Switch(
+                            checked = enableUnison,
+                            onCheckedChange = onEnableUnisonChange,
+                            thumbContent = {
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (enableUnison) R.drawable.check else R.drawable.close
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                )
+                            }
+                        )
+                    },
+                    onClick = { onEnableUnisonChange(!enableUnison) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.lyrics),
                     title = { Text(stringResource(R.string.lyrics_provider_priority)) },
                     description = { Text(stringResource(R.string.lyrics_provider_priority_desc)) },
-                    onClick = { showProviderPriorityDialog = true },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { showProviderPriorityDialog = true }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.language_korean_latin),
                     title = { Text(stringResource(R.string.lyrics_romanization)) },
-                    onClick = { navController.navigate("settings/content/romanization") },
-                    isExpressive = true
+                    onClick = { navController.navigate("settings/content/romanization") }
                 )
             )
         )
 //        Spacer(modifier = Modifier.height(27.dp))
 //
-//        Material3SettingsGroup(
+//        ExpressiveSettingGroup(
 //            title = "Wrapped",
 //            items = listOf(
 //                Material3SettingsItem(
@@ -1155,7 +1131,7 @@ fun ContentSettings(
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.misc),
             items = listOf(
                 Material3SettingsItem(
@@ -1177,21 +1153,18 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { onRandomizeHomeOrderChange(!randomizeHomeOrder) },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { onRandomizeHomeOrderChange(!randomizeHomeOrder) }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.trending_up),
                     title = { Text(stringResource(R.string.top_length)) },
-                    description = { Text(lengthTop) },
-                    onClick = { showTopLengthDialog = true },
-                    isExpressive = true
+                    trailingContent = { Text(lengthTop) },
+                    onClick = { showTopLengthDialog = true }
                 ),
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.home_outlined),
                     title = { Text(stringResource(R.string.set_quick_picks)) },
-                    description = {
+                    trailingContent = {
                         Text(
                             when (quickPicks) {
                                 QuickPicks.QUICK_PICKS -> stringResource(R.string.quick_picks)
@@ -1199,24 +1172,21 @@ fun ContentSettings(
                             }
                         )
                     },
-                    onClick = { showQuickPicksDialog = true },
-                    isExpressive = true
+                    onClick = { showQuickPicksDialog = true }
                 )
             )
         )
 
         Spacer(modifier = Modifier.height(27.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.logs_heading),
             items = listOf(
                 Material3SettingsItem(
                     icon = painterResource(R.drawable.bug_report),
                     title = { Text(stringResource(R.string.playback_logs)) },
                     description = { Text(stringResource(R.string.playback_logs_desc)) },
-                    onClick = { showPlaybackLogsDialog = true },
-                    isExpressive = true,
-                    descriptionBelow = true
+                    onClick = { showPlaybackLogsDialog = true }
                 )
             )
         )

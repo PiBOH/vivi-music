@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -163,10 +164,13 @@ fun PlayerBackground(
                         modifier = Modifier.fillMaxSize().blur(48.dp),
                     )
                 }
+                // Scrim follows the app theme: strong in dark mode, lighter in
+                // light mode so the player surface adapts to Light/Dark.
+                val dark = isAppInDarkTheme()
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.45f))
+                        .background(if (bgUrl != null) Color.Black.copy(alpha = if (dark) 0.45f else 0.2f) else MaterialTheme.colorScheme.surfaceContainerHigh)
                 )
             }
             PlayerBackgroundStyle.GLOW -> {
@@ -201,16 +205,21 @@ fun PlayerBackground(
                         modifier = Modifier.fillMaxSize().blur(36.dp).graphicsLayer { scaleX = 1.15f; scaleY = 1.15f },
                     )
                 }
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Black.copy(alpha = 0.35f),
-                                1f to Color.Black.copy(alpha = 0.8f),
+                // Overlay follows the app theme: strong in dark mode, lighter
+                // in light mode so the player surface adapts to Light/Dark.
+                val dark = isAppInDarkTheme()
+                if (bgUrl != null) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    0f to Color.Black.copy(alpha = if (dark) 0.35f else 0.12f),
+                                    1f to Color.Black.copy(alpha = if (dark) 0.8f else 0.35f),
+                                )
                             )
-                        )
-                )
+                    )
+                }
             }
             PlayerBackgroundStyle.LIVE_MESH -> LiveMeshBackground(accent)
             PlayerBackgroundStyle.VISUALIZER -> VisualizerBackground(

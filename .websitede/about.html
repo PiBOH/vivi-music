@@ -1,117 +1,471 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>document.documentElement.classList.add('js');try{if(localStorage.getItem('vmde-theme')==='light'){document.documentElement.setAttribute('data-theme','light');}}catch(e){}</script>
-  <title>About — VIVI Music DE</title>
-  <meta name="description" content="About VIVI Music DE." />
-  <link rel="icon" href="images/logo_vmde.png" type="image/png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ====================================================================
+     SEO KEYWORDS — page: about
+     VIVI Music DE: About VIVI Music DE — Open-Source YouTube Music Player
+     What VIVI Music DE is, who builds it, the stack, the license and the questions people actually ask about this free open-source YouTube Music desktop player.
+     download vivi music for pc, vivi music for pc, vivi music for windows, vivi music for windows 10, vivi music for windows 11, vivi music desktop app, vivi music de, vivi music download, youtube music player for pc, youtube music desktop client, free open source music player, vivi music linux, vivi music debian, vivi music arch, vivi music appimage, vivi music macos, vivi music apple silicon, music sync between devices, vivi music de about, vivi music developers, open source music player
+     Target search intents: "download vivi music for pc", "vivi music for
+     windows", "youtube music player for pc", "vivi music for linux / mac",
+     "vivi music download", "vivi music sync phone pc".
+     (Keywords are mirrored in the real <title>, <meta name="description">,
+     Open Graph tags and JSON-LD below — HTML comments alone are not read by
+     search engines; this comment is only for humans and maintenance.)
+     ==================================================================== -->
+  <link rel="canonical" href="https://piboh.github.io/vivi-music/about.html">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="keywords" content="download vivi music for pc, vivi music for pc, vivi music for windows, vivi music for windows 10, vivi music for windows 11, vivi music desktop app, vivi music de, vivi music download, youtube music player for pc, youtube music desktop client, free open source music player, vivi music linux, vivi music debian, vivi music arch, vivi music appimage, vivi music macos, vivi music apple silicon, music sync between devices, vivi music de about, vivi music developers, open source music player">
+  <title>About VIVI Music DE — Open-Source YouTube Music Player</title>
+  <meta name="description" content="What VIVI Music DE is, who builds it, the stack, the license and the questions people actually ask about this free open-source YouTube Music desktop player.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="VIVI Music DE">
+  <meta property="og:title" content="About VIVI Music DE — Open-Source YouTube Music Player">
+  <meta property="og:description" content="What VIVI Music DE is, who builds it, the stack, the license and the questions people actually ask about this free open-source YouTube Music desktop player.">
+  <meta property="og:url" content="https://piboh.github.io/vivi-music/about.html">
+  <meta property="og:image" content="https://piboh.github.io/vivi-music/images/logo_vmde.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="About VIVI Music DE — Open-Source YouTube Music Player">
+  <meta name="twitter:description" content="What VIVI Music DE is, who builds it, the stack, the license and the questions people actually ask about this free open-source YouTube Music desktop player.">
+  <meta name="twitter:image" content="https://piboh.github.io/vivi-music/images/logo_vmde.png">
+  <meta name="theme-color" content="#6c5ce7">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"About VIVI Music DE — Open-Source YouTube Music Player","url":"https://piboh.github.io/vivi-music/about.html","isPartOf":{"@context":"https://schema.org","@type":"WebSite","name":"VIVI Music DE","url":"https://piboh.github.io/vivi-music/","description":"Free open-source YouTube Music player for PC, Linux and macOS."},"description":"What VIVI Music DE is, who builds it, the stack, the license and the questions people actually ask about this free open-source YouTube Music desktop player."}</script>
+
+      <link rel="icon" type="image/png" href="images/logo_vmde.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="assets/fonts.css">
+  <link rel="stylesheet" href="assets/tpl.css">
+  <link rel="stylesheet" href="assets/site-chrome.css">
+  <link rel="stylesheet" href="style.css">
+  <script>document.documentElement.classList.add("js");try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
+  <script src="assets/tpl.js"></script>
 </head>
-<body>
-  <nav class="nav">
-    <div class="wrap nav-inner">
-      <a class="brand" href="index.html">
-        <img src="images/logo_vmde.png" alt="VIVI Music DE logo" />
-        VIVI Music <em>DE</em>
+<body class="bg-transparent text-white font-sora selection:bg-white/20 overflow-x-hidden">
+
+  <div id="page-background"></div>
+
+
+  <!-- BEGIN: Navigation -->
+  <nav id="top-navbar" class="fixed top-0 w-full z-[100] py-5 px-6 md:px-12 flex justify-between items-center transition-all duration-300 ease-in-out animate-nav" data-purpose="TopNavBar">
+    <div class="flex items-center gap-2">
+      <a href="index" class="flex items-center gap-2">
+        <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" decoding="async">
+        <span class="text-xl font-bold tracking-tight text-white font-geist">VIVI Music <span class="text-[#afbeff]">DE</span></span>
       </a>
-      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
-      <div class="nav-links">
-        <a href="index.html">Home</a>
-        <a href="downloads.html">Downloads</a>
-        <a href="install-guide.html">Guide</a>
-        <a href="changelog.html">Changelog</a>
-        <a href="sync.html">Sync</a>
-        <a href="about.html">About</a>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="hidden md:flex items-center gap-1 text-sm font-medium">
+        <a class="nav-link active-nav" href="index">Home</a><a class="nav-link" href="downloads">Downloads</a><a class="nav-link" href="screenshots">Screenshots</a><a class="nav-link" href="install-guide">Guide</a><a class="nav-link" href="sync">Sync</a><a class="nav-link" href="changelog">Changelog</a><a class="nav-link" href="errors">Errors</a><a class="nav-link" href="about">About</a>
+        <a class="nav-link" href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram</a>
+        <a class="nav-link" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub</a>
       </div>
-      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle dark/light theme">🌙</button>
+      <button class="trigger-download-modal hidden sm:inline-block bg-white text-black px-6 py-2.5 rounded-full text-sm font-bold hover:bg-white/85 transition-colors text-center shadow-md">
+        Download
+      </button>
+      <button id="mobile-menu-btn" class="md:hidden text-white focus:outline-none flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-colors select-none">
+        <span>Links</span>
+        <span class="material-symbols-outlined text-[18px] transition-transform duration-200" id="mobile-menu-chevron">expand_more</span>
+      </button>
+    </div>
+    <div id="mobile-menu" class="absolute right-6 md:right-12 top-full mt-2 z-[90] flex flex-col items-end gap-4 transform -translate-y-4 opacity-0 transition-all duration-300 pointer-events-none md:hidden">
+      <a class="mobile-menu-link" href="index">Home</a><a class="mobile-menu-link" href="downloads">Downloads</a><a class="mobile-menu-link" href="screenshots">Screenshots</a><a class="mobile-menu-link" href="install-guide">Guide</a><a class="mobile-menu-link" href="sync">Sync</a><a class="mobile-menu-link" href="changelog">Changelog</a><a class="mobile-menu-link" href="errors">Errors</a><a class="mobile-menu-link" href="about">About</a>
+      <a class="mobile-menu-link" href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram</a>
+      <a class="mobile-menu-link" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub</a>
+      <button class="trigger-download-modal flex items-center justify-center gap-2 bg-white text-black px-5 py-2.5 rounded-full text-sm font-bold hover:bg-white/85 transition-colors shadow-md select-none">
+        <span class="material-symbols-outlined text-[18px]">download</span>
+        Download
+      </button>
     </div>
   </nav>
+  <!-- END: Navigation -->
+  <main id="home" class="relative pt-32 pb-24 overflow-hidden">
 
-  <main class="page">
-    <h1>VIVI Music DE, at a glance</h1>
-    <p class="lede">
-      VIVI Music DE brings
-      <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a> to
-      <strong>Windows, Linux and macOS</strong>. Built with Kotlin and Compose
-      Multiplatform, it keeps the same Material 3 interface, with a collapsible
-      sidebar in place of the mobile bottom bar and a dedicated device-sync
-      screen.
-    </p>
+    <header class="phead">
+      <div class="wrap">
+        <p class="kicker">about</p>
+        <h1>The project,<br>at a glance.</h1>
+        <p class="lead">VIVI Music DE brings VIVI Music to Windows, Linux and macOS — same Material 3 interface, a collapsible sidebar instead of the mobile bottom bar, and a dedicated device-sync screen.</p>
+      </div>
+    </header>
 
-    <h2>Developer</h2>
-    <ul>
-      <li><a href="https://github.com/PiBOH">PiBOH</a> — lead developer.</li>
-    </ul>
+    <div class="wrap pbody">
+      <div class="about-grid">
 
-    <h2>Community</h2>
-    <ul>
-      <li>Source code: <a href="https://github.com/PiBOH/vivi-music">github.com/PiBOH/vivi-music</a></li>
-      <li>Releases: <a href="https://github.com/PiBOH/vivi-music/releases">github.com/PiBOH/vivi-music/releases</a></li>
-      <li>Telegram: <a href="https://t.me/vivimusicde">t.me/vivimusicde</a></li>
-    </ul>
+        <aside class="glance reveal" aria-label="At a glance">
+          <h3>At a glance</h3>
+          <div class="row"><span class="k">Developer</span><span class="v"><a href="https://github.com/PiBOH" target="_blank" rel="noopener">PiBOH</a></span></div>
+          <div class="row"><span class="k">What</span><span class="v">desktop port of VIVI Music</span></div>
+          <div class="row"><span class="k">Stack</span><span class="v">Kotlin · Compose Multiplatform</span></div>
+          <div class="row"><span class="k">UI</span><span class="v">Material 3</span></div>
+          <div class="row"><span class="k">Runtime</span><span class="v">JDK 21 (bundled)</span></div>
+          <div class="row"><span class="k">License</span><span class="v">modified GPL-3.0</span></div>
+          <div class="row"><span class="k">Source</span><span class="v"><a href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">github.com/PiBOH/vivi-music</a></span></div>
+          <div class="row"><span class="k">Talk</span><span class="v"><a href="https://t.me/vivimusicde" target="_blank" rel="noopener">t.me/vivimusicde</a></span></div>
+        </aside>
 
-    <h2>Credits</h2>
-    <p class="lede">
-      VIVI Music DE is a desktop port of
-      <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a>, created
-      and maintained by
-      <a href="https://github.com/vivizzz007">VIVIDH P ASHOKAN</a>. Visit the
-      <a href="https://vivimusic.mkmdevilmi.workers.dev/">official VIVI Music site</a>.
-    </p>
+        <div>
+          <h2 style="margin-top:0">What it is</h2>
+          <p class="prose">VIVI Music is a modern music player that streams from YouTube Music. The Android version is the original — created and maintained by <a href="https://github.com/vivizzz007" target="_blank" rel="noopener">VIVIDH P ASHOKAN</a>. VIVI Music DE is the desktop port: it reuses the same screens and the same pure-JVM network modules (innerTube, Spotify, Last.fm, Kizzy, ShazamKit, JioSaavn, lyrics) on top of Compose Multiplatform, and re-lays them out for a resizable window with a collapsible sidebar.</p>
+          <p class="prose">The part people actually come for is cross-device sync: pair it with the app on your phone and playback, seek position, settings and library follow you from one device to the other — over the same Wi-Fi, or anywhere, through a cloud relay. Details on the <a href="sync">sync page</a>.</p>
 
-    <h2>License</h2>
-    <p class="lede">
-      Released under the
-      <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a>.
-      Free software — you can use, study, share and improve it.
-    </p>
+          <h2>Built on</h2>
+          <div class="chiprow">
+            <span class="chip">Kotlin</span>
+            <span class="chip">Compose Multiplatform</span>
+            <span class="chip">JDK 21</span>
+            <span class="chip">Material 3</span>
+            <span class="chip">in-JVM AAC decoder</span>
+            <span class="chip">innerTube</span>
+            <span class="chip">WebSocket sync</span>
+          </div>
 
-    <h2>FAQ</h2>
-    <div class="faq reveal">
-      <details>
-        <summary>Is VIVI Music DE free?</summary>
-        <div><p>Yes — free and open source under the GPL-3.0 license. No ads, no tracking.</p></div>
-      </details>
-      <details>
-        <summary>Do I need a Google account?</summary>
-        <div><p>Not to browse and play music. Signing in (Google or cookies) unlocks your YouTube Music history, library and playlists.</p></div>
-      </details>
-      <details>
-        <summary>Which systems are supported?</summary>
-        <div><p>Windows 10+, Linux (x86_64) and macOS 10.15+. See the <a href="install-guide.html">install guide</a> for details.</p></div>
-      </details>
-      <details>
-        <summary>Can I sync with my phone?</summary>
-        <div><p>Yes — pair the Android app over LAN (same Wi-Fi) or the cloud relay. Queue, playback, volume, playlists and settings stay in sync. See <a href="sync.html">Sync</a>.</p></div>
-      </details>
-      <details>
-        <summary>Is it a fork of VIVI Music?</summary>
-        <div><p>It's a desktop port of <a href="https://github.com/vivizzz007/vivi-music">VIVI Music</a>, created and maintained by <a href="https://github.com/vivizzz007">VIVIDH P ASHOKAN</a>. VIVI Music DE keeps the same Material 3 interface and adds desktop features plus device sync.</p></div>
-      </details>
-      <details>
-        <summary>How do I report a bug?</summary>
-        <div><p>Open an issue on <a href="https://github.com/PiBOH/vivi-music/issues">GitHub</a> or ask in the <a href="https://t.me/vivimusicde">Telegram channel</a>. Include the version and, if possible, the error log from <code>~/.vivimusic/</code>.</p></div>
-      </details>
-    </div>
-  </main>
+          <h2>Credits</h2>
+          <p class="prose">VIVI Music DE stands on the shoulders of a few very good projects:</p>
+          <ul class="prose">
+            <li><a href="https://github.com/vivizzz007/vivi-music" target="_blank" rel="noopener"><b>VIVI Music</b></a> by VIVIDH P ASHOKAN — the original Android app that this whole project ports to the desktop.</li>
+            <li><a href="https://github.com/better-lyrics/better-lyrics" target="_blank" rel="noopener"><b>Better Lyrics</b></a> — synced lyrics and YouTube Music integration.</li>
+            <li><a href="https://github.com/maxrave-dev/SimpMusic" target="_blank" rel="noopener"><b>SimpMusic</b></a> — lyrics functionality and integration logic.</li>
+            <li><a href="https://github.com/monochrome-music/monochrome" target="_blank" rel="noopener"><b>Monochrome</b></a> — the premium Apple Music–style visualizer canvas.</li>
+            <li><a href="https://github.com/ZemerTeam/zemer-cipher" target="_blank" rel="noopener"><b>Zemer</b></a> — for the new playback method, which changed what the app could do.</li>
+            <li><a href="https://github.com/mostafaalagamy" target="_blank" rel="noopener"><b>Mostafa Alagamy</b></a> — inspiration and contributions to the community.</li>
+          </ul>
 
-  <footer class="footer">
-    <div class="wrap footer-inner">
-      <span>VIVI Music DE</span>
-      <div class="links">
-        <a href="https://github.com/PiBOH/vivi-music">GitHub</a>
-        <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a>
-        <a href="https://t.me/vivimusicde">Telegram</a>
-        <a href="https://vivimusic.mkmdevilmi.workers.dev/">Original VIVI Music</a>
+          <h2>License</h2>
+          <p class="prose">Released under a <a href="https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE" target="_blank" rel="noopener">modified GNU General Public License v3.0</a>. Free software — you can use it, study it, share it and improve it. The modifications to the standard GPL-3.0 text are written out in the LICENSE file, read it if you plan to build on this.</p>
+
+          <h2>The questions people actually ask</h2>
+
+          <details class="qa">
+            <summary>Is VIVI Music DE free?</summary>
+            <div class="a">Yes — free and open source under a modified GPL-3.0 license. No ads, no tracking, no premium tier.</div>
+          </details>
+          <details class="qa">
+            <summary>Do I need a Google account?</summary>
+            <div class="a">Not to browse and play music. Signing in (Google or cookies) unlocks your YouTube Music history, library and playlists.</div>
+          </details>
+          <details class="qa">
+            <summary>Which systems are supported?</summary>
+            <div class="a">Windows 10+, Linux (x86-64) and macOS 10.15+. The <a href="install-guide">install guide</a> has the package for every one of them.</div>
+          </details>
+          <details class="qa">
+            <summary>Can I sync with my phone?</summary>
+            <div class="a">Yes — pair the Android app over LAN (same Wi-Fi) or the cloud relay. Queue, playback, volume, playlists and settings stay in sync. See <a href="sync">Sync</a>.</div>
+          </details>
+          <details class="qa">
+            <summary>Is it a fork of VIVI Music?</summary>
+            <div class="a">It's a desktop port of VIVI Music, created and maintained by VIVIDH P ASHOKAN. VIVI Music DE keeps the same Material 3 interface and adds desktop features plus device sync.</div>
+          </details>
+          <details class="qa">
+            <summary>How do I report a bug?</summary>
+            <div class="a">Open an issue on <a href="https://github.com/PiBOH/vivi-music/issues" target="_blank" rel="noopener">GitHub</a> or ask in the <a href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram channel</a>. Include the version and, if you can, the error log from <code>~/.vivimusic/</code> — the <a href="errors">error codes page</a> will help you decode it.</div>
+          </details>
+
+          <p class="muted" style="font-size:13px;margin-top:26px">VIVI Music DE is not affiliated with, funded, authorized or endorsed by YouTube or Google LLC. Any trademark used here belongs to its owner; this is an independent project for personal and educational use.</p>
+        </div>
       </div>
     </div>
-  </footer>
+    </main>
 
-  <script src="assets/app.js"></script>
+  <!-- BEGIN: Footer -->
+  <footer class="border-t border-white/10 bg-[#152671]/40 backdrop-blur-md pt-16 pb-8 px-6 md:px-12" data-purpose="Footer">
+    <div class="container mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
+      <div class="col-span-1 flex flex-col gap-6">
+        <div class="flex items-center gap-3">
+          <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" loading="lazy" decoding="async">
+          <span class="text-lg font-bold tracking-tight text-white font-geist">VIVI Music DE</span>
+        </div>
+        <p class="text-[#afbeff]/70 font-geist text-sm leading-relaxed max-w-xs pr-4">
+          A free, open-source YouTube Music player for Windows, Linux and macOS that stays in sync with your phone.
+        </p>
+        <div class="flex gap-4 mt-2">
+          <a href="https://t.me/vivimusicde" target="_blank" title="Telegram channel" aria-label="Telegram channel" class="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+            <img src="images/telegram.white.svg" alt="Telegram" class="w-5 h-5" loading="lazy" decoding="async">
+          </a>
+          <a href="https://github.com/PiBOH/vivi-music" target="_blank" title="GitHub repository" aria-label="GitHub repository" class="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          </a>
+          <a href="mailto:piboh.github@gmail.com" title="Email — piboh.github@gmail.com" aria-label="Email — piboh.github@gmail.com" class="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+            <img src="images/mail.white.svg" alt="Email" class="w-5 h-5" loading="lazy" decoding="async">
+          </a>
+        </div>
+      </div>
+      <div>
+        <h4 class="font-bold mb-6 text-base text-white tracking-tight">Site</h4>
+        <ul class="space-y-3 text-sm text-[#afbeff]/70 font-geist">
+          <li><a class="hover:text-white transition-colors" href="index">Home</a></li><li><a class="hover:text-white transition-colors" href="downloads">Downloads</a></li><li><a class="hover:text-white transition-colors" href="screenshots">Screenshots</a></li><li><a class="hover:text-white transition-colors" href="install-guide">Guide</a></li><li><a class="hover:text-white transition-colors" href="sync">Sync</a></li><li><a class="hover:text-white transition-colors" href="changelog">Changelog</a></li><li><a class="hover:text-white transition-colors" href="errors">Errors</a></li><li><a class="hover:text-white transition-colors" href="about">About</a></li><li><a class="hover:text-white transition-colors" href="privacy">Privacy</a></li><li><a class="hover:text-white transition-colors" href="terms">Terms</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-bold mb-6 text-base text-white tracking-tight">Community</h4>
+        <ul class="space-y-3 text-sm text-[#afbeff]/70 font-geist">
+          <li><a class="hover:text-white transition-colors" href="https://github.com/PiBOH/vivi-music" target="_blank" rel="noopener">GitHub Repository</a></li>
+          <li><a class="hover:text-white transition-colors" href="https://github.com/PiBOH/vivi-music/issues" target="_blank" rel="noopener">Bug Reports</a></li>
+          <li><a class="hover:text-white transition-colors" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Releases</a></li>
+          <li><a class="hover:text-white transition-colors" href="https://t.me/vivimusicde" target="_blank" rel="noopener">Telegram Channel</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-bold mb-6 text-base text-white tracking-tight">License</h4>
+        <p class="text-[#afbeff]/70 font-geist text-sm leading-relaxed mb-6 max-w-[280px]">
+          VIVI Music is released under a <strong class="text-white font-semibold">modified GPL-3.0 License</strong>. We believe in the power of free and open software.
+        </p>
+      </div>
+    </div>
+    <div class="container mx-auto max-w-7xl pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-geist text-[#afbeff]/50">
+      <div class="flex flex-col items-center md:items-start gap-1">
+        <p>&copy; <span data-year>2026</span> PiBOH &mdash; made for people who queue songs on two screens. Your data stays on your machine.</p>
+        <p>Not affiliated with, funded or endorsed by YouTube or Google. The original mobile app is created by <a href="https://github.com/vivizzz007" target="_blank" class="text-white/80 hover:text-white transition-colors font-semibold">vivizzz007</a>.</p>
+      </div>
+      <p class="flex items-center gap-1 flex-wrap justify-center md:justify-end">
+        <span>Fork maintained by</span>
+        <a href="https://github.com/PiBOH" target="_blank" class="text-white/80 hover:text-white transition-colors font-semibold">PiBOH</a>
+      </p>
+    </div>
+  </footer>
+  <!-- END: Footer -->
+  <!-- BEGIN: Download Modal (multi-platform) -->
+  <dialog id="download-modal" class="outline-none border-none">
+    <div class="dialog-backdrop"></div>
+    <div class="helium-dialog-container p-6 text-center relative z-10 shadow-2xl flex flex-col items-center gap-4">
+      <div class="flex flex-col items-center select-none">
+        <span class="material-symbols-outlined text-[40px] text-white mb-[-4px]">download</span>
+        <h3 class="text-2xl font-bold text-white tracking-tight font-geist">Get VIVI Music</h3>
+      </div>
+      <p id="dl-tagline" class="text-[#afbeff]/80 font-geist text-sm leading-relaxed mb-2 px-1">Loading the latest release…</p>
+
+      <div id="dl-grid" class="grid grid-cols-2 gap-3 mb-1 w-full">
+        <button class="dl-plat helium-dialog-btn select-none group" data-plat="windows">
+          <span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform text-[#afbeff]">desktop_windows</span>
+          <span class="text-base font-bold">Windows</span>
+          <span class="dl-note text-xs text-[#afbeff]/60">10+</span>
+        </button>
+        <button class="dl-plat helium-dialog-btn select-none group" data-plat="macos">
+          <span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform text-[#afbeff]">laptop_mac</span>
+          <span class="text-base font-bold">macOS</span>
+          <span class="dl-note text-xs text-[#afbeff]/60">Apple Silicon &middot; Intel</span>
+        </button>
+        <button class="dl-plat helium-dialog-btn select-none group" data-plat="linux">
+          <span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform text-[#afbeff]">terminal</span>
+          <span class="text-base font-bold">Linux</span>
+          <span class="dl-note text-xs text-[#afbeff]/60">deb &middot; AppImage &middot; AUR</span>
+        </button>
+        <button class="dl-plat helium-dialog-btn select-none group" data-plat="android">
+          <span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform text-[#afbeff]">smartphone</span>
+          <span class="text-base font-bold">Android</span>
+          <span class="dl-note text-xs text-[#afbeff]/60">APK</span>
+        </button>
+      </div>
+
+      <div id="dl-variant" class="hidden w-full flex-col gap-2 mb-1"></div>
+      <a id="dl-all" href="downloads" class="text-xs font-geist text-[#afbeff]/70 hover:text-white transition-colors underline underline-offset-2">All downloads &amp; channels</a>
+      <button id="close-download-modal" class="helium-dialog-btn-close">Close</button>
+    </div>
+  </dialog>
+  <!-- END: Download Modal -->
+<script>
+/* ---- template chrome logic: navbar, mobile menu, download modal ---- */
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* navbar: shrink after scrolling a bit */
+  var nav = $('#top-navbar');
+  function onScroll() {
+    if (!nav) return;
+    if (window.scrollY > 40) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* mobile menu */
+  var menuBtn = $('#mobile-menu-btn');
+  var menu = $('#mobile-menu');
+  function closeMenu() {
+    if (!menu) return;
+    menu.classList.remove('open');
+    menu.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none');
+    if (menuBtn) menuBtn.classList.remove('open');
+  }
+  if (menuBtn && menu) {
+    menuBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = menu.classList.toggle('open');
+      menu.classList.toggle('opacity-0', !open);
+      menu.classList.toggle('-translate-y-4', !open);
+      menu.classList.toggle('pointer-events-none', !open);
+      menuBtn.classList.toggle('open', open);
+    });
+    document.addEventListener('click', function (e) {
+      if (!menu.contains(e.target) && e.target !== menuBtn && !menuBtn.contains(e.target)) closeMenu();
+    });
+  }
+
+  /* ---- download modal (multi-platform, from the latest release by tag) ---- */
+  var REPO = 'PiBOH/vivi-music';
+  var modal = $('#download-modal');
+  var tagline = $('#dl-tagline');
+  var grid = $('#dl-grid');
+  var variant = $('#dl-variant');
+  var rel = null;
+
+  function findAsset(re) {
+    var assets = (rel && rel.assets) || [];
+    for (var i = 0; i < assets.length; i++) if (re.test(assets[i].name)) return assets[i];
+    return null;
+  }
+  function assetUrl(re) {
+    var a = findAsset(re);
+    return a ? a.browser_download_url : null;
+  }
+  function fmtMB(bytes) {
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  var VARIANTS = {
+    windows: [
+      { re: /setup\.exe$/i, label: 'Installer (.exe)' },
+      { re: /\.msi$/i, label: 'Package (.msi)' }
+    ],
+    macos: [
+      { re: /arm64\.dmg$/i, label: 'Apple Silicon (.dmg)', note: 'macOS 11+' },
+      { re: /x64\.dmg$/i, label: 'Intel (.dmg)', note: 'macOS 10.15+' },
+      { re: /arm64\.pkg$/i, label: 'Apple Silicon (.pkg)' },
+      { re: /x64\.pkg$/i, label: 'Intel (.pkg)' }
+    ],
+    linux: [
+      { re: /\.deb$/i, label: 'Debian / Ubuntu (.deb)' },
+      { re: /\.AppImage$/i, label: 'AppImage' },
+      { re: /PKGBUILD/i, label: 'AUR (PKGBUILD)' }
+    ],
+    android: [
+      { re: /vivi-gsm\.apk$/i, label: 'VIVI for DE (GMS)', note: 'with Google services' },
+      { re: /vivi-foss\.apk$/i, label: 'VIVI for DE (FOSS)', note: 'without Google services' }
+    ]
+  };
+
+  function showVariants(plat) {
+    var items = VARIANTS[plat] || [];
+    variant.innerHTML = '';
+    var any = false;
+    items.forEach(function (it) {
+      var url = assetUrl(it.re);
+      var btn = document.createElement('a');
+      btn.className = 'helium-dialog-btn !flex-row !items-center !justify-start !text-left gap-3 w-full py-3';
+      if (url) {
+        any = true;
+        btn.href = url;
+        var a = findAsset(it.re);
+        var size = a ? ' · ' + fmtMB(a.size) : '';
+        btn.innerHTML = '<span class="material-symbols-outlined text-2xl text-[#afbeff] shrink-0">download</span>' +
+          '<span class="text-sm font-bold text-white">' + it.label + (it.note ? ' <span class="text-[10px] text-[#afbeff]/60 font-normal">' + it.note + '</span>' : '') +
+          '<span class="block text-[10px] text-[#afbeff]/60 font-normal leading-none mt-0.5">' + size + '</span></span>';
+      } else {
+        btn.classList.add('opacity-40', 'pointer-events-none');
+        btn.innerHTML = '<span class="material-symbols-outlined text-2xl text-[#afbeff] shrink-0">block</span>' +
+          '<span class="text-sm font-bold text-white">' + it.label + '</span>' +
+          '<span class="block text-[10px] text-[#afbeff]/60 font-normal leading-none mt-0.5">not in this release</span>';
+      }
+      variant.appendChild(btn);
+    });
+    if (plat === 'android' && !any) {
+      var rel2 = document.createElement('a');
+      rel2.className = 'helium-dialog-btn !flex-row !items-center !justify-start !text-left gap-3 w-full py-3';
+      rel2.href = rel ? rel.html_url : 'https://github.com/' + REPO + '/releases';
+      rel2.target = '_blank';
+      rel2.rel = 'noopener';
+      rel2.innerHTML = '<span class="material-symbols-outlined text-2xl text-[#afbeff] shrink-0">open_in_new</span>' +
+        '<span class="text-sm font-bold text-white">Get the APK from GitHub Releases</span>';
+      variant.appendChild(rel2);
+      any = true;
+    }
+    if (plat === 'linux') {
+      var note = document.createElement('p');
+      note.className = 'text-[10px] text-[#afbeff]/60 font-geist text-left px-1';
+      note.textContent = 'AUR helpers can also build from PKGBUILD + SRCINFO directly.';
+      variant.appendChild(note);
+    }
+    variant.classList.remove('hidden');
+    variant.classList.add('flex');
+  }
+
+  function pickRelease(list) {
+    var rels = (list || []).filter(function (r) { return r && !r.draft; });
+    /* GitHub returns releases newest-first by publish date; sort by date so the
+       combined tags (6.4.45_DE-1.50.19 vs the NEWER 6.0.6.1_DE-1.50.23) can
+       never be compared as version strings — chronology defines "latest".
+       The newest non-prerelease wins, otherwise the newest release. */
+    rels.sort(function (a, b) { return new Date(b.published_at || 0) - new Date(a.published_at || 0); });
+    for (var i = 0; i < rels.length; i++) if (!rels[i].prerelease) return rels[i];
+    return rels[0] || null;
+  }
+
+  function loadRelease() {
+    fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=30', {
+      headers: { Accept: 'application/vnd.github+json' }
+    }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (list) {
+        rel = pickRelease(list);
+        if (rel) {
+          var ch = rel.prerelease ? 'prerelease' : 'stable';
+          tagline.innerHTML = 'Latest release: <b class="text-white">' + rel.tag_name + '</b> · ' + ch;
+        } else {
+          tagline.textContent = 'No release published yet.';
+        }
+      })
+      .catch(function () { tagline.textContent = 'Could not reach GitHub — try the downloads page.'; });
+  }
+
+  function openModal() {
+    if (!modal) return;
+    if (!rel) loadRelease();
+    else if (tagline && !tagline.dataset.loaded) { /* keep */ }
+    modal.showModal();
+    void modal.offsetWidth;
+    modal.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    grid.classList.remove('hidden');
+    grid.classList.add('grid');
+    variant.classList.add('hidden');
+    variant.classList.remove('flex');
+  }
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.remove('is-open');
+    document.body.style.overflow = '';
+    setTimeout(function () { try { modal.close(); } catch (e) {} }, 250);
+  }
+
+  $$('.trigger-download-modal').forEach(function (b) { b.addEventListener('click', openModal); });
+  var closeBtn = $('#close-download-modal');
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (modal) {
+    var backdrop = modal.querySelector('.dialog-backdrop');
+    if (backdrop) backdrop.addEventListener('click', closeModal);
+    modal.addEventListener('cancel', function (e) { e.preventDefault(); closeModal(); });
+  }
+  $$('.dl-plat').forEach(function (b) {
+    b.addEventListener('click', function () { showVariants(b.dataset.plat); });
+  });
+})();
+</script>
+<script src="main.js"></script>
+<script>
+  (function () {
+    "use strict";
+    /* accordion: opening one closes the others — always a single open item */
+    var qas = Array.prototype.slice.call(document.querySelectorAll("details.qa"));
+    qas.forEach(function (q) {
+      q.addEventListener("toggle", function () {
+        if (!q.open) return;
+        qas.forEach(function (o) { if (o !== q && o.open) o.open = false; });
+      });
+    });
+  })();
+  </script>
 </body>
-</html>
+</html>

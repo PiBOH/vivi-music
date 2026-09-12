@@ -13,7 +13,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -36,6 +35,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -135,11 +135,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.music.lrclib.LrcLib
 import com.music.vivi.canvas.CanvasArtwork
 import com.music.vivi.desktop.player.LoadPhase
 import com.music.vivi.desktop.player.RepeatMode
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 private enum class M3ETab { NONE, QUEUE, LYRICS, HISTORY }
 
@@ -179,6 +179,7 @@ fun PlayerScreen(
     accent: Color = MaterialTheme.colorScheme.primary,
     audioLevel: Float = 0f,
     onBack: (() -> Unit)? = null,
+    progressiveSeek: Boolean = false,
 ) {
     val np = queue.getOrNull(index)
     var canvasArt by remember { mutableStateOf<CanvasArtwork?>(null) }
@@ -216,8 +217,35 @@ fun PlayerScreen(
                 isPlaying = isPlaying,
             )
             if (track == null) {
-                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(Localization.get(language, "nothing_playing"), style = MaterialTheme.typography.titleLarge)
+                // Nothing is playing (e.g. the queue was just cleared from the
+                // player): still offer the collapse control, otherwise the full
+                // player screen has no way back and the user must relaunch.
+                Box(Modifier.fillMaxSize()) {
+                    Text(
+                        Localization.get(language, "nothing_playing"),
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                    )
+                    onBack?.let { back ->
+                        Surface(
+                            onClick = back,
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(24.dp)
+                                .size(40.dp),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = Localization.get(language, "back"),
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            }
+                        }
+                    }
                 }
             } else if (design == PlayerDesign.EXPRESSIVE) {
                 M3EPlayerContent(
@@ -284,6 +312,7 @@ fun PlayerScreen(
                     background = background,
                     rotatingThumbnail = rotatingThumbnail,
                     accent = accent,
+                    progressiveSeek = progressiveSeek,
                 )
             }
         }
@@ -423,7 +452,15 @@ private fun M3EPlayerContent(
                     var isSeeking by remember(np.videoId) { mutableStateOf(false) }
                     var seekValue by remember(np.videoId) { mutableStateOf(0f) }
                     val sliderMax = durationMs.coerceAtLeast(1L)
-                    val displayPosition = if (isSeeking) seekValue else positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                    val unknownDuration = durationMs <= 0L
+                    // Duration unknown (loaded but never played): keep the thumb
+                    // at the scrubbed fraction so the seek stays visible and
+                    // playback starts from it once the length is known.
+                    val displayPosition = when {
+                        isSeeking -> seekValue
+                        unknownDuration -> (playbackPendingSeekFraction() ?: 0f) * sliderMax
+                        else -> positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                    }
                     
                     Column(
                         Modifier
@@ -437,26 +474,34 @@ private fun M3EPlayerContent(
                                 isSeeking = true
                             },
                             onValueChangeFinished = {
+                                // Duration unknown (loaded but never played): the
+                                // value encodes the start fraction (0..1000) and
+                                // playback starts from it once the length is known.
                                 if (durationMs > 0) onSeek(seekValue.toLong())
+                                else onSeek((seekValue * 1000).toLong())
                                 isSeeking = false
                             },
-                            enabled = durationMs > 0,
+                            enabled = true,
                             valueRange = 0f..sliderMax.toFloat(),
-                            style = ViviSliderStyle.EXPRESSIVE,
+                            style = sliderStyle,
+                            bufferedFraction = playbackBufferedFraction(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Row(Modifier.fillMaxWidth()) {
                             Text(
-                                formatTime(displayPosition.toLong()),
+                                if (unknownDuration) "${(displayPosition * 100).roundToInt()}%"
+                                else formatTime(displayPosition.toLong()),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.weight(1f))
-                            Text(
-                                "-" + formatTime(maxOf(0L, durationMs - displayPosition.toLong())),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            if (!unknownDuration) {
+                                Text(
+                                    "-" + formatTime(maxOf(0L, durationMs - displayPosition.toLong())),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
 
@@ -581,7 +626,7 @@ private fun M3EPlayerContent(
                             value = volume,
                             onValueChange = onVolume,
                             valueRange = 0f..1f,
-                            style = ViviSliderStyle.EXPRESSIVE,
+                            style = sliderStyle,
                             modifier = Modifier.weight(1f)
                         )
                         Icon(
@@ -767,6 +812,7 @@ private fun PlayerContent(
     background: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
+    progressiveSeek: Boolean = false,
 ) {
     val contentWidth = 980.dp
     val metrics = design.metrics()
@@ -824,6 +870,10 @@ private fun PlayerContent(
                 language = language,
                 onAddToPlaylist = onAddToPlaylist,
                 onOpenQueue = onOpenQueue,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                onSeek = onSeek,
+                progressiveSeek = progressiveSeek,
             )
             Spacer(Modifier.height(24.dp))
             Column(
@@ -873,6 +923,10 @@ private fun PlayerContent(
                         language = language,
                         onAddToPlaylist = onAddToPlaylist,
                         onOpenQueue = onOpenQueue,
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        onSeek = onSeek,
+                        progressiveSeek = progressiveSeek,
                     )
                 }
                 Column(Modifier.weight(1f)) {
@@ -936,6 +990,10 @@ private fun PlayerArtworkBlock(
     language: String,
     onAddToPlaylist: (() -> Unit)?,
     onOpenQueue: () -> Unit,
+    positionMs: Long = 0L,
+    durationMs: Long = 0L,
+    onSeek: ((Long) -> Unit)? = null,
+    progressiveSeek: Boolean = false,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // Artwork with Apple-style ambience: a colored glow (blurred artwork)
@@ -952,7 +1010,33 @@ private fun PlayerArtworkBlock(
                     fallbackColor = Color.Transparent,
                 ) {}
             }
-            Box(Modifier.shadow(24.dp, RoundedCornerShape(metrics.artCorner))) {
+            // "Progressive seek": double-click the left/right half of the
+            // artwork to skip ±5 seconds (mobile behavior); when the option is
+            // on, each rapid repeat (<1 s) adds 5 extra seconds (5 → 10 → 15…).
+            val currentPos by rememberUpdatedState(positionMs)
+            val blockModifier = if (onSeek != null && durationMs > 0L) {
+                Modifier
+                    .shadow(24.dp, RoundedCornerShape(metrics.artCorner))
+                    .pointerInput(np.videoId) {
+                        var skipMultiplier = 1
+                        var lastTapAt = 0L
+                        detectTapGestures(onDoubleTap = { offset ->
+                            val now = System.currentTimeMillis()
+                            if (progressiveSeek && now - lastTapAt < 1_000L) skipMultiplier++ else skipMultiplier = 1
+                            lastTapAt = now
+                            val amount = 5_000L * skipMultiplier
+                            val target = if (offset.x < size.width / 2f) {
+                                (currentPos - amount).coerceAtLeast(0L)
+                            } else {
+                                (currentPos + amount).coerceAtMost(durationMs)
+                            }
+                            onSeek(target)
+                        })
+                    }
+            } else {
+                Modifier.shadow(24.dp, RoundedCornerShape(metrics.artCorner))
+            }
+            Box(blockModifier) {
                 Box {
                     PlayerThumbnail(np.thumbnail, metrics.artSize, metrics.artCorner, rotatingThumbnail)
                     if (metrics.overlayTitle) {
@@ -1099,10 +1183,14 @@ private fun PlayerControlPanel(
     var isSeeking by remember(np.videoId) { mutableStateOf(false) }
     var seekValue by remember(np.videoId) { mutableStateOf(0f) }
     val sliderMax = durationMs.coerceAtLeast(1L)
-    val displayPosition = if (isSeeking) {
-        seekValue
-    } else {
-        positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+    val unknownDuration = durationMs <= 0L
+    // Duration unknown (loaded but never played): keep the thumb at the
+    // scrubbed fraction so the seek stays visible and playback starts from
+    // it once the length is known.
+    val displayPosition = when {
+        isSeeking -> seekValue
+        unknownDuration -> (playbackPendingSeekFraction() ?: 0f) * sliderMax
+        else -> positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
     }
     ViviSlider(
         value = displayPosition.coerceIn(0f, sliderMax.toFloat()),
@@ -1111,26 +1199,34 @@ private fun PlayerControlPanel(
             isSeeking = true
         },
         onValueChangeFinished = {
+            // Duration unknown (loaded but never played): the value encodes the
+            // start fraction (0..1000) and playback starts from it once the
+            // length is known.
             if (durationMs > 0) onSeek(seekValue.toLong())
+            else onSeek((seekValue * 1000).toLong())
             isSeeking = false
         },
-        enabled = durationMs > 0,
+        enabled = true,
         valueRange = 0f..sliderMax.toFloat(),
         style = sliderStyle,
+        bufferedFraction = playbackBufferedFraction(),
         modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.fillMaxWidth()) {
         Text(
-            formatTime(displayPosition.toLong()),
+            if (unknownDuration) "${(displayPosition * 100).roundToInt()}%"
+            else formatTime(displayPosition.toLong()),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.weight(1f))
-        Text(
-            formatTime(durationMs),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!unknownDuration) {
+            Text(
+                formatTime(durationMs),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 
     if (loadPhase != LoadPhase.NONE) {
@@ -1394,7 +1490,7 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
-                Tooltip("Queue options") {
+                Tooltip(Localization.get(language, "tooltip_queue_options")) {
                     IconButton(
                         onClick = { },
                         modifier = Modifier.size(32.dp),
@@ -1408,7 +1504,7 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
-                Tooltip("Autoplay") {
+                Tooltip(Localization.get(language, "tooltip_autoplay")) {
                     IconButton(
                         onClick = { isAutoplayEnabled = !isAutoplayEnabled },
                         modifier = Modifier.size(32.dp),
@@ -1416,7 +1512,7 @@ fun AppleUpNextQueueScreen(
                         Icon(
                             Icons.Filled.AllInclusive,
                             contentDescription = "Autoplay",
-                            tint = if (isAutoplayEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = if (isAutoplayEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.size(18.dp),
                         )
                     }
@@ -1505,7 +1601,7 @@ fun AppleUpNextQueueScreen(
                                     Spacer(Modifier.height(2.dp))
 
                                     Text(
-                                        text = "${item.artist} - ${item.artist}",
+                                        text = "${item.title} - ${item.artist}",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -1870,15 +1966,39 @@ fun LyricsScreen(
             return@LaunchedEffect
         }
         loading = true
-        val cached = LyricsCache.get(np.videoId)
+        // The cache is keyed by the fetch mode too: a plain text cached when
+        // "Synced lyrics" was off must never satisfy a synced request (and
+        // vice versa), or the resolver improvements look like they do nothing.
+        val cached = LyricsCache.get(np.videoId, preferSynced = synced)
         if (cached != null) {
             lyrics = cached
             error = null
             loading = false
             return@LaunchedEffect
         }
-        LrcLib.getLyrics(title = np.title, artist = np.artist, duration = -1).fold(
-            onSuccess = { lyrics = it; error = null; LyricsCache.put(np.videoId, it) },
+        // Multi-provider fetch: real duration + album when known, community
+        // servers first and the official YouTube Music lyrics as the exact
+        // fallback. With the "Synced lyrics" option on, a timed LRC is
+        // preferred across the whole chain (plain text only if no source has
+        // timestamps).
+        DesktopLyrics.fetch(
+            videoId = np.videoId,
+            title = np.title,
+            artist = np.artist,
+            durationMs = np.durationMs,
+            album = np.album,
+            preferSynced = synced,
+        ).fold(
+            onSuccess = {
+                lyrics = it
+                error = null
+                // Only persist results matched with a known duration: a
+                // duration-less lookup (duration -1) is the most likely to
+                // return the wrong recording, and caching it would freeze the
+                // mistake forever. The next time the duration is known the
+                // search re-runs with a precise match.
+                if (np.durationMs > 0) LyricsCache.put(np.videoId, it, preferSynced = synced)
+            },
             onFailure = { error = it.message },
         )
         loading = false
@@ -2136,7 +2256,7 @@ fun SpotifyRightNowPlayingPanel(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
@@ -2209,7 +2329,7 @@ fun SpotifyRightNowPlayingPanel(
                     .clickable(onClick = onOpenLyrics),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(
@@ -2256,7 +2376,7 @@ fun BoxScope.DesktopMiniPlayerBackgroundLayer(
     thumbnailUrl: String?,
     modifier: Modifier = Modifier,
 ) {
-    val dark = isSystemInDarkTheme()
+    val dark = isAppInDarkTheme()
     val baseSurface = if (pureBlack && dark) Color.Black else MaterialTheme.colorScheme.surfaceContainerHigh
     var extractedColors by remember(thumbnailUrl) { mutableStateOf<List<Color>>(emptyList()) }
 
@@ -2409,11 +2529,12 @@ fun ClassicDesktopMiniPlayer(
     isFullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
     language: String,
+    sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -2494,7 +2615,7 @@ fun ClassicDesktopMiniPlayer(
                                     )
                                 }
                             }
-                            Tooltip(Localization.get(language, "previous")) {
+                            Tooltip(Localization.get(language, "tooltip_previous")) {
                                 IconButton(onClick = onPrevious) {
                                     Icon(
                                         Icons.Filled.SkipPrevious,
@@ -2525,7 +2646,7 @@ fun ClassicDesktopMiniPlayer(
                                     }
                                 }
                             }
-                            Tooltip(Localization.get(language, "next")) {
+                            Tooltip(Localization.get(language, "tooltip_next")) {
                                 IconButton(onClick = onNext) {
                                     Icon(
                                         Icons.Filled.SkipNext,
@@ -2549,29 +2670,64 @@ fun ClassicDesktopMiniPlayer(
 
                         Spacer(Modifier.height(4.dp))
 
+                        // Seek happens once when the drag ends (like the full
+                        // player): seeking on every drag tick restarted the
+                        // whole decode thread per tick, which made the slider
+                        // fight the live position reports and feel dead.
+                        var isSeeking by remember(nowPlaying.videoId) { mutableStateOf(false) }
+                        var seekValue by remember(nowPlaying.videoId) { mutableStateOf(0f) }
+                        val sliderMax = durationMs.coerceAtLeast(1L)
+                        val unknownDuration = durationMs <= 0L
+                        // Duration unknown (loaded but never played): keep the
+                        // thumb at the scrubbed fraction so the seek stays
+                        // visible and playback starts from it once the length is
+                        // known.
+                        val displayPosition = when {
+                            isSeeking -> seekValue
+                            unknownDuration -> (playbackPendingSeekFraction() ?: 0f) * sliderMax
+                            else -> positionMs.toFloat().coerceIn(0f, sliderMax.toFloat())
+                        }
+
                         Row(
                             Modifier.fillMaxWidth(0.9f),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                formatTime(positionMs),
+                                if (unknownDuration) "${(displayPosition * 100).roundToInt()}%"
+                                else formatTime(displayPosition.toLong()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = mutedColor,
                             )
                             Spacer(Modifier.width(8.dp))
                             ViviSlider(
-                                value = positionMs.toFloat().coerceIn(0f, durationMs.coerceAtLeast(1L).toFloat()),
-                                onValueChange = { onSeek(it.toLong()) },
-                                valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
-                                style = ViviSliderStyle.SLIM,
+                                value = displayPosition.coerceIn(0f, sliderMax.toFloat()),
+                                onValueChange = {
+                                    seekValue = it.coerceIn(0f, sliderMax.toFloat())
+                                    isSeeking = true
+                                },
+                                onValueChangeFinished = {
+                                    // Duration unknown (loaded but never played):
+                                    // the value encodes the start fraction
+                                    // (0..1000) and playback starts from it once
+                                    // the length is known.
+                                    if (durationMs > 0) onSeek(seekValue.toLong())
+                                    else onSeek((seekValue * 1000).toLong())
+                                    isSeeking = false
+                                },
+                                enabled = true,
+                                valueRange = 0f..sliderMax.toFloat(),
+                                style = sliderStyle,
+                                bufferedFraction = playbackBufferedFraction(),
                                 modifier = Modifier.weight(1f),
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(
-                                formatTime(durationMs),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = mutedColor,
-                            )
+                            if (!unknownDuration) {
+                                Text(
+                                    formatTime(durationMs),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = mutedColor,
+                                )
+                            }
                         }
                     }
 
@@ -2581,7 +2737,7 @@ fun ClassicDesktopMiniPlayer(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Tooltip(Localization.get(language, "lyrics")) {
+                        Tooltip(Localization.get(language, "tooltip_lyrics")) {
                             IconButton(onClick = onOpenLyrics) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.Subject,
@@ -2591,7 +2747,7 @@ fun ClassicDesktopMiniPlayer(
                                 )
                             }
                         }
-                        Tooltip(Localization.get(language, "queue")) {
+                        Tooltip(Localization.get(language, "tooltip_queue")) {
                             IconButton(onClick = onOpenQueue) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.QueueMusic,
@@ -2616,22 +2772,22 @@ fun ClassicDesktopMiniPlayer(
                                 value = volume.coerceIn(0f, 1f),
                                 onValueChange = onVolume,
                                 valueRange = 0f..1f,
-                                style = ViviSliderStyle.SLIM,
+                                style = sliderStyle,
                                 modifier = Modifier.weight(1f),
                             )
                         }
                         Spacer(Modifier.width(4.dp))
-                        Tooltip("Right panel") {
+                        Tooltip(Localization.get(language, if (showRightSidebar) "tooltip_hide_right_panel" else "tooltip_show_right_panel")) {
                             IconButton(onClick = onToggleRightSidebar) {
                                 Icon(
                                     Icons.Filled.VerticalSplit,
-                                    contentDescription = "Right panel",
+                                    contentDescription = Localization.get(language, if (showRightSidebar) "tooltip_hide_right_panel" else "tooltip_show_right_panel"),
                                     tint = if (showRightSidebar) MaterialTheme.colorScheme.primary else mutedColor,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
                         }
-                        Tooltip("Open full player") {
+                        Tooltip(Localization.get(language, "tooltip_open_full_player")) {
                             IconButton(onClick = onOpenPlayer) {
                                 Icon(
                                     Icons.Filled.Fullscreen,
@@ -2671,8 +2827,8 @@ fun NewDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
     var isFavorite by remember { mutableStateOf(false) }
@@ -2697,6 +2853,8 @@ fun NewDesktopMiniPlayer(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Circular Artwork Thumbnail with Song Progress Arc & Play/Pause Button Inside Cover
+            // (a fainter buffered arc sits behind the played arc while streaming)
+            val bufferedFraction = playbackBufferedFraction()
             Box(
                 Modifier
                     .size(46.dp)
@@ -2712,6 +2870,15 @@ fun NewDesktopMiniPlayer(
                         useCenter = false,
                         style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                     )
+                    if (bufferedFraction < 0.999f && bufferedFraction > progress + 0.002f) {
+                        drawArc(
+                            color = primaryColor.copy(alpha = 0.4f),
+                            startAngle = -90f,
+                            sweepAngle = 360f * bufferedFraction,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
                     drawArc(
                         color = primaryColor,
                         startAngle = -90f,
@@ -2773,7 +2940,7 @@ fun NewDesktopMiniPlayer(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Tooltip("Output device") {
+                Tooltip(Localization.get(language, "tooltip_output_device")) {
                     IconButton(onClick = { onVolume((volume + 0.1f) % 1.05f) }) {
                         Icon(
                             Icons.Filled.SpeakerGroup,
@@ -2783,7 +2950,7 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip("Favorite") {
+                Tooltip(Localization.get(language, "tooltip_favorite")) {
                     IconButton(onClick = { isFavorite = !isFavorite }) {
                         Icon(
                             if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
@@ -2803,7 +2970,7 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "next")) {
+                Tooltip(Localization.get(language, "tooltip_next")) {
                     IconButton(onClick = onNext) {
                         Icon(
                             Icons.Filled.SkipNext,
@@ -2823,7 +2990,7 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "queue")) {
+                Tooltip(Localization.get(language, "tooltip_queue")) {
                     IconButton(onClick = onOpenQueue) {
                         Icon(
                             Icons.AutoMirrored.Filled.QueueMusic,
@@ -2833,11 +3000,11 @@ fun NewDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip("Open full player") {
+                Tooltip(Localization.get(language, "tooltip_open_full_player")) {
                     IconButton(onClick = onOpenPlayer) {
                         Icon(
                             Icons.Filled.Fullscreen,
-                            contentDescription = "Open full player",
+                            contentDescription = Localization.get(language, "tooltip_open_full_player"),
                             tint = contentColor,
                             modifier = Modifier.size(22.dp),
                         )
@@ -2870,8 +3037,8 @@ fun AppleDesktopMiniPlayer(
     modifier: Modifier = Modifier,
 ) {
     val isDynamicBg = backgroundStyle != MiniPlayerBackgroundStyle.FOLLOW_THEME
-    val contentColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
-    val mutedColor = if (isDynamicBg || (pureBlack && isSystemInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val contentColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White else MaterialTheme.colorScheme.onSurface
+    val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
     Box(
@@ -2887,7 +3054,8 @@ fun AppleDesktopMiniPlayer(
             thumbnailUrl = nowPlaying.thumbnail,
         )
 
-        // Bottom 3dp Progress Bar
+        // Bottom 3dp Progress Bar (with a fainter buffered portion while streaming)
+        val bufferedFraction = playbackBufferedFraction()
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2896,6 +3064,9 @@ fun AppleDesktopMiniPlayer(
                 .drawBehind {
                     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
                     drawRect(mutedColor.copy(alpha = 0.2f))
+                    if (bufferedFraction < 0.999f && bufferedFraction > progress + 0.002f) {
+                        drawRect(primaryColor.copy(alpha = 0.35f), size = Size(size.width * bufferedFraction, size.height))
+                    }
                     drawRect(primaryColor, size = Size(size.width * progress, size.height))
                 }
         )
@@ -2975,7 +3146,7 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "next")) {
+                Tooltip(Localization.get(language, "tooltip_next")) {
                     IconButton(onClick = onNext) {
                         Icon(
                             Icons.Filled.SkipNext,
@@ -2995,7 +3166,7 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "lyrics")) {
+                Tooltip(Localization.get(language, "tooltip_lyrics")) {
                     IconButton(onClick = onOpenLyrics) {
                         Icon(
                             Icons.AutoMirrored.Filled.Subject,
@@ -3005,7 +3176,7 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip(Localization.get(language, "queue")) {
+                Tooltip(Localization.get(language, "tooltip_queue")) {
                     IconButton(onClick = onOpenQueue) {
                         Icon(
                             Icons.AutoMirrored.Filled.QueueMusic,
@@ -3015,11 +3186,11 @@ fun AppleDesktopMiniPlayer(
                         )
                     }
                 }
-                Tooltip("Open full player") {
+                Tooltip(Localization.get(language, "tooltip_open_full_player")) {
                     IconButton(onClick = onOpenPlayer) {
                         Icon(
                             Icons.Filled.Fullscreen,
-                            contentDescription = "Open full player",
+                            contentDescription = Localization.get(language, "tooltip_open_full_player"),
                             tint = contentColor,
                             modifier = Modifier.size(22.dp),
                         )
@@ -3058,6 +3229,7 @@ fun DesktopMiniPlayer(
     isFullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
     language: String,
+    sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     modifier: Modifier = Modifier,
 ) {
     val np = nowPlaying ?: return
@@ -3135,6 +3307,7 @@ fun DesktopMiniPlayer(
                 isFullscreen = isFullscreen,
                 onToggleFullscreen = onToggleFullscreen,
                 language = language,
+                sliderStyle = sliderStyle,
                 modifier = modifier,
             )
         }
@@ -3170,6 +3343,7 @@ fun SpotifyPlayerBar(
     isFullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
     language: String,
+    sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     modifier: Modifier = Modifier,
 ) {
     DesktopMiniPlayer(
@@ -3199,6 +3373,7 @@ fun SpotifyPlayerBar(
         isFullscreen = isFullscreen,
         onToggleFullscreen = onToggleFullscreen,
         language = language,
+        sliderStyle = sliderStyle,
         modifier = modifier,
     )
 }
@@ -3289,7 +3464,7 @@ fun LyricsFocusScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Tooltip(Localization.get(language, "previous")) {
+            Tooltip(Localization.get(language, "tooltip_previous")) {
                 IconButton(onClick = onPrevious) {
                     Icon(
                         Icons.Filled.SkipPrevious,
@@ -3316,7 +3491,7 @@ fun LyricsFocusScreen(
                 }
             }
             Spacer(Modifier.width(20.dp))
-            Tooltip(Localization.get(language, "next")) {
+            Tooltip(Localization.get(language, "tooltip_next")) {
                 IconButton(onClick = onNext) {
                     Icon(
                         Icons.Filled.SkipNext,

@@ -14,6 +14,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
@@ -162,7 +163,52 @@ object AccentPalette {
         AccentColor("Brown", Color(0xFF6D4C41)),
         AccentColor("Grey", Color(0xFF757575)),
         AccentColor("Blue Grey", Color(0xFF546E7A)),
+        AccentColor("Magenta", Color(0xFFC2185B)),
+        AccentColor("Turquoise", Color(0xFF00BFA5)),
+        AccentColor("Coral", Color(0xFFFF7043)),
+        AccentColor("Lavender", Color(0xFF9575CD)),
+        AccentColor("Gold", Color(0xFFFFC107)),
+        AccentColor("Navy", Color(0xFF283593)),
     )
+}
+
+/** Converts HSV (hue 0..360, saturation/value 0..1) to an opaque RGB [Color]. */
+fun hsvToColor(h: Float, s: Float, v: Float): Color {
+    val hh = ((h % 360f) + 360f) % 360f
+    val c = v * s
+    val x = c * (1f - kotlin.math.abs((hh / 60f) % 2f - 1f))
+    val m = v - c
+    val (r, g, b) = when {
+        hh < 60f -> Triple(c, x, 0f)
+        hh < 120f -> Triple(x, c, 0f)
+        hh < 180f -> Triple(0f, c, x)
+        hh < 240f -> Triple(0f, x, c)
+        hh < 300f -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    return Color(r + m, g + m, b + m)
+}
+
+/** Converts an RGB [Color] to HSV (hue 0..360, saturation/value 0..1). */
+fun colorToHsv(color: Color): FloatArray {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val d = max - min
+    val v = max
+    val s = if (max == 0f) 0f else d / max
+    var h = 0f
+    if (d != 0f) {
+        h = when (max) {
+            r -> ((g - b) / d) % 6f
+            g -> (b - r) / d + 2f
+            else -> (r - g) / d + 4f
+        } * 60f
+        if (h < 0f) h += 360f
+    }
+    return floatArrayOf(h, s, v)
 }
 
 /** Packs a [Color] into an opaque ARGB [Int] (cross-platform, no Android API). */
@@ -358,6 +404,23 @@ private val spotifyShapes = Shapes(
 )
 
 /**
+ * The resolved "is the app UI dark?" flag, matching the color scheme that
+ * [AppTheme] computed from the selected [ThemeMode]. Provided by [AppTheme];
+ * outside of it (isolated windows, previews) this falls back to the OS
+ * setting so those surfaces keep following the system.
+ */
+val LocalAppIsDark = compositionLocalOf<Boolean?> { null }
+
+/**
+ * Whether the app currently renders the dark scheme. Inside [AppTheme] this
+ * returns the mode resolved from [ThemeMode] (LIGHT -> false even when the OS
+ * is dark, DARK -> true even when the OS is light); outside [AppTheme] it
+ * falls back to the OS setting.
+ */
+@Composable
+fun isAppInDarkTheme(): Boolean = LocalAppIsDark.current ?: isSystemInDarkTheme()
+
+/**
  * Applies the selected light/dark mode (resolving "system" against the OS)
  * and accent color to the whole app via [MaterialTheme]. When [spotify] is
  * true the app uses the flat Spotify palette (fixed green accent, 8dp shapes,
@@ -453,8 +516,13 @@ fun AppTheme(
         // never adapt to the theme. Provide it explicitly so text follows the
         // onBackground color, then paint the whole window with the theme
         // background (otherwise the native light window shows through in dark
-        // mode).
-        CompositionLocalProvider(LocalContentColor provides effective.onBackground) {
+        // mode). LocalAppIsDark lets surfaces that used to read the OS theme
+        // (players, mini players, sidebar) follow the app-selected mode
+        // instead of the OS one.
+        CompositionLocalProvider(
+            LocalAppIsDark provides useDark,
+            LocalContentColor provides effective.onBackground,
+        ) {
             Box(Modifier.fillMaxSize().background(effective.background)) {
                 content()
             }

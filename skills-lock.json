@@ -8,10 +8,10 @@
       "computedHash": "93f53fd1c0352d3d7ec17b8f73d7351bf76f4821e55d123c9d2abc2c53ba48e4"
     },
     "ponytail": {
-      "source": "DietrichGebert/ponytail",
+      "source": "alonbaron/claude-skills",
       "sourceType": "github",
       "skillPath": "skills/ponytail/SKILL.md",
-      "computedHash": "9e8d05cbbaf6dc38f0cffc924c09b3cbe76d94ba4ba0d09bde803da2f8c6b5a0"
+      "computedHash": "9467c514dd6ddb121342e9eb01732e7552bf4abd073985e33b200ca6829e823f"
     },
     "ponytail-audit": {
       "source": "DietrichGebert/ponytail",

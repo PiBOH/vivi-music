@@ -1,11 +1,20 @@
 package com.music.vivi.desktop.player
 
+import com.music.innertube.YouTube
+import com.music.innertube.models.SongItem
+import com.music.innertube.models.WatchEndpoint
+import com.music.vivi.desktop.AppLog
 import com.music.vivi.desktop.DesktopSettings
+import com.music.vivi.desktop.EqualizerProcessor
 import com.music.vivi.desktop.GuestSession
 import com.music.vivi.desktop.NowPlaying
+import com.music.vivi.desktop.ParametricEQ
+import com.music.vivi.desktop.SavedEQProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.random.Random
 
 enum class RepeatMode { OFF, ALL, ONE }
@@ -52,18 +62,88 @@ data class PlayerState(
  */
 class PlayerController {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val player = AudioPlayer()
+    @Volatile private var player = AudioPlayer()
 
     /** Whether to automatically play the next queued track when one ends. */
     @Volatile var autoPlayNext: Boolean = true
 
+    /**
+     * "Auto load more songs": when the queue reaches its end, fetch
+     * related/radio tracks for the last song and keep the music going instead
+     * of stopping (port of the mobile option, recommendations).
+     */
+    @Volatile var autoLoadMore: Boolean = true
+
+    /**
+     * "Prevent duplicate tracks in queue": when adding a track that is
+     * already queued, remove the old copy first (single copy per track).
+     */
+    @Volatile var preventDuplicateTracksInQueue: Boolean = false
+
+    /**
+     * "Auto skip to next song when error occurs": after all retries for a
+     * failing track are exhausted, skip to the next track instead of surfacing
+     * the error and stopping.
+     */
+    @Volatile var autoSkipNextOnError: Boolean = false
+
+    /**
+     * "Persistent shuffle": keep shuffle enabled when starting new songs or
+     * playlists (when off, a freshly started queue resets shuffle).
+     */
+    @Volatile var persistentShuffleAcrossQueues: Boolean = false
+
+    // ------------------------------------------------------------------
+    // Crossfade ("Crossfade", port of the mobile option)
+    // ------------------------------------------------------------------
+    // When enabled, the current track is overlapped with the next one near
+    // its end: a second AudioPlayer (its own output line on the same mixer,
+    // which the OS mixes together) starts the incoming track muted and both
+    // volumes ramp over the fade window, then the swap hands the incoming
+    // player to the main slot. With the option OFF every path here is
+    // skipped and the playback core behaves exactly as before.
+
+    /** "Crossfade": overlap tracks near the end of the current one. */
+    @Volatile var crossfadeEnabled: Boolean = false
+
+    /** Crossfade overlap in seconds (1–12, like mobile). */
+    @Volatile var crossfadeDurationSeconds: Int = 5
+
+    /** "Disable for gapless albums": skip the fade between same-album tracks. */
+    @Volatile var disableCrossfadeGapless: Boolean = false
+
+    /** Incoming (second) player used for the fade; null = no fade in flight. */
+    @Volatile private var crossfadePlayer: AudioPlayer? = null
+
+    private var fadeJob: Job? = null
+
+    /** playToken of the track whose end has a scheduled crossfade (-1 = none). */
+    @Volatile private var crossfadeScheduledToken = -1
+
+    @Volatile private var crossfadeTargetIndex = -1
+    @Volatile private var crossfadeInPositionMs = 0L
+    @Volatile private var crossfadeInDurationMs = 0L
+
     private companion object {
         /** Total resolution/playback attempts before an error is surfaced. */
         const val MAX_PLAY_ATTEMPTS = 3
+
+        /** Cap for the related tracks fetched at the end of the queue. */
+        const val MAX_AUTO_LOAD_RELATED = 15
     }
 
     private val _state = MutableStateFlow(PlayerState())
     val state: StateFlow<PlayerState> = _state.asStateFlow()
+
+    /** Most recently started tracks (newest first), used as seeds for the Home
+     *  "Recommended" section (port of the mobile Daily-Discover mechanism). */
+    private val _recentTracks = MutableStateFlow<List<NowPlaying>>(emptyList())
+    val recentTracks: StateFlow<List<NowPlaying>> = _recentTracks.asStateFlow()
+
+    private fun noteTrackStarted(track: NowPlaying) {
+        _recentTracks.value =
+            (listOf(track) + _recentTracks.value).distinctBy { it.videoId }.take(12)
+    }
 
     /** User-initiated seeks (emitted so the sync layer can push them instantly). */
     private val _seekEvents = MutableSharedFlow<Long>(extraBufferCapacity = 16)
@@ -72,10 +152,32 @@ class PlayerController {
     /**
      * Instantaneous audio level (0..1) of the decoded PCM stream, driven by
      * [AudioPlayer.onLevel]. Used by the "Visualizer" player background.
-     * Updated ~43x/s; callers smooth it when drawing.
+     * Updated ~20x/s (every other decoded frame); callers smooth it when
+     * drawing. The decimation halves the UI recomposition load that could
+     * otherwise starve the audio scheduler (macOS micro pauses/skips).
      */
     private val _audioLevel = MutableStateFlow(0f)
     val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
+
+    /**
+     * Buffered fraction (0..1) of the current track: how much of the stream has
+     * been downloaded/decoded so far, driven by [AudioPlayer.onBufferedFraction].
+     * 1f when fully cached / not streaming (the UI then hides the secondary
+     * "buffered" segment on the seek bars). Reset to 1f whenever no stream is
+     * loaded and to 0f while a fresh download starts.
+     */
+    private val _bufferedFraction = MutableStateFlow(1f)
+    val bufferedFraction: StateFlow<Float> = _bufferedFraction.asStateFlow()
+
+    /**
+     * Fraction (0..1) of the current track the user scrubbed to while its
+     * duration was still unknown (track loaded from the restored queue but
+     * never played). Keeps the seek bar thumb at the scrubbed point so the
+     * seek is visible; playback starts from it via [pendingStartFraction].
+     * Cleared when playback begins, the track changes, or the queue resets.
+     */
+    private val _pendingSeekFraction = MutableStateFlow<Float?>(null)
+    val pendingSeekFraction: StateFlow<Float?> = _pendingSeekFraction.asStateFlow()
 
     init {
         // Restore the saved shuffle/repeat state when "remember" is enabled.
@@ -86,8 +188,16 @@ class PlayerController {
                 repeatMode = repeatModeFromKey(s.repeatModeKey),
             )
         }
+        // Restore the in-app (VIVI) volume: it used to reset to 100% on every
+        // launch because the volume was never persisted.
+        if (s.playerVolume in 0f..1f) {
+            player.setVolume(s.playerVolume)
+            _state.value = _state.value.copy(volume = s.playerVolume)
+        }
         // Feed the audio-reactive visualizer from the decoded PCM stream.
         player.onLevel = { level -> _audioLevel.value = level }
+        // Feed the secondary "buffered" segment of the seek bars (YouTube-style).
+        player.onBufferedFraction = { frac -> _bufferedFraction.value = frac }
     }
 
     /** Resets the visualizer level to silence (e.g. on pause/stop). */
@@ -120,40 +230,208 @@ class PlayerController {
     /** Back-navigation history used by "previous" in shuffle mode. */
     private val previousStack = ArrayDeque<Int>()
 
+    /**
+     * Start position chosen while the track's duration was still unknown (a
+     * 0..1 fraction of the track). A loaded-but-never-played track can be
+     * scrubbed before its length is known; the fraction is applied to the real
+     * duration the moment playback starts. Consumed by the next [playAtAttempt].
+     */
+    private var pendingStartFraction: Float? = null
+
     fun play(track: NowPlaying) {
+        AppLog.log("playback", "play: '${track.title}' [${track.videoId}]")
+        resetShuffleForNewQueue()
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(listOf(track), 0)
+        // Tapping a single song anywhere must build a real queue right away
+        // (the mobile app shows an up-next/radio list): fetch it in background
+        // while the first track is still playing.
+        scheduleQueueExtensionIfSingle(listOf(track))
     }
 
     fun playAll(tracks: List<NowPlaying>, startIndex: Int = 0) {
         if (tracks.isEmpty()) return
+        AppLog.log("playback", "playAll: ${tracks.size} tracks, start at $startIndex ('${tracks[startIndex].title}') ")
+        resetShuffleForNewQueue()
         lastLocalPlayIntentAt = System.currentTimeMillis()
         playAt(tracks, startIndex.coerceIn(0, tracks.lastIndex))
+        // Same as [play]: a one-item list is a radio seed, not a queue.
+        if (tracks.size == 1) scheduleQueueExtensionIfSingle(tracks)
+    }
+
+    /**
+     * "Auto load more songs": while a freshly started single-track queue is
+     * still playing, fetch the up-next/automix tracks for that seed and append
+     * them, so the queue isn't a lonely 1-item list (mobile behavior). No-op
+     * unless the queue is still exactly that seed when the fetch returns, so a
+     * user who moved on is never disturbed.
+     */
+    private fun scheduleQueueExtensionIfSingle(initial: List<NowPlaying>) {
+        if (!autoLoadMore) return
+        if (initial.size != 1) return
+        val seed = initial[0]
+        val token = playToken
+        scope.launch {
+            val candidates = fetchAutoLoadCandidates(seed.videoId)
+            if (token != playToken) return@launch
+            val st = _state.value
+            if (st.queue.size != 1 || st.queue.getOrNull(0)?.videoId != seed.videoId) return@launch
+            if (st.current?.videoId != seed.videoId) return@launch
+            val fresh = candidates.filter { it.videoId != seed.videoId }
+            if (fresh.isEmpty()) {
+                AppLog.log("queue", "auto load more: no up-next candidates for '${seed.title}' — queue stays single")
+                return@launch
+            }
+            AppLog.log("queue", "auto load more: built the queue for '${seed.title}' — ${fresh.size} up-next tracks appended")
+            _state.update { it.copy(queue = st.queue + fresh) }
+        }
+    }
+
+    /**
+     * Starting a brand-new queue (a fresh song/playlist/album) clears the
+     * shuffle state unless "Persistent shuffle" is enabled — mirroring the
+     * mobile behavior where shuffle is per-queue by default.
+     */
+    private fun resetShuffleForNewQueue() {
+        if (persistentShuffleAcrossQueues) return
+        if (_state.value.isShuffle) {
+            AppLog.log("playback", "new queue — resetting shuffle (persistent shuffle off)")
+            previousStack.clear()
+            _state.update { it.copy(isShuffle = false) }
+            persistShuffleRepeat()
+        }
+    }
+
+    /**
+     * "Auto download on like": downloads [videoId] into the audio cache
+     * without playing it (same join-safe path used by look-ahead prefetch).
+     */
+    fun downloadToCache(videoId: String) {
+        if (player.isCached(videoId)) return
+        AppLog.log("cache", "auto download on like: caching $videoId")
+        scope.launch {
+            val quality = StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality)
+            val streams = StreamResolver.resolveAacStream(videoId, quality)
+            if (streams.isNotEmpty()) {
+                player.prefetch(streams, videoId)
+            } else {
+                AppLog.log("cache", "auto download on like: no stream for $videoId")
+            }
+        }
     }
 
     /** Appends a track to the queue; if nothing is playing, starts it. */
     fun addToQueue(track: NowPlaying) {
         val s = _state.value
+        AppLog.log("queue", "addToQueue: '${track.title}' [${track.videoId}]")
         if (s.current == null) {
             play(track)
         } else {
-            _state.update { it.copy(queue = it.queue + track) }
+            appendTracks(s, listOf(track))
         }
     }
 
     /** Appends a list of tracks to the queue; if nothing is playing, starts them. */
     fun addAllToQueue(tracks: List<NowPlaying>) {
         val s = _state.value
+        AppLog.log("queue", "addAllToQueue: ${tracks.size} tracks")
         if (s.current == null) {
             playAll(tracks)
         } else {
-            _state.update { it.copy(queue = it.queue + tracks) }
+            appendTracks(s, tracks)
+        }
+    }
+
+    /** Appends [tracks] to the end of the queue, honoring duplicate prevention. */
+    private fun appendTracks(s: PlayerState, tracks: List<NowPlaying>) {
+        if (tracks.isEmpty()) return
+        val purged = purgeQueueDuplicates(tracks, s.queue, s.index)
+        val newQueue = purged + tracks
+        _state.update {
+            // Copies purged before the current track shift its index forward.
+            val newIndex = purged.take(it.index).size
+            it.copy(queue = newQueue, index = newIndex)
+        }
+    }
+
+    /**
+     * Inserts [track] right after the currently playing item ("play next",
+     * used by Listen Together suggestions and QUEUE_ADD insert_next). If the
+     * queue is empty, starts the track instead.
+     */
+    fun insertNext(track: NowPlaying) {
+        val s = _state.value
+        if (s.current == null) {
+            play(track)
+            return
+        }
+        val purged = purgeQueueDuplicates(listOf(track), s.queue, s.index)
+        // Copies purged before the current track shift its index forward.
+        val newIndex = purged.take(s.index).size
+        val idx = (newIndex + 1).coerceAtMost(purged.size)
+        _state.update { it.copy(queue = purged.toMutableList().apply { add(idx, track) }, index = newIndex) }
+    }
+
+    /**
+     * "Prevent duplicate tracks in queue": removes every copy of the incoming
+     * tracks already queued (except the currently playing one, which always
+     * stays), so adding a track moves it instead of duplicating it.
+     */
+    private fun purgeQueueDuplicates(
+        incoming: List<NowPlaying>,
+        queue: List<NowPlaying>,
+        currentIndex: Int,
+    ): List<NowPlaying> {
+        if (!preventDuplicateTracksInQueue) return queue
+        val current = queue.getOrNull(currentIndex)
+        if (current == null) return queue
+        val incomingIds = incoming.map { it.videoId }.toHashSet()
+        if (incomingIds.isEmpty()) return queue
+        val purged = queue.filterIndexed { i, t -> i == currentIndex || t.videoId !in incomingIds }
+        if (purged.size != queue.size) {
+            AppLog.log("queue", "prevent duplicates: removed ${queue.size - purged.size} old copy/copies")
+        }
+        return purged
+    }
+
+    /**
+     * Replaces the whole queue WITHOUT restarting the current track: if the
+     * currently playing [videoId] is still present, the index is remapped and
+     * playback/position are preserved (used by Listen Together SYNC_QUEUE so a
+     * guest doesn't hear a glitch when the host adds/removes songs). Falls back
+     * to a full [applyRemotePlayback] when the current track is gone.
+     */
+    fun replaceQueuePreservingCurrent(newQueue: List<NowPlaying>, positionMs: Long, isPlaying: Boolean) {
+        if (newQueue.isEmpty()) {
+            clearQueue()
+            return
+        }
+        val s = _state.value
+        val currentId = s.current?.videoId
+        if (currentId == null) {
+            restoreQueue(newQueue, 0)
+            return
+        }
+        val newIndex = newQueue.indexOfFirst { it.videoId == currentId }
+        if (newIndex < 0) {
+            applyRemotePlayback(newQueue, 0, positionMs, isPlaying)
+        } else {
+            val wasPlaying = s.isPlaying
+            _state.update {
+                it.copy(queue = newQueue, index = newIndex, isPlaying = wasPlaying || isPlaying)
+            }
+            if (!wasPlaying && isPlaying) {
+                // Current track still loaded: just resume instead of reloading.
+                player.resume()
+                _state.update { st -> st.copy(isPlaying = true) }
+            }
         }
     }
 
     fun next() {
         val s = _state.value
         if (s.queue.isEmpty()) return
+        AppLog.log("playback", "next (index ${s.index + 1} of ${s.queue.size})")
         // At the end of the queue "next" wraps back to the first track, so the
         // user never hits a dead button (repeat mode only affects auto-advance).
         val nextIndex = when {
@@ -170,6 +448,7 @@ class PlayerController {
     fun previous() {
         val s = _state.value
         if (s.queue.isEmpty()) return
+        AppLog.log("playback", "previous (index ${s.index - 1})")
         val prevIndex = when {
             s.isShuffle -> previousStack.removeLastOrNull() ?: randomIndexExcluding(s.queue.size, s.index)
             s.index > 0 -> s.index - 1
@@ -182,6 +461,7 @@ class PlayerController {
     fun skipTo(index: Int) {
         val s = _state.value
         if (index in s.queue.indices) {
+            AppLog.log("queue", "skipTo: index $index")
             lastLocalPlayIntentAt = System.currentTimeMillis()
             previousStack.addLast(s.index)
             playAt(s.queue, index)
@@ -191,12 +471,16 @@ class PlayerController {
     fun removeAt(index: Int) {
         val s = _state.value
         if (index !in s.queue.indices) return
+        AppLog.log("queue", "removeAt: index $index")
+        if (index !in s.queue.indices) return
         val newQueue = s.queue.toMutableList().apply { removeAt(index) }
         when {
             newQueue.isEmpty() -> {
                 playToken++
                 player.stop()
                 loadedVideoId = null
+                _bufferedFraction.value = 1f
+                _pendingSeekFraction.value = null
                 _state.value = PlayerState(volume = s.volume, isShuffle = s.isShuffle, repeatMode = s.repeatMode)
             }
             index < s.index -> _state.update { it.copy(queue = newQueue, index = it.index - 1) }
@@ -207,9 +491,12 @@ class PlayerController {
 
     fun clearQueue() {
         val s = _state.value
+        AppLog.log("queue", "clearQueue (${s.queue.size} tracks)")
         playToken++
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
+        _pendingSeekFraction.value = null
         _state.value = PlayerState(volume = s.volume, isShuffle = s.isShuffle, repeatMode = s.repeatMode)
     }
 
@@ -228,6 +515,7 @@ class PlayerController {
     fun toggle() {
         val s = _state.value
         if (s.current == null) return
+        AppLog.log("playback", if (s.isPlaying) "pause" else "play toggle")
         lastLocalPlayIntentAt = System.currentTimeMillis()
         if (s.isPlaying) {
             player.pause()
@@ -258,13 +546,19 @@ class PlayerController {
 
     fun stop() {
         playToken++
+        abortCrossfade()
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
+        _pendingSeekFraction.value = null
         _state.update { it.copy(isPlaying = false, positionMs = 0L) }
     }
 
     fun seekTo(ms: Long) {
-        seekInternal(ms)?.let { _seekEvents.tryEmit(it) }
+        AppLog.log("playback", "seek to ${ms}ms")
+        // A local scrub during the fade window cancels the overlap.
+        abortCrossfade()
+        seekInternal(ms, startStream = true)?.let { _seekEvents.tryEmit(it) }
     }
 
     /**
@@ -305,11 +599,61 @@ class PlayerController {
         setPlaying(isPlaying)
     }
 
-    private fun seekInternal(ms: Long): Long? {
+    /**
+     * Applies a seek. [startStream] is true only for local user scrubs: when
+     * the track's stream isn't loaded yet, the scrub itself kicks off the
+     * resolution/load (YouTube behavior — scrubbing an unloaded video starts
+     * buffering it) and playback begins from the scrubbed position. Remote
+     * seeks keep the old remember-only path and let [setPlaying] decide.
+     */
+    private fun seekInternal(ms: Long, startStream: Boolean = false): Long? {
         val s = _state.value
         if (s.current == null) return null
-        val target = ms.coerceIn(0L, if (s.durationMs > 0) s.durationMs else ms)
-        player.seekTo(target)
+        // Duration unknown (track loaded but never resolved): the seek bar has
+        // no real time range, so the value is a 0..1000 encoding of the desired
+        // START FRACTION. It is remembered and applied to the stream duration
+        // when playback actually begins — pressing play then starts from the
+        // scrubbed point.
+        // The fraction encoding is only produced by the local seek bars (whose
+        // range is 0..1000 while the duration is unknown); a remote seek in real
+        // milliseconds is much larger and must not be reinterpreted.
+        if (s.durationMs <= 0L && ms in 0..1000L) {
+            val fraction = (ms / 1000f).coerceIn(0f, 1f)
+            pendingStartFraction = fraction
+            _pendingSeekFraction.value = fraction
+            _state.update { it.copy(positionMs = 0L) }
+            // Scrubbing a never-resolved track starts its stream right away;
+            // [playAtAttempt] applies the pending fraction to the real duration
+            // the moment it becomes known. The scrub must start the stream even
+            // when the track was already loaded once (restored from the
+            // persistent queue, prefetched at startup, or in the cache):
+            // [playAtAttempt] sets `loadedVideoId` immediately, so keying on
+            // `loadedVideoId != current` made the scrub a silent no-op on those
+            // tracks (the mini player's seek bar felt dead until the full
+            // player was opened). playAt stops the old decoder and restarts
+            // from the scrubbed fraction, so it is safe to call on a loaded
+            // but paused stream.
+            if (startStream && !s.isResolving) {
+                playAt(s.queue, s.index, startAtMs = 0L, startPaused = false)
+            }
+            return null
+        }
+        // A real (time-based) seek means the duration is known: drop any
+        // pending fraction so a stale thumb can't linger on a later track.
+        _pendingSeekFraction.value = null
+        val target = ms.coerceIn(0L, s.durationMs)
+        if (loadedVideoId == s.current?.videoId && player.hasLoadedStream()) {
+            player.seekTo(target)
+        } else if (startStream && !s.isResolving) {
+            // Stream not loaded yet (restored queue / never started): the scrub
+            // kicks off the resolution so the position becomes real and playback
+            // starts from it. While a resolution is already in flight the target
+            // is just remembered — [playAtAttempt] honors it (`st.positionMs`)
+            // when the stream is ready, so dragging during resolution works too.
+            _state.update { it.copy(positionMs = target) }
+            playAt(s.queue, s.index, startAtMs = target, startPaused = false)
+            return null
+        }
         _state.update { it.copy(positionMs = target) }
         return target
     }
@@ -320,14 +664,33 @@ class PlayerController {
         if (playing) {
             startCurrent(s)
         } else {
+            abortCrossfade()
             player.pause()
             _state.update { it.copy(isPlaying = false) }
         }
     }
 
     fun setVolume(v: Float) {
-        player.setVolume(v)
-        _state.update { it.copy(volume = v.coerceIn(0f, 1f)) }
+        val clamped = v.coerceIn(0f, 1f)
+        AppLog.log("volume", "set to ${(clamped * 100).roundToInt()}%")
+        player.setVolume(clamped)
+        _state.update { it.copy(volume = clamped) }
+        // Persist the volume so it survives restarts instead of resetting to
+        // the default maximum (also covers volumes applied by device sync).
+        runCatching { DesktopSettings.update { it.copy(playerVolume = clamped) } }
+    }
+
+    /**
+     * Applies an EQ profile to the PCM stream (null = equalization off). The
+     * processor is a pure add-on to the output write path: when null the audio
+     * path is byte-identical to before, so the frozen playback core is untouched.
+     */
+    fun setEqualizer(profile: SavedEQProfile?) {
+        player.equalizer = EqualizerProcessor().apply {
+            setProfile(profile?.let {
+                ParametricEQ(preamp = it.preamp, bands = it.bands)
+            })
+        }
     }
 
     /** True when [videoId] already has a valid on-disk cache file (prefetch check). */
@@ -340,6 +703,7 @@ class PlayerController {
     fun toggleShuffle() {
         val s = _state.value
         val newShuffle = !s.isShuffle
+        AppLog.log("playback", "shuffle ${if (newShuffle) "on" else "off"}")
         if (!newShuffle) previousStack.clear()
         _state.update { it.copy(isShuffle = newShuffle) }
         persistShuffleRepeat()
@@ -352,6 +716,7 @@ class PlayerController {
             RepeatMode.ALL -> RepeatMode.ONE
             RepeatMode.ONE -> RepeatMode.OFF
         }
+        AppLog.log("playback", "repeat mode → $next")
         _state.update { it.copy(repeatMode = next) }
         persistShuffleRepeat()
     }
@@ -377,8 +742,11 @@ class PlayerController {
     fun restoreQueue(tracks: List<NowPlaying>, index: Int) {
         if (tracks.isEmpty()) return
         playToken++
+        abortCrossfade()
         player.stop()
         loadedVideoId = null
+        _bufferedFraction.value = 1f
+        _pendingSeekFraction.value = null
         val idx = index.coerceIn(0, tracks.lastIndex)
         _state.update {
             it.copy(
@@ -441,6 +809,24 @@ class PlayerController {
         val token = ++playToken
         loadedVideoId = track.videoId
         scope.launch {
+            val playSettings = DesktopSettings.load()
+            // "Skip silence": flags are snapshotted per played track (changing
+            // the toggle applies from the next track/session).
+            player.skipSilence = playSettings.skipSilence
+            player.skipSilenceInstant = playSettings.skipSilenceInstant
+            // "Crossfade": snapshot per played track (like skip silence), and
+            // abandon any in-flight fade from a previous session (a manual
+            // next/previous/seek/restart always cancels the overlap).
+            crossfadeEnabled = playSettings.crossfade
+            crossfadeDurationSeconds = playSettings.crossfadeDurationSeconds.coerceIn(1, 12)
+            disableCrossfadeGapless = playSettings.disableCrossfadeGapless
+            abortCrossfade()
+            // "History duration": a track only enters the listen history (the
+            // seeds behind the Home "Recommended" row) after it actually played
+            // for this long, not the moment it starts (default 30 s, like the
+            // mobile app). Tracks skipped/stopped earlier never pollute it.
+            val historyThresholdMs = (playSettings.historyDurationSeconds * 1000L).coerceAtLeast(0L)
+            var historyNoted = false
             player.stop()
             _state.value = PlayerState(
                 queue = tracks,
@@ -458,30 +844,99 @@ class PlayerController {
                 isResolving = true,
             )
 
-            val streams = StreamResolver.resolveAacStream(
-                track.videoId,
-                StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
-            )
-            if (streams.isEmpty()) {
+            // A track that was already downloaded in full (audio cache) plays
+            // straight from disk — no network resolution, no "resolving"
+            // spinner, and no re-download on every restart with "cache
+            // forever". Only tracks without a valid cache file need a stream
+            // URL to fetch.
+            val alreadyCached = player.isCached(track.videoId)
+            AppLog.log("playback", "resolving '${track.title}' [${track.videoId}] (attempt ${attempt + 1}/${MAX_PLAY_ATTEMPTS}, cached=$alreadyCached)")
+            val streams = if (alreadyCached) {
+                emptyList()
+            } else {
+                StreamResolver.resolveAacStream(
+                    track.videoId,
+                    StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                )
+            }
+            if (streams.isEmpty() && !alreadyCached) {
                 if (attempt + 1 < MAX_PLAY_ATTEMPTS) {
                     // Bot detection / transient resolution failure: rotate the
                     // guest identity and try a fresh resolution.
+                    AppLog.log("playback", "resolution failed, rotating guest and retrying")
                     GuestSession.rotate()
-                    playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
-                } else {
+                    // Retry on the CURRENT queue, not the original one-item
+                    // list: the "auto load more" extension may have appended
+                    // up-next/automix tracks while this track was resolving,
+                    // and replaying with the seed-only list wiped them (the
+                    // queue visibly collapsed back to 1 song).
+                    val retryTracks = _state.value.queue.ifEmpty { tracks }
+                    playAtAttempt(retryTracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
+                } else if (!skipToNextOnErrorIfEnabled(index, track)) {
                     loadedVideoId = null
+                    _bufferedFraction.value = 1f
+                    AppLog.log("playback", "resolution failed after $MAX_PLAY_ATTEMPTS attempts — surfacing stream_error")
                     _state.update { it.copy(isPlaying = false, errorKey = "stream_error", errorDetail = null, loadPhase = LoadPhase.NONE, isResolving = false) }
                 }
                 return@launch
             }
-            _state.update { it.copy(errorKey = null, errorDetail = null, loadPhase = LoadPhase.DOWNLOADING) }
+            AppLog.log("playback", "stream ready for '${track.title}' (${if (alreadyCached) "cache" else "network"})")
+            _state.update {
+                it.copy(
+                    errorKey = null,
+                    errorDetail = null,
+                    // Cached tracks keep the RESOLVING phase only until the
+                    // first position report flips it (the resumeWhenReady
+                    // logic relies on that transition), so no spinner is
+                    // actually shown for them.
+                    loadPhase = if (alreadyCached) it.loadPhase else LoadPhase.DOWNLOADING,
+                )
+            }
+
+            // If the seek bar was scrubbed while this track was still being
+            // resolved/downloaded (no stream loaded yet), honor that position
+            // instead of the original startAtMs — otherwise the seek is lost
+            // the moment the stream starts from its planned offset. A scrub
+            // done while the duration was still unknown is a fraction: apply it
+            // to the metadata duration when available, otherwise forward it to
+            // the player which resolves it against the stream duration.
+            val st = _state.value
+            val pendingFraction = pendingStartFraction
+            pendingStartFraction = null
+            // Playback is starting: the seek bar switches to the real timeline,
+            // so the pending scrub indicator is no longer needed.
+            _pendingSeekFraction.value = null
+            val sameTrack = st.index == index && st.current?.videoId == track.videoId
+            var startFraction: Float? = null
+            val effectiveStartAt = when {
+                pendingFraction != null && pendingFraction > 0f && sameTrack -> {
+                    val knownDur = track.durationMs.takeIf { it > 0 }
+                        ?: st.durationMs.takeIf { it > 0 } ?: 0L
+                    if (knownDur > 0) {
+                        (pendingFraction * knownDur).toLong()
+                    } else {
+                        startFraction = pendingFraction
+                        0L
+                    }
+                }
+                sameTrack && st.positionMs > 0L -> st.positionMs.coerceAtLeast(0L)
+                else -> startAtMs
+            }
+            _bufferedFraction.value = if (alreadyCached) 1f else 0f
 
             player.play(
                 streams = streams,
                 cacheKey = track.videoId,
-                startAtMs = startAtMs,
+                startAtMs = effectiveStartAt,
+                startAtFraction = startFraction,
                 startPaused = startPaused,
+                // The queue item carries the real track length (search, browse,
+                // playlists, LT guest sync); the NewPipe/cache resolution paths
+                // return URLs without one, so this keeps the seek range and the
+                // truncation guard correct (no more "every track is ~19 s").
+                fallbackDurationMs = track.durationMs,
                 onError = { msg ->
+                    AppLog.log("playback", "playback error: $msg")
                     // Evict the cached resolution: a stale, single-use
                     // googlevideo URL must not be returned again by the retry.
                     StreamResolver.invalidate(track.videoId)
@@ -495,10 +950,15 @@ class PlayerController {
                         // rotate the guest identity and re-resolve, then retry.
                         scope.launch {
                             GuestSession.rotate()
-                            playAtAttempt(tracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
+                            // Same as the resolution retry: keep the queue that
+                            // may have grown with similar/up-next tracks.
+                            val retryTracks = _state.value.queue.ifEmpty { tracks }
+                            playAtAttempt(retryTracks, index, startAtMs, startPaused, resumeWhenReady, attempt + 1)
                         }
-                    } else {
+                    } else if (!skipToNextOnErrorIfEnabled(index, track)) {
                         loadedVideoId = null
+                        _bufferedFraction.value = 1f
+                        AppLog.log("playback", "giving up after $MAX_PLAY_ATTEMPTS attempts: $msg")
                         _state.update { s ->
                             if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
                                 s.copy(isPlaying = false, errorDetail = msg, loadPhase = LoadPhase.NONE, isResolving = false)
@@ -507,6 +967,19 @@ class PlayerController {
                     }
                 },
                 onPosition = { pos ->
+                    // Crossfade: once the playhead enters the fade window
+                    // before the end, schedule the next track's overlap.
+                    maybeScheduleCrossfade(index, track, pos)
+                    // Record the track into the listen history (Home seeds)
+                    // only after it actually played for the "History duration"
+                    // threshold — and only while it is still the current track.
+                    if (!historyNoted && pos >= historyThresholdMs) {
+                        val stNow = _state.value
+                        if (stNow.index == index && stNow.queue.getOrNull(index)?.videoId == track.videoId) {
+                            historyNoted = true
+                            noteTrackStarted(track)
+                        }
+                    }
                     // First position report means audio is actually ready. When
                     // we were held only because the peer was still resolving
                     // (resumeWhenReady), resume now so the paired device never
@@ -531,12 +1004,35 @@ class PlayerController {
                 onDuration = { dur ->
                     _state.update { s ->
                         if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
-                            s.copy(durationMs = dur, loadPhase = LoadPhase.NONE)
+                            // Backfill the real duration into the queue item too:
+                            // the persistent queue then keeps durations, so a
+                            // track restored on the next launch already has a
+                            // correct seek range (no more 0..1 "dead" bar).
+                            val queue = s.queue.toMutableList()
+                            queue[index] = queue[index].copy(durationMs = dur)
+                            s.copy(queue = queue, durationMs = dur, loadPhase = LoadPhase.NONE)
                         } else s
                     }
                 },
                 onComplete = {
                     if (token != playToken) return@play
+                    // A crossfade was scheduled for this track's end: if the
+                    // incoming player is already running, hand it the main
+                    // slot; otherwise fall back to the normal advance (the
+                    // incoming stream failed to resolve in time).
+                    if (crossfadeScheduledToken == token) {
+                        if (crossfadePlayer != null) {
+                            completeCrossfadeSwap()
+                        } else {
+                            crossfadeScheduledToken = -1
+                            crossfadeTargetIndex = -1
+                            val s = _state.value
+                            if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
+                                handleTrackEnd(s, index, token)
+                            }
+                        }
+                        return@play
+                    }
                     val s = _state.value
                     if (s.index == index && s.queue.getOrNull(index)?.videoId == track.videoId) {
                         handleTrackEnd(s, index, token)
@@ -547,27 +1043,22 @@ class PlayerController {
     }
 
     private fun handleTrackEnd(s: PlayerState, index: Int, token: Int) {
+        AppLog.log("playback", "track ended (repeat=${s.repeatMode}, autoPlayNext=$autoPlayNext)")
         when {
             s.repeatMode == RepeatMode.ONE -> {
                 if (token == playToken) playAt(s.queue, index)
             }
             autoPlayNext -> {
-                val nextIndex = when {
-                    s.queue.size == 1 && s.repeatMode != RepeatMode.ALL -> -1
-                    s.isShuffle -> randomIndexExcluding(s.queue.size, s.index)
-                    s.index < s.queue.lastIndex -> s.index + 1
-                    s.repeatMode == RepeatMode.ALL -> 0
-                    else -> -1
-                }
+                val nextIndex = nextIndexFor(s) ?: -1
                 if (nextIndex >= 0) {
                     // Auto-advance is also a local play intent: the peer's
                     // pre-advance "paused" echo must not pause the new track.
+                    AppLog.log("playback", "auto-advancing to index $nextIndex")
                     lastLocalPlayIntentAt = System.currentTimeMillis()
                     previousStack.addLast(s.index)
                     playAt(s.queue, nextIndex)
                 } else {
-                    loadedVideoId = null
-                    _state.update { it.copy(isPlaying = false) }
+                    extendQueueAtEnd(s, token)
                 }
             }
             else -> {
@@ -575,6 +1066,335 @@ class PlayerController {
                 _state.update { it.copy(isPlaying = false) }
             }
         }
+    }
+
+    /** Next queue index under the current repeat/shuffle/auto-advance rules
+     *  (null = no next track). Shared by [handleTrackEnd] and the crossfade
+     *  scheduler so both advance identically. */
+    private fun nextIndexFor(s: PlayerState): Int? = when {
+        s.repeatMode == RepeatMode.ONE -> s.index
+        !autoPlayNext -> null
+        s.queue.size == 1 && s.repeatMode != RepeatMode.ALL -> null
+        s.isShuffle -> randomIndexExcluding(s.queue.size, s.index)
+        s.index < s.queue.lastIndex -> s.index + 1
+        s.repeatMode == RepeatMode.ALL -> 0
+        else -> null
+    }
+
+    /** Abandons any in-flight crossfade (new play intent, stop, local seek…).
+     *  Cheap no-op when no fade is scheduled. */
+    private fun abortCrossfade() {
+        fadeJob?.cancel()
+        fadeJob = null
+        crossfadePlayer?.let { cp ->
+            crossfadePlayer = null
+            runCatching { cp.stop() }
+        }
+        crossfadeScheduledToken = -1
+        crossfadeTargetIndex = -1
+        // The fade ramp may have lowered the main player's volume: restore it.
+        player.setVolume(_state.value.volume)
+    }
+
+    /** Called from the current track's position reports: schedules the overlap
+     *  once the playhead enters the fade window before the end. */
+    private fun maybeScheduleCrossfade(index: Int, track: NowPlaying, pos: Long) {
+        if (!crossfadeEnabled) return
+        if (crossfadeScheduledToken != -1) return
+        val s = _state.value
+        if (s.index != index) return
+        val dur = s.durationMs
+        if (dur <= 0L) return
+        val fadeMs = crossfadeDurationSeconds.coerceIn(1, 12) * 1000L
+        val remaining = dur - pos
+        // ~1.5 s of margin for the incoming stream to resolve; a negative
+        // remaining means the track already ended (normal onComplete path).
+        if (remaining > fadeMs + 1500L || remaining <= 0L) return
+        val next = nextIndexFor(s) ?: return
+        val nextTrack = s.queue.getOrNull(next) ?: return
+        if (disableCrossfadeGapless && !track.album.isNullOrBlank() && track.album == nextTrack.album) {
+            AppLog.log("playback", "crossfade skipped — same album (gapless): '${track.album}'")
+            return
+        }
+        startCrossfade(next, nextTrack, fadeMs)
+    }
+
+    private fun startCrossfade(nextIndex: Int, nextTrack: NowPlaying, fadeMs: Long) {
+        crossfadeScheduledToken = playToken
+        crossfadeTargetIndex = nextIndex
+        AppLog.log("playback", "crossfade: scheduling '${nextTrack.title}' (index $nextIndex, fade ${fadeMs}ms)")
+        scope.launch {
+            val alreadyCached = player.isCached(nextTrack.videoId)
+            val streams = if (alreadyCached) {
+                emptyList()
+            } else {
+                runCatching {
+                    StreamResolver.resolveAacStream(
+                        nextTrack.videoId,
+                        StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
+                    )
+                }.getOrDefault(emptyList())
+            }
+            if (crossfadeScheduledToken != playToken) return@launch
+            if (streams.isEmpty() && !alreadyCached) {
+                // No stream: fall back to the normal advance (the outgoing
+                // track's onComplete will handle it).
+                AppLog.log("playback", "crossfade: no stream for '${nextTrack.title}' — normal advance")
+                crossfadeScheduledToken = -1
+                crossfadeTargetIndex = -1
+                return@launch
+            }
+            val cp = AudioPlayer()
+            // Same visual feeds as the main player (level / buffered fraction).
+            cp.onLevel = { level -> _audioLevel.value = level }
+            cp.onBufferedFraction = { frac -> _bufferedFraction.value = frac }
+            cp.equalizer = player.equalizer
+            val ps = DesktopSettings.load()
+            cp.skipSilence = ps.skipSilence
+            cp.skipSilenceInstant = ps.skipSilenceInstant
+            val token = playToken
+            var historyNoted = false
+            val historyThresholdMs = (ps.historyDurationSeconds * 1000L).coerceAtLeast(0L)
+            cp.play(
+                streams = streams,
+                cacheKey = nextTrack.videoId,
+                startAtMs = 0L,
+                startPaused = true,
+                fallbackDurationMs = nextTrack.durationMs,
+                onError = { msg ->
+                    AppLog.log("playback", "crossfade error for '${nextTrack.title}': $msg — normal advance")
+                    if (crossfadeScheduledToken == token) {
+                        crossfadeScheduledToken = -1
+                        crossfadeTargetIndex = -1
+                        crossfadePlayer = null
+                        runCatching { cp.stop() }
+                    }
+                },
+                onPosition = { p ->
+                    crossfadeInPositionMs = p
+                    // History entry once actually heard (threshold, like the
+                    // main path) — only after the swap makes it the current
+                    // track, so the guard below matches.
+                    if (p >= historyThresholdMs && !historyNoted) {
+                        val st = _state.value
+                        if (st.index == nextIndex && st.queue.getOrNull(nextIndex)?.videoId == nextTrack.videoId) {
+                            historyNoted = true
+                            noteTrackStarted(nextTrack)
+                        }
+                    }
+                },
+                onDuration = { d -> crossfadeInDurationMs = d },
+                onComplete = {
+                    // The incoming track finished: it is the active player now
+                    // (the swap already happened on the outgoing track's end).
+                    if (token != playToken) return@play
+                    val s = _state.value
+                    if (s.index == nextIndex && s.queue.getOrNull(nextIndex)?.videoId == nextTrack.videoId) {
+                        handleTrackEnd(s, nextIndex, token)
+                    }
+                },
+            )
+            // The outgoing track may have ended while the stream was still
+            // resolving (no overlap possible): the normal advance is already
+            // running, so stop the incoming player here.
+            if (crossfadeScheduledToken != playToken) {
+                runCatching { cp.stop() }
+                crossfadePlayer = null
+                return@launch
+            }
+            crossfadePlayer = cp
+            cp.resume()
+            fadeJob = scope.launch {
+                val master = _state.value.volume
+                val steps = 40
+                repeat(steps) { i ->
+                    val t = (i + 1) / steps.toFloat()
+                    runCatching { cp.setVolume(master * t) }
+                    runCatching { player.setVolume(master * (1 - t)) }
+                    delay(fadeMs / steps)
+                }
+                runCatching { cp.setVolume(master) }
+            }
+        }
+    }
+
+    /** Called from the outgoing track's onComplete while the fade is live:
+     *  hands the incoming player to the main slot and updates the state. */
+    private fun completeCrossfadeSwap() {
+        val incoming = crossfadePlayer ?: run {
+            crossfadeScheduledToken = -1
+            crossfadeTargetIndex = -1
+            return
+        }
+        val s = _state.value
+        val bIndex = crossfadeTargetIndex
+        val bTrack = s.queue.getOrNull(bIndex) ?: run {
+            crossfadeScheduledToken = -1
+            crossfadeTargetIndex = -1
+            return
+        }
+        fadeJob?.cancel()
+        fadeJob = null
+        crossfadeScheduledToken = -1
+        crossfadeTargetIndex = -1
+        crossfadePlayer = null
+        runCatching { player.stop() }
+        player = incoming
+        loadedVideoId = bTrack.videoId
+        val vol = s.volume
+        incoming.setVolume(vol)
+        val dur = crossfadeInDurationMs.takeIf { it > 0L } ?: bTrack.durationMs
+        AppLog.log("playback", "crossfade complete — '${bTrack.title}' is now current")
+        val queue = s.queue.toMutableList()
+        if (queue.getOrNull(bIndex)?.videoId == bTrack.videoId && dur > 0L) {
+            queue[bIndex] = queue[bIndex].copy(durationMs = dur)
+        }
+        _state.update {
+            it.copy(
+                queue = queue,
+                index = bIndex,
+                positionMs = crossfadeInPositionMs.coerceAtMost(dur),
+                durationMs = dur,
+                isPlaying = true,
+                isResolving = false,
+                loadPhase = LoadPhase.NONE,
+                errorKey = null,
+                errorDetail = null,
+            )
+        }
+    }
+
+    /**
+     * The queue has run out and auto-advance is on. With the "Auto load more
+     * songs" and "Similar content" options (default on) the playback keeps
+     * going like a radio: related tracks of the last song are fetched and
+     * appended, then the first new track starts. Otherwise playback stops
+     * cleanly (the ended state is set synchronously so the UI never freezes on
+     * a stale "playing" indicator while the fetch is in flight).
+     */
+    private fun extendQueueAtEnd(s: PlayerState, token: Int) {
+        val seed = s.current ?: run {
+            loadedVideoId = null
+            _state.update { it.copy(isPlaying = false) }
+            return
+        }
+        // Stop cleanly right away; a successful fetch below restarts playback.
+        loadedVideoId = null
+        _state.update { it.copy(isPlaying = false) }
+        if (!autoLoadMore) {
+            AppLog.log("playback", "queue ended — auto load more is off, stopping")
+            return
+        }
+        val seedId = seed.videoId
+        AppLog.log("playback", "queue ended — fetching up-next tracks for '${seed.title}' [$seedId]")
+        scope.launch {
+            val candidates = fetchAutoLoadCandidates(seedId)
+            // The user changed the track/queue (or stopped) while we fetched:
+            // never inject tracks into a playback that moved on.
+            if (token != playToken) return@launch
+            val st = _state.value
+            if (st.queue.getOrNull(st.index)?.videoId != seedId) return@launch
+            val known = (st.queue.map { it.videoId } + seedId).toHashSet()
+            val fresh = candidates.filter { it.videoId !in known }
+            if (fresh.isEmpty()) {
+                AppLog.log("playback", "no new up-next tracks to extend the queue — stopping")
+                return@launch
+            }
+            val newQueue = st.queue + fresh
+            AppLog.log("playback", "auto load more: appended ${fresh.size} up-next tracks (queue ${st.queue.size} → ${newQueue.size})")
+            previousStack.addLast(st.index)
+            playAt(newQueue, st.queue.size, startAtMs = 0L, startPaused = false, resumeWhenReady = true)
+        }
+    }
+
+    /**
+     * Fetches up to [MAX_AUTO_LOAD_RELATED] "up next" songs that keep the
+     * playback going after a single track / at the end of the queue. Mirrors
+     * the mobile radio flow, with the automix list first and the Related tab as
+     * fallback:
+     *
+     *  1. `YouTube.next(videoId).items` — the automix/"up next" queue that
+     *     YouTube returns for the video (usually ~25 similar songs);
+     *  2. `YouTube.next(videoId).relatedEndpoint` → `YouTube.related(...)` —
+     *     the Related tab (what the Home "Recommended" row also uses).
+     *
+     * Every failure/short result is logged with its cause and the exact state
+     * of the request, so a broken case is diagnosable from an exported log
+     * instead of silently returning nothing.
+     */
+    private suspend fun fetchAutoLoadCandidates(videoId: String): List<NowPlaying> {
+        // YouTube.next already returns a Result (no runCatching wrapper: it
+        // would nest Result<Result<...>> and break the member access below).
+        val nextResult = YouTube.next(WatchEndpoint(videoId = videoId))
+            .onFailure { AppLog.log("queue", "auto load more: YouTube.next failed for $videoId — ${it.message}") }
+            .getOrNull()
+        nextResult?.let { n ->
+            val fromQueue = n.items
+                .asSequence()
+                .filter { it.id != videoId && it.id.isNotBlank() }
+                .take(MAX_AUTO_LOAD_RELATED)
+                .map { it.toAutoLoadNowPlaying() }
+                .toList()
+            if (fromQueue.isNotEmpty()) {
+                AppLog.log("queue", "auto load more: got ${fromQueue.size} up-next/automix items for $videoId")
+                return fromQueue
+            }
+        }
+        val endpoint = nextResult?.relatedEndpoint
+        if (endpoint != null) {
+            val page = YouTube.related(endpoint)
+                .onFailure { AppLog.log("queue", "auto load more: YouTube.related failed for $videoId — ${it.message}") }
+                .getOrNull()
+            if (page != null) {
+                val fromRelated = page.songs
+                    .asSequence()
+                    .filter { it.id != videoId && it.id.isNotBlank() }
+                    .take(MAX_AUTO_LOAD_RELATED)
+                    .map { it.toAutoLoadNowPlaying() }
+                    .toList()
+                if (fromRelated.isNotEmpty()) {
+                    AppLog.log("queue", "auto load more: got ${fromRelated.size} related-tab items for $videoId")
+                    return fromRelated
+                }
+            }
+        }
+        AppLog.log(
+            "queue",
+            "auto load more: no up-next/related candidates for $videoId " +
+                "(nextResult=${nextResult != null}, automixItems=${nextResult?.items?.size ?: 0}, relatedEndpoint=${endpoint != null})",
+        )
+        return emptyList()
+    }
+
+    private fun SongItem.toAutoLoadNowPlaying(): NowPlaying = NowPlaying(
+        videoId = id,
+        title = title,
+        artist = artists.joinToString(", ") { it.name },
+        thumbnail = thumbnail,
+        durationMs = (duration ?: 0) * 1000L,
+    )
+
+    /**
+     * "Auto skip to next song when error occurs": once the retries for
+     * [track] at [index] are exhausted, continue with the next queued track
+     * (wrapping to the first only when repeat-all is on) instead of surfacing
+     * the error. Only skips while the failing track is still the current one.
+     * Returns true when the playback moved on.
+     */
+    private fun skipToNextOnErrorIfEnabled(index: Int, track: NowPlaying): Boolean {
+        if (!autoSkipNextOnError) return false
+        val s = _state.value
+        if (s.index != index || s.queue.getOrNull(index)?.videoId != track.videoId) return false
+        val nextIndex = when {
+            s.index < s.queue.lastIndex -> s.index + 1
+            s.repeatMode == RepeatMode.ALL && s.queue.size > 1 -> 0
+            else -> -1
+        }
+        if (nextIndex < 0) return false
+        AppLog.log("playback", "auto skip on error: skipping to index $nextIndex")
+        lastLocalPlayIntentAt = System.currentTimeMillis()
+        playAt(s.queue, nextIndex)
+        return true
     }
 
     private fun randomIndexExcluding(size: Int, exclude: Int): Int {

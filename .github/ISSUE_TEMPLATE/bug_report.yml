@@ -16,7 +16,7 @@ body:
     attributes:
       label: Pre-flight Checklist
       options:
-        - label: I am running the [latest debug version](https://github.com/vivizzz007/vivi-music/actions).
+        - label: I am running the [latest debug version](https://github.com/PiBOH/vivi-music/actions).
           required: true
         - label: I checked for duplicate issues.
           required: true

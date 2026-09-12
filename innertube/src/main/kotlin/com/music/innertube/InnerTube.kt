@@ -19,11 +19,13 @@ import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -102,15 +104,23 @@ class InnerTube {
                 )
                 
                 // Timeout configurations
-                connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-                readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-                writeTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 
                 // Enable HTTP/2 for better performance
                 protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
                 
                 // Retry on connection failure
                 retryOnConnectionFailure(true)
+                
+                // Cache configuration for better performance
+                cache(
+                    okhttp3.Cache(
+                        directory = java.io.File(System.getProperty("java.io.tmpdir"), "http_cache"),
+                        maxSize = 50L * 1024L * 1024L // 50 MB
+                    )
+                )
                 
                 // Apply IP version filtering
                 dns(object : Dns {
@@ -119,7 +129,12 @@ class InnerTube {
                         return when (this@InnerTube.ipVersion) {
                             IpVersion.IPV4 -> addresses.filter { it is Inet4Address }.ifEmpty { addresses }
                             IpVersion.IPV6 -> addresses.filter { it is Inet6Address }.ifEmpty { addresses }
-                            IpVersion.AUTO -> addresses
+                            IpVersion.AUTO -> {
+                                // Prioritize IPv4 to fix prevalent home Wi-Fi IPv6 routing blackholes
+                                val ipv4 = addresses.filterIsInstance<Inet4Address>()
+                                val ipv6 = addresses.filterIsInstance<Inet6Address>()
+                                ipv4 + ipv6 
+                            }
                         }
                     }
                 })
@@ -149,6 +164,10 @@ class InnerTube {
 
         defaultRequest {
             url(YouTubeClient.API_URL_YOUTUBE_MUSIC)
+            // Standard API accept headers — InnerTube returns JSON
+            // NOTE: Do NOT set Accept-Encoding here; Ktor's ContentEncoding plugin manages it
+            header("Accept", "application/json, text/plain, */*")
+            header("Accept-Language", "en-US,en;q=0.9")
         }
     }
 
@@ -158,21 +177,31 @@ class InnerTube {
             append("X-Goog-Api-Format-Version", "1")
             append("X-YouTube-Client-Name", client.clientId /* Not a typo. The Client-Name header does contain the client id. */)
             append("X-YouTube-Client-Version", client.clientVersion)
+            // Origin and Referer are mandatory — YouTube validates these for browser-like requests
+            append("Origin", YouTubeClient.ORIGIN_YOUTUBE_MUSIC)
             append("X-Origin", YouTubeClient.ORIGIN_YOUTUBE_MUSIC)
             append("Referer", YouTubeClient.REFERER_YOUTUBE_MUSIC)
+            // Signal to YouTube that this client is behaving like a Chromium browser
+            append("sec-ch-ua", YouTubeClient.SEC_CH_UA)
+            append("sec-ch-ua-mobile", "?0")
+            append("sec-ch-ua-platform", "\"Windows\"")
             visitorData?.let { append("X-Goog-Visitor-Id", it) }
             if (setLogin && client.loginSupported) {
                 cookie?.let { cookie ->
-                    append("cookie", cookie)
                     // The Authorization hash uses the APISID token. Modern Google
                     // logins (e.g. the embedded WebView) may only expose the
                     // Secure variants (__Secure-3PAPISID / __Secure-1PAPISID)
                     // instead of the legacy SAPISID; without the hash the API
                     // answers 401 "Request is missing required authentication
                     // credential". Try all three in order of preference.
+                    // IMPORTANT: if none of the three is present, do NOT send a
+                    // partial auth (cookie without SAPISIDHASH) — that is worse
+                    // than an anonymous request and is exactly what triggers the
+                    // 401 for New release albums etc. Fall back to anonymous.
                     val apisid = listOf("SAPISID", "__Secure-3PAPISID", "__Secure-1PAPISID")
                         .firstOrNull { it in cookieMap }
                         ?: return@let
+                    append("cookie", cookie)
                     val currentTime = System.currentTimeMillis() / 1000
                     val sapisidHash = sha1("$currentTime ${cookieMap[apisid]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
@@ -294,21 +323,55 @@ class InnerTube {
         params: String? = null,
         continuation: String? = null,
         setLogin: Boolean = false,
-    ) = withRetry {
-        httpClient.post("browse") {
-            ytClient(client, setLogin = setLogin || useLoginForBrowse)
-            setBody(
-                BrowseBody(
-                    context = client.toContext(
-                        locale,
-                        visitorData,
-                        if (setLogin || useLoginForBrowse) dataSyncId else null
-                    ),
-                    browseId = browseId,
-                    params = params,
-                    continuation = continuation
-                )
-            )
+    ): io.ktor.client.statement.HttpResponse {
+        val wantsLogin = setLogin || useLoginForBrowse
+        // First attempt: as requested (authed if wantsLogin and a cookie is present).
+        // On 401 UNAUTHENTICATED we retry once anonymously so public browse
+        // pages (e.g. FEmusic_new_releases_albums / explore / moodAndGenres)
+        // never show E1031 to a user whose session just expired or is missing
+        // SAPISIDHASH — the anonymous catalog is always available.
+        return try {
+            withRetry {
+                httpClient.post("browse") {
+                    ytClient(client, setLogin = wantsLogin)
+                    setBody(
+                        BrowseBody(
+                            context = client.toContext(
+                                locale,
+                                visitorData,
+                                if (wantsLogin) dataSyncId else null
+                            ),
+                            browseId = browseId,
+                            params = params,
+                            continuation = continuation
+                        )
+                    )
+                }
+            }
+        } catch (e: ClientRequestException) {
+            val is401 = e.response.status == HttpStatusCode.Unauthorized
+            val hadCookie = cookie != null
+            if (is401 && wantsLogin && hadCookie) {
+                // Retry once anonymously — public catalog pages (New releases,
+                // Explore, Mood & genres…) are always available without a
+                // session. No global state is touched (race-safe): we just
+                // build the anonymous request directly.
+                return withRetry {
+                    httpClient.post("browse") {
+                        ytClient(client, setLogin = false)
+                        setBody(
+                            BrowseBody(
+                                context = client.toContext(locale, visitorData, null),
+                                browseId = browseId,
+                                params = params,
+                                continuation = continuation
+                            )
+                        )
+                    }
+                }
+            } else {
+                throw e
+            }
         }
     }
 
@@ -700,6 +763,7 @@ class InnerTube {
         playlistId: String,
     ) = withRetry {
         httpClient.post("playlist/delete") {
+            println("deleting $playlistId")
             ytClient(client, setLogin = true)
             setBody(
                 PlaylistDeleteBody(

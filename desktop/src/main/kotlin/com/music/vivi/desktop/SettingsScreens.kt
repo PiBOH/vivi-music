@@ -11,14 +11,34 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.EnergySavingsLeaf
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,15 +47,18 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +66,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -270,7 +294,7 @@ fun SettingsSubScreen(language: String, onBack: () -> Unit, content: @Composable
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(14.dp),
     ) {
         BackButton(language, onBack)
         content()
@@ -286,16 +310,15 @@ fun SettingsLanguageScreen(language: String, onBack: () -> Unit, onLanguageChang
 fun SettingsAppearanceScreen(
     language: String,
     onBack: () -> Unit,
-    selectedFont: AppFont,
-    densityScale: Float,
-    screenTransition: String,
-    onOpenTheme: () -> Unit,
-    onOpenFont: () -> Unit,
-    onOpenCanvas: () -> Unit,
-    onOpenDensity: () -> Unit,
-    onOpenTransitions: () -> Unit,
-    onOpenIntro: () -> Unit,
+    animationsEnabled: Boolean = true,
+    onAnimationsEnabledChange: (Boolean) -> Unit = {},
+    onOpenTheme: () -> Unit = {},
+    onOpenFont: () -> Unit = {},
+    onOpenCanvas: () -> Unit = {},
+    onOpenDensity: () -> Unit = {},
+    onOpenTransitions: () -> Unit = {},
     onOpenPlayerDesign: () -> Unit = {},
+    onOpenIntro: () -> Unit = {},
     nativeTitleBar: Boolean = false,
     onNativeTitleBarChange: (Boolean) -> Unit = {},
     showRightSidebar: Boolean = true,
@@ -304,11 +327,133 @@ fun SettingsAppearanceScreen(
 ) {
     SettingsSubScreen(language, onBack) {
         AppearanceSection(
-            language, selectedFont, densityScale, screenTransition,
-            onOpenTheme, onOpenFont, onOpenCanvas, onOpenDensity, onOpenTransitions, onOpenIntro, onOpenPlayerDesign,
-            nativeTitleBar, onNativeTitleBarChange,
-            showRightSidebar, onShowRightSidebarChange,
-            onRestart,
+            language = language,
+            onOpenTheme = onOpenTheme,
+            onOpenFont = onOpenFont,
+            onOpenCanvas = onOpenCanvas,
+            onOpenDensity = onOpenDensity,
+            onOpenTransitions = onOpenTransitions,
+            onOpenPlayerDesign = onOpenPlayerDesign,
+            onOpenIntro = onOpenIntro,
+            animationsEnabled = animationsEnabled,
+            onAnimationsEnabledChange = onAnimationsEnabledChange,
+            nativeTitleBar = nativeTitleBar,
+            onNativeTitleBarChange = onNativeTitleBarChange,
+            showRightSidebar = showRightSidebar,
+            onShowRightSidebarChange = onShowRightSidebarChange,
+            onRestart = onRestart,
+        )
+    }
+}
+
+@Composable
+fun SettingsFontScreen(
+    language: String,
+    onBack: () -> Unit,
+    selectedFont: AppFont,
+    onFontChange: (AppFont) -> Unit,
+    customFontPath: String = "",
+    onImportFont: () -> Unit = {},
+) {
+    SettingsSubScreen(language, onBack) {
+        FontSection(
+            language = language,
+            selectedFont = selectedFont,
+            onFontChange = onFontChange,
+            customFontPath = customFontPath,
+            onImportFont = onImportFont,
+        )
+    }
+}
+
+@Composable
+fun SettingsCanvasScreen(
+    language: String,
+    onBack: () -> Unit,
+    canvasEnabled: Boolean,
+    onCanvasEnabledChange: (Boolean) -> Unit,
+    canvasSource: CanvasSource,
+    onCanvasSourceChange: (CanvasSource) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        CanvasSection(
+            language = language,
+            canvasEnabled = canvasEnabled,
+            onCanvasEnabledChange = onCanvasEnabledChange,
+            canvasSource = canvasSource,
+            onCanvasSourceChange = onCanvasSourceChange,
+        )
+    }
+}
+
+@Composable
+fun SettingsDensityScreen(
+    language: String,
+    onBack: () -> Unit,
+    densityScale: Float,
+    onDensityScaleChange: (Float) -> Unit,
+    gridItemSize: Int,
+    onGridItemSizeChange: (Int) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        DensityScreen(
+            language = language,
+            densityScale = densityScale,
+            onDensityScaleChange = onDensityScaleChange,
+            gridItemSize = gridItemSize,
+            onGridItemSizeChange = onGridItemSizeChange,
+        )
+    }
+}
+
+@Composable
+fun SettingsTransitionsScreen(
+    language: String,
+    onBack: () -> Unit,
+    screenTransition: String,
+    onScreenTransitionChange: (String) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        TransitionsScreen(
+            language = language,
+            screenTransition = screenTransition,
+            onScreenTransitionChange = onScreenTransitionChange,
+        )
+    }
+}
+
+@Composable
+fun SettingsPlayerDesignScreen(
+    language: String,
+    onBack: () -> Unit,
+    design: PlayerDesign,
+    onDesignChange: (PlayerDesign) -> Unit,
+    background: PlayerBackgroundStyle,
+    onBackgroundChange: (PlayerBackgroundStyle) -> Unit,
+    rotatingThumbnail: Boolean,
+    onRotatingThumbnailChange: (Boolean) -> Unit,
+    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
+    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
+    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
+    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
+    pureBlackMiniPlayer: Boolean = false,
+    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
+) {
+    SettingsSubScreen(language, onBack) {
+        PlayerDesignScreen(
+            language = language,
+            design = design,
+            onDesignChange = onDesignChange,
+            background = background,
+            onBackgroundChange = onBackgroundChange,
+            rotatingThumbnail = rotatingThumbnail,
+            onRotatingThumbnailChange = onRotatingThumbnailChange,
+            miniPlayerDesign = miniPlayerDesign,
+            onMiniPlayerDesignChange = onMiniPlayerDesignChange,
+            miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
+            onMiniPlayerBackgroundStyleChange = onMiniPlayerBackgroundStyleChange,
+            pureBlackMiniPlayer = pureBlackMiniPlayer,
+            onPureBlackMiniPlayerChange = onPureBlackMiniPlayerChange,
         )
     }
 }
@@ -349,38 +494,6 @@ fun SettingsWrappedScreen(
 }
 
 @Composable
-fun SettingsTransitionsScreen(
-    language: String,
-    onBack: () -> Unit,
-    screenTransition: String,
-    onScreenTransitionChange: (String) -> Unit,
-) {
-    SettingsSubScreen(language, onBack) {
-        TransitionsScreen(language, screenTransition, onScreenTransitionChange)
-    }
-}
-
-@Composable
-fun SettingsDensityScreen(
-    language: String,
-    onBack: () -> Unit,
-    densityScale: Float,
-    onDensityScaleChange: (Float) -> Unit,
-    gridItemSize: Int,
-    onGridItemSizeChange: (Int) -> Unit,
-) {
-    SettingsSubScreen(language, onBack) {
-        DensityScreen(
-            language = language,
-            densityScale = densityScale,
-            onDensityScaleChange = onDensityScaleChange,
-            gridItemSize = gridItemSize,
-            onGridItemSizeChange = onGridItemSizeChange,
-        )
-    }
-}
-
-@Composable
 fun SettingsThemeScreen(
     language: String,
     onBack: () -> Unit,
@@ -392,6 +505,9 @@ fun SettingsThemeScreen(
     onAccentIntensityChange: (Float) -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
+    customAccents: List<Int> = emptyList(),
+    onAddCustomAccent: (Int) -> Unit = {},
+    onRemoveCustomAccent: (Int) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         ThemeSection(
@@ -404,41 +520,10 @@ fun SettingsThemeScreen(
             onAccentIntensityChange = onAccentIntensityChange,
             pureBlack = pureBlack,
             onPureBlackChange = onPureBlackChange,
+            customAccents = customAccents,
+            onAddCustomAccent = onAddCustomAccent,
+            onRemoveCustomAccent = onRemoveCustomAccent,
         )
-    }
-}
-
-@Composable
-fun SettingsFontScreen(
-    language: String,
-    onBack: () -> Unit,
-    selectedFont: AppFont,
-    onFontChange: (AppFont) -> Unit,
-    customFontPath: String = "",
-    onImportFont: () -> Unit = {},
-) {
-    SettingsSubScreen(language, onBack) {
-        FontSection(
-            language = language,
-            selectedFont = selectedFont,
-            onFontChange = onFontChange,
-            customFontPath = customFontPath,
-            onImportFont = onImportFont,
-        )
-    }
-}
-
-@Composable
-fun SettingsCanvasScreen(
-    language: String,
-    onBack: () -> Unit,
-    canvasEnabled: Boolean,
-    onCanvasEnabledChange: (Boolean) -> Unit,
-    canvasSource: CanvasSource,
-    onCanvasSourceChange: (CanvasSource) -> Unit,
-) {
-    SettingsSubScreen(language, onBack) {
-        CanvasSection(language, canvasEnabled, onCanvasEnabledChange, canvasSource, onCanvasSourceChange)
     }
 }
 
@@ -448,6 +533,34 @@ fun SettingsPlayerScreen(
     onBack: () -> Unit,
     autoPlayNext: Boolean,
     onToggleAutoPlayNext: (Boolean) -> Unit,
+    autoLoadMore: Boolean,
+    onToggleAutoLoadMore: (Boolean) -> Unit,
+    preventDuplicateTracksInQueue: Boolean,
+    onTogglePreventDuplicateTracksInQueue: (Boolean) -> Unit,
+    autoSkipNextOnError: Boolean,
+    onToggleAutoSkipNextOnError: (Boolean) -> Unit,
+    pauseWhenMediaMuted: Boolean,
+    onTogglePauseWhenMediaMuted: (Boolean) -> Unit,
+    keepScreenOnWhenPlayerExpanded: Boolean,
+    onToggleKeepScreenOnWhenPlayerExpanded: (Boolean) -> Unit,
+    persistentShuffle: Boolean,
+    onTogglePersistentShuffle: (Boolean) -> Unit,
+    progressiveSeek: Boolean,
+    onToggleProgressiveSeek: (Boolean) -> Unit,
+    autoDownloadOnLike: Boolean,
+    onToggleAutoDownloadOnLike: (Boolean) -> Unit,
+    historyDurationSeconds: Int,
+    onHistoryDurationSecondsChange: (Int) -> Unit,
+    skipSilence: Boolean,
+    onToggleSkipSilence: (Boolean) -> Unit,
+    skipSilenceInstant: Boolean,
+    onToggleSkipSilenceInstant: (Boolean) -> Unit,
+    crossfade: Boolean,
+    onToggleCrossfade: (Boolean) -> Unit,
+    crossfadeDurationSeconds: Int,
+    onCrossfadeDurationSecondsChange: (Int) -> Unit,
+    disableCrossfadeGapless: Boolean,
+    onToggleDisableCrossfadeGapless: (Boolean) -> Unit,
     audioQuality: String,
     onAudioQualityChange: (String) -> Unit,
     rememberShuffleRepeat: Boolean,
@@ -458,7 +571,8 @@ fun SettingsPlayerScreen(
     onToggleSyncViviVolume: (Boolean) -> Unit,
     sliderStyle: String,
     onSliderStyleChange: (String) -> Unit,
-    onOpenPlayerDesign: () -> Unit,
+    onOpenPlayerDesign: () -> Unit = {},
+    onOpenEqualizer: () -> Unit = {},
     streamCacheMinutes: Int = 10,
     onStreamCacheMinutesChange: (Int) -> Unit = {},
 ) {
@@ -467,6 +581,34 @@ fun SettingsPlayerScreen(
             language,
             autoPlayNext,
             onToggleAutoPlayNext,
+            autoLoadMore,
+            onToggleAutoLoadMore,
+            preventDuplicateTracksInQueue,
+            onTogglePreventDuplicateTracksInQueue,
+            autoSkipNextOnError,
+            onToggleAutoSkipNextOnError,
+            pauseWhenMediaMuted,
+            onTogglePauseWhenMediaMuted,
+            keepScreenOnWhenPlayerExpanded,
+            onToggleKeepScreenOnWhenPlayerExpanded,
+            persistentShuffle,
+            onTogglePersistentShuffle,
+            progressiveSeek,
+            onToggleProgressiveSeek,
+            autoDownloadOnLike,
+            onToggleAutoDownloadOnLike,
+            historyDurationSeconds,
+            onHistoryDurationSecondsChange,
+            skipSilence,
+            onToggleSkipSilence,
+            skipSilenceInstant,
+            onToggleSkipSilenceInstant,
+            crossfade,
+            onToggleCrossfade,
+            crossfadeDurationSeconds,
+            onCrossfadeDurationSecondsChange,
+            disableCrossfadeGapless,
+            onToggleDisableCrossfadeGapless,
             audioQuality,
             onAudioQualityChange,
             rememberShuffleRepeat,
@@ -478,48 +620,9 @@ fun SettingsPlayerScreen(
             sliderStyle,
             onSliderStyleChange,
             onOpenPlayerDesign,
+            onOpenEqualizer,
             streamCacheMinutes,
             onStreamCacheMinutesChange,
-        )
-    }
-}
-
-@Composable
-fun SettingsPlayerDesignScreen(
-    language: String,
-    onBack: () -> Unit,
-    design: PlayerDesign,
-    onDesignChange: (PlayerDesign) -> Unit,
-    background: PlayerBackgroundStyle,
-    onBackgroundChange: (PlayerBackgroundStyle) -> Unit,
-    rotatingThumbnail: Boolean,
-    onRotatingThumbnailChange: (Boolean) -> Unit,
-    miniPlayerStyle: String = "standard",
-    onMiniPlayerStyleChange: (String) -> Unit = {},
-    miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
-    onMiniPlayerDesignChange: (MiniPlayerDesign) -> Unit = {},
-    miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
-    onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
-    pureBlackMiniPlayer: Boolean = false,
-    onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
-) {
-    SettingsSubScreen(language, onBack) {
-        PlayerDesignScreen(
-            language = language,
-            design = design,
-            onDesignChange = onDesignChange,
-            background = background,
-            onBackgroundChange = onBackgroundChange,
-            rotatingThumbnail = rotatingThumbnail,
-            onRotatingThumbnailChange = onRotatingThumbnailChange,
-            miniPlayerStyle = miniPlayerStyle,
-            onMiniPlayerStyleChange = onMiniPlayerStyleChange,
-            miniPlayerDesign = miniPlayerDesign,
-            onMiniPlayerDesignChange = onMiniPlayerDesignChange,
-            miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
-            onMiniPlayerBackgroundStyleChange = onMiniPlayerBackgroundStyleChange,
-            pureBlackMiniPlayer = pureBlackMiniPlayer,
-            onPureBlackMiniPlayerChange = onPureBlackMiniPlayerChange,
         )
     }
 }
@@ -587,8 +690,15 @@ fun SettingsUpdatesScreen(
 }
 
 @Composable
-fun SettingsAboutScreen(language: String, onBack: () -> Unit) {
-    SettingsSubScreen(language, onBack) { AboutSection(language) }
+fun SettingsAboutScreen(language: String, onBack: () -> Unit, onOpenContributors: () -> Unit) {
+    SettingsSubScreen(language, onBack) {
+        AboutSection(language = language, onOpenContributors = onOpenContributors)
+    }
+}
+
+@Composable
+fun SettingsContributorsScreen(language: String, onBack: () -> Unit) {
+    SettingsSubScreen(language, onBack) { ContributorsSection(language) }
 }
 
 @Composable
@@ -627,51 +737,57 @@ fun SettingsIntroScreen(
     SettingsSubScreen(language, onBack) {
         Text(Localization.get(language, "intro"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 12.dp))
 
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Switch(checked = showIntroSplash, onCheckedChange = onShowIntroSplashChange)
-            Column(Modifier.clickable { onShowIntroSplashChange(!showIntroSplash) }) {
-                Text(Localization.get(language, "show_intro_on_startup"))
-                Text(
-                    Localization.get(language, "intro_desc"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Movie,
+                    title = { Text(Localization.get(language, "show_intro_on_startup")) },
+                    description = { Text(Localization.get(language, "intro_desc")) },
+                    trailing = { Switch(checked = showIntroSplash, onCheckedChange = onShowIntroSplashChange) },
+                    onClick = { onShowIntroSplashChange(!showIntroSplash) },
+                ),
+            ),
+        )
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
 
-        IntroSectionLabel(Localization.get(language, "intro_style"))
-        listOf(
-            "logo" to "intro_style_logo",
-            "logo_name" to "intro_style_logo_name",
-            "logo_tagline" to "intro_style_logo_tagline",
-        ).forEach { (value, key) ->
-            IntroRadioRow(
-                title = Localization.get(language, key),
-                selected = introStyle == value,
-                onClick = { onIntroStyleChange(value) },
-            )
-        }
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.AutoAwesome,
+            title = Localization.get(language, "intro_style"),
+            value = Localization.get(language, when (introStyle) {
+                "logo" -> "intro_style_logo"
+                "logo_name" -> "intro_style_logo_name"
+                else -> "intro_style_logo_tagline"
+            }),
+            options = listOf("logo", "logo_name", "logo_tagline").map { v ->
+                v to Localization.get(language, when (v) {
+                    "logo" -> "intro_style_logo"
+                    "logo_name" -> "intro_style_logo_name"
+                    else -> "intro_style_logo_tagline"
+                })
+            },
+            onSelect = onIntroStyleChange,
+        )
 
         Spacer(Modifier.height(8.dp))
 
-        IntroSectionLabel(Localization.get(language, "intro_background"))
-        listOf(
-            "gradient" to "intro_background_gradient",
-            "glow" to "intro_background_glow",
-            "dark" to "intro_background_dark",
-        ).forEach { (value, key) ->
-            IntroRadioRow(
-                title = Localization.get(language, key),
-                selected = introBackground == value,
-                onClick = { onIntroBackgroundChange(value) },
-            )
-        }
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.Palette,
+            title = Localization.get(language, "intro_background"),
+            value = Localization.get(language, when (introBackground) {
+                "gradient" -> "intro_background_gradient"
+                "glow" -> "intro_background_glow"
+                else -> "intro_background_dark"
+            }),
+            options = listOf("gradient", "glow", "dark").map { v ->
+                v to Localization.get(language, when (v) {
+                    "gradient" -> "intro_background_gradient"
+                    "glow" -> "intro_background_glow"
+                    else -> "intro_background_dark"
+                })
+            },
+            onSelect = onIntroBackgroundChange,
+        )
 
         Spacer(Modifier.height(20.dp))
 
@@ -681,38 +797,6 @@ fun SettingsIntroScreen(
         ) {
             Text(Localization.get(language, "preview_intro"))
         }
-    }
-}
-
-@Composable
-private fun IntroSectionLabel(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun IntroRadioRow(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Text(
-            title,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = 12.dp),
-        )
     }
 }
 
@@ -1146,21 +1230,17 @@ fun LyricsSection(
     onLyricsLineSpacingChange: (Float) -> Unit = {},
 ) {
     Text(Localization.get(language, "lyrics"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
-    Row(
-        Modifier.fillMaxWidth().padding(top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Switch(checked = syncedLyrics, onCheckedChange = onToggleSyncedLyrics)
-        Column(Modifier.clickable { onToggleSyncedLyrics(!syncedLyrics) }) {
-            Text(Localization.get(language, "synced_lyrics"))
-            Text(
-                Localization.get(language, "synced_lyrics_desc"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Lyrics,
+                title = { Text(Localization.get(language, "synced_lyrics")) },
+                description = { Text(Localization.get(language, "synced_lyrics_desc")) },
+                trailing = { Switch(checked = syncedLyrics, onCheckedChange = onToggleSyncedLyrics) },
+                onClick = { onToggleSyncedLyrics(!syncedLyrics) },
+            ),
+        ),
+    )
 
     Text(
         "${Localization.get(language, "lyrics_text_size")}: ${lyricsTextSize.toInt()} sp",
@@ -1645,18 +1725,15 @@ fun SettingsNotificationsScreen(
         )
         Spacer(Modifier.height(12.dp))
 
-        NotificationModeOption(
-            language = language,
-            title = Localization.get(language, "notification_main_window"),
-            selected = notificationMode != "native",
-            onClick = { onNotificationModeChange("in_app") },
-        )
-        NotificationModeOption(
-            language = language,
-            title = Localization.get(language, "notification_native"),
-            tag = Localization.get(language, "experimental"),
-            selected = notificationMode == "native",
-            onClick = { onNotificationModeChange("native") },
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.DesktopWindows,
+            title = Localization.get(language, "notification_mode"),
+            value = Localization.get(language, if (notificationMode == "native") "notification_native" else "notification_main_window"),
+            options = listOf(
+                "in_app" to Localization.get(language, "notification_main_window"),
+                "native" to Localization.get(language, "notification_native"),
+            ),
+            onSelect = onNotificationModeChange,
         )
 
         Spacer(Modifier.height(12.dp))
@@ -1668,89 +1745,32 @@ fun SettingsNotificationsScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-        Text(
-            Localization.get(language, "notification_duration"),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            Localization.get(language, "notification_duration_desc"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
-        )
-        NotificationDurationOption(
-            seconds = 3,
-            selected = notificationDurationSeconds == 3,
-            onClick = { onNotificationDurationChange(3) },
-        )
-        NotificationDurationOption(
-            seconds = 5,
-            selected = notificationDurationSeconds == 5,
-            onClick = { onNotificationDurationChange(5) },
-        )
-        NotificationDurationOption(
-            seconds = 10,
-            selected = notificationDurationSeconds == 10,
-            onClick = { onNotificationDurationChange(10) },
-        )
-        NotificationDurationOption(
-            seconds = 15,
-            selected = notificationDurationSeconds == 15,
-            onClick = { onNotificationDurationChange(15) },
-        )
-        NotificationDurationOption(
-            seconds = 30,
-            selected = notificationDurationSeconds == 30,
-            onClick = { onNotificationDurationChange(30) },
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.AccessTime,
+            title = Localization.get(language, "notification_duration"),
+            description = Localization.get(language, "notification_duration_desc"),
+            value = "${notificationDurationSeconds}s",
+            options = listOf(3, 5, 10, 15, 30).map { it.toString() to "${it}s" },
+            onSelect = { s -> onNotificationDurationChange(s.toIntOrNull() ?: notificationDurationSeconds) },
         )
 
         Spacer(Modifier.height(16.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { onSaveHistoryChange(!saveHistory) }
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                Localization.get(language, "save_notification_history"),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Switch(checked = saveHistory, onCheckedChange = onSaveHistoryChange)
-        }
-
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenHistory)
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                Localization.get(language, "notification_history"),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun NotificationDurationOption(seconds: Int, selected: Boolean, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text("${seconds}s", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        if (selected) {
-            Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleLarge)
-        }
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.History,
+                    title = { Text(Localization.get(language, "save_notification_history")) },
+                    trailing = { Switch(checked = saveHistory, onCheckedChange = onSaveHistoryChange) },
+                    onClick = { onSaveHistoryChange(!saveHistory) },
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Notifications,
+                    title = { Text(Localization.get(language, "notification_history")) },
+                    trailing = { SettingsChevron() },
+                    onClick = onOpenHistory,
+                ),
+            ),
+        )
     }
 }
 
@@ -1900,33 +1920,23 @@ fun SettingsPrivacyScreen(
         Text(Localization.get(language, "privacy"), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))
 
-        Text(
-            Localization.get(language, "listen_history"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        BackupToggleRow(
-            language = language,
-            titleKey = "pause_listen_history",
-            descKey = "pause_listen_history_desc",
-            checked = pauseListenHistory,
-            onCheckedChange = onPauseListenHistoryChange,
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        Text(
-            Localization.get(language, "search_history"),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        BackupToggleRow(
-            language = language,
-            titleKey = "pause_search_history",
-            descKey = "pause_search_history_desc",
-            checked = pauseSearchHistory,
-            onCheckedChange = onPauseSearchHistoryChange,
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.History,
+                    title = { Text(Localization.get(language, "pause_listen_history")) },
+                    description = { Text(Localization.get(language, "pause_listen_history_desc")) },
+                    trailing = { Switch(checked = pauseListenHistory, onCheckedChange = onPauseListenHistoryChange) },
+                    onClick = { onPauseListenHistoryChange(!pauseListenHistory) },
+                ),
+                M3SettingsItem(
+                    icon = Icons.Filled.Search,
+                    title = { Text(Localization.get(language, "pause_search_history")) },
+                    description = { Text(Localization.get(language, "pause_search_history_desc")) },
+                    trailing = { Switch(checked = pauseSearchHistory, onCheckedChange = onPauseSearchHistoryChange) },
+                    onClick = { onPauseSearchHistoryChange(!pauseSearchHistory) },
+                ),
+            ),
         )
         Spacer(Modifier.height(12.dp))
         OutlinedButton(onClick = { showClearDialog = true }) {
@@ -2033,6 +2043,9 @@ fun SettingsDesktopScreen(
     language: String,
     onBack: () -> Unit,
     isWindows: Boolean,
+    isMac: Boolean = false,
+    macAccessibilityTrusted: Boolean = false,
+    onOpenAccessibilitySettings: (() -> Unit)? = null,
     showWidget: Boolean,
     onShowWidgetChange: (Boolean) -> Unit,
     mediaKeysEnabled: Boolean,
@@ -2075,12 +2088,15 @@ fun SettingsDesktopScreen(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(Localization.get(language, "media_keys"), style = MaterialTheme.typography.bodyLarge)
-                    if (!isWindows) {
+                    // On Windows/Linux the hook needs no OS permission; on
+                    // macOS it is only active once the Accessibility
+                    // permission is granted, which is reflected by the switch.
+                    if (isMac && !macAccessibilityTrusted) {
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            Localization.get(language, "windows_only"),
+                            Localization.get(language, "requires_accessibility"),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
@@ -2089,11 +2105,23 @@ fun SettingsDesktopScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (isMac && !macAccessibilityTrusted && onOpenAccessibilitySettings != null) {
+                    OutlinedButton(
+                        onClick = onOpenAccessibilitySettings,
+                        modifier = Modifier.padding(top = 4.dp),
+                    ) {
+                        Text(Localization.get(language, "open_system_settings"))
+                    }
+                }
             }
+            // macOS: usable only once the Accessibility permission is granted
+            // (MediaKeys activates as soon as the OS reports trust). Windows
+            // and Linux need no permission.
+            val keysUsable = isWindows || isMac && macAccessibilityTrusted || !isWindows && !isMac
             Switch(
-                checked = mediaKeysEnabled && isWindows,
-                onCheckedChange = { onMediaKeysChange(it && isWindows) },
-                enabled = isWindows,
+                checked = mediaKeysEnabled && keysUsable,
+                onCheckedChange = { onMediaKeysChange(it && keysUsable) },
+                enabled = keysUsable,
             )
         }
 
@@ -2112,5 +2140,617 @@ fun SettingsDesktopScreen(
             Switch(checked = trayMenuEnabled, onCheckedChange = onTrayMenuChange)
         }
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+/* =====================================================================
+ * Phase 10 settings sub-screens: Equalizer, Data saver, AI translation
+ * (ports of the mobile `EqScreen` / `DataSaverSetting` / `AiSettings`).
+ * ===================================================================== */
+
+/**
+ * Predefined example EQ profile (V-shape) so new users can see real values and
+ * tweak them with the live editor instead of importing a file blindly.
+ */
+fun exampleEQProfile(): SavedEQProfile = SavedEQProfile(
+    id = "example_v_shape",
+    name = "Example: V-Shape",
+    deviceModel = "VIVI Example",
+    bands = listOf(
+        ParametricEQBand(frequency = 60.0, gain = 6.0, q = 0.9),
+        ParametricEQBand(frequency = 150.0, gain = 3.0, q = 1.0),
+        ParametricEQBand(frequency = 400.0, gain = 0.0, q = 1.0),
+        ParametricEQBand(frequency = 1000.0, gain = -2.0, q = 1.1),
+        ParametricEQBand(frequency = 2500.0, gain = 2.0, q = 1.0),
+        ParametricEQBand(frequency = 6000.0, gain = 4.0, q = 0.9),
+        ParametricEQBand(frequency = 15000.0, gain = 5.0, q = 0.8),
+    ),
+    preamp = 0.0,
+    isCustom = true,
+)
+
+/**
+ * Maps an EQ band center frequency to its localized range-name key, so the
+ * live editor can show whether a band sits in the sub-bass, bass, low-mid,
+ * mid, high-mid or treble region next to its frequency (e.g. "Band 2 · 150 Hz · Bass").
+ */
+private fun eqRangeKey(frequency: Double): String = when {
+    frequency < 60.0 -> "eq_range_sub_bass"
+    frequency < 250.0 -> "eq_range_bass"
+    frequency < 500.0 -> "eq_range_low_mid"
+    frequency < 2000.0 -> "eq_range_mid"
+    frequency < 8000.0 -> "eq_range_high_mid"
+    else -> "eq_range_treble"
+}
+
+/** Equalizer: profile list + import (AutoEQ .txt) + delete + active radio + live editor. */
+@Composable
+fun SettingsEqualizerScreen(
+    language: String,
+    onBack: () -> Unit,
+    profiles: List<SavedEQProfile>,
+    activeProfileId: String,
+    onSelectProfile: (String?) -> Unit,
+    onImportProfile: (String, ParametricEQ) -> Unit,
+    onDeleteProfile: (String) -> Unit,
+    onAddExampleProfile: () -> Unit = {},
+    onUpdateProfile: (String, List<ParametricEQBand>, Double) -> Unit = { _, _, _ -> },
+) {
+    var error by remember { mutableStateOf<String?>(null) }
+    var deleteTarget by remember { mutableStateOf<SavedEQProfile?>(null) }
+
+    fun pickFile(): File? = runCatching {
+        val dialog = java.awt.FileDialog(
+            null as java.awt.Frame?,
+            Localization.get(language, "import_profile"),
+            java.awt.FileDialog.LOAD,
+        )
+        dialog.isVisible = true
+        val dir = dialog.directory
+        val name = dialog.file
+        dialog.dispose()
+        if (dir != null && name != null) File(dir, name) else null
+    }.getOrNull()
+
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "equalizer_header"),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+
+        // "No Equalization" option (always first, like the mobile screen).
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { onSelectProfile(null) }
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = activeProfileId.isEmpty(), onClick = { onSelectProfile(null) })
+            Spacer(Modifier.width(12.dp))
+            Text(Localization.get(language, "eq_disabled"), style = MaterialTheme.typography.bodyLarge)
+        }
+
+        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+        if (profiles.isEmpty()) {
+            Text(
+                Localization.get(language, "no_profiles"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 16.dp),
+            )
+        } else {
+            profiles.forEach { profile ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectProfile(profile.id) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = activeProfileId == profile.id, onClick = { onSelectProfile(profile.id) })
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(profile.deviceModel, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            Localization.get(language, "band_count").replace("%d", profile.bands.size.toString()),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = { deleteTarget = profile }) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = Localization.get(language, "delete_profile_desc"),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = {
+                    val file = pickFile()
+                    if (file != null) {
+                        runCatching {
+                            val eq = ParametricEQParser.parseText(file.readText())
+                            if (eq.bands.isEmpty()) throw IllegalArgumentException("No filters found")
+                            onImportProfile(file.nameWithoutExtension, eq)
+                        }.onFailure {
+                            error = it.message ?: Localization.get(language, "import_error_title")
+                        }
+                    }
+                },
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(Localization.get(language, "import_profile"))
+            }
+            OutlinedButton(onClick = onAddExampleProfile) {
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(Localization.get(language, "add_example_profile"))
+            }
+        }
+
+        // --- Live editor for the active profile: adjust gains/Q/preamp in real time. ---
+        val editingProfile = profiles.find { it.id == activeProfileId }
+        if (editingProfile != null) {
+            key(editingProfile.id) {
+                var draftBands by remember { mutableStateOf(editingProfile.bands) }
+                var draftPreamp by remember { mutableStateOf(editingProfile.preamp) }
+
+                fun commit() = onUpdateProfile(editingProfile.id, draftBands, draftPreamp)
+
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "${Localization.get(language, "eq_edit_profile")}: ${editingProfile.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Text(
+                    Localization.get(language, "eq_preamp"),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Slider(
+                        value = draftPreamp.toFloat(),
+                        onValueChange = { draftPreamp = it.toDouble(); commit() },
+                        valueRange = -12f..12f,
+                        steps = 47,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "${if (draftPreamp > 0) "+" else ""}${java.lang.String.format(java.util.Locale.US, "%.1f", draftPreamp)} dB",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp).widthIn(min = 64.dp),
+                        textAlign = TextAlign.End,
+                    )
+                }
+
+                draftBands.forEachIndexed { i, band ->
+                    Card(
+                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                            Text(
+                                "${Localization.get(language, "eq_band")} ${i + 1} · ${java.lang.String.format(java.util.Locale.US, "%.0f", band.frequency)} Hz · ${Localization.get(language, eqRangeKey(band.frequency))}",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    Localization.get(language, "eq_gain"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 44.dp),
+                                )
+                                Slider(
+                                    value = band.gain.toFloat(),
+                                    onValueChange = { g ->
+                                        draftBands = draftBands.toMutableList().also { it[i] = band.copy(gain = g.toDouble()) }
+                                        commit()
+                                    },
+                                    valueRange = -12f..12f,
+                                    steps = 47,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    "${if (band.gain > 0) "+" else ""}${java.lang.String.format(java.util.Locale.US, "%.1f", band.gain)} dB",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 56.dp),
+                                    textAlign = TextAlign.End,
+                                )
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    Localization.get(language, "eq_q_factor"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 44.dp),
+                                )
+                                Slider(
+                                    value = band.q.toFloat(),
+                                    onValueChange = { q ->
+                                        draftBands = draftBands.toMutableList().also { it[i] = band.copy(q = q.toDouble()) }
+                                        commit()
+                                    },
+                                    valueRange = 0.4f..8f,
+                                    steps = 37,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    java.lang.String.format(java.util.Locale.US, "%.2f", band.q),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.widthIn(min = 56.dp),
+                                    textAlign = TextAlign.End,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+
+    error?.let { message ->
+        AlertDialog(
+            onDismissRequest = { error = null },
+            title = { Text(Localization.get(language, "import_error_title")) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { error = null }) { Text(Localization.get(language, "ok")) }
+            },
+        )
+    }
+
+    deleteTarget?.let { profile ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text(Localization.get(language, "delete_profile_desc")) },
+            text = {
+                Text(
+                    Localization.get(language, "delete_profile_confirmation")
+                        .replace("%1\$s", profile.name)
+                        .replace("%s", profile.name),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteProfile(profile.id)
+                    deleteTarget = null
+                }) {
+                    Text(Localization.get(language, "delete"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) {
+                    Text(Localization.get(language, "cancel"))
+                }
+            },
+        )
+    }
+}
+
+/** Data saver: master toggle + the list of what gets turned off. */
+@Composable
+fun SettingsDataSaverScreen(
+    language: String,
+    onBack: () -> Unit,
+    dataSaver: Boolean,
+    onToggleDataSaver: (Boolean) -> Unit,
+) {
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "data_saver"),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+
+        Text(
+            Localization.get(language, "data_saver_desc"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 16.dp),
+        )
+
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.EnergySavingsLeaf,
+                    title = { Text(Localization.get(language, "data_saver")) },
+                    trailing = { Switch(checked = dataSaver, onCheckedChange = onToggleDataSaver) },
+                    onClick = { onToggleDataSaver(!dataSaver) },
+                ),
+            ),
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            Localization.get(language, "data_saver_turns_off_header"),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+        )
+        listOf(
+            "data_saver_player_canvas",
+            "data_saver_artist_video",
+            "data_saver_artist_bg_video",
+            "data_saver_album_canvas",
+            "data_saver_high_quality_images",
+        ).forEach { key ->
+            Text(
+                "•  " + Localization.get(language, key),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 3.dp),
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** AI lyrics translation settings (provider, keys, model, target language…). */
+@Composable
+fun SettingsAiScreen(
+    language: String,
+    onBack: () -> Unit,
+    aiProvider: String,
+    aiApiKey: String,
+    aiBaseUrl: String,
+    aiModel: String,
+    translateLanguage: String,
+    translateMode: String,
+    deeplApiKey: String,
+    deeplFormality: String,
+    onAiProviderChange: (String) -> Unit,
+    onAiApiKeyChange: (String) -> Unit,
+    onAiBaseUrlChange: (String) -> Unit,
+    onAiModelChange: (String) -> Unit,
+    onTranslateLanguageChange: (String) -> Unit,
+    onTranslateModeChange: (String) -> Unit,
+    onDeeplApiKeyChange: (String) -> Unit,
+    onDeeplFormalityChange: (String) -> Unit,
+) {
+    val aiProviders = mapOf(
+        "OpenRouter" to "https://openrouter.ai/api/v1/chat/completions",
+        "OpenAI" to "https://api.openai.com/v1/chat/completions",
+        "Perplexity" to "https://api.perplexity.ai/chat/completions",
+        "Claude" to "https://api.anthropic.com/v1/messages",
+        "Gemini" to "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        "XAi" to "https://api.x.ai/v1/chat/completions",
+        "Mistral" to "https://api.mistral.ai/v1/chat/completions",
+        "DeepL" to "https://api.deepl.com/v2/translate",
+        "Custom" to "",
+    )
+    val modelsByProvider = mapOf(
+        "OpenRouter" to listOf(
+            "google/gemini-2.5-flash-lite", "google/gemini-2.5-flash", "x-ai/grok-4.1-fast",
+            "deepseek/deepseek-v3.1-terminus:exacto", "openai/gpt-4o-mini", "google/gemini-3-flash-preview",
+        ),
+        "OpenAI" to listOf("gpt-4o-mini", "gpt-4o", "gpt-4-turbo"),
+        "Claude" to listOf("claude-3-5-haiku-latest", "claude-3-5-sonnet-latest", "claude-3-opus-latest"),
+        "Gemini" to listOf(
+            "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash",
+            "gemini-1.5-flash", "gemini-3.5-flash", "gemini-3-flash", "gemini-3.1-flash-lite", "gemini-3.1-pro",
+        ),
+        "Perplexity" to listOf("sonar", "sonar-pro", "sonar-reasoning"),
+        "XAi" to listOf("grok-4-1-fast", "grok-vision-beta"),
+        "Mistral" to listOf("mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "mistral-tiny-latest"),
+        "DeepL" to emptyList(),
+        "Custom" to emptyList(),
+    )
+
+    var providerExpanded by remember { mutableStateOf(false) }
+    var modelExpanded by remember { mutableStateOf(false) }
+    var languageExpanded by remember { mutableStateOf(false) }
+    var modeExpanded by remember { mutableStateOf(false) }
+    var formalityExpanded by remember { mutableStateOf(false) }
+    var editingKey by remember { mutableStateOf<String?>(null) }
+    var keyInput by remember { mutableStateOf("") }
+    var editingBaseUrl by remember { mutableStateOf(false) }
+    var baseUrlInput by remember { mutableStateOf("") }
+
+    SettingsSubScreen(language, onBack) {
+        Text(
+            Localization.get(language, "ai_lyrics_translation"),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+
+        // Provider
+        Text(Localization.get(language, "ai_provider"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+        Box(Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { providerExpanded = true }) { Text(aiProvider) }
+            DropdownMenu(expanded = providerExpanded, onDismissRequest = { providerExpanded = false }) {
+                aiProviders.keys.forEach { p ->
+                    DropdownMenuItem(
+                        text = { Text(p) },
+                        onClick = {
+                            providerExpanded = false
+                            val newBase = if (p == "Custom" || p == "DeepL") "" else (aiProviders[p] ?: "")
+                            onAiBaseUrlChange(newBase)
+                            onAiProviderChange(p)
+                            val models = modelsByProvider[p] ?: emptyList()
+                            onAiModelChange(models.firstOrNull() ?: "")
+                        },
+                    )
+                }
+            }
+        }
+
+        // API key
+        Text(Localization.get(language, "ai_api_key"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        OutlinedButton(onClick = {
+            editingKey = "main"
+            keyInput = aiApiKey
+        }) {
+            Text(
+                if (aiApiKey.isNotEmpty()) "•".repeat(minOf(aiApiKey.length, 8)) else Localization.get(language, "not_set"),
+            )
+        }
+
+        // Base URL
+        Text(Localization.get(language, "ai_base_url"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        OutlinedButton(onClick = {
+            editingBaseUrl = true
+            baseUrlInput = aiBaseUrl
+        }) {
+            Text(aiBaseUrl.ifBlank { Localization.get(language, "not_set") })
+        }
+
+        // Model (hidden for DeepL / Custom)
+        if (aiProvider != "DeepL" && aiProvider != "Custom") {
+            Text(Localization.get(language, "ai_model"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+            Box(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = { modelExpanded = true }) { Text(aiModel.ifBlank { Localization.get(language, "not_set") }) }
+                DropdownMenu(expanded = modelExpanded, onDismissRequest = { modelExpanded = false }) {
+                    (modelsByProvider[aiProvider] ?: emptyList()).forEach { m ->
+                        DropdownMenuItem(
+                            text = { Text(m) },
+                            onClick = { modelExpanded = false; onAiModelChange(m) },
+                        )
+                    }
+                }
+            }
+        }
+
+        // Translation mode (not DeepL)
+        if (aiProvider != "DeepL") {
+            Text(Localization.get(language, "ai_translation_mode"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+            Box(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = { modeExpanded = true }) {
+                    Text(
+                        when (translateMode) {
+                            "Transcribed" -> Localization.get(language, "ai_translation_transcribed")
+                            else -> Localization.get(language, "ai_translation_literal")
+                        },
+                    )
+                }
+                DropdownMenu(expanded = modeExpanded, onDismissRequest = { modeExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_translation_literal")) },
+                        onClick = { modeExpanded = false; onTranslateModeChange("Literal") },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_translation_transcribed")) },
+                        onClick = { modeExpanded = false; onTranslateModeChange("Transcribed") },
+                    )
+                }
+            }
+        }
+
+        // DeepL formality
+        if (aiProvider == "DeepL") {
+            Text(Localization.get(language, "ai_deepl_formality"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+            Box(Modifier.padding(top = 8.dp)) {
+                OutlinedButton(onClick = { formalityExpanded = true }) {
+                    Text(
+                        when (deeplFormality) {
+                            "more" -> Localization.get(language, "ai_deepl_formality_more")
+                            "less" -> Localization.get(language, "ai_deepl_formality_less")
+                            else -> Localization.get(language, "ai_deepl_formality_default")
+                        },
+                    )
+                }
+                DropdownMenu(expanded = formalityExpanded, onDismissRequest = { formalityExpanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_deepl_formality_default")) },
+                        onClick = { formalityExpanded = false; onDeeplFormalityChange("default") },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_deepl_formality_more")) },
+                        onClick = { formalityExpanded = false; onDeeplFormalityChange("more") },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(Localization.get(language, "ai_deepl_formality_less")) },
+                        onClick = { formalityExpanded = false; onDeeplFormalityChange("less") },
+                    )
+                }
+            }
+        }
+
+        // Target language
+        Text(Localization.get(language, "ai_target_language"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+        Box(Modifier.padding(top = 8.dp)) {
+            OutlinedButton(onClick = { languageExpanded = true }) {
+                Text(LanguageCodeToName[translateLanguage] ?: translateLanguage)
+            }
+            DropdownMenu(expanded = languageExpanded, onDismissRequest = { languageExpanded = false }) {
+                LanguageCodeToName.toList().sortedBy { it.second }.forEach { (code, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = { languageExpanded = false; onTranslateLanguageChange(code) },
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // API key dialog
+    editingKey?.let { which ->
+        AlertDialog(
+            onDismissRequest = { editingKey = null },
+            title = { Text(Localization.get(language, "ai_api_key")) },
+            text = {
+                OutlinedTextField(
+                    value = keyInput,
+                    onValueChange = { keyInput = it },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (which == "main") onAiApiKeyChange(keyInput.trim())
+                    editingKey = null
+                }) {
+                    Text(Localization.get(language, "save"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingKey = null }) { Text(Localization.get(language, "cancel")) }
+            },
+        )
+    }
+
+    // Base URL dialog
+    if (editingBaseUrl) {
+        AlertDialog(
+            onDismissRequest = { editingBaseUrl = false },
+            title = { Text(Localization.get(language, "ai_base_url")) },
+            text = {
+                OutlinedTextField(
+                    value = baseUrlInput,
+                    onValueChange = { baseUrlInput = it },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onAiBaseUrlChange(baseUrlInput.trim())
+                    editingBaseUrl = false
+                }) {
+                    Text(Localization.get(language, "save"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingBaseUrl = false }) { Text(Localization.get(language, "cancel")) }
+            },
+        )
     }
 }

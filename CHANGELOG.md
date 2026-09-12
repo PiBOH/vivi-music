@@ -11,6 +11,610 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.60-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The Windows uninstaller really is fixed this time - no `Control has no parent window` error and the user-data cleanup actually runs**: 1.50.59 moved the details box of the uninstall progress page into `CurUninstallStepChanged(usUninstall)`, but the cleanup (and every line it logs) still ran in `usPostUninstall`. By then Inno Setup has already torn the progress page down, so the very first write to the memo raised `Control 'TNewMemo' has no parent window`; the code then tried to log the failure in its own `except` handler, which raised the same error again - that uncaught second exception is the runtime error users saw - and because it aborted before doing any work, older backups and every cache were left behind on disk too. Verified by reproducing both on a real install/uninstall with Inno Setup locally. The box is now created, filled and left alone inside `usUninstall` (the only step in which the memo can be written) and the user-data cleanup moved there as well, so every cleanup line stays visible in the box; each write is additionally guarded, and if the box is ever unusable the line goes to `%TEMP%\VIVIMusic-uninstall.log` instead of stopping the uninstall. (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+
+## [6.0.6.3_DE-1.50.59-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The floating "Now Playing" widget can no longer be dragged off screen**: the window position was saved as-is, so dropping the widget past an edge (or plugging out the monitor its saved position belonged to) pushed it where it could not be grabbed again. The position is now clamped to the union of every attached screen — both when it is restored at launch and after each drag, where an off-screen drop snaps it back to the nearest fully visible spot. (Closes [#64](https://github.com/PiBOH/vivi-music/issues/64))
+- [DE] **The Windows uninstaller no longer aborts with 'Control has no parent window'**: the details box of the uninstall progress page was created in `InitializeUninstallProgressForm`, but the progress page is not displayed yet at that point, so it has no window handle — the memo was left orphaned and the uninstaller died while freeing its controls (`Control 'TNewMemo' has no parent window`), aborting the uninstall before any cleanup ran. The box is now created in `CurUninstallStepChanged(usUninstall)`, once the page is really on screen, which is what the installer side already did. (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+
+### Changed
+- [WEBSITE] **Motion is now forced on every page and on every device**: card lifts and most of the polish were hover-driven, so phones and iPhones had no motion at all, and the reveal observer's 12% visibility threshold never triggered for blocks taller than a small viewport (which is exactly what happens on a phone). Every page now auto-tags its sections, cards, rows and article paragraphs for the scroll reveal (threshold 0, staggered, with a fallback that never leaves a block invisible), a slow ambient gradient drifts in the page background everywhere, tapping a card gives the same response hover gives on desktop, and the body fades in on load. There is no `prefers-reduced-motion` opt-out: motion is part of the brand.
+
+## [6.0.6.3_DE-1.50.58-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The Windows uninstaller's closing message matches the new retention rule**: it still said "a final backup of your settings, playlists and fonts was kept", but since 1.50.57 the only survivors are the newest `.vivide.backup` and `device-sync.json` (fonts and `playlists.json` are inside the backup, not next to it). It now lists exactly the two paths that were kept. [#11](https://github.com/PiBOH/vivi-music/issues/11)
+
+## [6.0.6.3_DE-1.50.57-alpha] - 2026-09-11
+
+### Changed
+- [DE] **Uninstall now keeps only the newest `.vivide.backup` plus `device-sync.json`**: instead of building a new `backups\uninstall-<timestamp>\` folder out of raw `device-sync.json` / `playlists.json` / fonts, the Windows uninstaller, the shared Linux/macOS/AppImage `scripts/uninstall-cleanup.sh` and the AUR `post_remove` hook now keep the app's newest `.vivide.backup` (a real restore point - settings + playlists - that the app can import back) and `~/.vivimusic/device-sync.json`, deleting every other file: older backups, `playlists.json`, fonts, updates/audio/video/canvas/lyrics caches, logs and artwork. Windows picks the newest backup from the `YYYYMMDD_HHMMSS` timestamp at the end of the file name (the prefixes differ: `auto_backup_*` vs `vivimusic-de_*`), the shell hooks use `ls -1t`. INSTALL-GUIDE and the website install guide updated for every OS. (Closes [#11](https://github.com/PiBOH/vivi-music/issues/11))
+
+## [6.0.6.3_DE-1.50.56-alpha] - 2026-09-11
+
+### Fixed
+- [DE] **The floating "Now Playing" widget no longer crashes the app on launch**: until the widget is dragged for the first time it uses an aligned position (the default `WindowPosition(Alignment.TopEnd)`), whose x/y are unspecified (NaN). The debounced position save ran `roundToInt()` on that NaN and threw `IllegalArgumentException: Cannot round NaN value` about half a second after the widget appeared — on every start, so the widget could never be dragged to save a real position. Unspecified positions are now ignored (the widget still remembers the position as soon as it is moved). (Closes [#63](https://github.com/PiBOH/vivi-music/issues/63))
+- [DE] **Windows uninstall no longer aborts with 'Type Mismatch'**: the uninstall cleanup built the backup folder name with `GetDateTimeString('yyyymmdd_hhnnss', '', '')` — passing an empty string for the two `Char` parameters compiled fine but made the uninstaller stop with `Runtime error: Type Mismatch`, so the uninstall never completed and the user data was never backed up. The separators are now the documented `#0`, and the whole cleanup runs inside a `try/except` so no cleanup failure can abort the uninstall (the closing dialog then states that the data was left untouched). (Closes [#52](https://github.com/PiBOH/vivi-music/issues/52))
+
+## [6.0.6.3_DE-1.50.55-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **Persian (fa) and Hebrew (iw) tables completed (batch 68)**: those locale tags arrive on the desktop only via device-sync from the Android app and were the last two languages with keys falling back to English — 592 keys translated into Persian and Hebrew, so `scripts/check_localization.py` now reports **every language table contains every English key** (100% coverage, all 52 languages + English).
+
+## [6.0.6.3_DE-1.50.54-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **Player background "Visualizer" no longer shows in Arabic**: the desktop-only key `player_background_visualizer` was missing from the English table (the generator only shipped it via the non-English extra batch), so with the default/English language the fallback safety net picked the first dictionary that had the key — the Arabic one. The key is now mapped in the generator (`en` = "Visualizer"), so every language falls back to English instead.
+- [DE] **Completed the missing desktop translations (batch 67)**: all 47 selectable languages now carry the `tooltip_*` strings (derived from the already-translated base keys), `create_room` / `join_room` (reusing the Android wording), the remaining `auto_load_more` / `auto_skip_next_on_error` / `skip_silence` / `forgotten_favorites` / `similar_to` / `recommended` subsets and the device-sync tooltips — `scripts/check_localization.py` reports 0 missing keys for every selectable language (plus the `in` / `nb-rNO` / `pt-rBR` locale aliases now copy their twin `id` / `nb` / `pt` tables, and `fa` / `iw` / `pt-rBR` Android resources are imported instead of skipped).
+
+## [6.0.6.3_DE-1.50.53-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **Seek bar stuck at ~19 s for some tracks (persisted)**: when a stream carried no duration, the player derived the length from the sample table — which only held the first ~256 KB scan window (~19 s) when the whole file was already on disk. Complete cached tracks were then misjudged as "truncated" (thrown away and re-downloaded on every play), while genuinely truncated cache files played their first ~19 s and "ended" — the seek bar of the player and mini player never moving past ~19 s. The player now scans the entire file when it is already on disk, so the duration is correct immediately, the truncation guard only fires for really truncated files, and cached tracks are reused instead of re-downloaded.
+
+### Changed
+- [DE] De-duplicated `formatBytes`/`formatSpeed` (three `formatBytes` + two `formatSpeed` copies with slightly different behaviour in `Main.kt`, `DevTools.kt` and `LogExporter.kt`) into shared helpers, and centralized the 9 copy-pasted `Json { ignoreUnknownKeys = true }` codecs into shared `sharedJson*` values — no behaviour change.
+
+## [6.0.6.3_DE-1.50.52-alpha] - 2026-09-10
+
+### Fixed
+- [DE] **[CRITICAL] Tracks no longer appear to last ~19 seconds**: when a stream carried no duration (NewPipe fast path, cached files, Listen Together guest tracks), the player derived the length from the sample table — which only holds the first ~256 KB scan window (~19 s) when playback starts — and froze it there, so the seek bar showed every track as ~19 s, the position clamped at that value and (with crossfade on) the next track started after ~19 s. The duration now comes from the track metadata when the stream has none (`fallbackDurationMs`), and the AAC-derived fallback GROWS as fragments are scanned and is re-reported, so the seek range follows the real track length.
+- [DE] Listen Together: leaving a room now forces a clean socket reconnect, so the next Create/Join is no longer silently dropped on the old (possibly server-closed) connection — the "after leaving a room I can't leave or re-enter one" lock-up with a stuck spinner is fixed.
+
+### Changed
+- [DE] Listen Together lobby now has a single morphing action button like the mobile app: **Create room** when no code is typed, **Join room** when the 8-character code is complete.
+
+## [6.0.6.3_DE-1.50.51-alpha] - 2026-09-09
+
+### Fixed
+- [DE] **Browse pages no longer fail with 401 `BROWSE_UNAUTHENTICATED` (E1031)**: `POST music.youtube.com/youtubei/v1/browse → 401 Request is missing required authentication credential` — e.g. opening *New release albums* (`FEmusic_new_releases_albums`) — came from two causes that were both fixed. (a) When the session cookie missed an APISID token (`SAPISID` / `__Secure-3PAPISID`), the client sent a partial auth (cookie without `SAPISIDHASH`) which is rejected more strictly than an anonymous request — it now falls back to anonymous for that call, so public catalog pages always load. (b) When a real authed session expired mid-use, browse retried the same authed request once and still hit 401 — it now retries once **anonymously**, so public pages stay available even with an expired session. E1031 remains in `ERRORS.md` for truly private browse calls.
+
+## [6.0.6.3_DE-1.50.50-alpha] - 2026-09-09
+
+### Fixed
+- [DE] **Browse failures are no longer invisible in the logs and the app**: `POST music.youtube.com/youtubei/v1/browse → 401 UNAUTHENTICATED (E1031)` failures — e.g. opening *New release albums* — now land in `~/.vivimusic/logs/<ts>/browse.log` (with `browseId`/`params`/`loggedIn`/`cookie`/`visitorData`/`dataSyncId` context and a prefixed `E1031 …`) and surface their code-text in the browse error card (instead of a blank JSON), so the support zip is never empty for this error.
+- [DE] **Every log file now exists from the first launch**: each session `logs/<ts>/` now creates all 9 category logs (`actions`, `browse`, `cache`, `lyrics`, `nav`, `playback`, `queue`, `settings`, `volume`) — even when empty — so the support zip is always complete and a session's `browse.log` is never missing.
+
+## [6.0.6.3_DE-1.50.49-alpha] - 2026-09-09
+
+### Fixed
+- [DE] **Browsing no longer crashes with duplicate keys**: `BrowseScreen` (`LazyVerticalGrid` for mood/genre or New-releases pages) keyed every card by `ytItem.id` alone — when YouTube returns the same album/playlist/song in more than one section the duplicate `RDCLAK…` / playlist id appeared twice and Compose crashed with `Key "…" was already used`. Keys are now scoped by section + position (`browse-$section-$position-$id`), so duplicates no longer collide.
+- [DOCS] **New error code E1031 — `BROWSE_UNAUTHENTICATED`**: a `POST music.youtube.com/youtubei/v1/browse → 401 UNAUTHENTICATED (Request is missing required authentication credential)` — e.g. opening *New release albums* — now has its own documented code in `ERRORS.md` with the cause (expired / missing `__Secure-3PAPISID` / `VISITOR_DATA` / `SAPISIDHASH`) and the fix (sign in again from **Settings → Account**).
+
+## [6.0.6.3_DE-1.50.48-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Full players and mini-player backgrounds now follow the Light/Dark/System theme**: the canvas, blur and Apple Music backgrounds hardcoded dark scrims over the artwork (and over the plain surface when no artwork was loaded), so in light mode the player surface stayed dark while the rest of the UI went light. Scrims are now theme-aware (stronger in dark, lighter in light, skipped entirely without artwork), and the autoplay indicator and artist-card borders use theme tokens instead of hardcoded white. (Closes #24)
+
+## [6.0.6.3_DE-1.50.47-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **The classic mini-player seek bar now works without opening the full player first**: scrubbing a track that was already loaded (restored from the persistent queue, prefetched at startup, or cached) used to be a silent no-op, because the seek path only started the stream when `loadedVideoId` differed from the current track — but a loaded track always has a matching `loadedVideoId`. The scrub now always starts (or restarts) the stream at the chosen point when nothing is resolving. (Closes #23)
+
+## [6.0.6.3_DE-1.50.46-alpha] - 2026-09-08
+
+### Changed
+- [DE] **Remaining tooltips now use action verbs**: "Menu" → "Open menu", "Back" → "Go back", "Forward" → "Go forward", "Home" → "Go to home", "Settings" → "Open settings", "Queue" → "Open queue", "Lyrics" → "Show lyrics", "History" → "Open history", "Notifications" → "Open notifications", "More" → "Show more options", "Next" → "Skip to next", "Previous" → "Skip to previous", "Output device" → "Select output device", "Queue options" → "Show queue options", "Autoplay" → "Toggle autoplay", "Favorite" → "Add to favorites", "Connection method" → "Select connection method", "Wrapped" → "Open VIVI Wrapped", "Listen Together" → "Start Listen Together". New `tooltip_*` keys were added to the localization generator so every language falls back to the action wording.
+
+## [6.0.6.3_DE-1.50.45-alpha] - 2026-09-08
+
+### Changed
+- [DE] **The "Open live log" entry moved from Developer options to Settings → System and is now always available**: it no longer requires enabling Developer options, and the live-log window opens directly from the System screen. (Closes #60)
+- [DE] **Tooltips now use action verbs and reflect the current state**: the right-panel button says "Show/Hide right panel", the sidebar toggle "Expand/Collapse sidebar", the window button "Maximize/Restore" and the mini player "Play/Pause" — all localized instead of static English labels. (Closes #61)
+
+### Fixed
+- [DE] **The crash log is confirmed included in the exported log archive**: `~/.vivimusic/crash.log` and the timestamped `logs/<ts>/crash_<ts>.log` were already packaged by the log exporter (it collects every `*.log` recursively); no change was needed.
+
+### Commits
+- v: DE 1.50.45-alpha — move live log to System (always available); action-verb stateful tooltips
+
+## [6.0.6.3_DE-1.50.44-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Clicking any button on Home no longer crashes with an NPE**: the Home `LazyColumn` content dereferenced the reloadable `home`… [#58](https://github.com/PiBOH/vivi-music/issues/58)
+
+### Added
+- [DE] **Crash dumps are now written to disk on every uncaught error**: `~/.vivimusic/crash.log` is always overwritten with the most recent… [#59](https://github.com/PiBOH/vivi-music/issues/59)
+- [DE] **Every click is now recorded in the session `actions.log`**: cards, song rows, section headers, mood & genres chips, back buttons… [#59](https://github.com/PiBOH/vivi-music/issues/59)
+
+## [6.0.6.3_DE-1.50.43-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Crossfade sub-options are now hidden when crossfade is off**: the "Disable for gapless albums" toggle and the crossfade duration slider no longer show when the master crossfade toggle is off. (Closes #56)
+- [DE] **Browsing "Pinned for later" and similar playlists no longer crashes**: `MusicResponsiveHeaderRenderer.buttons` is now nullable with a default empty list, so YouTube responses that omit the field are handled gracefully instead of throwing a serialization error. (Closes #57)
+
+## [6.0.6.3_DE-1.50.42-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Windows uninstall no longer crashes with 'Type Mismatch'**: the uninstaller tried to create a detail log box using `TNewMemo` on… [#52](https://github.com/PiBOH/vivi-music/issues/52)
+- [DE] **Metadata now show 'PiBOH' as publisher and 'VIVI Music' as product name**: the Windows Control Panel showed 'Vivi Music' as author and included the version string in the display name; the Linux .deb was placed in the 'Other' category instead of 'Audio'. [#53](https://github.com/PiBOH/vivi-music/issues/53)
+- [DE] **In-app changelog now shows all released versions**: versions 1.50.36 through 1.50.38 had their release notes nested inside the 1.50.39 entry instead of having their own `## [version]` headings, so the parser skipped them — each now has a proper heading. [#54](https://github.com/PiBOH/vivi-music/issues/54)
+- [Website] **Screenshot gallery loads reliably**: a duplicate `</script>` tag broke the inline script that initializes the gallery, so the 'Loading screenshots…' placeholder was never replaced. [#55](https://github.com/PiBOH/vivi-music/issues/55)
+
+### Commits
+- v: DE 1.50.42-alpha — fix uninstall crash, metadata author/category, changelog headings, website gallery
+
+## [6.0.6.3_DE-1.50.41-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **Stale cached lyrics can no longer hide the resolver fixes**: the lyrics cache used only the video id as its key, so a plain (non-timed) or wrong-version result cached earlier. [#51](https://github.com/PiBOH/vivi-music/issues/51)
+- [DE] **Results fetched without a known duration are no longer cached**: a duration-less lookup (duration −1) is the most likely to match the wrong recording (radio edit vs original, live vs studio); those results are shown but not persisted, so the next time the track duration is known the search re-runs with a precise match.
+- [DE] **The album is now passed to every lyrics provider** (LrcLib, BetterLyrics, YouLyPlus, KuGou, Musixmatch, Paxsenix, Unison), matching the mobile app — album-aware providers use it to pick the right recording instead of relying on title/artist alone.
+
+### Commits
+- v: DE 1.50.41-alpha — lyrics cache keyed by sync mode; never cache duration-less matches; pass album to providers
+
+## [6.0.6.3_DE-1.50.40-alpha] - 2026-09-08
+
+### Fixed
+- [DE] **The two "keep the queue going" settings are merged into one**: "Auto load more songs" and "Enable similar content" both gated the exact same queue-extension code (fetching YouTube up-next/related tracks), so toggling one off silently disabled the other — they were duplicates. [#48](https://github.com/PiBOH/vivi-music/issues/48)
+- [DE] **"Instantly skip silence" only appears when "Skip silence" is on**: the instant variant is a derivative of the master toggle (it… [#49](https://github.com/PiBOH/vivi-music/issues/49)
+- [DE] **The slider style setting now applies to every player**: previously it only affected the classic full-screen player, while the… [#50](https://github.com/PiBOH/vivi-music/issues/50)
+
+### Commits
+- v: DE 1.50.40-alpha — merge duplicate auto-load-more settings; gate instant skip silence; apply slider style to all players
+
+## [6.0.6.3_DE-1.50.39-alpha] - 2026-09-07
+
+### Translations
+- [DE] **Full translation sweep across all 47 supported languages**: every desktop key now has a non-English translation — no key falls back to raw English anymore.
+
+### Commits
+- v: DE 1.50.39-alpha — full 47-language translation sweep (Player & audio port, device sync, login, live log)
+
+## [6.0.6.3_DE-1.50.38-alpha] - 2026-09-07
+
+### Fixed
+- [DE] **The similar/up-next queue is no longer wiped when a track's first attempt fails**: starting a single song builds the queue with ~15 up-next/automix tracks, but a playback error. [#47](https://github.com/PiBOH/vivi-music/issues/47)
+- [DE] **The "cannot find the file specified" playback error right after "stream ready" is fixed**: the decoder opened the shared `.part` download file the instant the download thread had created its handle but not yet created the file on disk (a race that produced `FileNotFoundException` and forced the retry above). The decoder now waits until the file actually exists before opening the channel.
+- [DE] **Logs are now organized per session**: every launch writes `~/.vivimusic/logs/<yyyyMMdd-HHmmss>/` with one file per category (`playback.log`, `queue.log`, `lyrics.log`, `nav.log`, `settings.log`, …).
+
+### Commits
+- v: DE 1.50.38-alpha — retries keep the grown similar queue; decoder waits for the .part file; per-session categorized logs
+
+## [6.0.6.3_DE-1.50.37-alpha] - 2026-09-07
+
+### Added
+- [DE] **Crossfade** (port of the mobile option, Settings → Player & audio): tracks now overlap with a short fade at the end of each song instead of hard-cutting. [#42](https://github.com/PiBOH/vivi-music/issues/42) — last item of the Player & audio port)
+
+### Commits
+- v: DE 1.50.37-alpha — crossfade with duration slider and same-album gapless exemption completes the #42 port
+
+## [6.0.6.3_DE-1.50.36-alpha] - 2026-09-07
+
+### Changed
+- [DE] **Lyrics prefer the synced (timed) version when the "Synced lyrics" option is on**: instead of returning the first provider that… [#46](https://github.com/PiBOH/vivi-music/issues/46)
+
+### Commits
+- v: DE 1.50.36-alpha — synced lyrics preferred across providers when the Synced lyrics option is on
+
+## [6.0.6.3_DE-1.50.35-alpha] - 2026-09-07
+
+### Fixed
+- [DE] **[Critical] Tapping a song on Home / Library now creates a real queue again**: a single track no longer sits alone in the queue and stops after one song. [#44](https://github.com/PiBOH/vivi-music/issues/44)
+- [DE] **[Critical] Lyrics are no longer missing, wrong-version or permanently wrong**: the desktop edition asked a single community server (LrcLib) **without the real track duration** and cached the result forever (even the look-ahead pre-fetch poisoned the cache). [#45](https://github.com/PiBOH/vivi-music/issues/45)
+
+### Commits
+- v: DE 1.50.35-alpha — critical fixes: single-song taps build a real up-next queue (automix first); multi-provider, duration-aware lyrics with official YouTube fallback
+
+## [6.0.6.3_DE-1.50.34-alpha] - 2026-09-07
+
+### Added
+- [DE] **"Skip silence" and "Instantly skip silence" options in Player & audio** (port from the mobile app, issue… [#42](https://github.com/PiBOH/vivi-music/issues/42)): silent runs of a track are dropped from the output while it plays (the normal option skips runs longer than ~150 ms so breaths/quiet attacks stay intact; the instant option cuts the leading silence at the start/after a seek right away and jumps mid-track silences as soon as they are detected). Implemented as a pure add-on on the decoded-PCM output path inside `AudioPlayer`: with both options off the audio path stays byte-identical. Both default off; labels/descriptions English-only for now; changes apply from the next played track.
+
+## [6.0.6.3_DE-1.50.33-alpha] - 2026-09-07
+
+### Added
+- [DE] **More "Player & audio" options ported from the mobile app** (issue [#42](https://github.com/PiBOH/vivi-music/issues/42)):
+  - **Persistent shuffle** (default off): a freshly started queue (new song / playlist / album) now resets shuffle unless the option is enabled — matching the mobile per-queue shuffle behavior (previously shuffle always carried over).
+- **Progressive seek** (default off): double-clicking the left/right half of the artwork in the full player skips ∓5 seconds; with the option on, each rapid repeat (<1 s) adds 5 extra seconds incrementally (5 → 10 → 15…), exactly like the mobile double-tap seek.
+  - **History duration** (default 30 s, slider 1–100 s): a track is only recorded into the listen history — the seeds behind the Home "Recommended" row — after it has actually played for this long, so quick skips no longer pollute the recommendations.
+  - **Auto download on like** (default off): liking a song now downloads it straight into the audio cache in the background (same join-safe path as the look-ahead prefetch), so it plays instantly later; cached files still follow the user's audio-cache retention setting.
+- Both "Resume on Bluetooth connect" and "Shuffle playlist/album first" have no real desktop equivalent (the desktop has no app-level Bluetooth audio routing, and similar content is only ever appended after the original queue is exhausted — the "original first, then similar" behavior already always holds), so they are not ported and are documented as not-applicable in issue #42.
+- All new labels/descriptions are English-only for now.
+
+## [6.0.6.3_DE-1.50.32-alpha] - 2026-09-07
+
+### Added
+- [DE] **New "Player & audio" options** (port from the mobile app, issue [#42](https://github.com/PiBOH/vivi-music/issues/42)):
+  - **Prevent duplicate tracks in queue**: adding a track that is already queued removes its old copy first, so every track appears once. Applies to "Add to queue", "Add all to queue" and "Play next".
+  - **Auto skip to next song when error occurs**: after all retries for a failing track are exhausted, playback continues with the next queued track (wrapping only when repeat-all is on) instead of stopping on the error.
+- **Pause music when media is muted**: when the OS output volume is muted or at zero while VIVI is playing, playback pauses and resumes when the volume comes back (reacts only to transitions, so pressing play manually while muted still works).
+  - **Keep screen on when player is expanded**: holds a keep-awake request while the full player screen is open (Windows `SetThreadExecutionState` / macOS `caffeinate`). Keep-awake is now multi-source — the pairing request and the expanded-player request are independent and no longer cancel each other.
+- All four options are **off by default** (as on mobile) and the labels/descriptions are English-only for now.
+
+## [6.0.6.3_DE-1.50.31-alpha] - 2026-09-07
+
+### Added
+- [DE] **"Auto load more songs" and "Enable similar content" options in Player & audio** (port from the mobile app, issue… [#42](https://github.com/PiBOH/vivi-music/issues/42)): when the queue reaches its end and autoplay is on, VIVI now fetches related/radio tracks for the last song (same innertube path as the Home "Recommended" row — `YouTube.next` + `YouTube.related`), appends the new tracks and keeps the music going instead of stopping. A single song played alone therefore continues into a radio-like stream of similar songs, and duplicates already in the queue are never re-added. Both options are enabled by default and can be turned off separately in Settings → Player & audio; the labels/descriptions are English-only for now.
+
+## [6.0.6.3_DE-1.50.30-alpha] - 2026-09-07
+
+### Fixed
+- [APK] **Prerelease updates on the fork now come from GitHub Releases, not nightly runs**: the nightly-workflow mechanism only exists… [#43](https://github.com/PiBOH/vivi-music/issues/43)
+- [APK] **The About screen shows the real release channel**: a new `BuildConfig.RELEASE_CHANNEL` (fed from the mobile channel in `version.txt`) makes companion builds read **ALPHA** instead of the stale NIGHTLY label.
+
+## [6.0.6.2_DE-1.50.29-alpha] - 2026-09-06
+
+### Changed
+- [APK] **The Android release workflow lets you choose the signing key**: on manual runs (`workflow_dispatch`) a new `signing_key` input selects `auto` (default — `RELEASE_KEYSTORE` when set, otherwise `DEBUG_KEYSTORE`), `release` or `debug`; pushes still resolve automatically.
+
+## [6.0.6.2_DE-1.50.28-alpha] - 2026-09-06
+
+### Added
+- [DE] **Do Not Disturb is detected before sending native notifications**: when native notifications are enabled but the OS is suppressing… [#37](https://github.com/PiBOH/vivi-music/issues/37)
+- [APK] **A dedicated release keystore now exists** (`app/keystore/release.keystore`, generated locally and gitignored, with a copy in `.ignore/`): the release signing on CI consumes it through the `RELEASE_KEYSTORE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD` secrets, so release builds no longer depend on the debug key. Instructions are in `.ignore/KEYSTORE-INFO.txt`.
+
+### Changed
+- [APK] **Android versioning is back on the `6.0.6.x` line** (`6.0.6.2`, versionCode 132): the previous one-off bumps (`6.4.45` / `6.4.46` / `6.4.46.1`) were temporary; per the documented scheme only the last digit increments on each APK update, and the versionCode stays monotonic. [#36](https://github.com/PiBOH/vivi-music/issues/36)
+
+### Translations
+- [DE] Added the `notif_dnd_title` / `notif_dnd_body` keys in all 52 supported languages (thanks to @codebuffai).
+
+## [6.4.46.1_DE-1.50.27-alpha] - 2026-09-06
+
+### Fixed
+- [DE] **Website footer cleaned up**: the "verified Open Source" badge is gone, and the GitHub/Telegram round buttons no longer show raw `code`/`send` text overflowing the containers. [#32](https://github.com/PiBOH/vivi-music/issues/32)
+- [DE] **Website animations now run on desktop too**: the `prefers-reduced-motion` kill switch was removed from the site CSS and JS, so the entrance, floating and scroll-reveal animations always play. [#34](https://github.com/PiBOH/vivi-music/issues/34)
+- [DE] **Website changelog is lazy now**: the page renders only the latest release and reveals older ones in batches through a "Load more…" button; search and the version picker still scan everything loaded. (Closes [#33](https://github.com/PiBOH/vivi-music/issues/33))
+
+### Changed
+- [APK] **The Android companion app is now "VIVI for DE"** (was "VIVI" / "VIVI Debug") and installs as `com.vivi.music.desktop` instead of the old debug package, so it can sit next to the upstream app without conflicts.
+- [APK] **`build-android.yml` rewritten**: it now triggers on the same release signal as the desktop autorelease (push whose commit message… [#35](https://github.com/PiBOH/vivi-music/issues/35)
+
+## [6.4.46_DE-1.50.26-alpha] - 2026-09-06
+
+### Added
+- [DE] **The settings search now covers every sub-screen**: each top-level Settings row is indexed with the localized labels of the options… [#30](https://github.com/PiBOH/vivi-music/issues/30)
+
+### Translations
+- `home_empty` (the empty Home state message) is now fully translated in all 47 supported languages instead of falling back to English. Thanks to @codebuffai for the translation pass.
+
+
+## [6.4.46_DE-1.50.25-alpha] - 2026-09-06
+
+### Added
+- [DE] **The activity log now records every settings change**: whenever an option is modified, the log line names the field and shows `old → new` (large lists are summarized; secrets such as cookies, visitor data and API keys are redacted). [#31](https://github.com/PiBOH/vivi-music/issues/31)
+
+### Fixed
+- [DE] **The Home "Recommended" row no longer disappears on fresh profiles**: when there is no in-session listening history yet, it seeds from the first songs of the loaded Home feed, so the row shows up even right after a clean install. (Closes [#28](https://github.com/PiBOH/vivi-music/issues/28))
+- [DE] **The Home empty state shows real text instead of a raw `home_empty` key**: the string was missing from every language table; it is now in the English base table and the other languages pick it up with the next dedicated translation pass.
+
+
+## [6.4.46_DE-1.50.24-alpha] - 2026-09-05
+
+### Added
+- [DE] **Detailed activity logging**: every playback command (play/pause/seek/next/previous/queue/skip/volume/shuffle/repeat), navigation change and playback error is now recorded with a timestamp in a new in-app log. [#25](https://github.com/PiBOH/vivi-music/issues/25)
+- [DE] **Live log viewer window** (Developer options → "Open live log"): a dedicated window shows the activity log in real time (auto-scrolled, selectable text to copy lines, Clear button). (Closes [#25](https://github.com/PiBOH/vivi-music/issues/25))
+
+### Fixed
+- [DE] **Stream cache minimum is now 10 minutes** instead of 1 minute: the slider in Player settings starts at 10 and any legacy saved value below the floor is clamped to 10 minutes. (Closes [#26](https://github.com/PiBOH/vivi-music/issues/26))
+
+### Changed
+- [APK] **One-off version bump to 6.4.46 (versionCode 130)** so users still on 6.4.45/128 receive this update; the next release returns to the 6.0.6.x line with a higher code. (Closes [#27](https://github.com/PiBOH/vivi-music/issues/27))
+- [APK] **Update check is now chronology-aware**: "latest release" is chosen by published date (GitHub returns releases newest-first) instead of comparing version strings, which stalled updates whenever the versioning scheme changed. [#27](https://github.com/PiBOH/vivi-music/issues/27)
+
+## [6.0.6.1_DE-1.50.23-alpha] - 2026-09-05
+
+### Changed
+- [DE][APK] **Playback resolution ported from upstream vivizzz007/main (6.0.6)** to finally settle the song-resolution issues on both… Closes #18)
+- [APK] **Rebased on upstream 6.0.6**: StreamUrlCache, ContentAwareFallbackStrategy, CipherDeobfuscator (WEB_REMIX streaming), SponsorBlock, NetworkConfig, the new lyrics providers and all upstream fixes come in via the merge; our device-sync (pairing) glue is the only feature kept on top. Closes #20)
+- [DE] Upstream fallback order also restored `Android VR 1.65.10` and the Chrome UA set that upstream 6.0.6 ships.
+
+### Added
+- [DE] **Home "Recommended" section** (port of the mobile Daily-Discover mechanism): the three most recent tracks you played seed `YouTube.next` → `YouTube.related`, and the related songs appear as a horizontally scrollable section; tapping one plays the whole recommendation list as a queue. Closes #19)
+
+### Fixed
+- [APK] Device-sync now persists/restores the `EnableUnisonKey` lyrics preference (renamed upstream from SimpMusic), so lyrics-provider sync keeps working after the rebase.
+- [APK] **Updater defaults now match the fork distribution**: the prerelease ("beta updates") switch is ON by default (releases ship as pre-releases), and the update source defaults to `PiBOH/vivi-music` instead of the upstream repo — both remain switchable in Settings → Updates. (Closes #21)
+- [APK] **Fixed a broken CI workflow**: the nightly-flag line added in 1.50.22 for the About-screen badge contained a literal CR/LF inside a shell string, which made the whole `build.yml` workflow file invalid (the Android build job never ran and the APK asset was missing from the release). The line is now valid shell.
+- [DE] The release tag now correctly reads `6.0.6.1_DE-1.50.23-alpha`: the Android part of the combined version follows the APK version (`6.0.6.1`), documented in `AGENTS.md` — the previous tag (`6.4.45_DE-...`) was built from a stale `version.txt` and its release has been replaced.
+
+
+## [6.4.45_DE-1.50.22-alpha] - 2026-09-04
+
+### Changed
+- [DE] Desktop releases now publish on the **alpha** channel instead of nightly (release channel in `version.txt`).
+
+### Fixed
+- [DE] **Players, mini players and the sidebar now follow the app theme in light mode**: they decided dark/light from the OS theme (`isSystemInDarkTheme()`) instead of the app's own mode, so with a dark OS + light app they stayed dark (and could get light text on light surfaces). Closes #15)
+- [DE] **Custom colors now appear in the palette live**: the Theme screen only persisted new/removed custom accents to disk without updating the list it displays, so swatches appeared only after re-entering the screen. Closes #16)
+- [APK] **Debug APK About screen now shows NIGHTLY for non-stable builds**: the CI built the APK without `-Pnightly=true`, so `BuildConfig.IS_NIGHTLY` was false and the About badge read "STABLE". The flag is now derived from the mobile channel in `version.txt` (line 3). (Closes #17)
+
+
+## [6.4.45_DE-1.50.21-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Tracks stuck in a resolve loop after clearing the cache**: the in-app "Clear cache" buttons (Settings → Storage / Privacy) delete every subfolder of `~/.vivimusic/cache`, including `audio/`, which `AudioPlayer` only created once at startup. Closes #14)
+
+## [6.4.45_DE-1.50.20-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Scrubbing the seek bar now starts the stream of an unresolved track** (issue #12): dragging the seek bar on a track restored from… Closes #12.
+- [DE] **The YouTube-style buffered bar is now always visible** (issue #13): the fainter secondary segment behind the played portion previously vanished as soon as the download finished or the track was already cached, so it was practically never seen. Closes #13.
+
+## [6.4.45_DE-1.50.19-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Windows installer no longer fails to compile** (issue #10): the details/log box is now created at runtime with `TNewMemo` — Inno Setup 6 removed the built-in `DetailsMemo`/`DetailsButton` that the previous version referenced.
+
+### Added
+- [DE] **Uninstall now keeps exactly one final backup and wipes every cache** (issue #11): on Windows the Inno Setup uninstaller copies `device-sync.json`, `playlists.json` and imported fonts into `~/.vivimusic/backups/uninstall-<timestamp>/` right before finishing, then deletes everything else in `~/.vivimusic` (downloaded updates, audio/video/canvas/lyrics caches, logs, helper libraries, artwork) — only that last backup remains. Linux mirrors it: the `.deb` ships a `postrm` hook (plus the shared `scripts/uninstall-cleanup.sh` embedded in `/opt` and copied to `/usr/share`), the AUR PKGBUILD gets a `post_remove` hook via `vivi-music-de.install`, and macOS/AppImage users can run the same script manually. INSTALL-GUIDE updated for every OS.
+
+## [6.4.45_DE-1.50.18-nightly] - 2026-09-04
+
+### Changed
+- [DE] The Inno Setup installer now always shows the installation details box (the extraction log) below the progress bar on the Installing page, instead of hiding it behind the "Show details" toggle.
+
+
+## [6.4.45_DE-1.50.17-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Radio/Charts discovery screen no longer stays empty**: the chart parser now converts every item type YouTube returns (songs, video-chart playlists, top artists, albums) instead of dropping everything that is not a song — the "Nothing to show here yet" screen with the endless refresh loop is gone. Closes #6.
+- [DE] **Native macOS notifications actually delivered**: the bundled native helper now posts through `UNUserNotificationCenter`, so notifications land in the macOS Notification Center and are attributed to the app (the old `osascript` path was unreliable/blocked on modern macOS). Closes #7.
+- [DE] **Home screen can no longer be silently blank**: an empty response auto-retries once and, if it still comes back empty, shows a clear "Nothing to show here yet" state with a Retry button instead of an endless spinner with no content. Closes #8.
+- [DE] **Changelog issue references are now clickable**: every `#N` mention (e.g. "Closes #3") across the whole changelog — past and future entries — renders as a link that opens the GitHub issue. Closes #9.
+
+
+## [6.4.45_DE-1.50.16-nightly] - 2026-09-04
+
+### Added
+- [DE] **Native system playback controls and "Now Playing" on macOS**: the app now registers with the system media session (Control Center… Closes #5.
+
+
+## [6.4.45_DE-1.50.15-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Audio micro-pauses/skips on macOS (random brief glitches on almost every track, coinciding with small UI hitches) reduced**: the… Closes #4.
+
+## [6.4.45_DE-1.50.14-nightly] - 2026-09-04
+
+### Added
+- [DE] Sidebar "Playlists" entry now opens the full playlist list screen (all local playlists with create/rename/delete); the chevron arrow is the only control that expands/collapses the inline playlist list in the sidebar. Closes #3.
+
+## [6.4.45_DE-1.50.13-nightly] - 2026-09-04
+
+### Fixed
+- [DE] **Mini player seek bar now works on tracks restored from the persistent queue without opening the full player**: restored tracks used to lose their duration, so the seek bar fell back to a 0..1 range and the thumb snapped back to the start after a scrub, making the seek look dead.
+
+## [6.4.45_DE-1.50.12-nightly] - 2026-09-03
+
+### Added
+- [DE] **Dedicated Contributors sub-screen**: the About screen now shows a single "Contributors" row right under the lead developer card; tapping it opens a dedicated screen with the full list, so the About page no longer gets crowded as the list grows.
+- [DE] **Seek bars usable before the duration is known**: a track loaded from the queue but never played can be scrubbed even while its length is still unknown (no more disabled slider); the chosen point is remembered as a fraction and playback starts from it the moment the duration becomes available (metadata or resolved stream).
+
+### Changed
+- [DE] `contributorsde.json` is now always read from the repository (`vivi-music-de` branch) with a silent refresh every time the Contributors screen opens — no local `~/.vivimusic/contributorsde.json` copy is created or read anymore (a stale one from older builds is deleted by the app); the bundled copy is only the offline fallback.
+
+## [6.4.45_DE-1.50.11-nightly] - 2026-09-03
+
+### Added
+- [DE] **YouTube-style buffered progress on the seek bars of every player**: while a track is still streaming/downloading, a fainter secondary segment shows how much of the audio is already available (full player — M3 Expressive and Classic designs, the Classic mini player slider, the Apple mini player bottom bar and the New mini player progress ring). Fully cached or finished downloads show no extra segment, and the buffer keeps advancing while the track is paused.
+- [DE] **Seek bars can now be scrubbed before playback starts**: dragging the slider on a loaded-but-not-yet-started track (restored persistent queue, or a track that already ended) remembers the chosen position, and pressing play starts from there instead of ignoring the drag.
+
+### Changed
+- [DE] The About -> Contributors list is now fetched live from GitHub (`contributorsde.json` on the `vivi-music-de` branch) every time the screen opens, so new contributors appear without an app update; the local copy (`~/.vivimusic/contributorsde.json`) is kept only as an offline cache/fallback and is refreshed silently.
+
+## [6.4.45_DE-1.50.10-nightly] - 2026-09-03
+
+### Changed
+- [DE] The contributor list is now read from `~/.vivimusic/contributorsde.json` (the bundled default is copied there on the first launch), so contributors can be added, edited and reordered without rebuilding the app — the About screen picks the changes up at the next launch.
+
+## [6.4.45_DE-1.50.9-nightly] - 2026-09-03
+
+### Added
+- [DE] About screen: new CONTRIBUTORS section below the developer card, listing the people behind the project (bogdan-developer, Ansu216, vivizzz007, dumbshrn) with their role, a link to their GitHub profile and their avatar fetched automatically from GitHub.
+
+## [6.4.45_DE-1.50.8-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Classic mini player seeking**: the seek slider now seeks once when the drag ends, like the full player. Previously every drag tick restarted the whole decode thread, so the slider fought the live position reports and felt dead (could not scrub forward/backward reliably).
+- [DE] **Instant start on the restored queue**: the startup prefetch now downloads the current track first.
+
+## [6.4.45_DE-1.50.7-nightly] - 2026-09-03
+
+### Fixed
+- [DE+APK] **Bidirectional language sync that can never be hijacked at pair time**: every manual language change now travels with a (deviceId, per-device sequence) marker.
+- [DE] **Radio/Charts screen can never be silently blank**: the charts parser now walks every section-list the response can use (any single-column tab, a top-level section list, the two-column tabs) instead of only the first tab, auto-issues the continuation once when the shell is empty, and the UI shows a localized empty state with a Retry button (plus one automatic retry) instead of an empty page.
+- [DE] **Single density selector**: the duplicate "Density & grid" info row inside the Density sub-screen was folded into the one dropdown (its description), so the screen offers exactly one density option plus the separate grid-item-size picker.
+- [DE] **Every error is selectable**: the shared error box, the login error/status lines, the update-failed / open-error texts and the Listen Together error lines are wrapped in `SelectionContainer`, so any in-app error can be copied for a report.
+- [DE] **Sign-in now strips the `||…` suffix from `DATASYNC_ID`**: the delegated account id YouTube embeds in `ytcfg` can carry a trailing pipe-suffixed token; sent verbatim as `onBehalfOfUser` it made validation fail (401/500).
+- [DE] Player-design dropdowns now highlight the selected option (the check compares the translated labels, not a raw key against the label) and `Localization.get` gained a last-resort fallback that can never surface a raw snake-case key on screen.
+- Translations: 2 new keys (`retry`, `charts_empty`) for the Charts empty state, translated across all 47 languages (translations assisted by AI — thanks to @codebuffai).
+
+## [6.4.44_DE-1.50.6-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Settings lists are ~15% more compact** across the main Settings screen and every sub-screen: entry rows use tighter padding (20/16 dp → 17/14 dp), the tinted icon tiles shrank from 40 dp to 34 dp with 24 dp → 20 dp glyphs inside, the gap between rows went from 4 dp to 3 dp, the chevron is 20 dp instead of 24 dp, and the sub-screen content margin went from 16 dp to 14 dp — the Material 3 settings rows now match the density of the rest of the interface.
+
+## [6.4.44_DE-1.50.5-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **Seeking now lands precisely on the clicked position instead of re-scanning the whole seek bar**: the player used to seek by decoding (and discarding) every frame from the start of the track until the target, which made the slider visibly reload from zero and — for tracks still downloading — could only land once the download had reached the target. Seeking now jumps straight to the AAC frame containing the requested time (AAC-LC frames are independent and ~constant-size), so it is instant on cached tracks and accurate to within one frame (~23 ms).
+- [DE] **A fully cached track is played straight from disk without being "resolved" again**: play always resolved a fresh stream URL before checking the cache, so every restart (and every return to a song) showed the resolving phase even with "cache forever" and a complete file on disk.
+- [DE] **Look-ahead prefetch now covers the whole queue**: previously only the 3 upcoming tracks were prefetched.
+- [DE] **The in-app (VIVI) volume no longer resets to 100% on every launch**: the volume slider was never persisted. It is now saved (including when changed by device sync) and restored at startup.
+
+## [6.4.44_DE-1.50.4-nightly] - 2026-09-03
+
+### Fixed
+- [DE] **"Mood & genres" no longer crashes when it scrolls into view on the Home page** (or on the dedicated screen): the API can return the same mood/genre (identical `browseId` + title) more than once across category sections, and the lists were keyed by `browseId + title` — two identical keys in a LazyColumn/Row throw "key … was already used". Both lists now deduplicate before rendering.
+- [DE] **macOS: the Accessibility permission prompt no longer reappears on every launch** (reported on 1.50.1–1.50.3): the global media-key hook (JNativeHook) was registered unconditionally at startup, and macOS re-asks for the permission every time the hook is attempted while untrusted.
+- [DE] **Expressive player: clearing the queue no longer strands the user on the full-player screen**: a clear stops playback and empties the queue, and that "Nothing playing" state had no collapse control — the only way out was relaunching.
+- [DE] **Device sync (relay): the pairing code is now generated automatically when connecting** — the Connect button moved below the relay-server field and merged with code generation into one "Connect & Generate Pair Code" action; once connected the same spot becomes "Regenerate Pair Code" (with a separate Disconnect button), and a code is also issued automatically whenever the relay is connected, unpaired and no code is pending, so the pairing QR is always ready.
+- [DE] **Audio micro-pauses/skips on macOS** (reported alongside small UI hitches): the audio decode thread now runs at maximum priority so UI/GC work cannot starve the sound-buffer refill, and the audio-reactive visualizer level is decimated to every other decoded frame (~20 Hz) to halve the UI recomposition load competing with the audio scheduler. Best-effort mitigation pending confirmation from the affected Mac.
+
+## [6.4.44_DE-1.50.3-nightly] - 2026-09-03
+
+### Fixed
+- [APK] **Startup freeze after in-place updates** (previously only recoverable by uninstalling and reinstalling the app): the first image load ran an unbounded `runBlocking` on the main thread waiting for DataStore, the preference cache stopped retrying after a single DataStore error (so every synchronous settings read fell into the slow fallback path and stalled startup), and the persisted queue/automix/player-state files were deserialized on the main thread. All three are now non-blocking: the image-loader cache-size read is bounded with a timeout and default, the preference cache keeps retrying, and the persisted queue restore runs off the main thread (DE 1.50.3 / APK 6.4.44).
+
+## [6.4.43_DE-1.50.3-nightly] - 2026-09-03
+
+### Fixed
+- [DE] [APK] The "Sync VIVI volume" toggle now gates only the in-app VIVI volume channel — the native OS system-volume sync is an independent channel again and keeps syncing whenever the devices are paired, so turning the toggle off no longer stops the system volume from following the peer (on either edition).
+- [DE] The Devices sync screen gained a connection-method selector at the top (Server relay, recommended / Local LAN server) and the "how to connect" steps adapt to the chosen method; the pairing QR code is now generated for both methods; the Connect button shows "Connecting…" (with a note that it can take a few seconds — up to 2 minutes if the relay server has to wake up) instead of staying static; and the mobile-download button reads "Download the adapted VIVI Music for Android (APK)".
+
+## [6.4.42_DE-1.50.2-nightly] - 2026-09-03
+
+### Fixed
+- [APK] The relay server field in Settings → Devices can be cleared and changed again: it is now kept as local state while editing and persisted with an app-lifetime scope, so a cleared or edited value no longer snaps back to the last-used one when leaving the screen.
+- [DE] The Device sync section no longer claims to be "Connected" when it is only connected to the relay: until a device is actually paired the status says it is waiting for a device to pair.
+
+## [6.4.41_DE-1.50.1-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **Listen Together: creating a room no longer hangs on the spinner**: the client stored the create/join request in a closure that captured the socket variable *before* connecting — when the WebSocket was still offline the captured value was `null`, so `create_room` was silently dropped and the UI stayed stuck on the loading indicator (the connection badge said "connected" but no room was ever created). Pending messages are now queued as text and flushed from `onOpen` on the actual open socket; a dropped connection while a create/join is in flight also releases the spinner so the user can retry, and a failed connection no longer leaves the button disabled.
+
+## [6.4.41_DE-1.50.0-nightly] - 2026-09-02
+
+### Added
+- [DE] **Real Listen Together (full port of the mobile feature)**: the desktop Listen Together screen now speaks the complete mobile wire protocol and synchronizes real playback between devices.
+  - **Host**: observes the local player and broadcasts track changes (with the full queue), play/pause, user seeks, queue edits (debounced) and in-app volume (when "Sync volume" is on), plus a 10-second playback heartbeat so guests auto-correct drift.
+  - **Guest**: applies the host's actions with debounce + position tolerance (no audible seek glitches), the buffering protocol (buffer-ready/wait/complete), whole-queue replacement that preserves the current track, queue add/remove/clear, volume sync and smart re-sync after reconnection.
+- **Rooms**: create/join with room code, join requests with approve/reject (optional auto-approve), kick and transfer-host, suggestion flow (guests paste a YouTube link/ID, host approves/rejects → inserted next), chat with replies, buffering indicator, connection state badge, request-sync/reconnect buttons and a copy-code button.
+  - **Session persistence**: the room session token is saved in settings, so a reconnect (or app restart) resumes the room automatically.
+- [DE] **PlayerController: `insertNext` + `replaceQueuePreservingCurrent`** — the two primitives Listen Together needs to play-next and to swap a guest's queue without restarting the current track.
+- [DE] 18 new Listen Together strings translated into all 47 languages (618 keys total; `check_localization` passes).
+
+## [6.4.41_DE-1.49.9-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **Data saver toggle now updates live**: flipping the switch in Settings → Data saver previously only reflected the new state after leaving and re-entering the screen (the value was read once from the settings file instead of from observable state).
+
+## [6.4.41_DE-1.49.8-nightly] - 2026-09-02
+
+### Fixed
+- [DE+APK] **Volume sync now fully obeys the "Sync VIVI volume" toggle**: the native OS system-volume channel used to sync unconditionally (changing the system volume on one device moved it on both even with every toggle off).
+- [DE] **Tray menu toggle applies live**: disabling "Tray menu" now removes the tray icon immediately (no restart needed); re-enabling recreates it. Notifications still work on every OS (WinRT toasts / osascript / temporary tray balloon).
+- [DE] **Home section songs now play as a queue like Android**: tapping a song in a Home recommendation section (Quick Picks, Last Listen, …) enqueues the whole section starting from the tapped track, instead of playing a single song. Fixed a `artist - artist` text bug on the mini-player card (now `title - artist`).
+- [DE] **Mac/Linux physical media keys work (with permission)**: global Play/Pause, Next, Previous and Stop now work on macOS and Linux through JNativeHook (the Windows low-level hook is unchanged). On macOS the OS asks for Accessibility permission once; until granted, VIVI logs a hint instead of failing silently.
+- [DE] **Audio glitches** (especially macOS): the output line buffer was doubled (16 KB with fallback to the old 8 KB) so scheduler/GC hiccups no longer underrun as easily.
+- [DE] **Log export moved to Settings → System** (it was under Developer options): same .zip export (logs + redacted system info), now in the System sub-menu.
+- [DE] **Remaining raw UI strings localized in all 47 languages**: Home greeting (Good morning/afternoon/evening), "Your Artists Feed", "Made For You", "See all"/"View section", and every button tooltip (Menu, Collapse/Toggle sidebar, Clear, Output device, Minimize, Forward, Queue options, Autoplay, Open full player, Favorite, …). Localization grew from 582 to 600 keys.
+
+## [6.4.41_DE-1.49.7-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **Sign-in now requires `DATASYNC_ID` and `VISITOR_DATA`** (they were treated as optional, which made the account validation answer as a guest — the cryptic NPE / 5xx some users hit after the embedded window closed).
+- [DE] Login labels/hint updated from "optional" to "required" wording in all 47 languages.
+
+## [6.4.41_DE-1.49.6-nightly] - 2026-09-02
+
+### Added
+- [DE] **Developer options → "Export logs (.zip)"**: packages VIVI's diagnostic data into a STORED .zip for support requests — every log file from `~/.vivimusic/` (login-debug.log, native-notify.log, …) plus a generated `system-info.txt` (app version, OS, Java, key settings) and a redacted `settings-summary.txt` (the settings file itself is never included because it holds the YouTube cookie). The save dialog suggests `vivi-de-logs-<version>-<date>.zip`.
+- [DE] **Appearance → Native system title bar now shows a compatibility hint** below the description: recommended when window/rendering problems occur (translated in all 47 languages).
+
+### Fixed
+- [DE] **Native notifications on macOS now actually fire**: the old path used the `java.awt.SystemTray` balloon, which usually never shows on macOS (especially Apple Silicon). Native notifications now go through `osascript display notification` (Notification Center) with a fallback to the tray balloon if that fails.
+- [DE] **Login validation failures caused by a YouTube Music server error (HTTP 5xx.
+
+## [6.4.41_DE-1.49.5-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **"Player design" entry in Settings → Player & audio now opens the design screen**: the row was rendered in the player section but its navigation callback was never wired, so clicking it did nothing (the identical entry under Appearance worked).
+
+## [6.4.41_DE-1.49.4-nightly] - 2026-09-02
+
+### Changed
+- [DE] **Font sub-screen restored to the pre-1.44.0 rich layout**: the big themed typography preview card (primary-container, "Typography Preview" label + the quote rendered in the selected font) is back, and each font is listed as its own radio row rendered in that typeface with its description (System / Google Sans / Sans Flex / Outfit / Plus Jakarta Sans / Custom), instead of the compact dropdown. Verified live on Windows.
+
+## [6.4.41_DE-1.49.3-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **[CRITICAL FIX] All single-choice dropdown options were invisible since 1.44.0**: `M3SettingsDropdownItem` constructed its row (`M3SettingsItem`) but never rendered it, so every dropdown-based option disappeared from the UI — Font / Canvas source / Density & grid / Screen transitions / Player design / Mini-player design & background / Slider style / Notification mode & duration / Intro style & background all looked "missing", their sub-screens appeared empty and the rows did nothing when clicked. The row is now actually composed (wrapped in `M3SettingsItemRow`), restoring every dropdown everywhere.
+
+## [6.4.41_DE-1.49.2-nightly] - 2026-09-02
+
+### Added
+- [DE] **EQ band range labels**: the live equalizer editor now shows the frequency region next to each band's center frequency (Sub-bass / Bass / Low mid / Mid / High mid / Treble), translated in all 47 languages (e.g. "Band 2 · 150 Hz · Bass").
+
+## [6.4.41_DE-1.49.1-nightly] - 2026-09-02
+
+### Fixed
+- [DE] **[CRITICAL FIX] Restored the Appearance sub-screens that were flattened into inline dropdowns in 1.44.0**: Font, VIVI Music Canvas, Density & grid, Screen transitions and Player design are back in Settings → Appearance as Material 3 sub-screens (anchored dropdowns inside each screen), and the Player design entry is back under Player & audio.
+- [DE] **Mini-player design style no longer resets on launch**: removed the legacy `miniPlayerStyle` setting that duplicated `miniPlayerDesign` and could shadow the chosen style; a single setting is now read, changed and saved consistently.
+- [DE] **Player background option "Canvas" was showing the raw key in every language**: it had no translation entry at all; added the `canvas` label translated in all 47 languages.
+
+### Changed
+- [DE] **First-launch screen redesigned as a Material 3 welcome**: bundled logo, welcome title and description, the language list rendered as M3 option cards with a checkmark, and a full-width Continue button (previously a bare text list that went straight in on click).
+
+## [6.4.41_DE-1.48.0-nightly] - 2026-09-01
+
+### Changed
+- [DE] **Inner settings sub-screens restyled to Material 3**: the Intro screen (show-intro switch into a card + style/background as anchored dropdowns), the Privacy screen (history toggles into M3 grouped cards) and the Notifications screen (mode + duration as inline dropdowns instead of cramped radio rows). Removed the squashed flat rows.
+
+## [6.4.41_DE-1.47.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Animations master switch** (Appearance → Animations): turning it off makes screen transitions instant (no fade/slide) and the intro splash switches without animation. When animations are off, the Screen transitions picker is hidden.
+
+## [6.4.41_DE-1.46.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Equalizer example profile + live editor**: a one-click "Add example profile" inserts a predefined V-shape profile (7 bands), and selecting a profile now opens an inline live editor with draggable sliders for preamp, per-band gain (−12…+12 dB) and Q factor (0.4…8) applied to playback in real time — no more guessing the AutoEQ text format.
+
+## [6.4.41_DE-1.45.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Custom accent color picker**: in the Theme screen there is now a full HSV gradient picker (hue / saturation / brightness bars you can click or drag) with a live preview, the hex code, and an “Add to palette” button.
+- [DE] **6 new accent palette colors**: Magenta, Turquoise, Coral, Lavender, Gold and Navy (with tooltips in all 47 languages).
+- [i18n] Completed the missing `mini_player_*` translations (mini-player design/background options and the pure-black mini-player toggle) in all 47 languages.
+
+## [6.4.41_DE-1.44.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Inline dropdowns for single-choice settings**: options that previously opened a dedicated sub-screen or an unanchored menu (font, canvas source, UI density, grid size, player design, player background, mini-player design, mini-player background, audio quality, slider style) are now Material 3 dropdowns anchored directly under their row — no more popup menus appearing in the top-left corner of the window. The dedicated Font/Canvas/Density/Transitions/Player-design sub-screens were removed.
+
+## [6.4.41_DE-1.43.2-nightly] - 2026-09-01
+
+### Fixed
+- [DE] **UI density calibrated**: the "100%" preset no longer looks oversized next to the phone — it now matches the size the mobile UI has at 75% (a calibration factor of 0.75 is applied to the density scale, keeping all presets from 55% to 200% relative).
+- [DE] **Duplicate option labels disambiguated**: in 11 languages (including Italian) the slider styles `Squiggly` and `Wavy` translated to the same word.
+
+### Added
+- [DOCS] `ERRORS.md` expanded from 13 to 29 VIVI-specific error codes (E1000–E1028): new codes for update check/download/installer-not-found (E1013–E1015), sync self-pair/not-paired/relay-bind/LAN (E1016–E1019), backup empty-archive/create-failed (E1020–E1021), login cookie empty/missing-SAPISID/webview-timeout (E1022–E1024), song recognition no-mic (E1025), Listen Together (E1026), commit list (E1027) and stream resolution (E1028). Each new code mirrors a real failure path in the DE code.
+- [WEBSITE] New interactive **Error codes** page (`errors.html`, linked in the nav and footer of every page) that loads `ERRORS.md` from the repository automatically, parses the Markdown tables and renders them as searchable rows with Playback/VIVI category tabs, a result counter and a click-to-copy code button.
+
+## [6.4.41_DE-1.43.1-nightly] - 2026-09-01
+
+### Changed
+- [DE] License references now correctly say **modified GPL-3.0** (the LICENSE file itself was left untouched): README footer, INSTALL-GUIDE.md, the website (About, home, install guide) and the desktop About screen link (now pointing at the `vivi-music-de` branch LICENSE, matching the README badge).
+
+## [6.4.41_DE-1.43.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Settings sub-menus redesigned to match the mobile Material 3 look**: a shared card-based settings component (rounded cards, tinted icon tiles, section titles) now styles the main Settings screen — grouped into General / Appearance / Player & audio / Account / Content / Privacy / About sections with the search bar still working — and the sub-screens (Appearance, Player & audio, Notifications, Lyrics, System, Data saver) use the same card rows for navigation and toggle entries.
+- [DE] **ERRORS.md**: new error-code reference (root + linked from the website footer) listing every playback error code (1000–6008, ExoPlayer/media3) and VIVI-specific codes (E1000–E1012: login, sync, backup, update, EQ import, AI translation) in ascending order, each with cause and how to fix it.
+- [WEBSITE] Footer now links to the error-code reference; the fake "Now playing · demo" card and the LIVE version badge in the hero were removed (the real latest version is still shown on Downloads/Changelog).
+
+## [6.4.41_DE-1.42.1-nightly] - 2026-09-01
+
+### Added
+- [DE] **Full translation coverage for the new sub-screens**: the Equalizer, Data saver and AI Lyrics Translation keys are now translated in all 47 languages (reusing the mobile translations where they exist and filling every gap, so no string falls back to English).
+
+## [6.4.41_DE-1.42.0-nightly] - 2026-09-01
+
+### Added
+- [DE] **Equalizer** (Settings → Player & audio → Equalizer): import AutoEQ `ParametricEQ.txt` profiles (native file picker), select the active profile or "Disabled", delete with confirmation.
+- [DE] **Data saver** (Settings → Data saver): master toggle that backs up the current canvas and rotating-artwork settings, forces them off while enabled, and restores the saved values on disable (port of the mobile `DataSaverSetting`).
+- [DE] **AI Lyrics Translation** (Settings → AI Lyrics Translation): provider picker (OpenRouter/OpenAI/Perplexity/Claude/Gemini/XAi/Mistral/DeepL/Custom) with per-provider base URL + first model auto-selection, API key entry (masked), editable base URL, model dropdown (or hidden for DeepL/Custom), translation mode (Literal/Transcribed), DeepL formality and target language — all persisted for the future lyrics-translation integration.
+
+## [6.4.41_DE-1.41.17-nightly] - 2026-09-01
+
+### Fixed
+- [DE] **WebView sign-in now captures the same cookies the manual method does**: the capture dumped the whole cookie store with a coin-flip domain tie-break (`.google.com` vs `.youtube.com` have equal length), and the full-session gate required the legacy `SID` cookie that modern Google logins never issue. The capture now asks the cookie handler which cookies it would actually send to `music.youtube.com` (identical to the manually pasted header), prefers the `.youtube.com` variant on domain ties, accepts `__Secure-1PSID`/`__Secure-3PSID` as session ids, and backfills any critical auth cookies the scoped lookup misses.
+
+## [6.4.41_DE-1.41.16-nightly] - 2026-09-01
+
+### Fixed
+- [DE] **WebView sign-in now captures the same cookie set the manual method does**: the capture built the session header by dumping the whole cookie store with an arbitrary domain tie-break, so `SAPISID`/`__Secure-3PSID` could be taken from `.google.com` instead of `.youtube.com`, and the full-session gate required the legacy `SID` cookie that modern Google logins never issue. The capture now asks the cookie handler which cookies it would actually send to `music.youtube.com` (same domain/path/secure matching a browser applies — identical to the manually pasted header), prefers the `.youtube.com` variant on domain ties, accepts `__Secure-1PSID`/`__Secure-3PSID` as session ids, and backfills any critical auth cookie the scoped lookup missed. Failed WebView logins are kept in the manual cookie field for a one-click retry.
+
 ## [6.4.41_DE-1.41.15-nightly] - 2026-08-29
 
 ### Added
@@ -19,7 +623,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.41.14-nightly] - 2026-08-29
 
 ### Fixed
-- [DE] **Linux crash with `UnsatisfiedLinkError: OpenGLApi.glFlush()` now heals itself**: the previous startup probe only checked that a `libGL` was loadable, but a loadable library is not a working GLX/EGL context, so the first frame could still die on Arch/AppImage systems. The global error handler now recognizes the Skiko OpenGL crash, writes `~/.vivimusic/.gl-software`, and relaunches the app once with the software renderer (`SKIKO_RENDER_API=SOFTWARE`); every later launch reads the marker and starts directly in software rendering instead of crashing again. Delete the marker file to let the app try OpenGL again (e.g. after fixing drivers).
+- [DE] **Linux crash with `UnsatisfiedLinkError: OpenGLApi.glFlush()` now heals itself**: the previous startup probe only checked that a `libGL` was loadable, but a loadable library is not a working GLX/EGL context, so the first frame could still die on Arch/AppImage systems.
 
 ### Added
 - [DE] **AUR packaging assets are now attached to every release**: the auto-release workflow generates `PKGBUILD` + `SRCINFO` (scripts/generate_aur_pkgbuild.py) pinned to the exact release commit with a real sha256 checksum, so Arch users can grab them and run `makepkg -si` for a proper system package instead of relying on the AppImage.
@@ -32,12 +636,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.41.12-nightly] - 2026-08-29
 
 ### Fixed
-- [DE] **AppImage no longer crashes on Linux without a working libGL** (e.g. Arch): the first frame died with `UnsatisfiedLinkError` in `OpenGLApi.glFlush()` because Skiko defaults to OpenGL on Linux. The app now probes for a loadable OpenGL library at startup and automatically falls back to the software renderer (`skiko.renderApi=SOFTWARE`) before the first frame, so machines with no GPU/GL (or broken GL in the AppImage) run normally; machines with a real GPU are unaffected. `SKIKO_RENDER_API` env var is honored as an explicit override.
+- [DE] **AppImage no longer crashes on Linux without a working libGL** (e.g. Arch): the first frame died with `UnsatisfiedLinkError` in `OpenGLApi.glFlush()` because Skiko defaults to OpenGL on Linux.
 
 ## [6.4.41_DE-1.41.11-nightly] - 2026-08-29
 
 ### Changed
-- [DE] **Expressive theme now stays inside the Material palette**: the "Made For You" mix cards, the player's live-mesh background, artist placeholder gradients and the Expressive player's bottom toolbar used fixed brand colors (red/blue/purple/grey hex values). They are now derived from the theme's accent color via hue rotations (new `rotateHue` helper) and Material 3 containers, keeping the Spotify/Apple-style expressive design without leaving the Material theme colors.
+- [DE] **Expressive theme now stays inside the Material palette**: the "Made For You" mix cards, the player's live-mesh background, artist placeholder gradients and the Expressive player's bottom toolbar used fixed brand colors (red/blue/purple/grey hex values).
 
 ## [6.4.41_DE-1.41.10-nightly] - 2026-08-29
 
@@ -47,7 +651,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.41.9-nightly] - 2026-08-29
 
 ### Fixed
-- [DE] **Tooltips appear next to the pointer again**: the smart placement was using the cursor position in component-local coordinates while the popup expects window coordinates, so every tooltip showed at the window's top-left. The component's own offset is now added, so tooltips render below-right of the pointer with the flip-above/clamp behavior intact.
+- [DE] **Tooltips appear next to the pointer again**: the smart placement was using the cursor position in component-local coordinates while the popup expects window coordinates, so every tooltip showed at the window's top-left.
 
 ## [6.4.41_DE-1.41.8-nightly] - 2026-08-29
 
@@ -68,7 +672,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.41.5-nightly] - 2026-08-29
 
 ### Fixed
-- [DE] **Distinct icons for distinct actions**: the right Now Playing panel toggle now uses the split-panel icon (`VerticalSplit`) instead of reusing the queue icon; playlist entries in the sidebar and the playlist search filter now use the playlist icon (`PlaylistPlay`) instead of the queue icon. The queue icon (`QueueMusic`) is now used only for the queue, matching the mobile app.
+- [DE] **Distinct icons for distinct actions**: the right Now Playing panel toggle now uses the split-panel icon (`VerticalSplit`) instead of reusing the queue icon; playlist entries in the sidebar and the playlist search filter now use the playlist icon (`PlaylistPlay`) instead of the queue icon.
 
 ## [6.4.41_DE-1.41.4-nightly] - 2026-08-29
 
@@ -83,7 +687,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.41.2-nightly] - 2026-08-29
 
 ### Added
-- [DE] **Hover tooltips on buttons**: resting the pointer on a button now shows a small hint with its name (like website tooltips). Covered: sidebar toggle, top-bar controls (back, forward, sidebar, home, search, lyrics, queue, history, stats, Listen Together, settings, output device), window controls (minimize/maximize/close), mini-player and full-player controls (play/pause, next, previous, shuffle, repeat, volume, queue, lyrics, full player, favorite, right panel), search clear, home notifications, browse "See all", now-playing widget, playlist rename/delete, song menu, add-to-playlist buttons.
+- [DE] **Hover tooltips on buttons**: resting the pointer on a button now shows a small hint with its name (like website tooltips).
 
 ## [6.4.41_DE-1.41.1-nightly] - 2026-08-29
 
@@ -101,13 +705,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.40.0-nightly] - 2026-08-29
 
 ### Added
-- [DE] **Accent color intensity slider** (Settings → Appearance → Theme & colors): tune how vivid the accent appears from 100% down to 0% (fully desaturated grey of the same lightness). It works in both the tonal Material accent and the flat Spotify style — the saturation is scaled before the accent seeds either palette, without changing the hue. The value persists (`accentIntensity`) and a small row of preview swatches shows 100/75/50/25/0%. New string translated in all 47 languages.
+- [DE] **Accent color intensity slider** (Settings → Appearance → Theme & colors): tune how vivid the accent appears from 100% down to 0% (fully desaturated grey of the same lightness).
 
 ## [6.4.41_DE-1.39.0-nightly] - 2026-08-29
 
 ### Added
 - [DE] **Spotify-style shell (Phase 1)** — the 3-panel shell now follows the Spotify look when the Spotify style is active:
-  - **Sidebar**: pure-black background in dark mode (white in light), no surface frame around it; selected items use a grey pill (`surfaceContainerHighest`) with full-contrast bold text instead of the accent-filled selection; entries get a subtle hover background (`surfaceContainerHigh`); corner radius reduced to 8dp for the main/library/playlist entries. The classic Material layout keeps its accent selection untouched.
+- **Sidebar**: pure-black background in dark mode (white in light), no surface frame around it; selected items use a grey pill (`surfaceContainerHighest`) with full-contrast bold text instead of the accent-filled selection; entries get a subtle hover background (`surfaceContainerHigh`); corner radius reduced to 8dp for the main/library/playlist entries. The classic Material layout keeps its accent selection untouched.
   - **Bottom player bar**: a thin 1dp top border separates it from the content above (Spotify-style). The bar already had the Spotify layout (cover + title/artist left, transport center, volume right).
   - **Right Now-Playing panel**: its background was hardcoded `#121212` (dark-only, wrong in light mode); it now uses the theme panel color (`surfaceContainer` — `#181818` in dark Spotify, `#F6F6F6` in light).
 
@@ -119,13 +723,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.38.1-nightly] - 2026-08-29
 
 ### Fixed
-- [DE] **Accent color selection works again in Spotify style**: the flat Spotify scheme hardcoded the green `#1DB954` as the primary color, so picking a different accent did nothing. The scheme now uses the user's selected accent (resolved through the dynamic/OS sentinel) as the flat primary — with a contrast-aware text color — so accent changes apply immediately. A new **"Spotify"** accent swatch (`#1DB954`) was added to the accent palette to get the classic green back.
+- [DE] **Accent color selection works again in Spotify style**: the flat Spotify scheme hardcoded the green `#1DB954` as the primary color, so picking a different accent did nothing.
 - [DE] **Queue/Lyrics/History panel in the Expressive player no longer sits on an accent-tinted background**: the right panel was `surface` at 55% opacity over the accent-colored player background, so the accent bled through behind the track list. The panel is now fully opaque, like the plain playlist screens.
 
 ## [6.4.41_DE-1.38.0-nightly] - 2026-08-29
 
 ### Added
-- [DE] **Spotify-style UI redesign — Phase 0 (theme foundations)**: when the Spotify layout is active (the default 3-panel shell), the app now uses a flat Spotify palette instead of the tonal Material 3 scheme — dark `#121212` background with `#181818` panels and `#282828` hover surfaces, fixed green accent `#1DB954`, secondary text `#B3B3B3`; light mode `#FFFFFF` / `#F6F6F6` panels / text `#191414`. All surfaces drop the Material 3 tonal variation, corners become a uniform 8dp (`Shapes`), and titles/labels render bolder (Spotify-like). Pure black in dark mode forces a true black background (like Spotify's sidebar). The main window root now paints the flat background behind the `surfaceContainer` panels so the 3-panel shell has real depth. The tonal Material 3 theme is untouched and returns whenever the Spotify layout is off; theme/accent sync with the mobile app is unaffected (the accent stays green while Spotify style is on, and returns to the user's color when off).
+- [DE] **Spotify-style UI redesign — Phase 0 (theme foundations)**: when the Spotify layout is active (the default 3-panel shell), the app now uses a flat Spotify palette instead of the tonal Material 3 scheme — dark `#121212` background with `#181818` panels and `#282828` hover surfaces, fixed green accent `#1DB954`, secondary text `#B3B3B3`; light mode `#FFFFFF` / `#F6F6F6` panels / text `#191414`. All surfaces drop the Material 3 tonal variation, corners become a uniform 8dp (`Shapes`), and titles/labels render bolder (Spotify-like). Pure black in dark mode forces a true black background. The main window root now paints the flat background behind the `surfaceContainer` panels so the 3-panel shell has real depth. The tonal Material 3 theme is untouched and returns whenever the Spotify layout is off; theme/accent sync with the mobile app is unaffected.
 
 ## [6.4.41_DE-1.37.3-nightly] - 2026-08-29
 
@@ -136,8 +740,8 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.37.2-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] **Enabling the native title bar no longer crashes** (`IllegalComponentStateException: The frame is displayable`): the toggle changed reactive state that Compose's `SwingWindow` reads to call `setUndecorated()` on the already-displayed frame, which throws. The window chrome is now frozen at startup (`undecorated` never changes at runtime) — flipping the toggle only saves the setting and asks to restart, and the restart applies it.
-- [DE] **Window no longer reopens stretched over the Windows taskbar**: closing the app while maximized saved the maximized (full-screen) bounds, and the next start re-applied them as a normal placement — the window opened sitting over/under the taskbar (with an auto-hide bar it stayed above it). The floating bounds are now captured before maximizing and persisted instead; on restore the window is clamped to the work area of the monitor it was last on (not just the primary one).
+- [DE] **Enabling the native title bar no longer crashes** (`IllegalComponentStateException: The frame is displayable`): the toggle changed reactive state that Compose's `SwingWindow` reads to call `setUndecorated()` on the already-displayed frame, which throws.
+- [DE] **Window no longer reopens stretched over the Windows taskbar**: closing the app while maximized saved the maximized (full-screen) bounds, and the next start re-applied them as a normal placement — the window opened sitting over/under the taskbar (with an auto-hide bar it stayed above it).
 
 ## [6.4.41_DE-1.37.1-nightly] - 2026-08-28
 
@@ -148,12 +752,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.37.0-nightly] - 2026-08-28
 
 ### Added
-- [DE] **"Download VIVI for Android (APK)" button on the Devices/sync screen**: fetches the newest Android APK from the selected update source's GitHub releases (default PiBOH/vivi-music — e.g. `VIVIMusic-6.4.41-debug.apk`) and opens it in the browser; if no APK is published it falls back to the releases page. 2 new strings translated in all 47 languages (batch 35).
+- [DE] **"Download VIVI for Android (APK)" button on the Devices/sync screen**: fetches the newest Android APK from the selected update source's GitHub releases (default PiBOH/vivi-music.
 
 ## [6.4.41_DE-1.36.0-nightly] - 2026-08-28
 
 ### Added
-- [DE] **Toggle between the native OS title bar and VIVI's custom one** (Settings → Appearance): off by default (VIVI's bar). When the native system title bar is enabled, the window uses the OS chrome — its minimize/maximize/close buttons — and VIVI's own bar adapts by hiding its window buttons (the floating overlay on the player screen is hidden too). The change applies after a restart (a dialog offers to restart immediately), and all 4 new strings are translated in all 47 languages.
+- [DE] **Toggle between the native OS title bar and VIVI's custom one** (Settings → Appearance): off by default (VIVI's bar).
 
 ## [6.4.41_DE-1.35.8-nightly] - 2026-08-28
 
@@ -173,14 +777,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.35.5-nightly] - 2026-08-28
 
 ### Changed
-- [DE] **Playback starts while the track is still downloading (progressive streaming)**: the stream is downloaded to a unique `.part` file in the background and the decoder starts as soon as the first audio fragment is on disk, instead of waiting for the whole file. The sample table grows incrementally as new `moof` fragments arrive. A prefetch and a user play of the same track now share ONE download (no more concurrent-write races), completed downloads are promoted to the cache best-effort (copy fallback on Windows where an open file can't be renamed), and stale `.part` leftovers are swept on startup.
+- [DE] **Playback starts while the track is still downloading (progressive streaming)**: the stream is downloaded to a unique `.part` file in the background and the decoder starts as soon as the first audio fragment is on disk, instead of waiting for the whole file.
 - [DE] **Stream resolution is much faster**: the client chain used to run all ~12 fallback clients sequentially even when the first URL validated, costing many round-trips per track. It now stops at the first HEAD-validated URL (NewPipe + any already-collected candidates remain as download fallbacks).
 - [DE] **The "downloading" indicator is accurate**: the loading phase is no longer cleared the instant resolution ends — it now stays visible until audio is actually ready (the first decoded frame).
 
 ## [6.4.41_DE-1.35.4-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] **"Module with the Main dispatcher is missing" crash**: desktop code hops back to `Dispatchers.Main` after off-thread image blur, but the module that provides the Swing-backed Main dispatcher was never declared — only `kotlinx-coroutines-core` was. Running that path (artwork blur) threw the missing-dispatcher error once out of the dev classpath/into a packaged run. Added `kotlinx-coroutines-swing` at the same version as `core`, which backs `Dispatchers.Main` on Compose Desktop.
+- [DE] **"Module with the Main dispatcher is missing" crash**: desktop code hops back to `Dispatchers.Main` after off-thread image blur, but the module that provides the Swing-backed Main dispatcher was never declared — only `kotlinx-coroutines-core` was.
 
 ## [6.4.41_DE-1.35.3-nightly] - 2026-08-28
 
@@ -224,7 +828,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.41_DE-1.34.8-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] The full player (Classic/New/V2 designs) had no visible way back: the sidebar and the top header are hidden on the player screen and the window is undecorated, so the player felt like it filled the whole screen with no way to shrink it. A back button (chevron) now appears at the top-left of every player design (it was only present in the Expressive one), and the Escape key goes back like Backspace/Alt+Left.
+- [DE] The full player (Classic/New/V2 designs) had no visible way back: the sidebar and the top header are hidden on the player screen and the window is undecorated, so the player felt like it filled the whole screen with no way to shrink it.
 
 ## [6.4.41_DE-1.34.7-nightly] - 2026-08-28
 
@@ -248,7 +852,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.39_DE-1.34.4-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] Selecting a player design in Settings → Player & audio → player design (and the density screen) could make the whole UI explode and freeze the app, forcing Task Manager. Root cause: `PlayerDesignScreen`/`DensityScreen` used `fillMaxSize()` inside the scrollable `SettingsSubScreen`; with an infinite maximum height the layout sized to Infinity (everything looks enlarged and the app becomes unresponsive). Both screens now use `fillMaxWidth()` only.
+- [DE] Selecting a player design in Settings → Player & audio → player design (and the density screen) could make the whole UI explode and freeze the app, forcing Task Manager.
 
 ## [6.4.39_DE-1.34.3-nightly] - 2026-08-28
 
@@ -258,10 +862,10 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.39_DE-1.34.2-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] The embedded login WebView stayed permanently white in the packaged app. Root cause found with a limited-modules reproduction of the jlink runtime: the packaged image was missing the `java.net.http` module (JavaFX ships as classpath jars, so jlink cannot see its requirements — the page load then hangs at RUNNING forever) and `jdk.unsupported` (`sun.misc.Unsafe`, required by the Marlin 2D rendering engine). Both modules are now included; the reproduction shows `state=SUCCEEDED` with the Google page actually rendered.
+- [DE] The embedded login WebView stayed permanently white in the packaged app.
 
 ### Changed
-- [DE] The sidebar now compresses to a compact icon rail (72dp, centered icons) when collapsed instead of disappearing entirely, in both the Spotify and classic layouts. A menu button inside the collapsed rail expands it; the classic layout header gains a collapse button, and the Spotify top bar keeps its toggle. State stays persisted across restarts.
+- [DE] The sidebar now compresses to a compact icon rail (72dp, centered icons) when collapsed instead of disappearing entirely, in both the Spotify and classic layouts.
 
 ## [6.4.39_DE-1.34.1-nightly] - 2026-08-28
 
@@ -278,7 +882,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ### Changed
 - [DE] Version numbering now follows SemVer properly: a feature-level change like this new UI bumps the minor version (1.33.x → 1.34.0); patch is reserved for fixes only.
-- [DE] Re-integrated all features added since the NewUI base: embedded JavaFX Google sign-in (`LoginWebView`), account/Library inline login options (`LoginContent`), AI-translation disclaimer, installer auto-cleanup, official-logo toast path, and the latest localization table (441 keys). 4 new UI strings (`close`, `listen_together_title`, `search_hint`, `up_next`) added in English; full translations of the new strings follow in a later commit.
+- [DE] Re-integrated all features added since the NewUI base: embedded JavaFX Google sign-in (`LoginWebView`), account/Library inline login options (`LoginContent`), AI-translation disclaimer, installer auto-cleanup, official-logo toast path, and the latest localization table (441 keys).
 
 ## [6.4.39_DE-1.33.129-nightly] - 2026-08-28
 
@@ -296,7 +900,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ## [6.4.39_DE-1.33.127-nightly] - 2026-08-28
 
 ### Fixed
-- [DE] Completed every missing desktop translation: 3,582 missing per-language strings were added across all 47 languages (new batches `desktop_extra_translations_24..31`). Every key used in the desktop sources now exists in the English table (13 raw keys such as `wrapped_show_on_home` or `screen_transitions` no longer show up in the UI), and every language table now contains all 437 keys (no more silent English fallback for the 41 keys that were mapped to inline English literals in the generator).
+- [DE] Completed every missing desktop translation: 3,582 missing per-language strings were added across all 47 languages (new batches `desktop_extra_translations_24..31`).
 - [DE] Fixed the desktop localization generator dropping translations: extra translation batches are now merged per key instead of being replaced by the last file's language subset, so a key defined in two batches keeps all its languages.
 - [DE] Added `scripts/check_localization.py` to verify used-key coverage and per-language completeness.
 

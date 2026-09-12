@@ -32,6 +32,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -53,11 +54,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.music.innertube.YouTube
 import com.music.innertube.models.SongItem
+import com.music.innertube.models.WatchEndpoint
 import com.music.innertube.models.YTItem
 import com.music.innertube.pages.BrowseResult
 import com.music.innertube.pages.HomePage
 import com.music.innertube.pages.MoodAndGenres
 import com.music.innertube.pages.SearchResult
+import kotlinx.coroutines.delay
 import com.music.innertube.pages.SearchSummary
 import com.music.innertube.pages.SearchSummaryPage
 
@@ -92,18 +95,70 @@ fun HomeScreen(
     onRandomizeOrderChange: (Boolean) -> Unit = {},
     wrappedStats: WrappedStats = WrappedStats(),
     showWrapped: Boolean = false,
+    /** Recently started tracks (newest first) used as recommendation seeds. */
+    recentSeedTracks: List<NowPlaying> = emptyList(),
 ) {
     var home by remember { mutableStateOf<HomePage?>(null) }
     var moodAndGenres by remember { mutableStateOf<List<MoodAndGenres>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var selectedChip by remember { mutableStateOf<HomePage.Chip?>(null) }
+    // Retry support: bump [loadRequest] to refetch. Also retries once when the
+    // response is an empty shell (YouTube sometimes returns the shell before
+    // streaming the real carousels), so the Home can't be left permanently empty.
+    var loadRequest by remember { mutableStateOf(0) }
+    var autoRetried by remember { mutableStateOf(false) }
 
-    LaunchedEffect(selectedChip) {
+    // Recommended songs, ported from the mobile app's HomeViewModel:
+    // for each recent seed track ask `YouTube.next(videoId)` for its related
+    // endpoint, then `YouTube.related(endpoint)` and surface the songs.
+    var recommendations by remember { mutableStateOf<List<SongItem>?>(null) }
+    // Seeds come from the most recent in-session tracks. On a fresh profile
+    // there is no history yet, so the first songs that came back in the Home
+    // feed are used instead — the "Recommended" row must never silently
+    // disappear just because nothing was played in this session.
+    LaunchedEffect(
+        recentSeedTracks.map { it.videoId }.take(3).joinToString(","),
+        home,
+    ) {
+        var seeds = recentSeedTracks.take(3).map { it.videoId }
+        if (seeds.isEmpty() && home != null) {
+            val homeSongs: List<SongItem> =
+                home!!.sections.flatMap { it.items }.filterIsInstance<SongItem>()
+            seeds = homeSongs.map { it.id }.distinct().take(3)
+        }
+        if (seeds.isEmpty()) {
+            recommendations = null
+            return@LaunchedEffect
+        }
+        val collected = mutableListOf<SongItem>()
+        for (videoId in seeds) {
+            val endpoint = YouTube.next(WatchEndpoint(videoId = videoId))
+                .getOrNull()?.relatedEndpoint ?: continue
+            val page = YouTube.related(endpoint).getOrNull() ?: continue
+            collected += page.songs.filter { it.id != videoId }
+            if (collected.size >= 12) break
+        }
+        recommendations = collected.distinctBy { it.id }.take(12).ifEmpty { null }
+    }
+
+    LaunchedEffect(loadRequest, selectedChip) {
         val params = selectedChip?.endpoint?.params
+        error = null
+        home = null
         YouTube.home(params = params).fold(
             onSuccess = { home = it; error = null },
             onFailure = { error = it.message },
         )
+    }
+
+    // One automatic retry when the response is empty (rare YouTube layout
+    // changes return an empty shell for the first request).
+    LaunchedEffect(home) {
+        if (home != null && home!!.sections.isEmpty() && !autoRetried) {
+            autoRetried = true
+            delay(1200)
+            loadRequest++
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -113,12 +168,12 @@ fun HomeScreen(
         )
     }
 
-    val greetingText = remember {
+    val greetingText = remember(language) {
         val hour = LocalTime.now().hour
         when {
-            hour < 12 -> "Good morning"
-            hour < 17 -> "Good afternoon"
-            else -> "Good evening"
+            hour < 12 -> Localization.get(language, "home_greeting_morning")
+            hour < 17 -> Localization.get(language, "home_greeting_afternoon")
+            else -> Localization.get(language, "home_greeting_evening")
         }
     }
 
@@ -138,6 +193,27 @@ fun HomeScreen(
     when {
         error != null && home == null -> ErrorBox(language, error)
         home == null -> LoadingBox(language)
+        // Empty response (even after the automatic retry): show a clear state
+        // with a manual Retry instead of a silently blank Home.
+        home!!.sections.isEmpty() -> Column(
+            Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                Localization.get(language, "home_empty"),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = {
+                AppLog.click("Home retry")
+                autoRetried = true
+                loadRequest++
+            }) {
+                Text(Localization.get(language, "retry"))
+            }
+        }
         else -> LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -145,6 +221,15 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // `home` is a reloadable state: while a chip/reload request is in
+            // flight the loading effect nulls it *before* refetching. The
+            // LazyColumn content DSL can be re-executed by the snapshot
+            // observer at that exact moment, so dereferencing it here with `!!`
+            // crashed with an NPE as soon as any button on Home was clicked
+            // (see issue #58). Bail out to an empty list instead; the LoadingBox
+            // branch of the outer `when` takes over on the next recomposition.
+            val page = home ?: return@LazyColumn
+
             // 1. Greeting Header Row
             item(key = "greeting_header") {
                 Row(
@@ -163,9 +248,9 @@ fun HomeScreen(
                         )
                     }
 
-                    Tooltip("Notifications") {
+                    Tooltip(Localization.get(language, "tooltip_notifications")) {
                         IconButton(
-                            onClick = { /* Home hub / notifications */ },
+                            onClick = { AppLog.click("Home notifications") /* Home hub / notifications */ },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 contentColor = MaterialTheme.colorScheme.onSurface,
@@ -211,7 +296,10 @@ fun HomeScreen(
                                         if (quickPicksSelected) MaterialTheme.colorScheme.primaryContainer
                                         else Color.Transparent
                                     )
-                                    .clickable { onUseLastListenChange(false) }
+                                    .clickable {
+                                        AppLog.click("Home quick picks")
+                                        onUseLastListenChange(false)
+                                    }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -233,7 +321,10 @@ fun HomeScreen(
                                         if (lastListenSelected) MaterialTheme.colorScheme.primaryContainer
                                         else Color.Transparent
                                     )
-                                    .clickable { onUseLastListenChange(true) }
+                                    .clickable {
+                                        AppLog.click("Home last listen")
+                                        onUseLastListenChange(true)
+                                    }
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
@@ -253,7 +344,10 @@ fun HomeScreen(
 
                     val shuffleColor = if (randomizeOrder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     Surface(
-                        onClick = { onRandomizeOrderChange(!randomizeOrder) },
+                        onClick = {
+                            AppLog.click("Home randomize order")
+                            onRandomizeOrderChange(!randomizeOrder)
+                        },
                         shape = RoundedCornerShape(50),
                         color = if (randomizeOrder) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                         else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -280,8 +374,6 @@ fun HomeScreen(
                 }
             }
 
-            val page = home!!
-
             // Chips row (if available)
             val chipsList = page.chips.orEmpty().filter { !it.title.equals("Podcasts", ignoreCase = true) }
             if (chipsList.isNotEmpty()) {
@@ -293,7 +385,10 @@ fun HomeScreen(
                         items(chipsList, key = { chip -> chip.title }) { chip ->
                             val selected = selectedChip?.title == chip.title
                             Surface(
-                                onClick = { selectedChip = if (selected) null else chip },
+                                onClick = {
+                                    AppLog.click("Home chip '${chip.title}'")
+                                    selectedChip = if (selected) null else chip
+                                },
                                 shape = RoundedCornerShape(50),
                                 color = if (selected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -353,9 +448,12 @@ fun HomeScreen(
                         ) {
                             val endpoint = section.endpoint
                             if (endpoint != null) {
-                                Tooltip("See all") {
+                                Tooltip(Localization.get(language, "see_all")) {
                                     IconButton(
-                                        onClick = { onOpenBrowse(endpoint.browseId, endpoint.params) },
+                                        onClick = {
+                                            AppLog.click("Home see all '${section.title}'")
+                                            onOpenBrowse(endpoint.browseId, endpoint.params)
+                                        },
                                         colors = IconButtonDefaults.iconButtonColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                             contentColor = MaterialTheme.colorScheme.onSurface,
@@ -364,7 +462,7 @@ fun HomeScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                            contentDescription = "View section",
+                                            contentDescription = Localization.get(language, "view_section"),
                                             modifier = Modifier.size(18.dp),
                                         )
                                     }
@@ -379,9 +477,24 @@ fun HomeScreen(
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(songs.distinctBy { it.id }, key = { it.id }) { song ->
+                            val sectionSongs = songs.distinctBy { it.id }
+                            items(sectionSongs, key = { it.id }) { song ->
                                 Box(Modifier.width(300.dp)) {
-                                    SongRow(song = song, language = language, onClick = { onPlaySong(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                                    SongRow(
+                                        song = song,
+                                        language = language,
+                                        // Like the Android app: tapping a song in a Home
+                                        // recommendation section plays the WHOLE section as a
+                                        // queue, starting from the tapped track (next/prev move
+                                        // through the rest of the section).
+                                        onClick = {
+                                            val start = sectionSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                            val rotated = sectionSongs.slice(start until sectionSongs.size) +
+                                                sectionSongs.slice(0 until start)
+                                            onPlayAll(rotated)
+                                        },
+                                        onAddToPlaylist = { onAddToPlaylist(song) },
+                                    )
                                 }
                             }
                         }
@@ -400,6 +513,42 @@ fun HomeScreen(
                 }
             }
 
+            // 3b. Recommended Section (ported from the mobile app):
+            // personalized related songs seeded from the tracks you listened to.
+            recommendations?.takeIf { it.isNotEmpty() }?.let { recs ->
+                item(key = "recommended_header") {
+                    Text(
+                        text = Localization.get(language, "recommended"),
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                item(key = "recommended_content") {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        val recSongs = recs.distinctBy { it.id }
+                        items(recSongs, key = { "rec-${it.id}" }) { song ->
+                            Box(Modifier.width(300.dp)) {
+                                SongRow(
+                                    song = song,
+                                    language = language,
+                                    // Like the Android app: tapping a recommendation
+                                    // plays the whole recommendation list as a queue.
+                                    onClick = {
+                                        val start = recSongs.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
+                                        val rotated = recSongs.slice(start until recSongs.size) +
+                                            recSongs.slice(0 until start)
+                                        onPlayAll(rotated)
+                                    },
+                                    onAddToPlaylist = { onAddToPlaylist(song) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // 4. Your Artists Feed Section
             item(key = "artists_feed_header") {
                 Row(
@@ -410,7 +559,7 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = "Your Artists Feed",
+                        text = Localization.get(language, "your_artists_feed"),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface,
                     )
@@ -425,7 +574,7 @@ fun HomeScreen(
             // 5. Made For You Section (Dynamic Gradient Cards)
             item(key = "made_for_you_header") {
                 Text(
-                    text = "Made For You",
+                    text = Localization.get(language, "made_for_you"),
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -475,7 +624,14 @@ fun HomeScreen(
                 }
             }
 
-            val moodItems = moodAndGenres?.flatMap { it.items }
+            // The API can repeat the same mood/genre (identical browseId+title)
+            // across category sections; the LazyRow below is keyed by
+            // `browseId + title`, so duplicates must be removed or Compose
+            // crashes with "key ... was already used" as soon as the row
+            // scrolls into view.
+            val moodItems = moodAndGenres
+                ?.flatMap { it.items }
+                ?.distinctBy { it.endpoint.browseId + it.title }
             if (!moodItems.isNullOrEmpty()) {
                 item(key = "mood_header") {
                     SectionHeader(title = Localization.get(language, "mood_and_genres"), language = language)
@@ -581,7 +737,24 @@ fun BrowseScreen(
     LaunchedEffect(browseId, params) {
         YouTube.browse(browseId, params).fold(
             onSuccess = { result = it; error = null },
-            onFailure = { error = it.message },
+            onFailure = { t ->
+                val raw = t.message.orEmpty()
+                val tagged = if (raw.contains("401") && raw.contains("browse", ignoreCase = true)) {
+                    "E1031 $raw"
+                } else {
+                    raw.ifBlank { t.javaClass.simpleName }
+                }
+                // Visible to the user (covers the unreadable 401 JSON).
+                error = tagged
+                // Always land in the session logs — the support zip was missing
+                // this failure completely, leaving nothing to debug.
+                runCatching {
+                    AppLog.log(
+                        "browse",
+                        "browse failed E1031 — browseId=$browseId params=${params?.take(64)} loggedIn=${LoginManager.isLoggedIn()} cookie=${YouTube.cookie?.length ?: 0}b visitorData=${!YouTube.visitorData.isNullOrBlank()} dataSyncId=${!YouTube.dataSyncId.isNullOrBlank()} — $tagged — ${t.javaClass.name}"
+                    )
+                }
+            },
         )
     }
 
@@ -595,14 +768,14 @@ fun BrowseScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                result!!.items.forEach { section ->
+                result!!.items.forEachIndexed { secIdx, section ->
                     if (!section.title.isNullOrBlank()) {
-                        item(key = "header-${section.title}", span = { GridItemSpan(maxLineSpan) }) {
+                        item(key = "header-$secIdx-${section.title}", span = { GridItemSpan(maxLineSpan) }) {
                             SectionHeader(title = section.title!!, language = language)
                         }
                     }
-                    section.items.forEach { ytItem ->
-                        item(key = ytItem.id) {
+                    section.items.forEachIndexed { itemIdx, ytItem ->
+                        item(key = "browse-$secIdx-$itemIdx-${ytItem.id}") {
                             YtItemCard(
                                 item = ytItem,
                                 width = null,

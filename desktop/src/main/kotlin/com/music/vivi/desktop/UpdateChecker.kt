@@ -2,7 +2,6 @@ package com.music.vivi.desktop
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -69,7 +68,7 @@ object UpdateSource {
  * (tags like `6.1.0`) are ignored.
  */
 object UpdateChecker {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = sharedJson
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)

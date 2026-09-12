@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,8 +56,9 @@ import kotlinx.coroutines.delay
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.draw.alpha
-
+import com.music.vivi.LocalListenTogetherManager
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun QueueV2(
@@ -73,7 +76,14 @@ fun QueueV2(
     val repeatMode by playerConnection.repeatMode.collectAsState()
     val isPlaying by playerConnection.isEffectivelyPlaying.collectAsState()
     
-    var locked by rememberPreference(QueueEditLockKey, false)
+    val listenTogetherManager = LocalListenTogetherManager.current
+    val listenTogetherRoleState = listenTogetherManager?.role?.collectAsState(initial = com.music.vivi.listentogether.RoomRole.NONE)
+    val isGuest = listenTogetherRoleState?.value == com.music.vivi.listentogether.RoomRole.GUEST
+    
+    var locked by rememberPreference(QueueEditLockKey, true)
+    
+    // Automatically lock queue for guests
+    val isQueueEffectivelyLocked = locked || isGuest
 
     // Sleep Timer
     var showSleepTimerDialog by remember { mutableStateOf(false) }
@@ -101,7 +111,7 @@ fun QueueV2(
 
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
-        defaultValue = PlayerBackgroundStyle.DEFAULT
+        defaultValue = PlayerBackgroundStyle.GRADIENT
     )
     val adaptivePrimary = if (playerBackground == PlayerBackgroundStyle.DEFAULT) MaterialTheme.colorScheme.onSurface else Color.White
     val adaptiveSecondary = if (playerBackground == PlayerBackgroundStyle.DEFAULT) MaterialTheme.colorScheme.onSurfaceVariant else Color.White.copy(alpha = 0.7f)
@@ -171,6 +181,7 @@ fun QueueV2(
         }
     }
 
+    CompositionLocalProvider(LocalContentColor provides adaptivePrimary) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -178,7 +189,7 @@ fun QueueV2(
     ) {
         // Fixed Top Control Pills
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val pillShape = RoundedCornerShape(16.dp)
@@ -192,7 +203,7 @@ fun QueueV2(
                     .height(48.dp)
                     .background(if (shuffleModeEnabled) activeColor else inactiveColor, pillShape)
                     .clip(pillShape)
-                    .clickable { playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled },
+                    .clickable(enabled = !isGuest) { playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(painterResource(R.drawable.shuffle), contentDescription = "Shuffle", tint = adaptivePrimary, modifier = Modifier.size(24.dp))
@@ -204,7 +215,7 @@ fun QueueV2(
                     .height(48.dp)
                     .background(if (repeatMode != Player.REPEAT_MODE_OFF) activeColor else inactiveColor, pillShape)
                     .clip(pillShape)
-                    .clickable { playerConnection.player.toggleRepeatMode() },
+                    .clickable(enabled = !isGuest) { playerConnection.player.toggleRepeatMode() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -226,7 +237,7 @@ fun QueueV2(
                     .height(48.dp)
                     .background(if (sleepTimerEnabled) activeColor else inactiveColor, pillShape)
                     .clip(pillShape)
-                    .clickable {
+                    .clickable(enabled = !isGuest) {
                         if (sleepTimerEnabled) {
                             playerConnection.service.sleepTimer.clear()
                         } else {
@@ -251,7 +262,7 @@ fun QueueV2(
 
         // Queue Header Row
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -261,12 +272,14 @@ fun QueueV2(
                 fontWeight = FontWeight.Bold,
                 color = adaptivePrimary
             )
-            IconButton(onClick = { locked = !locked }) {
-                Icon(
-                    painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
-                    contentDescription = if (locked) "Unlock Queue" else "Lock Queue",
-                    tint = adaptiveSecondary
-                )
+            if (!isGuest) {
+                IconButton(onClick = { locked = !locked }) {
+                    Icon(
+                        painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
+                        contentDescription = if (locked) "Unlock Queue" else "Lock Queue",
+                        tint = adaptiveSecondary
+                    )
+                }
             }
         }
 
@@ -304,19 +317,13 @@ fun QueueV2(
                     }
 
                     val content: @Composable () -> Unit = {
-                        val glassBg = if (playerBackground == PlayerBackgroundStyle.DEFAULT) {
-                            Color.Unspecified
-                        } else {
-                            if (isActive) adaptiveSurface.copy(alpha = 0.4f) else adaptiveSurface.copy(alpha = 0.15f)
-                        }
-
                         MediaMetadataListItem(
                             mediaMetadata = window.mediaItem.metadata!!,
                             isSelected = false,
                             isActive = isActive,
                             isPlaying = isPlaying && isActive,
-                            backgroundColor = glassBg,
-                            shape = listItemShape(index, mutableQueueWindows.size),
+                            backgroundColor = Color.Transparent,
+                            subtitleColor = adaptiveSecondary,
                             trailingContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
@@ -343,8 +350,8 @@ fun QueueV2(
                                             contentDescription = "Options"
                                         )
                                     }
-
-                                    if (!locked) {
+                                    
+                                    if (!isQueueEffectivelyLocked) {
                                         IconButton(
                                             onClick = { },
                                             modifier = Modifier.draggableHandle()
@@ -358,16 +365,15 @@ fun QueueV2(
                                 }
                             },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .clickable {
-                                    playerConnection.player.seekToDefaultPosition(window.firstPeriodIndex)
-                                    playerConnection.player.playWhenReady = true
-                                }
+                                                .fillMaxWidth()
+                                                .clickable(enabled = !isGuest) {
+                                                    playerConnection.player.seekToDefaultPosition(window.firstPeriodIndex)
+                                                    playerConnection.player.playWhenReady = true
+                                                }
                         )
                     }
 
-                    if (locked) {
+                    if (isQueueEffectivelyLocked) {
                         content()
                     } else {
                         @OptIn(ExperimentalMaterial3Api::class)
@@ -384,7 +390,6 @@ fun QueueV2(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .padding(vertical = 4.dp, horizontal = 16.dp)
-                                        .clip(listItemShape(index, mutableQueueWindows.size))
                                         .background(color),
                                     contentAlignment = Alignment.CenterEnd
                                 ) {
@@ -409,7 +414,8 @@ fun QueueV2(
                 }
             }
             // end of queue
-        }
+            } // end Column
+    } // end CompositionLocalProvider
     }
 
     if (showSleepTimerDialog) {

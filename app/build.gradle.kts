@@ -22,11 +22,16 @@ android {
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
-        applicationId = "com.vivi.vivimusic"
+        applicationId = "com.vivi.music.desktop"
         minSdk = 26
         targetSdk = 37
-        versionCode = 124
-        versionName = "6.4.41"
+        // 6.0.6.3: companion build — installs as com.vivi.music.desktop and is
+        // named "VIVI for DE" so it can coexist with the upstream app.
+        // Versioning follows the Android scheme (last digit increments per
+        // release: 6.0.6 -> 6.0.6.1 -> 6.0.6.2 -> 6.0.6.3). versionCode stays
+        // monotonic and always increases per release.
+        versionCode = 133
+        versionName = "6.0.6.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -44,6 +49,15 @@ android {
 //add nightly build label support
         val isNightly = project.hasProperty("nightly") && project.property("nightly") == "true"
         buildConfigField("Boolean", "IS_NIGHTLY", isNightly.toString())
+
+        // Actual release channel for the About label (stable / rc / beta /
+        // alpha / nightly). The build workflow passes -Pchannel=... from
+        // version.txt (mobile channel line); falls back to the binary nightly
+        // flag so locally built APKs keep the old stable/nightly behaviour.
+        val releaseChannel = (project.findProperty("channel") as String?)
+            ?.lowercase()?.trim()?.takeIf { it.isNotBlank() }
+            ?: if (isNightly) "nightly" else "stable"
+        buildConfigField("String", "RELEASE_CHANNEL", "\"$releaseChannel\"")
     }
     
 
@@ -84,47 +98,52 @@ android {
         }
     }
 
-    signingConfigs {
-        create("persistentDebug") {
-            storeFile = file("persistent-debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-        create("release") {
-            storeFile = file("keystore/release.keystore")
+   signingConfigs {
+    create("persistentDebug") {
+        storeFile = file("persistent-debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+    }
+    create("release") {
+        val keystoreFile = file("keystore/release.keystore")
+        if (keystoreFile.exists()) {
+            storeFile = keystoreFile
             storePassword = System.getenv("STORE_PASSWORD")
             keyAlias = System.getenv("KEY_ALIAS")
             keyPassword = System.getenv("KEY_PASSWORD")
         }
-        getByName("debug") {
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-            storePassword = "android"
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-        }
     }
+    getByName("debug") {
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+        storePassword = "android"
+        storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+    }
+}
 
-    buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            isCrunchPngs = false
-            isDebuggable = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            buildConfigField("String", "ARCHITECTURE", "\"release\"")
-        }
-        debug {
-            applicationIdSuffix = ".debug"
-            isDebuggable = true
-            signingConfig = signingConfigs.getByName("debug")
-            buildConfigField("String", "ARCHITECTURE", "\"debug\"")
-        }
+buildTypes {
+    release {
+        signingConfig = if (file("keystore/release.keystore").exists())
+            signingConfigs.getByName("release")
+        else
+            signingConfigs.getByName("debug")
+        isMinifyEnabled = true
+        isShrinkResources = true
+        isCrunchPngs = false
+        isDebuggable = false
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+        buildConfigField("String", "ARCHITECTURE", "\"release\"")
     }
+    debug {
+        isDebuggable = true
+        signingConfig = signingConfigs.getByName("debug")
+        buildConfigField("String", "ARCHITECTURE", "\"debug\"")
+    }
+}
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true

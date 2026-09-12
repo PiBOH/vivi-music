@@ -2,7 +2,6 @@ package com.music.vivi.desktop
 
 import com.music.vivi.sync.SyncedPlaylist
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -28,7 +27,7 @@ object BackupManager {
     private const val SETTINGS_ENTRY = "settings.json"
     private const val PLAYLISTS_ENTRY = "playlists.json"
 
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; prettyPrint = true }
+    private val json = sharedJsonPretty
 
     /** Auto backups live under `~/.vivimusic/backups/`. */
     private val autoDir: File = File(System.getProperty("user.home"), ".vivimusic/backups").apply { mkdirs() }

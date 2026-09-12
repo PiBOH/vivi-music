@@ -44,6 +44,7 @@ import androidx.navigation.NavController
 import com.music.vivi.LocalPlayerAwareWindowInsets
 import com.music.vivi.R
 import com.music.vivi.db.entities.Song
+import com.music.vivi.ui.component.ExpressiveSettingGroup
 import com.music.vivi.ui.component.IconButton
 import com.music.vivi.ui.component.Material3SettingsGroup
 import com.music.vivi.ui.component.Material3SettingsItem
@@ -142,7 +143,14 @@ fun BackupAndRestore(
             )
         )
 
-        Material3SettingsGroup(
+        Text(
+            text = stringResource(R.string.backup_restore),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 16.dp)
+        )
+
+        ExpressiveSettingGroup(
             title = stringResource(R.string.backup_restore),
             items = listOf(
                 Material3SettingsItem(
@@ -150,8 +158,7 @@ fun BackupAndRestore(
                     icon = painterResource(R.drawable.database_upload),
                     onClick = {
                         navController.navigate("settings/backup_restore/autobackup")
-                    },
-                    isExpressive = true
+                    }
                 ),
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.action_backup)) },
@@ -163,8 +170,7 @@ fun BackupAndRestore(
                                 LocalDateTime.now().format(formatter)
                             }.vividroid.backup"
                         )
-                    },
-                    isExpressive = true
+                    }
                 ),
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.action_restore)) },
@@ -180,7 +186,7 @@ fun BackupAndRestore(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Material3SettingsGroup(
+        ExpressiveSettingGroup(
             title = stringResource(R.string.others),
             items = listOf(
                 Material3SettingsItem(
@@ -188,31 +194,28 @@ fun BackupAndRestore(
                     icon = painterResource(R.drawable.playlist_add),
                     onClick = {
                         importM3uLauncherOnline.launch(arrayOf("audio/*"))
-                    },
-                    isExpressive = true
+                    }
                 ),
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.import_csv)) },
                     icon = painterResource(R.drawable.playlist_add),
                     onClick = {
                         importPlaylistFromCsv.launch(arrayOf("text/csv", "text/comma-separated-values", "application/csv", "text/plain"))
-                    },
-                    isExpressive = true
+                    }
                 ),
                 Material3SettingsItem(
                     title = { Text(stringResource(R.string.import_from_spotify)) },
                     icon = painterResource(R.drawable.spotify),
                     onClick = {
                         navController.navigate("settings/spotify")
-                    },
-                    isExpressive = true
+                    }
                 )
             )
         )
     }
 
     TopAppBar(
-        title = { Text(stringResource(R.string.backup_restore)) },
+        title = { },
         navigationIcon = {
             IconButton(
                 onClick = navController::navigateUp,

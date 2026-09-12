@@ -47,6 +47,22 @@ jobs:
           fi
           python3 scripts/fix_deb_depends.py "$DEB"
 
+      - name: Inject uninstall cleanup into DEB
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Append a postrm hook so `dpkg -r` / `apt remove` keeps one final
+          # backup of ~/.vivimusic and wipes every cache (updates, audio,
+          # video/canvas, lyrics, logs) — same behavior as the Windows
+          # uninstaller. The shared script is embedded into /opt and copied to
+          # /usr/share by postinst so postrm can still find it.
+          DEB="$(find desktop/build/compose/binaries/main/deb -name '*.deb' -print -quit)"
+          if [ -z "$DEB" ]; then
+            echo "No .deb produced; cannot inject uninstall cleanup." >&2
+            exit 1
+          fi
+          python3 scripts/patch_deb_postrm.py "$DEB"
+
       - name: Collect DEB
         shell: bash
         run: |

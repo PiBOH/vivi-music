@@ -1,5 +1,6 @@
 package com.music.vivi.desktop.player
 
+import com.music.vivi.desktop.EqualizerProcessor
 import net.sourceforge.jaad.aac.Decoder
 import net.sourceforge.jaad.aac.SampleBuffer
 import org.jcodec.common.io.NIOUtils
@@ -87,9 +88,49 @@ class AudioPlayer {
 
         /** Poll interval while waiting for the download to catch up (ms). */
         const val DOWNLOAD_POLL_MS = 30L
+
+        /** Interval between buffered-fraction reports to the UI (ms). Also used
+         *  as the paused-state poll so the download keeps filling the cache and
+         *  the secondary buffer bar keeps advancing while audio is paused. */
+        const val BUFFERED_POLL_MS = 250L
+
+        /** Max bytes of newly arrived fragments scanned in one pass: bounding
+         *  the atom walk keeps a huge network burst from stalling the decode
+         *  thread in a single giant scan (see [decodeAndPlay]). */
+        const val SCAN_WINDOW_BYTES = 256 * 1024L
+
+        /** RMS level below which a decoded frame counts as silence (~-62 dBFS). */
+        const val SILENCE_RMS_LEVEL = 0.0008f
+
+        /** Minimum consecutive silent frames before a run is skipped (~150 ms
+         *  at ~43 frames/s): short gaps, breaths and quiet attacks stay intact.
+         *  With "Instantly skip silence" the wait is reduced to 2 frames. */
+        const val MIN_SILENCE_RUN_FRAMES = 7
     }
 
     @Volatile private var line: SourceDataLine? = null
+
+    /**
+     * Optional parametric-EQ processor applied to the decoded 16-bit PCM just
+     * before it is written to the output line. Default null = pass-through,
+     * byte-identical to the previous behaviour; the UI sets it from the active
+     * EQ profile (Settings → Player & audio → Equalizer).
+     */
+    @Volatile var equalizer: EqualizerProcessor? = null
+
+    /**
+     * "Skip silence": silent runs are dropped from the output while a track
+     * plays, so it fast-forwards through them. Default false = the audio path
+     * is byte-identical to before (no silence detection runs).
+     */
+    @Volatile var skipSilence: Boolean = false
+
+    /**
+     * "Instantly skip silence": on top of [skipSilence], leading silence at
+     * the start of a track/seek is cut right away and mid-track silent runs
+     * are jumped as soon as they are detected (2 frames instead of ~150 ms).
+     */
+    @Volatile var skipSilenceInstant: Boolean = false
 
     private var onPosition: ((Long) -> Unit)? = null
     private var onDuration: ((Long) -> Unit)? = null
@@ -105,8 +146,21 @@ class AudioPlayer {
     @Volatile
     var onLevel: ((Float) -> Unit)? = null
 
-    private var currentStreams: List<StreamResolver.ResolvedStream>? = null
-    private var currentCacheKey: String? = null
+    @Volatile private var currentStreams: List<StreamResolver.ResolvedStream>? = null
+    @Volatile private var currentCacheKey: String? = null
+    /** Metadata duration of the track currently loaded (see [play]). Kept
+     *  across [seekTo] so a seek preserves the authoritative length. */
+    @Volatile private var currentFallbackDurationMs: Long = 0L
+
+    /**
+     * Called with the buffered fraction (0..1) of the current track: how much
+     * of the stream has been downloaded/decoded so far, reported while playing
+     * AND while paused (the cache keeps filling). 1f means the whole track is
+     * on disk (fully cached or download finished) — callers then hide the
+     * secondary "buffered" segment, mirroring a fully buffered YouTube video.
+     */
+    @Volatile
+    var onBufferedFraction: ((Float) -> Unit)? = null
 
     init {
         // Sweep stale partial downloads left behind by a crash: a `.part` is
@@ -127,6 +181,18 @@ class AudioPlayer {
         cacheKey: String,
         startAtMs: Long = 0L,
         startPaused: Boolean = false,
+        /** Desired start as a 0..1 fraction of the track, used only when the
+         *  total duration is not known yet (a track loaded from the queue whose
+         *  metadata carried no length). Resolved against the stream duration
+         *  inside the decode thread, where it becomes available. */
+        startAtFraction: Float? = null,
+        /** Track length from the caller's metadata (queue/search/browse/LT
+         *  always carry it). Used as the authoritative duration when the
+         *  resolved stream did not (the NewPipe fast path and the cache path
+         *  return URLs without a length), so the seek range and the truncation
+         *  guard stay correct instead of falling back to the ~19 s first
+         *  fragment. */
+        fallbackDurationMs: Long = 0L,
         onPosition: (Long) -> Unit,
         onDuration: (Long) -> Unit,
         onError: (String) -> Unit,
@@ -136,7 +202,7 @@ class AudioPlayer {
         this.onDuration = onDuration
         this.onError = onError
         this.onComplete = onComplete
-        startDecode(streams, cacheKey, startAtMs, startPaused)
+        startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction, fallbackDurationMs)
     }
 
     /** Seeks to [ms] by restarting decode from the cached file, preserving the
@@ -144,7 +210,7 @@ class AudioPlayer {
     fun seekTo(ms: Long) {
         val streams = currentStreams ?: return
         val key = currentCacheKey ?: return
-        startDecode(streams, key, ms.coerceAtLeast(0L), startPaused = paused)
+        startDecode(streams, key, ms.coerceAtLeast(0L), startPaused = paused, fallbackDurationMs = currentFallbackDurationMs)
     }
 
     /** Sets playback volume in the 0f..1f range. */
@@ -172,7 +238,14 @@ class AudioPlayer {
         line = null
     }
 
-    private fun startDecode(streams: List<StreamResolver.ResolvedStream>, cacheKey: String, startAtMs: Long, startPaused: Boolean) {
+    private fun startDecode(
+        streams: List<StreamResolver.ResolvedStream>,
+        cacheKey: String,
+        startAtMs: Long,
+        startPaused: Boolean,
+        startAtFraction: Float? = null,
+        fallbackDurationMs: Long = 0L,
+    ) {
         // Invalidate any running thread and reset the play flags.
         val gen = ++generation
         stopped = true
@@ -184,13 +257,18 @@ class AudioPlayer {
         stopped = false
         currentStreams = streams
         currentCacheKey = cacheKey
+        currentFallbackDurationMs = fallbackDurationMs
 
-        // Authoritative duration from the player response, used by
-        // [decodeAndPlay] for the seek range and the truncation guard. It is
+        // Authoritative duration, used by [decodeAndPlay] for the seek range
+        // and the truncation guard. Priority: the player response's
+        // `lengthSeconds` when the resolution carried one, then the caller's
+        // metadata duration (queue/search/browse/LT always know the real
+        // length), then 0 = derive it from the decoded sample count. It is
         // deliberately NOT reported through [onDuration] here: the UI state
         // already carries the track duration, and firing it immediately would
         // clear the "downloading" phase before any audio is actually ready.
-        val knownDurationMs = streams.firstNotNullOfOrNull { it.durationMs }?.takeIf { it > 0 } ?: 0L
+        val knownDurationMs = streams.firstNotNullOfOrNull { it.durationMs }?.takeIf { it > 0 }
+            ?: fallbackDurationMs.takeIf { it > 0 } ?: 0L
 
         thread = Thread {
             var failed = false
@@ -205,7 +283,7 @@ class AudioPlayer {
                 } else {
                     beginDownload(streams, cacheKey)
                 }
-                decodeAndPlay(handle, gen, startAtMs, knownDurationMs)
+                decodeAndPlay(handle, gen, startAtMs, knownDurationMs, startAtFraction)
             } catch (e: Exception) {
                 failed = true
                 if (gen == generation) {
@@ -221,9 +299,20 @@ class AudioPlayer {
         }.apply {
             isDaemon = true
             name = "vivimusic-audio"
+            // The decode thread refills the sound buffer on a deadline; if the
+            // scheduler preempts it too long the output line underruns (the
+            // audible micro-pause/skip reported on macOS). Keep it at the
+            // highest priority so UI/GC work can't starve it.
+            priority = Thread.MAX_PRIORITY
             start()
         }
     }
+
+    /** True while a stream has been loaded (even if paused/ended) — i.e. a
+     *  [seekTo] would restart a real decode instead of being a no-op. Before
+     *  the first play of a restored track there is no loaded stream, so seeks
+     *  only move the UI position and are applied when playback starts. */
+    fun hasLoadedStream(): Boolean = currentStreams != null
 
     /** True when [cacheKey] already has a valid, non-truncated local cache file. */
     fun isCached(cacheKey: String): Boolean {
@@ -273,6 +362,14 @@ class AudioPlayer {
      * arrives instead of after the whole track is on disk.
      */
     private fun beginDownload(streams: List<StreamResolver.ResolvedStream>, cacheKey: String): DownloadHandle {
+        // The audio cache folder can disappear at runtime: the in-app "clear
+        // cache" (Settings → Storage / Privacy) deletes every subfolder of
+        // ~/.vivimusic/cache, including audio/, and AudioPlayer only created it
+        // once at construction. Without recreating it here every download
+        // started after the cleanup fails with "path not found", which showed
+        // up as tracks resolving over and over and never starting (the player
+        // retried, rotated the guest identity, and failed instantly each time).
+        runCatching { cacheDir.mkdirs() }
         activeDownloads[cacheKey]?.let { return it }
         val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val file = File(cacheDir, "$safe.m4a")
@@ -462,8 +559,28 @@ class AudioPlayer {
         return true
     }
 
-    private fun decodeAndPlay(handle: DownloadHandle, gen: Int, startAtMs: Long, knownDurationMs: Long = 0L) {
-        NIOUtils.readableChannel(handle.file).use { channel ->
+    private fun decodeAndPlay(
+        handle: DownloadHandle,
+        gen: Int,
+        startAtMs: Long,
+        knownDurationMs: Long = 0L,
+        startAtFraction: Float? = null,
+    ) {
+        // The download thread creates the `.part` file asynchronously (and can
+        // delete/recreate it between stream candidates), so opening the channel
+        // the instant play() returns raced it and threw FileNotFoundException
+        // ("cannot find the file specified") right after "stream ready" — the
+        // failed attempt then retried and wiped the just-built up-next queue.
+        // Wait until the file actually exists before opening the channel.
+        var opened: SeekableByteChannel? = null
+        while (opened == null) {
+            opened = runCatching { NIOUtils.readableChannel(handle.file) }.getOrNull()
+            if (opened != null) break
+            if (handle.failed || handle.complete || stopped || gen != generation) break
+            Thread.sleep(DOWNLOAD_POLL_MS)
+        }
+        val channel = opened ?: throw IOException(handle.failure ?: "Audio file is not available")
+        channel.use { channel ->
             // The download may still be in flight: wait until the head of the
             // file (`ftyp` + `moov`) is on disk before parsing the container.
             while (handle.downloadedBytes < MIN_START_BYTES && !handle.complete && !handle.failed) {
@@ -487,11 +604,17 @@ class AudioPlayer {
             var scannedTo = 0L
 
             /** Scans [scannedTo..downloadedBytes) for complete `moof` boxes and
-             *  appends their AAC samples; advances [scannedTo] past them. */
+             *  appends their AAC samples; advances [scannedTo] past them. The
+             *  walk is bounded to a window per call: after a big network burst
+             *  one unbounded scan over hundreds of new atoms would stall the
+             *  decode thread longer than the output buffer covers. */
             fun scanMore() {
                 val until = handle.downloadedBytes
                 if (scannedTo < until) {
-                    scannedTo = walkAtoms(channel, trackId, scannedTo, until, samples)
+                    scannedTo = walkAtoms(
+                        channel, trackId, scannedTo,
+                        minOf(until, scannedTo + SCAN_WINDOW_BYTES), samples,
+                    )
                 }
             }
 
@@ -500,6 +623,20 @@ class AudioPlayer {
             while (samples.isEmpty() && !handle.complete && !handle.failed) {
                 Thread.sleep(DOWNLOAD_POLL_MS)
                 scanMore()
+            }
+            // The whole file is already on disk: scan it ALL before deriving the
+            // duration or judging truncation. Otherwise the sample table only
+            // holds the first ~256 KB window (~19 s), so a complete cached track
+            // is misjudged as "truncated" (thrown away and re-downloaded on
+            // every play) and a genuinely truncated cache file plays its first
+            // ~19 s and "ends" — the seek bar never moving past ~19 s.
+            if (handle.complete) {
+                while (scannedTo < handle.downloadedBytes) {
+                    scannedTo = walkAtoms(
+                        channel, trackId, scannedTo,
+                        minOf(handle.downloadedBytes, scannedTo + SCAN_WINDOW_BYTES), samples,
+                    )
+                }
             }
             if (samples.isEmpty()) {
                 throw if (handle.failed) IOException(handle.failure ?: "Audio download failed")
@@ -542,12 +679,31 @@ class AudioPlayer {
             val firstFrameSeconds = buffer.length.coerceAtLeast(0.0)
             val metaDurationMs = runCatching { track.meta.totalDuration }
                 .getOrNull()?.takeIf { it > 0 }?.let { (it * 1000).toLong() } ?: 0L
-            val derivedDurationMs = (firstFrameSeconds * samples.size * 1000).toLong()
-            // Prefer the player-response duration (accurate); the AAC derivation
-            // is only a fallback for streams that didn't carry a lengthSeconds.
-            val durationMs = if (knownDurationMs > 0) knownDurationMs
-                else maxOf(derivedDurationMs, metaDurationMs)
-            if (gen == generation) onDuration?.invoke(durationMs)
+            // The AAC derivation is a fallback for streams that carried no
+            // duration (NewPipe fast path, cached files, LT guest tracks): it is
+            // computed from the sample table, which holds only the first
+            // ~256 KB scan window when playback starts (~19 s of audio). It must
+            // therefore GROW as fragments arrive instead of freezing at that
+            // first-window value — otherwise every track looks ~19 s long, the
+            // position clamps there and (with crossfade on) the next track
+            // starts after ~19 s.
+            fun currentDerivedDurationMs(): Long =
+                (firstFrameSeconds * samples.size * 1000).toLong()
+            fun currentDurationMs(): Long =
+                if (knownDurationMs > 0) knownDurationMs
+                else maxOf(currentDerivedDurationMs(), metaDurationMs)
+            // Report the duration as soon as it is known, and re-report when it
+            // grows (more fragments scanned), so the seek range follows the real
+            // track length instead of the first fragment.
+            var reportedDurationMs = 0L
+            fun reportDuration() {
+                val dur = currentDurationMs()
+                if (dur > reportedDurationMs && gen == generation) {
+                    reportedDurationMs = dur
+                    onDuration?.invoke(dur)
+                }
+            }
+            reportDuration()
 
             // Truncated-cache guard for files already fully on disk when playback
             // started (a stale/interrupted cache holds only a fraction of the
@@ -556,10 +712,10 @@ class AudioPlayer {
             // partial scan at this point is expected, and the end-of-track check
             // below covers that case.
             if (handle.complete && scannedTo >= handle.downloadedBytes && knownDurationMs > 0 &&
-                derivedDurationMs < knownDurationMs * 0.6
+                currentDerivedDurationMs() < knownDurationMs * 0.6
             ) {
                 throw IOException(
-                    "Cached audio is truncated (only ${derivedDurationMs / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
+                    "Cached audio is truncated (only ${currentDerivedDurationMs() / 1000}s of ${knownDurationMs / 1000}s); re-downloading"
                 )
             }
 
@@ -573,66 +729,211 @@ class AudioPlayer {
             val out = AudioSystem.getSourceDataLine(format)
                 ?: throw IOException("No audio output device supports $format")
             line = out
-            out.open(format, 8192)
+            // The output buffer is the ONLY jitter headroom between the decode
+            // thread (which also does disk scans, network waits and GC pauses)
+            // and the sound card: when the thread stalls longer than the buffer
+            // holds, the line underruns and you hear a micro-pause/skip. The old
+            // 8-16 KB buffers (~50-90 ms of audio) underran easily on macOS;
+            // ask for ~250 ms worth (computed from the real format) and only
+            // fall back to smaller sizes if the line rejects the bigger ones.
+            val outBufferBytes = (format.sampleRate * format.channels *
+                (format.sampleSizeInBits / 8) * 0.25).toInt().coerceAtLeast(16384)
+            var lineOpened = false
+            for (size in intArrayOf(outBufferBytes, 16384, 8192)) {
+                if (runCatching { out.open(format, size); lineOpened = true }.isSuccess) break
+            }
+            if (!lineOpened) throw IOException("Could not open the audio output device")
             out.start()
 
             val bigEndian = buffer.isBigEndian
             val bitsPerSample = buffer.bitsPerSample
-            val targetSeconds = startAtMs / 1000.0
-            var elapsedSeconds = 0.0
+            // A fraction-based start (duration unknown when the user scrubbed)
+            // is resolved against the stream duration here, where it is known.
+            val effectiveStartMs = if (startAtFraction != null && knownDurationMs > 0) {
+                (startAtFraction * knownDurationMs).toLong()
+            } else {
+                startAtMs
+            }
+            val targetSeconds = effectiveStartMs / 1000.0
             // Position reports are throttled so the UI (seek slider, lyrics) does
             // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
             // the slider smooth and draggable while staying accurate to ~100 ms.
             var lastReportMs = -POSITION_REPORT_INTERVAL_MS
+            // Level callbacks are decimated (every other decoded frame, ~20/s)
+            // so the audio-reactive visualizer drives about half the UI
+            // recompositions of before: the frame-rate UI load was starving the
+            // audio scheduler on macOS, causing micro pauses/skips that
+            // coincided with small UI hitches.
+            var levelTick = false
+
+            // Jump straight to the AAC frame that contains the requested
+            // position instead of decoding (and discarding) every frame from
+            // the start: seeking into a long track used to visibly re-scan the
+            // whole seek bar from zero and could only land once the download
+            // reached the target, so it never felt precise. AAC-LC frames are
+            // independent and ~constant-size, so frame N begins at
+            // N × frameDuration.
+            val frameSeconds = buffer.length.coerceAtLeast(0.0)
+            val skipIndex = if (frameSeconds > 0.0 && effectiveStartMs > 0L) {
+                (effectiveStartMs / 1000.0 / frameSeconds).toInt()
+                    .coerceIn(0, (samples.size - 1).coerceAtLeast(0))
+            } else 0
+            var index = skipIndex
+            var elapsedSeconds = index * frameSeconds
+            // When jumping forward, replace the calibration frame (0) that is
+            // already in the buffer with the frame at the seek target.
+            if (index > 0) {
+                awaitSample(index)
+                decodeAt(index)
+            }
 
             fun reportPosition() {
                 if (gen != generation) return
-                var posMs = ((elapsedSeconds + buffer.length) * 1000).toLong()
+                // Report the REAL playhead (frames the line has actually output)
+                // offset by the seek start, not the decoded-ahead time: the
+                // decode thread runs ahead of the sound by the output buffer, so
+                // decoded time would make the seek slider / lyrics lead the
+                // audio by the whole buffer (worse now that it is ~250 ms).
+                val lineFrames = runCatching { out.getLongFramePosition() }.getOrDefault(0L)
+                var posMs = effectiveStartMs
+                if (format.sampleRate > 0f) {
+                    posMs += (lineFrames * 1000L / format.sampleRate.toLong())
+                }
                 // Never report past the end of the track, so the seek slider can't
                 // get stuck at the end while playing (or push a past-end position
-                // to the synced device).
-                if (durationMs > 0) posMs = posMs.coerceAtMost(durationMs)
+                // to the synced device). Uses the CURRENT (growing) duration so a
+                // derived length doesn't freeze the playhead at the first
+                // fragment.
+                val dur = currentDurationMs()
+                if (dur > 0) posMs = posMs.coerceAtMost(dur)
                 if (posMs - lastReportMs >= POSITION_REPORT_INTERVAL_MS) {
                     lastReportMs = posMs
                     onPosition?.invoke(posMs)
                 }
             }
 
+            // Throttled buffered-fraction reports: decoded time available (samples
+            // scanned so far x per-frame duration) over the track duration. A fully
+            // cached file or a finished download reports 1f, so the UI hides the
+            // secondary buffer segment (nothing is "still buffering").
+            var lastBufferedReportAt = -BUFFERED_POLL_MS
+            fun reportBuffered() {
+                if (gen != generation) return
+                val dur = currentDurationMs()
+                val frac = if (handle.complete) {
+                    1f
+                } else if (dur > 0 && frameSeconds > 0.0) {
+                    val decodedMs = samples.size * frameSeconds * 1000
+                    (decodedMs / dur.toDouble()).toFloat().coerceIn(0f, 1f)
+                } else {
+                    1f // unknown duration: nothing meaningful to show
+                }
+                val now = System.currentTimeMillis()
+                if (now - lastBufferedReportAt >= BUFFERED_POLL_MS) {
+                    lastBufferedReportAt = now
+                    onBufferedFraction?.invoke(frac)
+                }
+            }
+
+            // "Skip silence" state. [leading] is true until the first audible
+            // frame of this decode session has actually been written, so a
+            // silent intro (or the silence after a seek) is cut without waiting
+            // for the run-length detection. [silentRunFrames] counts consecutive
+            // silent frames; once it crosses the threshold the run is dropped.
+            val silenceEnabled = skipSilence || skipSilenceInstant
+            var leading = true
+            var silentRunFrames = 0
+            var suppressing = false
+
             fun emit() {
-                // Decode-and-discard frames until the seek target is reached.
-                if (elapsedSeconds + buffer.length >= targetSeconds) {
-                    if (!paused) {
-                        val data = if (volume < 0.999f && bitsPerSample == 16) {
-                            scale16(buffer.data, volume, bigEndian)
-                        } else {
-                            buffer.data
+                // Write the current frame to the output line (skipped while
+                // paused) and report the decoded position.
+                val doWrite = !paused && elapsedSeconds + buffer.length >= targetSeconds
+                var suppressed = false
+                if (doWrite && bitsPerSample == 16 && silenceEnabled) {
+                    val silent = rms16(buffer.data, bigEndian) <= SILENCE_RMS_LEVEL
+                    if (silent) {
+                        // Nothing audible has been written yet: cut immediately.
+                        // Otherwise count the run; "instantly" skips as soon as
+                        // the run is clearly detected (2 frames), the normal
+                        // mode after the longer minimum (~150 ms) so breaths
+                        // and quiet attacks stay intact.
+                        val minRun = if (skipSilenceInstant) 2 else MIN_SILENCE_RUN_FRAMES
+                        if (!suppressing) {
+                            if (leading || ++silentRunFrames >= minRun) suppressing = true
                         }
-                        var written = 0
-                        while (written < data.size) {
-                            val n = out.write(data, written, data.size - written)
-                            if (n <= 0) break
-                            written += n
-                        }
-                        if (bitsPerSample == 16) {
-                            onLevel?.invoke(rms16(data, bigEndian))
-                        }
+                        if (suppressing) suppressed = true
+                    } else {
+                        // An audible frame ends any suppression window.
+                        suppressing = false
+                        silentRunFrames = 0
+                    }
+                }
+                if (doWrite && !suppressed) {
+                    leading = false
+                    val data = if (volume < 0.999f && bitsPerSample == 16) {
+                        scale16(buffer.data, volume, bigEndian)
+                    } else {
+                        buffer.data
+                    }
+                    // Optional EQ: applied to the final PCM buffer (after the
+                    // volume scale) so it stays a pure add-on — null default
+                    // keeps the audio path identical to before.
+                    val outData = equalizer?.let { eq ->
+                        if (bitsPerSample == 16) eq.process(data, bigEndian, buffer.sampleRate, buffer.channels)
+                        else data
+                    } ?: data
+                    var written = 0
+                    while (written < outData.size) {
+                        val n = out.write(outData, written, outData.size - written)
+                        if (n <= 0) break
+                        written += n
+                    }
+                    if (bitsPerSample == 16) {
+                        levelTick = !levelTick
+                        if (levelTick) onLevel?.invoke(rms16(outData, bigEndian))
                     }
                 }
                 reportPosition()
                 elapsedSeconds += buffer.length
             }
             emit()
+            reportBuffered()
 
-            var index = 0
             while (true) {
                 synchronized(lock) {
-                    while (paused && !stopped) lock.wait()
+                    while (paused && !stopped) {
+                        // While paused the download keeps filling the cache:
+                        // wait in short slices so newly arrived fragments are
+                        // scanned and the buffered fraction refreshed, instead
+                        // of sleeping until resume.
+                        lock.wait(BUFFERED_POLL_MS)
+                        scanMore()
+                        reportBuffered()
+                        reportDuration()
+                    }
                 }
                 if (stopped || gen != generation) break
 
-                // Grow the sample table as new fragments arrive.
-                scanMore()
-                if (index + 1 >= samples.size) {
+                if (index + 1 < samples.size) {
+                    // Decode + queue the next frame FIRST and scan for new
+                    // fragments only AFTER, so a scan spike (disk I/O over a
+                    // burst of newly arrived atoms) overlaps with audio that is
+                    // already queued instead of starving the output line.
+                    awaitSample(index + 1)
+                    index++
+                    decodeAt(index)
+                    emit()
+                    scanMore()
+                    reportBuffered()
+                    reportDuration()
+                } else {
+                    // No next sample yet: grow the sample table as fragments
+                    // arrive, then poll until the download catches up.
+                    scanMore()
+                    reportBuffered()
+                    reportDuration()
+                    if (index + 1 < samples.size) continue
                     if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
                     if (!handle.complete) {
                         Thread.sleep(DOWNLOAD_POLL_MS)
@@ -640,10 +941,6 @@ class AudioPlayer {
                     }
                     break // download complete and samples exhausted → end of track
                 }
-                awaitSample(index + 1)
-                index++
-                decodeAt(index)
-                emit()
             }
 
             // End-of-track truncation guard: a download that "completed" but only

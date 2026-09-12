@@ -33,7 +33,9 @@ import com.music.vivi.extensions.toEnum
 import com.music.vivi.extensions.toInetSocketAddress
 import com.music.vivi.utils.CrashHandler
 import com.music.vivi.utils.ViviPrefCache
+import com.music.vivi.utils.cipher.CipherDeobfuscator
 import com.music.vivi.utils.dataStore
+import com.music.vivi.utils.normalizeDataSyncId
 import com.music.vivi.viewmodels.BackupRestoreViewModel
 import com.music.vivi.utils.reportException
 import dagger.hilt.android.HiltAndroidApp
@@ -45,6 +47,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Credentials
 import timber.log.Timber
 import java.net.Authenticator
@@ -76,15 +79,10 @@ class App : Application(), SingletonImageLoader.Factory {
         // Install crash handler first
         CrashHandler.install(this)
 
-        // Initialize cacheDir for YouTubeExtractor JS decipher caching
-        com.music.innertube.YouTubeExtractor.cacheDir = cacheDir
+        // Initialize cipher deobfuscator for WEB_REMIX streaming
+        CipherDeobfuscator.initialize(this)
 
         Timber.plant(Timber.DebugTree())
-
-        // Pre-warm decipher scripts in the background so first song plays instantly
-        applicationScope.launch(Dispatchers.IO) {
-            runCatching { com.music.innertube.YouTubeExtractor.ensureInitialized() }
-        }
 
         // تهيئة إعدادات التطبيق عند الإقلاع
         applicationScope.launch {
@@ -179,11 +177,7 @@ class App : Application(), SingletonImageLoader.Factory {
                 .map { it[DataSyncIdKey] }
                 .distinctUntilChanged()
                 .collect { dataSyncId ->
-                    YouTube.dataSyncId = dataSyncId?.let {
-                        it.takeIf { !it.contains("||") }
-                            ?: it.takeIf { it.endsWith("||") }?.substringBefore("||")
-                            ?: it.substringAfter("||")
-                    }
+                    YouTube.dataSyncId = normalizeDataSyncId(dataSyncId)
                 }
         }
 
@@ -275,8 +269,13 @@ class App : Application(), SingletonImageLoader.Factory {
     }
 
     override fun newImageLoader(context: PlatformContext): ImageLoader {
-        val cacheSize = runBlocking {
-            dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
+        // Bound this read: the factory runs on the main thread when the first
+        // image is requested, and an unbounded runBlocking here would freeze
+        // the UI if DataStore is slow or stuck (e.g. right after an update).
+        val cacheSize = runBlocking(Dispatchers.IO) {
+            withTimeoutOrNull(1500) {
+                dataStore.data.map { it[MaxImageCacheSizeKey] ?: 512 }.first()
+            } ?: 512
         }
         return ImageLoader.Builder(this).apply {
             crossfade(true)
