@@ -104,7 +104,15 @@ static void PushNowPlayingInfo(void) {
                                                return art;
                                            }];
     }
-    [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = info;
+    MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+    center.nowPlayingInfo = info;
+    // macOS also needs the playback state: without it the system does not treat
+    // the app as the "Now Playing" source, so neither the Control Center /
+    // Lock Screen tile nor the media-key routing is activated (macOS 10.12.2+).
+    if (@available(macOS 10.12.2, *)) {
+        center.playbackState = g_playing ? MPNowPlayingPlaybackStatePlaying
+                                         : MPNowPlayingPlaybackStatePaused;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +231,9 @@ void viviSetCommandsEnabled(int enabled) {
         center.previousTrackCommand.enabled = on;
         center.changePlaybackPositionCommand.enabled = on;
         if (!on) {
+            if (@available(macOS 10.12.2, *)) {
+                center.playbackState = MPNowPlayingPlaybackStateStopped;
+            }
             [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
         } else {
             PushNowPlayingInfo();
@@ -233,6 +244,10 @@ void viviSetCommandsEnabled(int enabled) {
 // Marks the session as stopped (clears the tile; handlers stay registered).
 void viviEndSession(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (@available(macOS 10.12.2, *)) {
+            [MPNowPlayingInfoCenter defaultCenter].playbackState =
+                MPNowPlayingPlaybackStateStopped;
+        }
         [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
     });
 }
