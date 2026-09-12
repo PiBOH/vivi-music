@@ -3,6 +3,9 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.64 (FIX): the header's audio output device button is wired to the real picker instead of being an empty click handler, and the device list is built from `Mixer.sourceLineInfo` so the default OS endpoint is listed (the strict format probe made it answer "no") (#77).
+- [x] DE 1.50.64: the mouse X1/X2 back/forward behaviour is unconditional — the Appearance switch and its persisted setting were removed (#78).
+- [x] DE 1.50.64: the header's leading no-op "Open menu" placeholder was replaced by the sidebar expand/collapse button (#79).
 - [x] DE 1.50.63 (FIX): audio micro-pauses/skips reduced — the output line now asks for ~500 ms of audio (was ~250 ms, the only jitter headroom between the decode thread and the sound card), the fallback halves it (250/125 ms) before ever dropping to the legacy 8-16 KB sizes that made it audible, and every real underrun (wait > 40 ms while the line is nearly empty) is logged to `playback.log` with the wait and the remaining headroom (#4).
 - [x] DE 1.50.63 (FIX): the macOS "Now Playing" tile + media keys survive a restart — the enabled intent is kept on the native side and re-asserted at registration, on every session start and on every new track, so a fresh launch no longer leaves a visible tile with disabled buttons (#67).
 - [x] DE 1.50.63 (FIX): the raw `refresh` key in the Library empty state was in the sources but not in the string table; added, so the Retry button reads properly (#72).

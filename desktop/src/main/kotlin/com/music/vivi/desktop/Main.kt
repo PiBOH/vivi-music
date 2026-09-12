@@ -87,7 +87,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -926,7 +925,6 @@ fun WindowScope.App(
     var screenTransition by remember { mutableStateOf(startupSettings.screenTransition) }
     var animationsEnabled by remember { mutableStateOf(startupSettings.animationsEnabled) }
     var animationSpeed by remember { mutableStateOf(startupSettings.animationSpeed) }
-    var mouseBackForwardButtons by remember { mutableStateOf(startupSettings.mouseBackForwardButtons) }
     var sliderStyle by remember { mutableStateOf(startupSettings.sliderStyle) }
     var playerDesign by remember { mutableStateOf(PlayerDesign.from(startupSettings.playerDesign)) }
     var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(startupSettings.playerBackground)) }
@@ -1164,18 +1162,17 @@ fun WindowScope.App(
     }
 
     // Mouse thumb / "special" buttons: X1 (button 4) goes back, X2 (button 5)
-    // goes forward, like every browser and media app. A global AWT listener is
-    // used because Compose's Skia canvas consumes the mouse event before it ever
-    // reaches a listener attached to the window itself.
+    // goes forward, like every browser and media app. Always active — there is
+    // deliberately no setting for it. A global AWT listener is used because
+    // Compose's Skia canvas consumes the mouse event before it ever reaches a
+    // listener attached to the window itself.
     val mouseBackRef = rememberUpdatedState(goBack)
     val mouseForwardRef = rememberUpdatedState(redo)
-    val mouseButtonsEnabled = rememberUpdatedState(mouseBackForwardButtons)
     val mainWindowComponent = window
     DisposableEffect(mainWindowComponent) {
         val listener = java.awt.event.AWTEventListener { e ->
             if (e !is java.awt.event.MouseEvent) return@AWTEventListener
             if (e.id != java.awt.event.MouseEvent.MOUSE_PRESSED) return@AWTEventListener
-            if (!mouseButtonsEnabled.value) return@AWTEventListener
             if (e.button != 4 && e.button != 5) return@AWTEventListener
             // Only react to clicks inside the main window (the floating widget
             // and dialogs keep their own handling).
@@ -2117,11 +2114,6 @@ fun WindowScope.App(
                             animationSpeed = v
                             Animations.speed = v
                             DesktopSettings.update { it.copy(animationSpeed = v) }
-                        },
-                        mouseBackForwardButtons = mouseBackForwardButtons,
-                        onMouseBackForwardButtonsChange = { v ->
-                            mouseBackForwardButtons = v
-                            DesktopSettings.update { it.copy(mouseBackForwardButtons = v) }
                         },
                         onOpenTheme = { navigate(Screen.SettingsTheme) },
                         onOpenFont = { navigate(Screen.SettingsFont) },
@@ -3720,6 +3712,8 @@ fun WindowScope.SpotifyTopHeader(
     selectedFilter: YouTube.SearchFilter? = null,
     onFilterSelect: (YouTube.SearchFilter?) -> Unit = {},
 ) {
+    // Real output-device picker (the button used to be a no-op placeholder).
+    var showOutputPicker by remember { mutableStateOf(false) }
     WindowDraggableArea {
         Row(
             Modifier
@@ -3734,16 +3728,17 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Tooltip(Localization.get(language, "tooltip_menu")) {
+                // Sidebar toggle, where the (no-op) overflow menu used to be.
+                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
                     IconButton(
-                        onClick = { /* overflow menu */ },
+                        onClick = onToggleSidebar,
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
-                            Icons.Filled.MoreHoriz,
-                            contentDescription = "Menu",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                            modifier = Modifier.size(18.dp),
+                            Icons.Filled.ViewColumn,
+                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
+                            tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
@@ -3771,19 +3766,6 @@ fun WindowScope.SpotifyTopHeader(
                             Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Forward",
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
-                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
-                    IconButton(
-                        onClick = onToggleSidebar,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.ViewColumn,
-                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
-                            tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -4004,16 +3986,30 @@ fun WindowScope.SpotifyTopHeader(
             ) {
                 Tooltip(Localization.get(language, "tooltip_output_device")) {
                     IconButton(
-                        onClick = { /* output device */ },
+                        onClick = { showOutputPicker = true },
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
                             Icons.Filled.SpeakerGroup,
-                            contentDescription = "Output device",
+                            contentDescription = Localization.get(language, "output_device"),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
+                }
+                if (showOutputPicker) {
+                    OutputDeviceDialog(
+                        language = language,
+                        onDismiss = { showOutputPicker = false },
+                        onSelect = { name ->
+                            AudioOutput.apply(name)
+                            AppLog.log(
+                                "settings",
+                                "audio output device: " + name.ifBlank { "system default" },
+                            )
+                            showOutputPicker = false
+                        },
+                    )
                 }
                 Tooltip(Localization.get(language, "tooltip_lyrics")) {
                     IconButton(

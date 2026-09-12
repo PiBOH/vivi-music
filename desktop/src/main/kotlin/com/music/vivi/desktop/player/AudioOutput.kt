@@ -51,13 +51,22 @@ object AudioOutput {
         selectedName = DesktopSettings.load().outputDeviceName
     }
 
-    /** All mixers that can play PCM through a [SourceDataLine], in OS order. */
+    /**
+     * All mixers that can play PCM through a [SourceDataLine], in OS order.
+     *
+     * `Mixer.sourceLineInfo` (the mixer's own playback lines) is the primary
+     * probe: asking with a fully-specified format makes the default OS endpoint
+     * answer "no" — it only negotiates the format later, when the line is opened
+     * — which used to leave the picker with nothing but "System default".
+     */
     fun devices(): List<Device> = runCatching {
-        val info = DataLine.Info(SourceDataLine::class.java, probeFormat)
+        val typed = DataLine.Info(SourceDataLine::class.java, probeFormat)
         AudioSystem.getMixerInfo().mapNotNull { mixerInfo ->
             val mixer = runCatching { AudioSystem.getMixer(mixerInfo) }.getOrNull()
                 ?: return@mapNotNull null
-            val supported = runCatching { mixer.isLineSupported(info) }.getOrDefault(false)
+            val supported = runCatching {
+                mixer.sourceLineInfo.isNotEmpty() || mixer.isLineSupported(typed)
+            }.getOrDefault(false)
             if (supported) Device(mixerInfo.name, mixerInfo.description) else null
         }
     }.getOrDefault(emptyList())

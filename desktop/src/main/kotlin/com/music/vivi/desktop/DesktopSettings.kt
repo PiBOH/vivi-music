@@ -57,7 +57,6 @@ data class DesktopSyncState(
     /** Global UI animation speed: "fast" / "normal" / "slow" (multiplier on every tween/spring). */
     val animationSpeed: String = "normal",
     /** Navigate back/forward with the mouse X1/X2 thumb buttons (Windows/Linux). */
-    val mouseBackForwardButtons: Boolean = true,
     /** Preferred audio output device (Java Sound mixer name; empty = system default). */
     val outputDeviceName: String = "",
     /** Player slider style: slim / squiggly / wavy. */

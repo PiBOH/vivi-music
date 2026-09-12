@@ -3575,7 +3575,7 @@ fun LyricsFocusScreen(
  * persisted and picked up by the engine from the next track/seek.
  */
 @Composable
-private fun OutputDeviceDialog(
+internal fun OutputDeviceDialog(
     language: String,
     onDismiss: () -> Unit,
     onSelect: (String) -> Unit,

@@ -96,8 +96,6 @@ fun AppearanceSection(
     onAnimationsEnabledChange: (Boolean) -> Unit = {},
     animationSpeed: String = "normal",
     onAnimationSpeedChange: (String) -> Unit = {},
-    mouseBackForwardButtons: Boolean = true,
-    onMouseBackForwardButtonsChange: (Boolean) -> Unit = {},
     nativeTitleBar: Boolean = false,
     onNativeTitleBarChange: (Boolean) -> Unit = {},
     showRightSidebar: Boolean = true,
@@ -167,18 +165,6 @@ fun AppearanceSection(
                 description = { Text(Localization.get(language, "animations_desc")) },
                 trailing = { Switch(checked = animationsEnabled, onCheckedChange = onAnimationsEnabledChange) },
                 onClick = { onAnimationsEnabledChange(!animationsEnabled) },
-            ),
-            M3SettingsItem(
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                title = { Text(Localization.get(language, "mouse_back_forward")) },
-                description = { Text(Localization.get(language, "mouse_back_forward_desc")) },
-                trailing = {
-                    Switch(
-                        checked = mouseBackForwardButtons,
-                        onCheckedChange = onMouseBackForwardButtonsChange,
-                    )
-                },
-                onClick = { onMouseBackForwardButtonsChange(!mouseBackForwardButtons) },
             ),
             M3SettingsItem(
                 icon = Icons.Filled.DesktopWindows,

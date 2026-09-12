@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.64-alpha] - 2026-09-13
+
+### Fixed
+- [DE] **The header's audio output device button works**: it was a leftover placeholder whose click handler was an empty block, so the picker could only be reached from the mini player. It now opens the same dialog and the chosen device is written to the session log. The device list no longer relies on the strict "does this mixer accept 44.1 kHz / 16-bit / stereo right now" probe either — the default OS endpoint answers "no" to that and negotiates the format only when the line is opened, which could leave the picker showing nothing but "System default"; the mixer's own playback-line list is probed instead. (Fixes #77)
+
+### Changed
+- [DE] **The mouse back/forward buttons are always on**: the X1 (back) / X2 (forward) behaviour is now unconditional and the "Mouse back / forward buttons" switch was removed from Settings → Appearance, along with its persisted setting. (Closes #78)
+- [DE] **The first button in the header is the sidebar toggle**: the leading control used to be a no-op "Open menu" placeholder (empty click handler); it is gone and the expand/collapse sidebar button now sits in its place, ahead of back and forward. (Closes #79)
+
 ## [6.0.6.3_DE-1.50.63-alpha] - 2026-09-13
 
 ### Fixed
