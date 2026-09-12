@@ -3,6 +3,12 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.63 (FIX): audio micro-pauses/skips reduced — the output line now asks for ~500 ms of audio (was ~250 ms, the only jitter headroom between the decode thread and the sound card), the fallback halves it (250/125 ms) before ever dropping to the legacy 8-16 KB sizes that made it audible, and every real underrun (wait > 40 ms while the line is nearly empty) is logged to `playback.log` with the wait and the remaining headroom (#4).
+- [x] DE 1.50.63 (FIX): the macOS "Now Playing" tile + media keys survive a restart — the enabled intent is kept on the native side and re-asserted at registration, on every session start and on every new track, so a fresh launch no longer leaves a visible tile with disabled buttons (#67).
+- [x] DE 1.50.63 (FIX): the raw `refresh` key in the Library empty state was in the sources but not in the string table; added, so the Retry button reads properly (#72).
+- [x] DE 1.50.63: every new desktop string translated into all 52 languages (batch 69) — animation speed (4 keys), mouse back/forward (2), audio output device (2) and `refresh`, with "System default" reusing the existing Android translation; `scripts/check_localization.py` is back to 100%.
+- [x] DE: the 1.50.62 work now carries its retroactive issue references (#68-#76) in the changelog entries — it had been implemented before those issues were opened.
+- [x] WEBSITE: PageSpeed pass #2 — dropped the 419 KB Tailwind Play CDN runtime (the four utilities the pages actually use are emitted statically into `tpl.css`), the favicon went from the 635 KB logo to a 3.2 KB 96×96 PNG, and the 22 dead Google-Fonts preconnects (the fonts are self-hosted) were removed.
 - [x] DE 1.50.62: mouse side buttons (X1/X2) navigate back/forward — AWT-level listener (Compose consumes the event before the window sees it), main-window only, toggle in Settings → Appearance.
 - [x] DE 1.50.62: real audio output device picker (Java Sound mixers, persisted, system-default fallback) replacing the volume-bump placeholder button.
 - [x] DE 1.50.62: "Animation speed" (Fast/Normal/Slow) global multiplier for UI transitions; like button in the full + mini player now writes the real account state (optimistic toggle + InnerTube `likeVideo`).

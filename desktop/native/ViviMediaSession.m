@@ -48,6 +48,12 @@ static NSTimeInterval g_duration = 0.0;
 static NSTimeInterval g_position = 0.0;
 static NSString *g_artworkPath = nil; // local file already downloaded by Kotlin
 
+// The user's "Media keys" intent. Kept here (not only in Kotlin) so every later
+// registration / start / metadata push can re-apply it: the enabled flags used
+// to be set once, before the handlers were installed, so after a restart the
+// keys only started working when the switch was toggled (issue #67).
+static BOOL g_commandsEnabled = YES;
+
 // ---------------------------------------------------------------------------
 // Notification delegate: shows banners even while the app is in the foreground.
 // Kept strongly referenced for the app's lifetime.
@@ -119,6 +125,20 @@ static void PushNowPlayingInfo(void) {
 // Exported C API (loaded by JNA).
 // ---------------------------------------------------------------------------
 
+// Applies g_commandsEnabled to every remote command (main queue only). The
+// handlers stay installed for the whole process; only their enabled flag
+// follows the switch, and re-asserting it is what makes a restart behave like
+// toggling the switch twice.
+static void ApplyCommandsEnabled(void) {
+    MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+    center.playCommand.enabled = g_commandsEnabled;
+    center.pauseCommand.enabled = g_commandsEnabled;
+    center.togglePlayPauseCommand.enabled = g_commandsEnabled;
+    center.nextTrackCommand.enabled = g_commandsEnabled;
+    center.previousTrackCommand.enabled = g_commandsEnabled;
+    center.changePlaybackPositionCommand.enabled = g_commandsEnabled;
+}
+
 // Registers the Kotlin callbacks and installs the remote-command handlers.
 // Call once, before any metadata is pushed.
 void viviRegisterCallbacks(vivi_play_pause_cb pp, vivi_next_cb nx, vivi_previous_cb pv,
@@ -130,13 +150,9 @@ void viviRegisterCallbacks(vivi_play_pause_cb pp, vivi_next_cb nx, vivi_previous
     g_artwork = art;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+        ApplyCommandsEnabled();
+        // Local handle for the handler registrations below.
         MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
-        center.playCommand.enabled = YES;
-        center.pauseCommand.enabled = YES;
-        center.togglePlayPauseCommand.enabled = YES;
-        center.nextTrackCommand.enabled = YES;
-        center.previousTrackCommand.enabled = YES;
-        center.changePlaybackPositionCommand.enabled = YES;
 
         [center.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
             if (g_playPause) g_playPause();
@@ -185,13 +201,9 @@ void viviSetAppIdentity(const char *appNameUtf8) {
 // viviEndSession earlier.
 void viviStartSession(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
-        center.playCommand.enabled = YES;
-        center.pauseCommand.enabled = YES;
-        center.togglePlayPauseCommand.enabled = YES;
-        center.nextTrackCommand.enabled = YES;
-        center.previousTrackCommand.enabled = YES;
-        center.changePlaybackPositionCommand.enabled = YES;
+        // Re-assert the intent: viviEndSession / a restart / a switch toggle may
+        // have turned the commands off in the meantime (issue #67).
+        ApplyCommandsEnabled();
         PushNowPlayingInfo();
     });
 }
@@ -211,6 +223,10 @@ void viviSetNowPlaying(const char *titleUtf8, const char *artistUtf8, const char
         if (thumbnailPathUtf8 && strlen(thumbnailPathUtf8) > 0) {
             g_artworkPath = [NSString stringWithUTF8String:thumbnailPathUtf8];
         }
+        // A new track is the moment the tile must work: re-assert the commands
+        // so a session that was cleared (or a fresh process launch) never ends
+        // up with a visible tile whose buttons are disabled (issue #67).
+        ApplyCommandsEnabled();
         PushNowPlayingInfo();
         if (g_artwork) g_artwork();
     });
@@ -221,15 +237,10 @@ void viviSetNowPlaying(const char *titleUtf8, const char *artistUtf8, const char
 // nothing is worse than no tile. Used by the "Media keys" switch on macOS,
 // which no longer depends on the Accessibility permission.
 void viviSetCommandsEnabled(int enabled) {
+    BOOL on = enabled != 0;
+    g_commandsEnabled = on;
     dispatch_async(dispatch_get_main_queue(), ^{
-        BOOL on = enabled != 0;
-        MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
-        center.playCommand.enabled = on;
-        center.pauseCommand.enabled = on;
-        center.togglePlayPauseCommand.enabled = on;
-        center.nextTrackCommand.enabled = on;
-        center.previousTrackCommand.enabled = on;
-        center.changePlaybackPositionCommand.enabled = on;
+        ApplyCommandsEnabled();
         if (!on) {
             if (@available(macOS 10.12.2, *)) {
                 [MPNowPlayingInfoCenter defaultCenter].playbackState =

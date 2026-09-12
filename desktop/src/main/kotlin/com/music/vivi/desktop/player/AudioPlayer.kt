@@ -1,5 +1,6 @@
 package com.music.vivi.desktop.player
 
+import com.music.vivi.desktop.AppLog
 import com.music.vivi.desktop.EqualizerProcessor
 import net.sourceforge.jaad.aac.Decoder
 import net.sourceforge.jaad.aac.SampleBuffer
@@ -659,13 +660,49 @@ class AudioPlayer {
                 else IOException("No audio frames to decode")
             }
 
+            /**
+             * Throttled underrun diagnostics (issue #4). A gap is audible
+             * exactly when the decode thread has to wait for the download while
+             * the output line is nearly empty: recording the wait and the line's
+             * remaining headroom turns "it lags sometimes" into something
+             * checkable in the exported playback log.
+             */
+            var lastStallLogMs = 0L
+            // Declared here (not next to its first assignment below) so the
+            // stall diagnostics can report the current playback time.
+            var elapsedSeconds = 0.0
+            fun logStall(waitMs: Long) {
+                if (waitMs < 40) return
+                val now = System.currentTimeMillis()
+                if (now - lastStallLogMs < 2_000L) return
+                lastStallLogMs = now
+                val freeMs = runCatching {
+                    val l = line ?: return@runCatching -1.0
+                    val f = l.format
+                    val bytesPerSec = f.sampleRate * f.channels * (f.sampleSizeInBits / 8)
+                    if (bytesPerSec <= 0f) -1.0
+                    else l.available().toDouble() / bytesPerSec * 1000.0
+                }.getOrDefault(-1.0)
+                AppLog.log(
+                    "playback",
+                    "audio stall: waited ${waitMs}ms for data at ~${elapsedSeconds.toInt()}s " +
+                        "(line headroom ${freeMs.toInt()}ms)",
+                )
+            }
+
             /** Blocks until the sample at [index] is fully on disk (or the
              *  download finished/failed). */
             fun awaitSample(index: Int) {
                 val (offset, size) = samples[index]
+                val waitStart = System.currentTimeMillis()
                 while (offset + size > handle.downloadedBytes && !handle.complete && !handle.failed) {
                     Thread.sleep(DOWNLOAD_POLL_MS)
                     scanMore()
+                }
+                // Only a wait that RESOLVED (the sample did arrive) is a stall:
+                // the other exit path throws right below.
+                if (offset + size <= handle.downloadedBytes) {
+                    logStall(System.currentTimeMillis() - waitStart)
                 }
                 if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
                 if (offset + size > handle.downloadedBytes) {
@@ -749,13 +786,22 @@ class AudioPlayer {
             // thread (which also does disk scans, network waits and GC pauses)
             // and the sound card: when the thread stalls longer than the buffer
             // holds, the line underruns and you hear a micro-pause/skip. The old
-            // 8-16 KB buffers (~50-90 ms of audio) underran easily on macOS;
-            // ask for ~250 ms worth (computed from the real format) and only
-            // fall back to smaller sizes if the line rejects the bigger ones.
+            // 8-16 KB buffers (~50-90 ms of audio) underran easily on macOS, and
+            // even 250 ms left the random sub-frame "pause" of issue #4 audible
+            // while the download is still catching up (a scan of a 256 KB atom
+            // burst plus a GC pause can exceed it). Ask for ~500 ms worth
+            // (computed from the real format) and only fall back to smaller
+            // sizes if the line rejects the bigger ones.
             val outBufferBytes = (format.sampleRate * format.channels *
-                (format.sampleSizeInBits / 8) * 0.25).toInt().coerceAtLeast(16384)
+                (format.sampleSizeInBits / 8) * 0.5).toInt().coerceAtLeast(16384)
+            // Fall back in halves before dropping to the tiny legacy buffers: a
+            // device that refuses 500 ms usually still accepts 250/125 ms, and
+            // anything above ~100 ms keeps the same underrun protection.
+            // The old chain jumped straight to 16384 B (~90 ms) and then 8192 B
+            // (~45 ms), i.e. the very sizes that made issue #4 audible.
             var lineOpened = false
-            for (size in intArrayOf(outBufferBytes, 16384, 8192)) {
+            for (size in intArrayOf(outBufferBytes, outBufferBytes / 2, outBufferBytes / 4, 16384, 8192)) {
+                if (size <= 0) continue
                 if (runCatching { out.open(format, size); lineOpened = true }.isSuccess) break
             }
             if (!lineOpened) throw IOException("Could not open the audio output device")
@@ -795,7 +841,7 @@ class AudioPlayer {
                     .coerceIn(0, (samples.size - 1).coerceAtLeast(0))
             } else 0
             var index = skipIndex
-            var elapsedSeconds = index * frameSeconds
+            elapsedSeconds = index * frameSeconds
             // When jumping forward, replace the calibration frame (0) that is
             // already in the buffer with the frame at the seek target.
             if (index > 0) {
