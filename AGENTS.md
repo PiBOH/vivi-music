@@ -563,6 +563,11 @@ Rules:
   sections that no longer apply.
 - If the legality of a requested change is unclear, STOP and ask the user
   instead of implementing it.
-- If a legal-risk feature is found in the tree, remove it **completely** (code,
-  scripts, translations, docs) rather than gating or hiding it, and note the
-  removal in the CHANGELOG without naming the removed provider.
+- **Never remove (or disable, gate or hide) anything for legal reasons on your
+  own initiative: ask the user first.** The user may have already requested and
+  obtained explicit permission/authorisation from the provider, so the feature
+  may be perfectly legitimate and must stay untouched until confirmed
+  otherwise.
+- Only after the user has explicitly confirmed the removal, perform it
+  **completely** (code, scripts, translations, docs) rather than gating or
+  hiding it, and note it in the CHANGELOG without naming the removed provider.
