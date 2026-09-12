@@ -463,10 +463,6 @@ locale tag):
 | 繁體中文 | `zh-rTW` |
 | 日本語 | `ja` |
 
-## 8. Ask before assuming — MANDATORY
-
-Whenever there is **any doubt — even a minimal one** (intent, scope, versioning
-type, branch to touch, wording of a string, which platform is affected, ...),
 ## 7. GitHub Issues workflow — MANDATORY
 
 Every user-reported problem or feature request MUST first become a GitHub
