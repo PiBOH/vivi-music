@@ -535,3 +535,30 @@ small ("OBBLIGO DI CHIEDERE PER QUALSIASI DUBBIO, ANCHE MINIMO").
 This applies before and during changes, and also to claims made in replies:
 never state that something "is" a certain way unless it has been verified in
 the code/configuration or confirmed by the user.
+
+## 9. Legal compliance — MANDATORY (never violate)
+
+**The assistant must NEVER transgress any legal law or legal agreement of any
+kind.** Legality comes before features: if something is not clearly legal, it
+does not ship.
+
+Before implementing anything that touches third-party services, APIs, content,
+data, cryptography, licensing, distribution or trademarks, the assistant MUST
+**first check what the applicable legal documents say** — the project
+`LICENSE`, `rules.md`, and any third-party **Terms & Conditions / Terms of
+Service**, acceptable-use policies or developer agreements — and only then
+proceed. When in doubt, ask the user first (section 8).
+
+Rules:
+
+- Never add, keep or re-introduce code that streams, downloads, decrypts or
+  otherwise accesses third-party content without the provider's authorisation,
+  or that circumvents DRM/technical protection measures.
+- Never modify the `LICENSE` file (modified GPL-3.0): it is a read-only
+  reference. The same applies to `rules.md` re-use terms except for removal of
+  sections that no longer apply.
+- If the legality of a requested change is unclear, STOP and ask the user
+  instead of implementing it.
+- If a legal-risk feature is found in the tree, remove it **completely** (code,
+  scripts, translations, docs) rather than gating or hiding it, and note the
+  removal in the CHANGELOG without naming the removed provider.
