@@ -297,11 +297,16 @@
 }
 
 
-/* Material Symbols Outlined (self-hosted variable font) */
+/* Material Symbols Outlined (self-hosted variable font).
+   `font-display: swap` instead of `block`: the icon font is a large variable
+   font (the full glyph set), and `block` made every page render-block on it for
+   up to 3 s (blank text) while it downloaded - the single worst FCP/LCP cost on
+   the site. With `swap` the text renders immediately and the glyphs appear as
+   soon as the font arrives. */
 @font-face {
   font-family: 'Material Symbols Outlined';
   font-style: normal;
   font-weight: 100 700;
-  font-display: block;
+  font-display: swap;
   src: url('fonts/material-symbols-outlined.woff2') format('woff2');
 }

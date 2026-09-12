@@ -417,8 +417,11 @@
         shots.forEach(function (f) {
           var enc = encodeURIComponent(f.name);
           var alt = pretty(f.name);
+          // Explicit intrinsic size (the gallery is 16:9 by rule): the browser
+          // reserves the box before the image loads, so the grid never reflows
+          // (CLS) while the screenshots stream in.
           html += '<figure class="gshot" data-src="' + PAGES + enc + '" data-fallback="' + RAW + enc + '">' +
-            '<img src="' + PAGES + enc + '" alt="VIVI Music DE screenshot — ' + alt + '" loading="lazy" decoding="async">' +
+            '<img src="' + PAGES + enc + '" alt="VIVI Music DE screenshot — ' + alt + '" width="1920" height="1080" loading="lazy" decoding="async">' +
             '<figcaption>' + alt + '</figcaption></figure>';
         });
         container.innerHTML = html;
