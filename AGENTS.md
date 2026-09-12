@@ -492,6 +492,16 @@ issue on `PiBOH/vivi-music` **before any code is changed**:
 4. **Close the issue** after the fix is committed and pushed:
    `gh issue close <NN> --repo PiBOH/vivi-music`.
 
+5. **NEVER close an issue opened by someone else.** Only issues authored by the
+   user (they are created through the user's `gh` auth, so the author is
+   `PiBOH`) are owned by us and get closed after the fix. An issue opened by a
+   **third party** (a contributor, a user, a bot, …) must only be **fixed and
+   referenced** — `Fixes #NN` in the CHANGELOG and in the commit message — and
+   left **open**: the reporter verifies the fix and closes it himself. Never
+   run `gh issue close` on it, never add a closing label/comment asking to
+   close it, and never treat "it is fixed" as a reason to close it.
+   The same applies to any issue whose author is not `PiBOH`.
+
 **NEVER open a GitHub issue for website or workflow changes** — for these
 categories issues must NOT be opened at all (not even "when in doubt").
 This includes:
