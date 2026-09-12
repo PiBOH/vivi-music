@@ -232,7 +232,8 @@ void viviSetCommandsEnabled(int enabled) {
         center.changePlaybackPositionCommand.enabled = on;
         if (!on) {
             if (@available(macOS 10.12.2, *)) {
-                center.playbackState = MPNowPlayingPlaybackStateStopped;
+                [MPNowPlayingInfoCenter defaultCenter].playbackState =
+                    MPNowPlayingPlaybackStateStopped;
             }
             [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
         } else {
