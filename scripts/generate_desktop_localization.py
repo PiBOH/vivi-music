@@ -914,6 +914,14 @@ ENGLISH = {
     "intro_background_gradient": "Gradient",
     "intro_background_glow": "Glow",
     "intro_background_dark": "Dark",
+    "animation_speed": "Animation speed",
+    "animation_speed_fast": "Fast",
+    "animation_speed_normal": "Normal",
+    "animation_speed_slow": "Slow",
+    "mouse_back_forward": "Mouse back / forward buttons",
+    "mouse_back_forward_desc": "Use the mouse thumb buttons (X1 / X2) to go back and forward in VIVI Music DE",
+    "output_device": "Audio output device",
+    "output_device_default": "System default",
 }
 
 # Desktop-only translations (keys with no Android source string) plus gap-fills

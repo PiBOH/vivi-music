@@ -77,6 +77,8 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Button
@@ -108,7 +110,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
+import com.music.vivi.desktop.player.AudioOutput
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -121,6 +125,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import sh.calvin.reorderable.ReorderableItem
@@ -203,7 +208,7 @@ fun PlayerScreen(
     // track changes, like Apple Music — no more hard "flash" cut between songs.
     AnimatedContent(
         targetState = np?.videoId,
-        transitionSpec = { fadeIn(tween(320)) togetherWith fadeOut(tween(220)) },
+        transitionSpec = { fadeIn(tween(Animations.ms(320))) togetherWith fadeOut(tween(Animations.ms(220))) },
         label = "playerTrack",
     ) { id ->
         val track = queue.firstOrNull { it.videoId == id }
@@ -354,7 +359,7 @@ private fun M3EPlayerContent(
     onBack: (() -> Unit)? = null,
 ) {
     var activeTab by remember { mutableStateOf(M3ETab.QUEUE) }
-    var isFavorite by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 24.dp)) {
         Row(
             Modifier.fillMaxSize(),
@@ -599,6 +604,30 @@ private fun M3EPlayerContent(
                                         repeatIcon(repeatMode),
                                         contentDescription = Localization.get(language, "repeat"),
                                         tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+                        }
+
+                        // Real like/unlike for the current track (account state).
+                        val liked = SongActions.isLiked(np.videoId)
+                        Tooltip(Localization.get(language, "tooltip_favorite")) {
+                            Surface(
+                                onClick = {
+                                    val next = !liked
+                                    SongActions.setLiked(np.videoId, next, title = np.title)
+                                    scope.launch { YouTube.likeVideo(np.videoId, next) }
+                                },
+                                shape = CircleShape,
+                                color = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(skipButtonSize),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                        contentDescription = Localization.get(language, "tooltip_favorite"),
+                                        tint = if (liked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(22.dp),
                                     )
                                 }
@@ -1248,7 +1277,9 @@ private fun PlayerControlPanel(
 
     Spacer(Modifier.height(16.dp))
 
-    // Transport controls: shuffle / previous / play / next / repeat.
+    val scope = rememberCoroutineScope()
+
+    // Transport controls: shuffle / previous / play / next / repeat / like.
     // Apple-style "glass" circles (semi-transparent, subtle sheen + border)
     // instead of flat Material buttons, so the controls sit on the artwork.
     val onSurface = MaterialTheme.colorScheme.onSurface
@@ -1313,6 +1344,20 @@ private fun PlayerControlPanel(
             size = 42.dp,
             iconSize = 22.dp,
             tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else onSurface.copy(alpha = 0.85f),
+        )
+        // Real like/unlike for the current track (account state).
+        val liked = SongActions.isLiked(np.videoId)
+        GlassCircleButton(
+            onClick = {
+                val next = !liked
+                SongActions.setLiked(np.videoId, next, title = np.title)
+                scope.launch { YouTube.likeVideo(np.videoId, next) }
+            },
+            icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = Localization.get(language, "tooltip_favorite"),
+            size = 42.dp,
+            iconSize = 22.dp,
+            tint = if (liked) MaterialTheme.colorScheme.primary else onSurface.copy(alpha = 0.85f),
         )
     }
 
@@ -2831,7 +2876,8 @@ fun NewDesktopMiniPlayer(
     val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
-    var isFavorite by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var showOutputPicker by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -2941,21 +2987,39 @@ fun NewDesktopMiniPlayer(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Tooltip(Localization.get(language, "tooltip_output_device")) {
-                    IconButton(onClick = { onVolume((volume + 0.1f) % 1.05f) }) {
+                    IconButton(onClick = { showOutputPicker = true }) {
                         Icon(
                             Icons.Filled.SpeakerGroup,
-                            contentDescription = "Output device",
+                            contentDescription = Localization.get(language, "output_device"),
                             tint = mutedColor,
                             modifier = Modifier.size(20.dp),
                         )
                     }
                 }
+                if (showOutputPicker) {
+                    OutputDeviceDialog(
+                        language = language,
+                        onDismiss = { showOutputPicker = false },
+                        onSelect = { name ->
+                            AudioOutput.apply(name)
+                            showOutputPicker = false
+                        },
+                    )
+                }
+                // Real like: reads/writes the account state (SongActions) and
+                // calls the InnerTube like endpoint, so the heart reflects the
+                // actual account instead of a local, lost-on-exit flag.
+                val liked = SongActions.isLiked(nowPlaying.videoId)
                 Tooltip(Localization.get(language, "tooltip_favorite")) {
-                    IconButton(onClick = { isFavorite = !isFavorite }) {
+                    IconButton(onClick = {
+                        val next = !liked
+                        SongActions.setLiked(nowPlaying.videoId, next, title = nowPlaying.title)
+                        scope.launch { YouTube.likeVideo(nowPlaying.videoId, next) }
+                    }) {
                         Icon(
-                            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavorite) primaryColor else mutedColor,
+                            if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = Localization.get(language, "tooltip_favorite"),
+                            tint = if (liked) primaryColor else mutedColor,
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -3502,5 +3566,58 @@ fun LyricsFocusScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Real audio output device picker: lists the Java Sound mixers the OS exposes
+ * (Speakers, Headphones, virtual devices…) plus "System default". The choice is
+ * persisted and picked up by the engine from the next track/seek.
+ */
+@Composable
+private fun OutputDeviceDialog(
+    language: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    // Probing the mixers touches the OS audio stack, so do it once per opening.
+    val devices = remember { AudioOutput.devices() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(Localization.get(language, "output_device")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutputDeviceRow(
+                    label = Localization.get(language, "output_device_default"),
+                    selected = AudioOutput.selectedName.isBlank(),
+                    onClick = { onSelect("") },
+                )
+                devices.forEach { device ->
+                    OutputDeviceRow(
+                        label = device.label,
+                        selected = AudioOutput.selectedName == device.name,
+                        onClick = { onSelect(device.name) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(Localization.get(language, "ok")) }
+        },
+    )
+}
+
+@Composable
+private fun OutputDeviceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(10.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }

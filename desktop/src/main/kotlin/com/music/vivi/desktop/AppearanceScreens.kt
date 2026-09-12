@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ViewSidebar
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
@@ -93,6 +94,10 @@ fun AppearanceSection(
     onOpenIntro: () -> Unit,
     animationsEnabled: Boolean = true,
     onAnimationsEnabledChange: (Boolean) -> Unit = {},
+    animationSpeed: String = "normal",
+    onAnimationSpeedChange: (String) -> Unit = {},
+    mouseBackForwardButtons: Boolean = true,
+    onMouseBackForwardButtonsChange: (Boolean) -> Unit = {},
     nativeTitleBar: Boolean = false,
     onNativeTitleBarChange: (Boolean) -> Unit = {},
     showRightSidebar: Boolean = true,
@@ -164,6 +169,18 @@ fun AppearanceSection(
                 onClick = { onAnimationsEnabledChange(!animationsEnabled) },
             ),
             M3SettingsItem(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                title = { Text(Localization.get(language, "mouse_back_forward")) },
+                description = { Text(Localization.get(language, "mouse_back_forward_desc")) },
+                trailing = {
+                    Switch(
+                        checked = mouseBackForwardButtons,
+                        onCheckedChange = onMouseBackForwardButtonsChange,
+                    )
+                },
+                onClick = { onMouseBackForwardButtonsChange(!mouseBackForwardButtons) },
+            ),
+            M3SettingsItem(
                 icon = Icons.Filled.DesktopWindows,
                 title = { Text(Localization.get(language, "native_title_bar")) },
                 description = {
@@ -202,6 +219,24 @@ fun AppearanceSection(
                 onClick = { onShowRightSidebarChange(!showRightSidebar) },
             ),
         ),
+    )
+
+    // "Animation speed" applies a multiplier to every UI transition
+    // (screen transitions, player crossfade, …).
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.MotionPhotosOn,
+        title = Localization.get(language, "animation_speed"),
+        value = Localization.get(language, when (animationSpeed) {
+            "fast" -> "animation_speed_fast"
+            "slow" -> "animation_speed_slow"
+            else -> "animation_speed_normal"
+        }),
+        options = listOf(
+            "fast" to Localization.get(language, "animation_speed_fast"),
+            "normal" to Localization.get(language, "animation_speed_normal"),
+            "slow" to Localization.get(language, "animation_speed_slow"),
+        ),
+        onSelect = onAnimationSpeedChange,
     )
 
     if (showRestartDialog) {

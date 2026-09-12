@@ -175,6 +175,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -214,6 +215,7 @@ import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 import com.music.innertube.YouTubeExtractor
 import com.music.innertube.models.SongItem
+import com.music.vivi.desktop.player.AudioOutput
 import com.music.vivi.desktop.player.PlayerController
 import com.music.vivi.desktop.player.RepeatMode
 import com.music.vivi.desktop.player.StreamResolver
@@ -326,23 +328,30 @@ fun main(args: Array<String>) {
     YouTubeExtractor.cacheDir = File(System.getProperty("user.home"), ".vivimusic/cache").apply { mkdirs() }
     LoginManager.restore()
     DesktopSettings.ensureFirstLaunchDate()
+    // Restore the preferred audio output device (Java Sound mixer) before the
+    // first line is opened.
+    AudioOutput.load()
+    // Restore the global UI animation speed.
+    Animations.load()
     // Dev tools are non-critical: never let their initialization crash the app
     // at startup (which the jpackage launcher reports as "Failed to launch JVM").
     runCatching { DeveloperOptions.load() }
 
-    var language by remember { mutableStateOf(DesktopSettings.load().language) }
-    var themeMode by remember { mutableStateOf(ThemeMode.from(DesktopSettings.load().darkMode)) }
-    var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
-    var accentIntensity by remember { mutableStateOf(DesktopSettings.load().accentIntensity) }
-    var customAccents by remember { mutableStateOf(DesktopSettings.load().customAccents) }
-    var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
-    var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
-    var customFontPath by remember { mutableStateOf(DesktopSettings.load().customFontPath) }
+    // Bootup speed: the settings file is parsed exactly ONCE (initialSettings)
+    // instead of one disk read + JSON parse per setting (~12 of them here).
+    var language by remember { mutableStateOf(initialSettings.language) }
+    var themeMode by remember { mutableStateOf(ThemeMode.from(initialSettings.darkMode)) }
+    var accent by remember { mutableStateOf(argbIntToColor(initialSettings.accentColor)) }
+    var accentIntensity by remember { mutableStateOf(initialSettings.accentIntensity) }
+    var customAccents by remember { mutableStateOf(initialSettings.customAccents) }
+    var pureBlack by remember { mutableStateOf(initialSettings.pureBlack) }
+    var selectedFont by remember { mutableStateOf(AppFont.fromValue(initialSettings.selectedFont)) }
+    var customFontPath by remember { mutableStateOf(initialSettings.customFontPath) }
     // Make the runtime-imported font resolvable before the first theme pass.
     if (customFontPath.isNotBlank()) AppFonts.customFontPath = customFontPath
     // Spotify-style layout (3 panels) + flat theme, applied together. Default
     // on; when false the app falls back to the Material 3 tonal look.
-    var spotifyLayout by remember { mutableStateOf(DesktopSettings.load().spotifyLayout) }
+    var spotifyLayout by remember { mutableStateOf(initialSettings.spotifyLayout) }
 
     fun saveTheme() {
         DesktopSettings.update {
@@ -405,15 +414,15 @@ fun main(args: Array<String>) {
     // cannot change on a displayed frame — Compose's `SwingWindow` calls
     // `setUndecorated()` on the live frame when the parameter changes, which
     // throws `IllegalComponentStateException: The frame is displayable`.
-    var nativeTitleBar by remember { mutableStateOf(DesktopSettings.load().nativeTitleBar) }
+    var nativeTitleBar by remember { mutableStateOf(initialSettings.nativeTitleBar) }
     // FROZEN at first composition: the window chrome fixed at creation. It is
     // deliberately never updated after startup, so flipping the toggle can
     // never trigger a runtime `setUndecorated` on the shown frame; the new
     // value is picked up by the restart the toggle asks for.
-    val nativeTitleBarAtStartup = remember { DesktopSettings.load().nativeTitleBar }
+    val nativeTitleBarAtStartup = remember { initialSettings.nativeTitleBar }
     // Tracks the OS-maximized state (updated by the AWT listener below) so the
     // custom title-bar buttons reflect the real window placement.
-    var windowMaximized by remember { mutableStateOf(DesktopSettings.load().windowMaximized) }
+    var windowMaximized by remember { mutableStateOf(initialSettings.windowMaximized) }
     // Placement before entering fullscreen, so leaving it restores exactly
     // where the window was (floating bounds or maximized).
     var preFullscreenMaximized by remember { mutableStateOf(false) }
@@ -909,14 +918,19 @@ fun WindowScope.App(
         }
     }
 
-    var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
-    var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
-    var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
-    var animationsEnabled by remember { mutableStateOf(DesktopSettings.load().animationsEnabled) }
-    var sliderStyle by remember { mutableStateOf(DesktopSettings.load().sliderStyle) }
-    var playerDesign by remember { mutableStateOf(PlayerDesign.from(DesktopSettings.load().playerDesign)) }
-    var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(DesktopSettings.load().playerBackground)) }
-    var rotatingThumbnail by remember { mutableStateOf(DesktopSettings.load().rotatingThumbnail) }
+    // Bootup speed: parse the settings file once for the whole settings block
+    // instead of one disk read + JSON parse per option.
+    val startupSettings = remember { DesktopSettings.load() }
+    var densityScale by remember { mutableStateOf(startupSettings.densityScale) }
+    var gridItemSize by remember { mutableStateOf(startupSettings.gridItemSize) }
+    var screenTransition by remember { mutableStateOf(startupSettings.screenTransition) }
+    var animationsEnabled by remember { mutableStateOf(startupSettings.animationsEnabled) }
+    var animationSpeed by remember { mutableStateOf(startupSettings.animationSpeed) }
+    var mouseBackForwardButtons by remember { mutableStateOf(startupSettings.mouseBackForwardButtons) }
+    var sliderStyle by remember { mutableStateOf(startupSettings.sliderStyle) }
+    var playerDesign by remember { mutableStateOf(PlayerDesign.from(startupSettings.playerDesign)) }
+    var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(startupSettings.playerBackground)) }
+    var rotatingThumbnail by remember { mutableStateOf(startupSettings.rotatingThumbnail) }
     var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
     var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
     var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
@@ -1146,6 +1160,43 @@ fun WindowScope.App(
             undoStack = undoStack + backStack.last()
             backStack = backStack + redoStack.last()
             redoStack = redoStack.dropLast(1)
+        }
+    }
+
+    // Mouse thumb / "special" buttons: X1 (button 4) goes back, X2 (button 5)
+    // goes forward, like every browser and media app. A global AWT listener is
+    // used because Compose's Skia canvas consumes the mouse event before it ever
+    // reaches a listener attached to the window itself.
+    val mouseBackRef = rememberUpdatedState(goBack)
+    val mouseForwardRef = rememberUpdatedState(redo)
+    val mouseButtonsEnabled = rememberUpdatedState(mouseBackForwardButtons)
+    val mainWindowComponent = window
+    DisposableEffect(mainWindowComponent) {
+        val listener = java.awt.event.AWTEventListener { e ->
+            if (e !is java.awt.event.MouseEvent) return@AWTEventListener
+            if (e.id != java.awt.event.MouseEvent.MOUSE_PRESSED) return@AWTEventListener
+            if (!mouseButtonsEnabled.value) return@AWTEventListener
+            if (e.button != 4 && e.button != 5) return@AWTEventListener
+            // Only react to clicks inside the main window (the floating widget
+            // and dialogs keep their own handling).
+            val inMainWindow = generateSequence<java.awt.Component>(e.component as? java.awt.Component) { it.parent }
+                .any { it === mainWindowComponent }
+            if (!inMainWindow) return@AWTEventListener
+            when (e.button) {
+                4 -> {
+                    e.consume()
+                    mouseBackRef.value()
+                }
+                5 -> {
+                    e.consume()
+                    mouseForwardRef.value()
+                }
+            }
+        }
+        java.awt.Toolkit.getDefaultToolkit()
+            .addAWTEventListener(listener, java.awt.AWTEvent.MOUSE_EVENT_MASK)
+        onDispose {
+            java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(listener)
         }
     }
 
@@ -1920,10 +1971,10 @@ fun WindowScope.App(
                                     fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
                                 } else {
                                     when (screenTransition) {
-                                        "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
-                                            (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
+                                        "slide" -> (slideInHorizontally(animationSpec = tween(Animations.ms(220))) { it / 4 } + fadeIn(animationSpec = tween(Animations.ms(220)))) togetherWith
+                                            (slideOutHorizontally(animationSpec = tween(Animations.ms(220))) { -it / 4 } + fadeOut(animationSpec = tween(Animations.ms(220))))
                                         "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
-                                        else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                        else -> fadeIn(animationSpec = tween(Animations.ms(180))) togetherWith fadeOut(animationSpec = tween(Animations.ms(180)))
                                     }
                                 }
                             },
@@ -2060,6 +2111,17 @@ fun WindowScope.App(
                         onAnimationsEnabledChange = { v ->
                             animationsEnabled = v
                             DesktopSettings.update { it.copy(animationsEnabled = v) }
+                        },
+                        animationSpeed = animationSpeed,
+                        onAnimationSpeedChange = { v ->
+                            animationSpeed = v
+                            Animations.speed = v
+                            DesktopSettings.update { it.copy(animationSpeed = v) }
+                        },
+                        mouseBackForwardButtons = mouseBackForwardButtons,
+                        onMouseBackForwardButtonsChange = { v ->
+                            mouseBackForwardButtons = v
+                            DesktopSettings.update { it.copy(mouseBackForwardButtons = v) }
                         },
                         onOpenTheme = { navigate(Screen.SettingsTheme) },
                         onOpenFont = { navigate(Screen.SettingsFont) },

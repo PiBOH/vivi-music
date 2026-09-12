@@ -14,6 +14,8 @@ import org.jcodec.containers.mp4.boxes.TrunBox
 import org.jcodec.containers.mp4.demuxer.AbstractMP4DemuxerTrack
 import org.jcodec.containers.mp4.demuxer.MP4Demuxer
 import org.jcodec.containers.mp4.demuxer.MP4DemuxerTrackMeta
+import okhttp3.ConnectionPool
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -48,9 +50,18 @@ import javax.sound.sampled.SourceDataLine
  */
 class AudioPlayer {
 
+    // Playback & network stack speed: a shared connection pool (the CDN hosts
+    // are reused across tracks and prefetches, so TLS handshakes are not paid
+    // again for every song) plus a dispatcher that allows the current track and
+    // the surrounding prefetches to download in parallel.
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
+        .connectionPool(ConnectionPool(12, 5, TimeUnit.MINUTES))
+        .dispatcher(Dispatcher().apply {
+            maxRequests = 64
+            maxRequestsPerHost = 16
+        })
         .build()
 
     private val cacheDir =
@@ -75,8 +86,11 @@ class AudioPlayer {
     private val lock = Object()
 
     private companion object {
-        /** Min interval between decoded-position reports to the UI (ms). */
-        const val POSITION_REPORT_INTERVAL_MS = 100L
+        /** Min interval between decoded-position reports to the UI (ms).
+         *  50 ms (~20 reports/s) instead of 100 ms: the seekbar used to lag the
+         *  audio by up to ~50 ms because the UI only ever saw every second
+         *  decoded tick. Still throttled well below one report per frame. */
+        const val POSITION_REPORT_INTERVAL_MS = 50L
 
         /** Bytes that must be on disk before the MP4 demuxer is created: the
          *  `moov` box (decoder setup) lives at the head of the file, before the
@@ -86,8 +100,10 @@ class AudioPlayer {
          *  first fragment (instead of waiting for a second one) is safe. */
         const val MIN_START_BYTES = 32 * 1024L
 
-        /** Poll interval while waiting for the download to catch up (ms). */
-        const val DOWNLOAD_POLL_MS = 30L
+        /** Poll interval while waiting for the download to catch up (ms).
+         *  15 ms halves the worst-case "wait for buffer" latency at track start
+         *  and after a seek; the wait is a cheap file-length check. */
+        const val DOWNLOAD_POLL_MS = 15L
 
         /** Interval between buffered-fraction reports to the UI (ms). Also used
          *  as the paused-state poll so the download keeps filling the cache and
@@ -726,7 +742,7 @@ class AudioPlayer {
                 true,
                 buffer.isBigEndian,
             )
-            val out = AudioSystem.getSourceDataLine(format)
+            val out = AudioOutput.openLine(format)
                 ?: throw IOException("No audio output device supports $format")
             line = out
             // The output buffer is the ONLY jitter headroom between the decode

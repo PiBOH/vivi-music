@@ -52,9 +52,14 @@ data class DesktopSyncState(
     /** Adaptive grid cell width in dp for album/artist/playlist grids. */
     val gridItemSize: Int = 160,
     /** Screen transition style between navigations: off / fade / slide. */
-    val screenTransition: String = "fade",
-    /** Master switch for UI animations; when off, screen transitions become instant. */
+    val screenTransition: String = "fade",    /** Master switch for UI animations; when off, screen transitions become instant. */
     val animationsEnabled: Boolean = true,
+    /** Global UI animation speed: "fast" / "normal" / "slow" (multiplier on every tween/spring). */
+    val animationSpeed: String = "normal",
+    /** Navigate back/forward with the mouse X1/X2 thumb buttons (Windows/Linux). */
+    val mouseBackForwardButtons: Boolean = true,
+    /** Preferred audio output device (Java Sound mixer name; empty = system default). */
+    val outputDeviceName: String = "",
     /** Player slider style: slim / squiggly / wavy. */
     val sliderStyle: String = "slim",
     /** Full-player layout variant: classic / new / v2 / expressive. */

@@ -3,6 +3,12 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.62: mouse side buttons (X1/X2) navigate back/forward — AWT-level listener (Compose consumes the event before the window sees it), main-window only, toggle in Settings → Appearance.
+- [x] DE 1.50.62: real audio output device picker (Java Sound mixers, persisted, system-default fallback) replacing the volume-bump placeholder button.
+- [x] DE 1.50.62: "Animation speed" (Fast/Normal/Slow) global multiplier for UI transitions; like button in the full + mini player now writes the real account state (optimistic toggle + InnerTube `likeVideo`).
+- [x] DE 1.50.62 (FIX): backup restore restores playlists again — each ZIP entry decoded independently + fallback to the settings' library snapshot, restored count logged.
+- [x] DE 1.50.62 (FIX/PERF): library empty state has Retry; seekbar position reports every 50 ms instead of 100 ms; shared OkHttp connection pool + parallel dispatcher, 10 s connect timeout, 15 ms buffer poll; settings parsed once per screen at startup.
+- [x] DE 1.50.62: regression scan of every `pointerInput` for the #65 pattern (`detectTapGestures` + drag detector in the same block) — only the already-fixed theme picker matched.
 - [x] DE 1.50.61 (FIX): theme picker gives live feedback — the gradient bars ran `detectTapGestures` before `detectDragGestures` in one `pointerInput`, and since the former never returns the drag detector was dead code (the bars only moved on mouse release); a single gesture loop now tracks press + movement, a `#RRGGBB` field applies a pasted color live, and the accent-intensity slider persists on release instead of per frame (#65).
 - [x] DE 1.50.61 (FIX): macOS "Now Playing" + media keys work without the Accessibility permission — the session is now always registered (OS-level integration, no permission involved) and the "Media keys" switch only toggles its remote commands (off clears the tile); the Accessibility hint/button is gone, the helper now sets `MPNowPlayingInfoCenter.playbackState` (what makes macOS treat the app as its Now Playing source) and no longer publishes the app name as the track title, and the whole lifecycle is logged to `playback.log` (#67).
 - [x] DE 1.50.61: macOS window chrome follows the app's Light/Dark mode (`viviSetWindowAppearance` sets `NSAppearanceNameDarkAqua`/`Aqua` on `NSApp` + every window, re-applied on theme change) instead of always being light (#66).

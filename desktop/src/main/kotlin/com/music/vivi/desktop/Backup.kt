@@ -78,23 +78,41 @@ object BackupManager {
         ZipInputStream(FileInputStream(file).buffered()).use { zip ->
             var entry = zip.nextEntry
             var found = false
+            var importedSettings: DesktopSyncState? = null
+            var importedPlaylists: List<SyncedPlaylist>? = null
             while (entry != null) {
                 val bytes = zip.readBytes()
+                // Each entry is decoded independently: a single unreadable
+                // entry (e.g. a playlists list written by an older build) must
+                // not abort the whole restore and silently drop the settings.
                 when (entry.name) {
-                    SETTINGS_ENTRY -> {
-                        val imported = json.decodeFromString(DesktopSyncState.serializer(), bytes.decodeToString())
-                        applyImportedSettings(imported)
+                    SETTINGS_ENTRY -> runCatching {
+                        importedSettings = json.decodeFromString(DesktopSyncState.serializer(), bytes.decodeToString())
                         found = true
-                    }
-                    PLAYLISTS_ENTRY -> {
-                        val playlists = json.decodeFromString(ListSerializer(SyncedPlaylist.serializer()), bytes.decodeToString())
-                        PlaylistStore.replaceAll(playlists)
+                    }.onFailure { AppLog.log("backup", "restore: settings entry unreadable (${it.message})") }
+                    PLAYLISTS_ENTRY -> runCatching {
+                        importedPlaylists = json.decodeFromString(ListSerializer(SyncedPlaylist.serializer()), bytes.decodeToString())
                         found = true
-                    }
+                    }.onFailure { AppLog.log("backup", "restore: playlists entry unreadable (${it.message})") }
                 }
                 entry = zip.nextEntry
             }
             if (!found) throw IllegalStateException("No backup entries found in archive")
+
+            importedSettings?.let { applyImportedSettings(it) }
+
+            // Playlists come from their own entry; when a backup predates that
+            // entry (or it was unreadable) fall back to the copy embedded in the
+            // settings' library snapshot, so a restore never silently leaves the
+            // playlists behind.
+            val playlists = importedPlaylists
+                ?: importedSettings?.library?.playlists
+            if (playlists != null) {
+                PlaylistStore.replaceAll(playlists)
+                AppLog.log("backup", "restore: ${playlists.size} playlist(s) restored")
+            } else {
+                AppLog.log("backup", "restore: no playlists found in this backup")
+            }
         }
     }
 

@@ -11,6 +11,24 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.62-alpha] - 2026-09-12
+
+### Added
+- [DE] **The mouse side buttons navigate back and forward**: pressing X1 (button 4) goes back and X2 (button 5) goes forward through the screen history, like every browser and media app, with a new switch in Settings → Appearance to turn it off. The listener is installed at the AWT level because Compose's Skia canvas consumes the mouse event before it ever reaches a listener attached to the window, and it only reacts to clicks inside the main window (the floating widget and dialogs keep their own handling).
+- [DE] **Real audio output device picker**: the "output device" button in the mini player used to just bump the volume up by 10%; it now lists the actual Java Sound mixers the OS exposes (Speakers, Headphones, virtual devices…) plus "System default", persists the choice and reopens the audio line on the selected device. A device that disappeared since it was saved falls back to the system default instead of breaking playback.
+- [DE] **"Animation speed" option (Fast / Normal / Slow)**: a global multiplier applied to the UI transitions (screen transitions, player crossfade), on top of the existing on/off switch.
+- [DE] **The like button actually likes**: the full player had no heart at all and the mini player's heart only flipped a local flag that was lost on exit. Both now read and write the account state through the same path as the song menu (optimistic toggle + InnerTube `likeVideo`), so the heart reflects the YouTube account and "Auto download on like" fires from the player too.
+
+### Fixed
+- [DE] **Restoring a backup restores the playlists again**: the playlists entry of the archive was written and read independently of the settings, so a backup whose playlists entry failed to decode (or predated it) restored the settings but silently dropped every playlist. Each entry is now decoded independently and, when the archive carries no playlists, the copy embedded in the settings' library snapshot is used as a fallback; the restored count is written to the `backup` log.
+- [DE] **Empty "Liked songs" / albums / artists / playlists library tabs can be reloaded**: an empty list caused by a transient failure (expired session, 401, network hiccup) left the screen blank with no way to retry without leaving and reopening it; the empty state now offers a Retry button (and the screen's data-loading effect tracks it).
+
+### Changed
+- [DE] **Seekbar lag reduced (~50 ms)**: the decoded position was reported to the UI at most every 100 ms, so the slider could trail the audio by up to two ticks; it is now reported every 50 ms (~20/s), still far below one report per decoded frame.
+- [DE] **Playback & network stack**: the audio engine now uses a shared OkHttp connection pool (5-minute keep-alive, 12 connections) and a dispatcher that allows the current track and the surrounding prefetches to download in parallel, so TLS handshakes are not paid again for every song; the connect timeout dropped from 15 s to 10 s and the "wait for the buffer to catch up" poll interval halved to 15 ms, cutting the worst-case start/seek latency.
+- [DE] **Faster startup**: the settings file was read and JSON-parsed about a dozen times while building the first frame (once per setting); it is now parsed once per screen and the values are reused, and the redundant duplicate reads were removed.
+- [DE] **Regression scan for the #65 class of bug**: every `pointerInput` block in the desktop module was analysed for a `detectTapGestures` call followed by a drag detector in the *same* block (the second detector never runs because the first never returns). The theme picker was the only occurrence and it was already fixed in 1.50.61; nothing else needed changing.
+
 ## [6.0.6.3_DE-1.50.61-alpha] - 2026-09-12
 
 ### Fixed
