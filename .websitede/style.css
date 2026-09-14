@@ -589,7 +589,6 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   background: var(--text);
   border: 3px solid var(--accent);
   transform: translate(-50%, -50%);
-  transition: left 1s linear;
 }
 .mock-times { display: flex; justify-content: space-between; font: 500 11px var(--font-mono); color: var(--faint); margin-bottom: 13px; }
 .mock-ctl { display: flex; align-items: center; justify-content: center; gap: 22px; color: var(--muted); }
@@ -762,19 +761,37 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
 }
 .dev-chip .di { display: block; font-size: 20px; margin-bottom: 6px; }
 .wires { position: relative; flex: 1; height: 2px; background: repeating-linear-gradient(90deg, var(--line2) 0 7px, transparent 7px 14px); }
+/* The travelling dots are the only thing on the site that moves all the time,
+   so they must never touch a layout property: animating `left` invalidated the
+   layout of their containing block on every single frame (Lighthouse reported
+   ~4 s of "Style & Layout" and >1 s of blocking time on a phone). `.pd` is now
+   the invisible full-length rail and the visible dot is its ::after child, so a
+   plain translateX moves it: the rail is `100% - 10px` wide, which makes
+   `translateX(100%)` travel exactly the same distance the old
+   `left: 0 -> calc(100% - 10px)` did. Pixel-identical, composited, no layout. */
 .wires .pd {
   position: absolute;
   top: -4px;
+  left: 0;
+  width: calc(100% - 10px);
+  height: 10px;
+  background: none;
+  will-change: transform;
+  animation: pdot 2.4s linear infinite;
+}
+.wires .pd::after {
+  content: "";
+  position: absolute;
+  top: 0;
   left: 0;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--grad);
-  animation: pdot 2.4s linear infinite;
 }
 .wires .pd.back { animation-name: pdotb; animation-delay: 1.2s; }
-@keyframes pdot { 0% { left: 0; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 10px); opacity: 0; } }
-@keyframes pdotb { 0% { left: calc(100% - 10px); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 0; opacity: 0; } }
+@keyframes pdot { 0% { transform: translateX(0); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
+@keyframes pdotb { 0% { transform: translateX(100%); opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translateX(0); opacity: 0; } }
 
 .sticker {
   position: absolute;
@@ -1096,15 +1113,26 @@ details.qa[open] .a { animation: qaIn 0.28s ease both; }
   width: min(200px, 40vw);
   background: repeating-linear-gradient(90deg, var(--line2) 0 8px, transparent 8px 16px);
 }
+/* same rail + dot split as .wires .pd above: translateX only, never `left` */
 .duo-mid .pd {
   position: absolute;
   top: -4px;
+  left: 0;
+  width: calc(100% - 10px);
+  height: 10px;
+  background: none;
+  will-change: transform;
+  animation: pdot 2.2s linear infinite;
+}
+.duo-mid .pd::after {
+  content: "";
+  position: absolute;
+  top: 0;
   left: 0;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--grad);
-  animation: pdot 2.2s linear infinite;
 }
 .duo-mid .pd.back { animation-name: pdotb; animation-delay: 1.1s; }
 .relay-chip {

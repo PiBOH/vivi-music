@@ -15,70 +15,6 @@ body {
   pointer-events: none;
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-10px);
-  }
-
-  100% {
-    transform: translateY(0px);
-  }
-}
-
-.floating-element {
-  animation: float 4s ease-in-out infinite;
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-.floating-element-delayed {
-  animation: float 5s ease-in-out infinite;
-  animation-delay: 1s;
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-.glass-card {
-  background: rgba(175, 190, 255, 0.15);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(175, 190, 255, 0.25);
-}
-
-
-
-/* Page 2 Custom CSS */
-.vivid-glow-hover:hover {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
-}
-
-.glass-panel {
-  background: rgba(175, 190, 255, 0.15);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(175, 190, 255, 0.25);
-}
-
-.mockup-container {
-  perspective: 1200px;
-}
-
-.mockup-item {
-  --px: 0px;
-  --py: 0px;
-  transform: translate3d(var(--px), var(--py), 0);
-  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-.mockup-item:hover {
-  transform: translate3d(var(--px), calc(var(--py) - 24px), 0) scale(1.05);
-  z-index: 50;
-}
-
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -96,85 +32,6 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Phone Mockup styles */
-.phone-frame {
-  box-shadow: 0 0 80px rgba(175, 190, 255, 0.15);
-}
-
-/* Progress bar */
-.progress-bar-fill {
-  transition: width 10s linear;
-}
-
-/* Glass Card for Bento Grid */
-.bento-glass-card {
-  position: relative;
-  background: rgba(175, 190, 255, 0.08);
-  border: 1px solid rgba(175, 190, 255, 0.15);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  overflow: hidden;
-}
-
-.bento-glass-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    300px circle at var(--mouse-x, 0) var(--mouse-y, 0),
-    rgba(175, 190, 255, 0.15),
-    transparent 40%
-  );
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-.bento-glass-card:hover::before {
-  opacity: 1;
-}
-
-.bento-glass-card:hover {
-  background: rgba(175, 190, 255, 0.15);
-  border-color: rgba(175, 190, 255, 0.3);
-}
-
-/* Community Section CSS */
-.glow-avatar {
-  box-shadow: 0 0 30px rgba(175, 190, 255, 0.3), inset 0 0 20px rgba(175, 190, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-}
-
-.glow-button-purple {
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
-}
-
-.glow-button-blue {
-  box-shadow: 0 0 20px rgba(175, 190, 255, 0.3);
-}
-
-.community-banner {
-  background: linear-gradient(135deg, rgba(175, 190, 255, 0.1) 0%, rgba(175, 190, 255, 0.02) 100%);
-  border: 1px solid rgba(175, 190, 255, 0.18);
-  position: relative;
-  overflow: hidden;
-  backdrop-filter: blur(20px);
-}
-
-.community-banner::before {
-  content: '';
-  position: absolute;
-  right: -100px;
-  top: -100px;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(175, 190, 255, 0.2) 0%, transparent 70%);
-  border-radius: 50%;
-  z-index: 0;
-  pointer-events: none;
-}
-
 /* Hide scrollbar for Chrome, Safari and Opera */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -183,27 +40,6 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* Smooth Scroll Reveal Animations */
-@keyframes revealUpAnim {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.reveal-up {
-  opacity: 0;
-  will-change: opacity, transform;
-}
-
-.reveal-visible {
-  animation: revealUpAnim 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Custom Premium Scrollbar */
@@ -274,7 +110,10 @@ html {
   padding-bottom: 12px;
 }
 
-/* Helium-matching Topbar Button Styles */
+/* Helium-matching Topbar Button Styles
+   No `will-change` here on purpose: these only transform on :hover/:active, and
+   the header holds ~20 of them, so a permanent hint would keep ~20 composited
+   layers alive from the first frame for a hover that may never happen. */
 .nav-link {
   color: #ffffff !important;
   background-color: transparent;
@@ -288,7 +127,6 @@ html {
   align-items: center;
   text-decoration: none;
   user-select: none;
-  will-change: transform;
 }
 
 .nav-link:hover {
@@ -310,7 +148,6 @@ html {
   display: inline-flex;
   align-items: center;
   user-select: none;
-  will-change: transform;
 }
 
 .mobile-menu-link:hover {
@@ -474,7 +311,7 @@ dialog.is-open .helium-dialog-container {
     box-shadow: none !important;
     border-radius: 0 !important;
     margin-bottom: 24px;
-    
+
     /* Mobile entrance transition: slide up from bottom */
     transform: translateY(100%) !important;
     opacity: 0;
@@ -486,12 +323,6 @@ dialog.is-open .helium-dialog-container {
     opacity: 1;
   }
 }
-
-
-
-
-
-
 
 /* ---- site chrome fallbacks ---- */
 html, body { background: transparent !important; }
