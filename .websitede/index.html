@@ -134,31 +134,30 @@
         return String(n);
       }
       var REPO = 'PiBOH/vivi-music';
-      fetch('https://api.github.com/repos/' + REPO, { headers: { Accept: 'application/vnd.github+json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { var el = document.getElementById('gh-stars'); if (el && d.stargazers_count) el.textContent = fmt(d.stargazers_count); })
-        .catch(function () {});
-      function applyDownloads(list) {
-        var total = 0;
-        (list || []).forEach(function (rel) { (rel.assets || []).forEach(function (a) { total += a.download_count || 0; }); });
-        var el = document.getElementById('gh-downloads');
-        if (el && total) el.textContent = fmt(total);
-      }
-      /* Same cached release list the download dialog uses: no extra API call, and
-         the counter is filled on the first paint instead of after a refresh.
+      /* Both numbers come from the static manifest shipped with the site: no
+         GitHub API request is spent on a page view (the anonymous quota is 60
+         per hour, and it running out is what emptied the download lists), and
+         they are filled on the first paint instead of after a refresh.
          main.js loads later in the document, hence the deferred call. */
-      function loadDownloads() {
-        if (window.vmReleasesSWR) {
-          window.vmReleasesSWR(100, applyDownloads);
+      function setStat(id, value) {
+        var el = document.getElementById(id);
+        if (el && value) el.textContent = fmt(value);
+      }
+      function loadStats() {
+        if (window.vmStats) {
+          window.vmStats().then(function (s) {
+            setStat('gh-stars', s.stars);
+            setStat('gh-downloads', s.totalDownloads);
+          });
           return;
         }
-        fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
+        fetch('https://api.github.com/repos/' + REPO, { headers: { Accept: 'application/vnd.github+json' } })
           .then(function (r) { return r.json(); })
-          .then(applyDownloads)
+          .then(function (d) { setStat('gh-stars', d.stargazers_count); })
           .catch(function () {});
       }
-      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', loadDownloads);
-      else loadDownloads();
+      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', loadStats);
+      else loadStats();
     })();
     </script>
 
