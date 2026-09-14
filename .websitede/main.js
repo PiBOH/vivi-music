@@ -239,6 +239,114 @@
     } catch (e) { return iso || ""; }
   };
 
+  /* ---------- releases: cached locally, revalidated in the background ----------
+   * Every page used to fire its own /releases request and paint only once the
+   * response arrived, which had two visible consequences: opening the download
+   * dialog before the API answered listed every asset as "not in this release",
+   * and a failed or rate-limited request left the page empty until a manual
+   * refresh. The GitHub API allows only 60 unauthenticated requests per hour per
+   * IP and the site was spending one per page view, so the last good response is
+   * now kept in localStorage: the cached list is rendered synchronously (the
+   * assets are on screen before the network is even touched), the fresh copy
+   * replaces it silently, and a new request is only made once the cached one is
+   * older than REL_TTL_MS — a published release therefore appears by itself,
+   * with no refresh. */
+  var REL_KEY = "vmde-releases-cache";
+  var REL_TTL_MS = 120000; // 2 min
+  /* Above this the cached copy keeps only the fields the site renders (assets,
+     tag, date…): the full payload of 100 releases is ~2.6 MB of release notes,
+     which would not fit in the browser storage quota. */
+  var REL_MAX_BYTES = 400000;
+
+  /* Only [body] is dropped by the slim copy — it is the release notes text. */
+  function relSlim(release, keepBody) {
+    var out = {
+      tag_name: release.tag_name,
+      name: release.name,
+      published_at: release.published_at,
+      prerelease: !!release.prerelease,
+      draft: !!release.draft,
+      html_url: release.html_url,
+      assets: (release.assets || []).map(function (a) {
+        return {
+          name: a.name,
+          size: a.size,
+          download_count: a.download_count,
+          browser_download_url: a.browser_download_url,
+        };
+      }),
+    };
+    if (keepBody) out.body = release.body;
+    return out;
+  }
+  function relKey(perPage) { return REL_KEY + ":" + perPage; }
+
+  function relReadCache(perPage) {
+    try {
+      var obj = JSON.parse(localStorage.getItem(relKey(perPage)) || "null");
+      if (!obj || obj.perPage !== perPage || !obj.list || !obj.list.length) return null;
+      return obj;
+    } catch (e) { return null; }
+  }
+  function relWriteCache(perPage, list) {
+    var keepBody = JSON.stringify(list).length <= REL_MAX_BYTES;
+    try {
+      localStorage.setItem(relKey(perPage), JSON.stringify({
+        perPage: perPage,
+        t: Date.now(),
+        list: list.map(function (r) { return relSlim(r, keepBody); }),
+      }));
+    } catch (e) { /* private mode / quota: the cache is a pure optimisation */ }
+  }
+  /* One retry: the GitHub API answers 502/403 (secondary rate limit) now and
+     then and a single delayed retry fixes the vast majority of those. */
+  function relFetch(perPage, attempt) {
+    return window.vmReleases(perPage).catch(function (err) {
+      if (attempt >= 1) throw err;
+      return new Promise(function (res) { setTimeout(res, 900); }).then(function () {
+        return relFetch(perPage, attempt + 1);
+      });
+    });
+  }
+  /**
+   * Releases with stale-while-revalidate semantics.
+   * [onData] can fire twice: once with the cached list (fromCache = true) and
+   * once with the network one. It is never called with an error while cached
+   * data is already on screen.
+   */
+  window.vmReleasesSWR = function (perPage, onData) {
+    var n = perPage || 30;
+    var cached = relReadCache(n);
+    if (cached) {
+      try { onData(cached.list, true); } catch (e) { /* renderer error: keep going */ }
+      if (Date.now() - cached.t < REL_TTL_MS) return Promise.resolve(cached.list);
+    }
+    return relFetch(n, 0)
+      .then(function (list) {
+        if (list && list.length) relWriteCache(n, list);
+        try { onData(list, false); } catch (e) { /* ignore */ }
+        return list;
+      })
+      .catch(function (err) {
+        if (!cached) { try { onData(null, false, err); } catch (e) { /* ignore */ } }
+        return null;
+      });
+  };
+  /** Latest release: newest non-prerelease, else the newest one (chronology,
+   *  never the tag string — see [byPublishedDesc]). */
+  window.vmPickRelease = function (list) {
+    var rels = (list || []).filter(function (r) { return r && !r.draft; });
+    rels.sort(byPublishedDesc);
+    for (var i = 0; i < rels.length; i++) if (!rels[i].prerelease) return rels[i];
+    return rels[0] || null;
+  };
+  /** [vmReleasesSWR] for the latest release: cb(release, fromCache, error). */
+  window.vmWatchLatestRelease = function (cb, perPage) {
+    return window.vmReleasesSWR(perPage, function (list, fromCache, err) {
+      cb(err ? null : window.vmPickRelease(list), !!fromCache, err || null);
+    });
+  };
+
   /* ---------- tiny markdown -> html (good enough for release notes) ---------- */
   window.vmEsc = function (s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

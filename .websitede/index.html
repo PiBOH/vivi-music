@@ -138,15 +138,27 @@
         .then(function (r) { return r.json(); })
         .then(function (d) { var el = document.getElementById('gh-stars'); if (el && d.stargazers_count) el.textContent = fmt(d.stargazers_count); })
         .catch(function () {});
-      fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (list) {
-          var total = 0;
-          (list || []).forEach(function (rel) { (rel.assets || []).forEach(function (a) { total += a.download_count || 0; }); });
-          var el = document.getElementById('gh-downloads');
-          if (el && total) el.textContent = fmt(total);
-        })
-        .catch(function () {});
+      function applyDownloads(list) {
+        var total = 0;
+        (list || []).forEach(function (rel) { (rel.assets || []).forEach(function (a) { total += a.download_count || 0; }); });
+        var el = document.getElementById('gh-downloads');
+        if (el && total) el.textContent = fmt(total);
+      }
+      /* Same cached release list the download dialog uses: no extra API call, and
+         the counter is filled on the first paint instead of after a refresh.
+         main.js loads later in the document, hence the deferred call. */
+      function loadDownloads() {
+        if (window.vmReleasesSWR) {
+          window.vmReleasesSWR(100, applyDownloads);
+          return;
+        }
+        fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
+          .then(function (r) { return r.json(); })
+          .then(applyDownloads)
+          .catch(function () {});
+      }
+      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', loadDownloads);
+      else loadDownloads();
     })();
     </script>
 
@@ -398,6 +410,10 @@
   var grid = $('#dl-grid');
   var variant = $('#dl-variant');
   var rel = null;
+  /* Platform panel currently on screen, so arriving data can re-render it. */
+  var curPlat = null;
+  var relLoading = false;
+  var relFailed = false;
 
   function findAsset(re) {
     var assets = (rel && rel.assets) || [];
@@ -435,8 +451,17 @@
   };
 
   function showVariants(plat) {
+    curPlat = plat;
     var items = VARIANTS[plat] || [];
     variant.innerHTML = '';
+    /* No release data yet: say so instead of advertising every asset as "not in
+       this release". This branch is exactly what the dialog used to draw when
+       it was opened before the API answered - the reason the assets only
+       showed up after refreshing the page. */
+    if (!rel) {
+      renderPending();
+      return;
+    }
     var any = false;
     items.forEach(function (it) {
       var url = assetUrl(it.re);
@@ -490,26 +515,70 @@
     return rels[0] || null;
   }
 
+  function renderPending() {
+    variant.innerHTML = '';
+    if (relFailed && !relLoading) {
+      var again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'helium-dialog-btn w-full py-3 text-sm font-bold text-white';
+      again.textContent = 'Retry';
+      again.addEventListener('click', function () { relFailed = false; loadRelease(); });
+      variant.appendChild(again);
+      var hint = document.createElement('p');
+      hint.className = 'text-[10px] text-[#afbeff]/60 font-geist text-left px-1';
+      hint.textContent = 'GitHub did not answer - every asset is also on the releases page.';
+      variant.appendChild(hint);
+    } else {
+      var wait = document.createElement('p');
+      wait.className = 'text-xs font-geist text-[#afbeff]/70 text-left px-1';
+      wait.textContent = 'Loading the latest release\u2026';
+      variant.appendChild(wait);
+      if (!relLoading) loadRelease();
+    }
+    variant.classList.remove('hidden');
+    variant.classList.add('flex');
+  }
+
+  /* Applies whatever the shared cache/proxy hands over and re-renders the panel
+     the user is looking at: the data can arrive, or be replaced by a newer
+     copy, while the dialog is already open. */
+  function applyRelease(r) {
+    if (r) {
+      rel = r;
+      relFailed = false;
+      var ch = r.prerelease ? 'prerelease' : 'stable';
+      tagline.innerHTML = 'Latest release: <b class="text-white">' + r.tag_name + '</b> \u00b7 ' + ch;
+    } else if (!rel) {
+      tagline.textContent = 'Could not reach GitHub - pick a platform to retry.';
+    }
+    if (curPlat) showVariants(curPlat);
+  }
+
   function loadRelease() {
+    if (relLoading) return;
+    relLoading = true;
+    function done(r) {
+      relLoading = false;
+      if (!r && rel) return; /* a failed revalidation keeps what is on screen */
+      if (!r) relFailed = true;
+      applyRelease(r);
+    }
+    /* main.js owns the local cache and the retry; this fallback only runs if it
+       could not be loaded at all (so the dialog still works without it). */
+    if (window.vmWatchLatestRelease) {
+      window.vmWatchLatestRelease(function (r) { done(r); });
+      return;
+    }
     fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=30', {
       headers: { Accept: 'application/vnd.github+json' }
     }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (list) {
-        rel = pickRelease(list);
-        if (rel) {
-          var ch = rel.prerelease ? 'prerelease' : 'stable';
-          tagline.innerHTML = 'Latest release: <b class="text-white">' + rel.tag_name + '</b> · ' + ch;
-        } else {
-          tagline.textContent = 'No release published yet.';
-        }
-      })
-      .catch(function () { tagline.textContent = 'Could not reach GitHub — try the downloads page.'; });
+      .then(function (list) { done(pickRelease(list)); })
+      .catch(function () { done(null); });
   }
 
   function openModal() {
     if (!modal) return;
-    if (!rel) loadRelease();
-    else if (tagline && !tagline.dataset.loaded) { /* keep */ }
+    loadRelease();
     modal.showModal();
     void modal.offsetWidth;
     modal.classList.add('is-open');
@@ -534,6 +603,15 @@
     if (backdrop) backdrop.addEventListener('click', closeModal);
     modal.addEventListener('cancel', function (e) { e.preventDefault(); closeModal(); });
   }
+
+  /* Warm the release data while the page is idle, so the dialog is already
+     filled the first time it is opened. The shared helper lives in main.js,
+     which is loaded after this inline script - hence the DOMContentLoaded wait. */
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', loadRelease);
+  } else {
+    loadRelease();
+  }
   $$('.dl-plat').forEach(function (b) {
     b.addEventListener('click', function () { showVariants(b.dataset.plat); });
   });
@@ -552,7 +630,7 @@
     var grid = document.getElementById("newsGrid");
     var hv = document.querySelector("[data-hero-ver]");
     if (grid && window.vmReleases) {
-      window.vmReleases(3).then(function (list) {
+      function newsRender(list) {
         if (hv && list[0]) hv.textContent = String(list[0].tag_name || "").replace(/^v/i, "") || "1.41.14";
         var top = list.slice(0, 3);
         if (!top.length) throw new Error("empty feed");
@@ -577,7 +655,8 @@
             '<span class="dt">' + window.vmFmtDate(r.published_at) + "</span>" +
             "<p>" + (window.vmEsc(body) || "No notes this time — code moved, nothing to say.") + "</p></div>";
         }).join("");
-      })["catch"](function () {
+      }
+      function newsFallback() {
         var fb = [
           { v: "1.41.14", t: "Broken OpenGL stacks on Linux are now detected: the app drops to software rendering once and remembers the choice." },
           { v: "1.41.13", t: "Modern Google cookie sets authenticate again — the 401 UNAUTHENTICATED login wall is gone." }
@@ -585,7 +664,21 @@
         grid.innerHTML = fb.map(function (x) {
           return '<div class="news-item"><span class="ver">' + x.v + '</span><span class="dt">from the install guide</span><p>' + x.t + "</p></div>";
         }).join("") + '<div class="news-item"><span class="ver">feed</span><span class="dt">offline</span><p>The GitHub API didn\u2019t answer. The <a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">releases page</a> is always up.</p></div>';
-      });
+      }
+
+      /* Cached list first (the cards are there instantly), then the network copy
+         replaces it. The fallback only runs when nothing is cached and the API
+         did not answer, so a rate-limited request no longer empties the section. */
+      var newsSeen = false;
+      if (window.vmReleasesSWR) {
+        window.vmReleasesSWR(3, function (list) {
+          if (!list || !list.length) { if (!newsSeen) newsFallback(); return; }
+          newsSeen = true;
+          newsRender(list);
+        });
+      } else {
+        window.vmReleases(3).then(newsRender)["catch"](newsFallback);
+      }
     }
   })();
   </script>

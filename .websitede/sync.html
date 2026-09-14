@@ -295,6 +295,10 @@
   var grid = $('#dl-grid');
   var variant = $('#dl-variant');
   var rel = null;
+  /* Platform panel currently on screen, so arriving data can re-render it. */
+  var curPlat = null;
+  var relLoading = false;
+  var relFailed = false;
 
   function findAsset(re) {
     var assets = (rel && rel.assets) || [];
@@ -332,8 +336,17 @@
   };
 
   function showVariants(plat) {
+    curPlat = plat;
     var items = VARIANTS[plat] || [];
     variant.innerHTML = '';
+    /* No release data yet: say so instead of advertising every asset as "not in
+       this release". This branch is exactly what the dialog used to draw when
+       it was opened before the API answered - the reason the assets only
+       showed up after refreshing the page. */
+    if (!rel) {
+      renderPending();
+      return;
+    }
     var any = false;
     items.forEach(function (it) {
       var url = assetUrl(it.re);
@@ -387,26 +400,70 @@
     return rels[0] || null;
   }
 
+  function renderPending() {
+    variant.innerHTML = '';
+    if (relFailed && !relLoading) {
+      var again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'helium-dialog-btn w-full py-3 text-sm font-bold text-white';
+      again.textContent = 'Retry';
+      again.addEventListener('click', function () { relFailed = false; loadRelease(); });
+      variant.appendChild(again);
+      var hint = document.createElement('p');
+      hint.className = 'text-[10px] text-[#afbeff]/60 font-geist text-left px-1';
+      hint.textContent = 'GitHub did not answer - every asset is also on the releases page.';
+      variant.appendChild(hint);
+    } else {
+      var wait = document.createElement('p');
+      wait.className = 'text-xs font-geist text-[#afbeff]/70 text-left px-1';
+      wait.textContent = 'Loading the latest release\u2026';
+      variant.appendChild(wait);
+      if (!relLoading) loadRelease();
+    }
+    variant.classList.remove('hidden');
+    variant.classList.add('flex');
+  }
+
+  /* Applies whatever the shared cache/proxy hands over and re-renders the panel
+     the user is looking at: the data can arrive, or be replaced by a newer
+     copy, while the dialog is already open. */
+  function applyRelease(r) {
+    if (r) {
+      rel = r;
+      relFailed = false;
+      var ch = r.prerelease ? 'prerelease' : 'stable';
+      tagline.innerHTML = 'Latest release: <b class="text-white">' + r.tag_name + '</b> \u00b7 ' + ch;
+    } else if (!rel) {
+      tagline.textContent = 'Could not reach GitHub - pick a platform to retry.';
+    }
+    if (curPlat) showVariants(curPlat);
+  }
+
   function loadRelease() {
+    if (relLoading) return;
+    relLoading = true;
+    function done(r) {
+      relLoading = false;
+      if (!r && rel) return; /* a failed revalidation keeps what is on screen */
+      if (!r) relFailed = true;
+      applyRelease(r);
+    }
+    /* main.js owns the local cache and the retry; this fallback only runs if it
+       could not be loaded at all (so the dialog still works without it). */
+    if (window.vmWatchLatestRelease) {
+      window.vmWatchLatestRelease(function (r) { done(r); });
+      return;
+    }
     fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=30', {
       headers: { Accept: 'application/vnd.github+json' }
     }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (list) {
-        rel = pickRelease(list);
-        if (rel) {
-          var ch = rel.prerelease ? 'prerelease' : 'stable';
-          tagline.innerHTML = 'Latest release: <b class="text-white">' + rel.tag_name + '</b> · ' + ch;
-        } else {
-          tagline.textContent = 'No release published yet.';
-        }
-      })
-      .catch(function () { tagline.textContent = 'Could not reach GitHub — try the downloads page.'; });
+      .then(function (list) { done(pickRelease(list)); })
+      .catch(function () { done(null); });
   }
 
   function openModal() {
     if (!modal) return;
-    if (!rel) loadRelease();
-    else if (tagline && !tagline.dataset.loaded) { /* keep */ }
+    loadRelease();
     modal.showModal();
     void modal.offsetWidth;
     modal.classList.add('is-open');
@@ -430,6 +487,15 @@
     var backdrop = modal.querySelector('.dialog-backdrop');
     if (backdrop) backdrop.addEventListener('click', closeModal);
     modal.addEventListener('cancel', function (e) { e.preventDefault(); closeModal(); });
+  }
+
+  /* Warm the release data while the page is idle, so the dialog is already
+     filled the first time it is opened. The shared helper lives in main.js,
+     which is loaded after this inline script - hence the DOMContentLoaded wait. */
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', loadRelease);
+  } else {
+    loadRelease();
   }
   $$('.dl-plat').forEach(function (b) {
     b.addEventListener('click', function () { showVariants(b.dataset.plat); });
