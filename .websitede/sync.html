@@ -266,18 +266,29 @@
 
   /* navbar: shrink after scrolling a bit */
   var nav = $('#top-navbar');
-  function onScroll() {
-    if (!nav) return;
-    if (window.scrollY > 40) nav.classList.add('scrolled');
-    else nav.classList.remove('scrolled');
+  /* The navbar shrinks once the page is scrolled past 40px. This must not read
+     the scroll position: `window.scrollY` forces a synchronous layout, which is
+     what Lighthouse reported as "forced reflow" (710 ms on a throttled phone,
+     and it flagged the same read again once it was merely deferred a frame). A
+     1px sentinel 40px down the document observed by IntersectionObserver gives
+     the same answer without touching layout, and it is also correct when the
+     page is opened with a #fragment, where no scroll event fires at all.
+   */
+  if (nav) {
+    var navMark = document.createElement('div');
+    navMark.setAttribute('aria-hidden', 'true');
+    navMark.style.cssText = 'position:absolute;top:40px;left:0;width:1px;height:1px;pointer-events:none';
+    document.body.appendChild(navMark);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        nav.classList.toggle('scrolled', !entries[0].isIntersecting);
+      }, { threshold: 0 }).observe(navMark);
+    } else {
+      window.addEventListener('scroll', function () {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+      }, { passive: true });
+    }
   }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  /* Do not read the scroll position while the parser is still building the
-     page: `window.scrollY` forces a synchronous layout of the half-parsed
-     document (the browser lays it out again a moment later anyway, so the
-     read only costs a second, wasted pass). One frame later is the same
-     result for a fraction of the work. */
-  requestAnimationFrame(onScroll);
 
   /* mobile menu */
   var menuBtn = $('#mobile-menu-btn');
