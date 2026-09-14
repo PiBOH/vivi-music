@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.65-alpha] - 2026-09-14
+
+### Fixed
+- [DE] **Playback no longer pauses or skips: decoding and output are two separate threads now**: the 1.50.63 buffer increase only bought headroom, because a single thread was still decoding the AAC, walking the sample table, waiting on the network *and* calling the blocking `SourceDataLine.write` on the same deadline — every hiccup of that thread (a 256 KB atom scan, a GC pause, a download wait while streaming, UI contention) went straight to the sound card as the micro-pause users hear on almost every song. The decode thread now renders PCM into an 8-second queue and a dedicated maximum-priority writer thread does nothing but hand those bytes to the line, so the writer can only ever be late if the queue itself ran dry — several seconds of audio, not a few hundred milliseconds. The queue is filled ahead at every play and seek, the queued tail is played out on a normal end of track instead of being cut, and a stop/seek/failure drops it immediately. (Fixes #4)
+- [DE] **The random audio gap is now measurable in the exported log**: the stall line in `playback.log` also reports how much audio was still queued (so "the decoder was slow but covered" is distinguishable from a real output gap), and the writer logs `audio output starved: queue empty waiting for decode` with the line's remaining headroom whenever the queue runs dry — the one and only situation that can still be audible. (Fixes #4)
+- [DE] **The macOS "Now Playing" tile appears on a fresh launch without touching the switch**: the app called `endSession` whenever there was no track — which includes startup, when `nowPlaying` is still null — and that unregistered the session; since registration only happened from the media-keys effect (keyed on its own switch), a first track afterwards reached a session that was gone and `setNowPlaying` returned early, so Control Center and the media keys stayed dead until the switch was toggled. Clearing the tile is now a separate native call (`viviClearNowPlaying`) that keeps the session, its handlers and the app identity alive, and pushing a track re-registers the session by itself if it was never registered or was torn down, so playback always brings Now Playing back. (Fixes #67)
+
 ## [6.0.6.3_DE-1.50.64-alpha] - 2026-09-13
 
 ### Fixed

@@ -34,6 +34,11 @@ object MacMediaSession {
 
     private val started = AtomicBoolean(false)
 
+    /** App name shown by the system tile; kept so the session can be
+     *  re-registered later without the caller passing it again. */
+    @Volatile
+    private var appName: String = "VIVI Music"
+
     // Native callback signatures (JNA marshals these across the FFI boundary).
     private fun interface VoidCb : Callback {
         fun invoke()
@@ -54,6 +59,7 @@ object MacMediaSession {
             durationMs: Double, positionMs: Double, playing: Int, artworkPath: String?,
         )
         fun viviEndSession()
+        fun viviClearNowPlaying()
         fun viviRequestNotificationPermission()
         fun viviNotify(title: String?, message: String?)
         fun viviSetCommandsEnabled(enabled: Int)
@@ -170,32 +176,43 @@ object MacMediaSession {
         this.onNext = onNext
         this.onPrevious = onPrevious
         this.onSeek = onSeek
+        this.appName = appName
         if (!isMac) return
-        val api = nativeApi ?: run {
-            log("session NOT started: native helper unavailable")
-            return
-        }
-        if (started.compareAndSet(false, true)) {
-            try {
-                val cbs = NativeCallbacks(
-                    playPause = VoidCb { this.onPlayPause?.invoke() },
-                    next = VoidCb { this.onNext?.invoke() },
-                    previous = VoidCb { this.onPrevious?.invoke() },
-                    seek = SeekCb { posMs -> this.onSeek?.invoke(posMs.toLong()) },
-                )
-                callbacks = cbs
-                api.viviRegisterCallbacks(cbs.playPause, cbs.next, cbs.previous, cbs.seek, VoidCb {})
-                api.viviSetAppIdentity(appName)
-                log("system Now Playing session registered (app=\"$appName\")")
-            } catch (t: Throwable) {
-                println("[mac-media] start failed: $t")
-                log("session registration failed: $t")
-                started.set(false)
-                return
-            }
-        }
+        ensureRegistered()
         // Re-apply the latest metadata (the tile may have been cleared).
         syncMetadata()
+    }
+
+    /**
+     * Registers the OS-level session (callbacks + app identity) exactly once.
+     * Idempotent and callable from any thread: the now-playing push re-runs it
+     * when the session was never registered OR was torn down, which is what
+     * made the tile appear only after toggling the switch (issue #67).
+     */
+    private fun ensureRegistered(): Boolean {
+        val api = nativeApi ?: run {
+            log("session NOT started: native helper unavailable")
+            return false
+        }
+        if (started.get()) return true
+        return try {
+            val cbs = NativeCallbacks(
+                playPause = VoidCb { this.onPlayPause?.invoke() },
+                next = VoidCb { this.onNext?.invoke() },
+                previous = VoidCb { this.onPrevious?.invoke() },
+                seek = SeekCb { posMs -> this.onSeek?.invoke(posMs.toLong()) },
+            )
+            callbacks = cbs
+            api.viviRegisterCallbacks(cbs.playPause, cbs.next, cbs.previous, cbs.seek, VoidCb {})
+            api.viviSetAppIdentity(appName)
+            started.set(true)
+            log("system Now Playing session registered (app=\"$appName\")")
+            true
+        } catch (t: Throwable) {
+            println("[mac-media] start failed: $t")
+            log("session registration failed: $t")
+            false
+        }
     }
 
     /**
@@ -220,7 +237,19 @@ object MacMediaSession {
         runCatching { api.viviSetWindowAppearance(if (dark) 1 else 0) }
     }
 
-    /** Stops the session (clears the tile) but keeps the handlers registered. */
+    /**
+     * Clears the system tile (nothing is playing / media keys switched off)
+     * WITHOUT tearing the session down: unregistering here is what broke the
+     * "start the app, then play" case, because nothing re-registered the
+     * session afterwards (issue #67).
+     */
+    fun clearNowPlaying() {
+        lastLoggedTitle = null
+        if (!isMac) return
+        runCatching { nativeApi?.viviClearNowPlaying() }
+    }
+
+    /** Stops the session (clears the tile and unregisters it). */
     fun endSession() {
         if (started.compareAndSet(true, false)) {
             runCatching { nativeApi?.viviEndSession() }
@@ -305,7 +334,11 @@ object MacMediaSession {
     // ------------------------------------------------------------------
 
     private fun syncMetadata() {
-        if (!started.get()) return
+        if (!isMac) return
+        // Self-healing: pushing a track must always be enough to make the tile
+        // appear, even if the session was never registered or was torn down
+        // (issue #67: it used to require toggling the switch).
+        if (!ensureRegistered()) return
         val api = nativeApi ?: return
         val m = metadata
         if (m.title != lastLoggedTitle) {

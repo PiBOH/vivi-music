@@ -264,6 +264,27 @@ void viviEndSession(void) {
     });
 }
 
+// Clears the tile (no track playing / media keys switched off) while keeping
+// the session, its handlers and the app identity alive. Kotlin used to call
+// viviEndSession for this, which unregistered the session: nothing re-registered
+// it later, so a fresh launch had a dead "Now Playing" until the media-keys
+// switch was toggled (issue #67).
+void viviClearNowPlaying(void) {
+    g_title = @"";
+    g_artist = @"";
+    g_album = @"";
+    g_playing = NO;
+    g_position = 0.0;
+    g_artworkPath = nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (@available(macOS 10.12.2, *)) {
+            [MPNowPlayingInfoCenter defaultCenter].playbackState =
+                MPNowPlayingPlaybackStateStopped;
+        }
+        [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
+    });
+}
+
 // Requests macOS notification permission (shown once by the system). Safe to
 // call repeatedly; the OS ignores repeated prompts.
 void viviRequestNotificationPermission(void) {

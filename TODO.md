@@ -3,6 +3,9 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.65 (FIX): playback is gap-free — the decode thread only renders PCM into an 8 s queue and a dedicated max-priority writer thread owns the sound card, so scans/network waits/GC pauses are no longer audible; the queued tail plays out on a normal end of track, and stop/seek/failure drops it immediately (#4).
+- [x] DE 1.50.65 (FIX): the output gap is diagnosable — the stall line in `playback.log` now includes the queued audio, and the writer logs `audio output starved: queue empty waiting for decode` with the line headroom when the queue runs dry (#4).
+- [x] DE 1.50.65 (FIX): macOS "Now Playing" works on a fresh launch without toggling the switch — the tile is cleared with the new `viviClearNowPlaying` (session, handlers and app identity stay alive) instead of `endSession`, and pushing a track re-registers the session on its own (#67).
 - [x] DE 1.50.64 (FIX): the header's audio output device button is wired to the real picker instead of being an empty click handler, and the device list is built from `Mixer.sourceLineInfo` so the default OS endpoint is listed (the strict format probe made it answer "no") (#77).
 - [x] DE 1.50.64: the mouse X1/X2 back/forward behaviour is unconditional — the Appearance switch and its persisted setting were removed (#78).
 - [x] DE 1.50.64: the header's leading no-op "Open menu" placeholder was replaced by the sidebar expand/collapse button (#79).

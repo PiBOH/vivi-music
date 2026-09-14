@@ -826,7 +826,11 @@ fun WindowScope.App(
         LaunchedEffect(nowPlaying?.videoId, isPlaying) {
             val np = nowPlaying
             if (np == null) {
-                MacMediaSession.endSession()
+                // No track: only the tile is cleared — the session stays
+                // registered, so the NEXT track brings it back on its own
+                // (tearing it down here left "Now Playing" dead until the
+                // media-keys switch was toggled, issue #67).
+                MacMediaSession.clearNowPlaying()
                 return@LaunchedEffect
             }
             while (true) {

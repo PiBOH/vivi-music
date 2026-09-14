@@ -22,8 +22,10 @@ import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
@@ -123,6 +125,19 @@ class AudioPlayer {
          *  at ~43 frames/s): short gaps, breaths and quiet attacks stay intact.
          *  With "Instantly skip silence" the wait is reduced to 2 frames. */
         const val MIN_SILENCE_RUN_FRAMES = 7
+
+        /**
+         * Seconds of already-decoded PCM the decode thread may run ahead of the
+         * sound card (issue #4). This is the real jitter headroom: the writer
+         * thread never blocks on anything but the queue, so a decode hiccup
+         * (GC, disk scan, network wait) stays inaudible until the queue drains.
+         * 8 s ≈ 1.4 MB at 44.1 kHz stereo 16-bit.
+         */
+        const val AUDIO_QUEUE_SECONDS = 8.0
+
+        /** How long the closing track waits for the writer to play out the
+         *  queued tail before the line is force-closed. */
+        const val WRITER_JOIN_MS = 15_000L
     }
 
     @Volatile private var line: SourceDataLine? = null
@@ -671,6 +686,11 @@ class AudioPlayer {
             // Declared here (not next to its first assignment below) so the
             // stall diagnostics can report the current playback time.
             var elapsedSeconds = 0.0
+            // Same reason: the PCM queue and the output line are built further
+            // down (they need the decoded format), so the stall diagnostics ask
+            // this provider for the queued audio instead of referencing them
+            // directly (-1 = not created yet).
+            var queuedPcmMs: () -> Int = { -1 }
             fun logStall(waitMs: Long) {
                 if (waitMs < 40) return
                 val now = System.currentTimeMillis()
@@ -683,10 +703,15 @@ class AudioPlayer {
                     if (bytesPerSec <= 0f) -1.0
                     else l.available().toDouble() / bytesPerSec * 1000.0
                 }.getOrDefault(-1.0)
+                // With the PCM queue in front of the writer this wait is only
+                // audible when the queue ALSO ran dry, so log what was still
+                // queued: it separates "decoder was slow but covered" from a
+                // real output gap.
+                val queuedMs = queuedPcmMs()
                 AppLog.log(
                     "playback",
                     "audio stall: waited ${waitMs}ms for data at ~${elapsedSeconds.toInt()}s " +
-                        "(line headroom ${freeMs.toInt()}ms)",
+                        "(line headroom ${freeMs.toInt()}ms, queued ${queuedMs}ms)",
                 )
             }
 
@@ -782,20 +807,17 @@ class AudioPlayer {
             val out = AudioOutput.openLine(format)
                 ?: throw IOException("No audio output device supports $format")
             line = out
-            // The output buffer is the ONLY jitter headroom between the decode
-            // thread (which also does disk scans, network waits and GC pauses)
-            // and the sound card: when the thread stalls longer than the buffer
-            // holds, the line underruns and you hear a micro-pause/skip. The old
-            // 8-16 KB buffers (~50-90 ms of audio) underran easily on macOS, and
-            // even 250 ms left the random sub-frame "pause" of issue #4 audible
-            // while the download is still catching up (a scan of a 256 KB atom
-            // burst plus a GC pause can exceed it). Ask for ~500 ms worth
+            // The line buffer is the LAST safety net: the PCM queue in front of
+            // the writer covers decoder stalls (seconds), this covers the writer
+            // thread itself being scheduled late (device changes, a CPU-saturated
+            // machine, the OS ignoring the JVM priority). Ask for ~1 s of audio
             // (computed from the real format) and only fall back to smaller
-            // sizes if the line rejects the bigger ones.
+            // sizes if the device rejects the bigger ones — the old 8-16 KB
+            // buffers (~50-90 ms) underran easily on macOS (issue #4).
             val outBufferBytes = (format.sampleRate * format.channels *
-                (format.sampleSizeInBits / 8) * 0.5).toInt().coerceAtLeast(16384)
-            // Fall back in halves before dropping to the tiny legacy buffers: a
-            // device that refuses 500 ms usually still accepts 250/125 ms, and
+                (format.sampleSizeInBits / 8)).toInt().coerceAtLeast(32768)
+            // Fall back in halves before dropping to the legacy buffers: a
+            // device that refuses 1 s usually still accepts 500/250/125 ms, and
             // anything above ~100 ms keeps the same underrun protection.
             // The old chain jumped straight to 16384 B (~90 ms) and then 8192 B
             // (~45 ms), i.e. the very sizes that made issue #4 audible.
@@ -849,6 +871,50 @@ class AudioPlayer {
                 decodeAt(index)
             }
 
+            /**
+             * Output decoupling (issue #4). Before, ONE thread decoded the AAC,
+             * walked the sample table, waited on the network and called the
+             * blocking `SourceDataLine.write` on the same deadline: any pause of
+             * that thread (GC, a 256 KB atom scan, a network wait while
+             * streaming, UI contention) went straight to the sound card as the
+             * random micro-pause/skip macOS users reported. Now the decode
+             * thread only renders PCM into this queue and a dedicated writer
+             * thread owns the line, so a decoder hiccup stays inaudible as long
+             * as the queue still holds audio.
+             */
+            val queueSlots = if (frameSeconds > 0.0) {
+                (AUDIO_QUEUE_SECONDS / frameSeconds).toInt().coerceIn(16, 1024)
+            } else {
+                64
+            }
+            val pcmQueue = ArrayBlockingQueue<ByteArray>(queueSlots)
+            /** Set when the producer is finished (end of track, error, stop):
+             *  tells the writer that an empty queue is final, so it exits. */
+            val producerDone = AtomicBoolean(false)
+            // Diagnostics for [logStall]: "how much audio is still queued for
+            // the writer", i.e. the jitter headroom left when the decoder had
+            // to wait for the download.
+            queuedPcmMs = {
+                runCatching {
+                    val bytes = pcmQueue.sumOf { it.size }
+                    val bytesPerSec = format.sampleRate * format.channels *
+                        (format.sampleSizeInBits / 8)
+                    if (bytesPerSec <= 0f) -1
+                    else (bytes * 1000.0 / bytesPerSec).toInt()
+                }.getOrDefault(-1)
+            }
+
+            /** Hands one rendered PCM frame to the writer, blocking while the
+             *  queue is full (that backpressure IS the look-ahead bound). */
+            fun enqueue(chunk: ByteArray) {
+                while (!stopped && gen == generation) {
+                    val ok = runCatching {
+                        pcmQueue.offer(chunk, 50L, TimeUnit.MILLISECONDS)
+                    }.getOrDefault(false)
+                    if (ok) return
+                }
+            }
+
             fun reportPosition() {
                 if (gen != generation) return
                 // Report the REAL playhead (frames the line has actually output)
@@ -872,6 +938,79 @@ class AudioPlayer {
                     lastReportMs = posMs
                     onPosition?.invoke(posMs)
                 }
+            }
+
+            /**
+             * The writer thread: it does NOTHING but hand pre-rendered PCM to
+             * the sound card, and it is the only thread that may be late. It
+             * also reports the playhead (the line's own frame counter, i.e. the
+             * audio actually played), so position reporting keeps following the
+             * real output instead of the decode look-ahead.
+             */
+            var lastStarveLogMs = 0L
+            val writer = Thread {
+                try {
+                    while (!stopped && gen == generation) {
+                        // Honour pause without writing a byte: the line is
+                        // stopped by pause() and the tile/position stay frozen.
+                        synchronized(lock) {
+                            while (paused && !stopped && gen == generation &&
+                                !producerDone.get()
+                            ) {
+                                lock.wait(25L)
+                            }
+                        }
+                        if (stopped || gen != generation) break
+                        if (paused && producerDone.get()) break
+
+                        val chunk = pcmQueue.poll(50L, TimeUnit.MILLISECONDS)
+                        if (chunk == null) {
+                            // Producer behind. Usually harmless (the line buffer
+                            // is still full), but it is the ONLY situation that
+                            // can be audible, so record it with the line's
+                            // remaining headroom for the exported log.
+                            if (producerDone.get()) break
+                            val now = System.currentTimeMillis()
+                            if (now - lastStarveLogMs >= 2_000L) {
+                                lastStarveLogMs = now
+                                val freeMs = runCatching {
+                                    val f = out.format
+                                    val bytesPerSec = f.sampleRate * f.channels *
+                                        (f.sampleSizeInBits / 8)
+                                    if (bytesPerSec <= 0f) -1.0
+                                    else out.available().toDouble() / bytesPerSec * 1000.0
+                                }.getOrDefault(-1.0)
+                                AppLog.log(
+                                    "playback",
+                                    "audio output starved: queue empty waiting for decode " +
+                                        "(line headroom ${freeMs.toInt()}ms)",
+                                )
+                            }
+                            continue
+                        }
+                        var written = 0
+                        while (written < chunk.size) {
+                            val n = out.write(chunk, written, chunk.size - written)
+                            if (n <= 0) break
+                            written += n
+                        }
+                        reportPosition()
+                    }
+                } catch (_: Throwable) {
+                    // stop()/seek closes the line under a blocked write: exit.
+                } finally {
+                    runCatching { out.drain() }
+                    runCatching { out.stop() }
+                    runCatching { out.close() }
+                    if (line === out) line = null
+                }
+            }.apply {
+                isDaemon = true
+                name = "vivimusic-audio-out"
+                // Only constraint of the whole pipeline: never be scheduled
+                // late. The decode thread may stall, this one must not.
+                priority = Thread.MAX_PRIORITY
+                start()
             }
 
             // Throttled buffered-fraction reports: decoded time available (samples
@@ -908,8 +1047,9 @@ class AudioPlayer {
             var suppressing = false
 
             fun emit() {
-                // Write the current frame to the output line (skipped while
-                // paused) and report the decoded position.
+                // Render the current frame into the PCM queue for the writer
+                // thread (skipped while paused); the playhead itself is reported
+                // by the writer, from the frames the line has actually played.
                 val doWrite = !paused && elapsedSeconds + buffer.length >= targetSeconds
                 var suppressed = false
                 if (doWrite && bitsPerSample == 16 && silenceEnabled) {
@@ -945,63 +1085,86 @@ class AudioPlayer {
                         if (bitsPerSample == 16) eq.process(data, bigEndian, buffer.sampleRate, buffer.channels)
                         else data
                     } ?: data
-                    var written = 0
-                    while (written < outData.size) {
-                        val n = out.write(outData, written, outData.size - written)
-                        if (n <= 0) break
-                        written += n
-                    }
+                    // Hand the frame to the writer instead of writing it here.
+                    // jaad reuses `buffer.data` for the next decode, so the
+                    // chunk is copied before being queued (the writer still owns
+                    // it after the following decodeFrame call).
+                    enqueue(outData.copyOf())
                     if (bitsPerSample == 16) {
                         levelTick = !levelTick
                         if (levelTick) onLevel?.invoke(rms16(outData, bigEndian))
                     }
                 }
-                reportPosition()
                 elapsedSeconds += buffer.length
             }
             emit()
             reportBuffered()
 
-            while (true) {
-                synchronized(lock) {
-                    while (paused && !stopped) {
-                        // While paused the download keeps filling the cache:
-                        // wait in short slices so newly arrived fragments are
-                        // scanned and the buffered fraction refreshed, instead
-                        // of sleeping until resume.
-                        lock.wait(BUFFERED_POLL_MS)
+            /**
+             * Producer loop: decode frames into the PCM queue. It runs AHEAD of
+             * the writer (up to the queue capacity), so disk scans, network
+             * waits and GC pauses no longer have to fit between two writes to
+             * the sound card (issue #4).
+             */
+            fun produceFrames() {
+                while (true) {
+                    synchronized(lock) {
+                        while (paused && !stopped) {
+                            // While paused the download keeps filling the cache:
+                            // wait in short slices so newly arrived fragments are
+                            // scanned and the buffered fraction refreshed, instead
+                            // of sleeping until resume.
+                            lock.wait(BUFFERED_POLL_MS)
+                            scanMore()
+                            reportBuffered()
+                            reportDuration()
+                        }
+                    }
+                    if (stopped || gen != generation) return
+
+                    if (index + 1 < samples.size) {
+                        awaitSample(index + 1)
+                        index++
+                        decodeAt(index)
+                        emit()
                         scanMore()
                         reportBuffered()
                         reportDuration()
+                    } else {
+                        // No next sample yet: grow the sample table as fragments
+                        // arrive, then poll until the download catches up.
+                        scanMore()
+                        reportBuffered()
+                        reportDuration()
+                        if (index + 1 < samples.size) continue
+                        if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
+                        if (!handle.complete) {
+                            Thread.sleep(DOWNLOAD_POLL_MS)
+                            continue
+                        }
+                        return // download complete and samples exhausted → end of track
                     }
                 }
-                if (stopped || gen != generation) break
+            }
 
-                if (index + 1 < samples.size) {
-                    // Decode + queue the next frame FIRST and scan for new
-                    // fragments only AFTER, so a scan spike (disk I/O over a
-                    // burst of newly arrived atoms) overlaps with audio that is
-                    // already queued instead of starving the output line.
-                    awaitSample(index + 1)
-                    index++
-                    decodeAt(index)
-                    emit()
-                    scanMore()
-                    reportBuffered()
-                    reportDuration()
-                } else {
-                    // No next sample yet: grow the sample table as fragments
-                    // arrive, then poll until the download catches up.
-                    scanMore()
-                    reportBuffered()
-                    reportDuration()
-                    if (index + 1 < samples.size) continue
-                    if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
-                    if (!handle.complete) {
-                        Thread.sleep(DOWNLOAD_POLL_MS)
-                        continue
-                    }
-                    break // download complete and samples exhausted → end of track
+            var endedNormally = false
+            try {
+                produceFrames()
+                endedNormally = true
+            } finally {
+                // Never leave the writer behind: on a normal end it plays out
+                // the queued tail first (so the last seconds are not cut), on a
+                // stop/seek/error the queued audio is dropped and the line is
+                // closed, which also unblocks a writer sitting inside write().
+                producerDone.set(true)
+                if (endedNormally && !stopped && gen == generation) {
+                    runCatching { writer.join(WRITER_JOIN_MS) }
+                }
+                if (stopped || gen != generation || !endedNormally || writer.isAlive) {
+                    pcmQueue.clear()
+                    runCatching { out.stop() }
+                    runCatching { out.close() }
+                    if (line === out) line = null
                 }
             }
 
@@ -1017,11 +1180,6 @@ class AudioPlayer {
                     )
                 }
             }
-
-            out.drain()
-            out.stop()
-            out.close()
-            if (line === out) line = null
         }
     }
 
