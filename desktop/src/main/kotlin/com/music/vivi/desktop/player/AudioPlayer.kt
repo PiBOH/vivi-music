@@ -166,6 +166,19 @@ class AudioPlayer {
         /** How long the closing track waits for the writer to play out the
          *  queued tail before the line is force-closed. */
         const val WRITER_JOIN_MS = 15_000L
+
+        /**
+         * PCM the decode thread keeps queued while playback is PAUSED (ms).
+         *
+         * The producer used to stop feeding the queue completely on pause, so
+         * a resume began with an EMPTY queue and an empty device ring: the
+         * sound card stayed silent for the first decode round-trip and the log
+         * recorded it as `audio output starved: queue empty waiting for decode`
+         * right after a resume (heard as a hiccup on every pause/play). A small
+         * pre-roll removes the gap without decoding the whole track ahead while
+         * paused: the download keeps filling the cache as before.
+         */
+        const val PAUSE_PREROLL_MS = 400
     }
 
     @Volatile private var line: SourceDataLine? = null
@@ -1267,11 +1280,14 @@ class AudioPlayer {
             fun produceFrames() {
                 while (true) {
                     synchronized(lock) {
-                        while (paused && !stopped) {
-                            // While paused the download keeps filling the cache:
-                            // wait in short slices so newly arrived fragments are
-                            // scanned and the buffered fraction refreshed, instead
-                            // of sleeping until resume.
+                        // Paused: hold a [PAUSE_PREROLL_MS] pre-roll in the queue
+                        // (so a resume has audio to write immediately instead of
+                        // starting on an empty queue — see PAUSE_PREROLL_MS) and
+                        // only then idle. While idling the download keeps filling
+                        // the cache: wait in short slices so newly arrived
+                        // fragments are scanned and the buffered fraction is
+                        // refreshed, instead of sleeping until resume.
+                        while (paused && !stopped && queuedPcmMs() < PAUSE_PREROLL_MS) {
                             lock.wait(BUFFERED_POLL_MS)
                             scanMore()
                             reportBuffered()

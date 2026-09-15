@@ -3,6 +3,12 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.67 (FIX): the Home "Your artists feed" header browses `FEmusic_library_corpus_artists` instead of the param-less library container (which the server rejects with 400), and a rejected browse gets the new E1032 code instead of being mislabelled E1031 ("sign in again") in the error box and in `browse.log` (#82).
+- [x] DE 1.50.67 (FIX): the live log window no longer crashes the app — log lines are keyed by a monotonic id from the logger instead of their text (two identical lines in the same millisecond killed it), and the home chip/mix rows (whose titles can repeat) are keyed by position + title (#80).
+- [x] DE 1.50.67 (FIX): the lyrics shown belong to the playing song — a KuGou candidate must match the requested song and artist names (token overlap, both field orderings, `feat.`/parenthesised suffixes ignored), not just the duration, and a synced file running >60 s past the end of the track is discarded; the module is shared with the Android app (#81).
+- [x] DE 1.50.67 (FIX): resuming from pause keeps the pre-rolled PCM in the queue instead of dropping it, so playback no longer starts with the silence logged as `audio output starved` (#4).
+- [x] DE 1.50.67: new `window` log category — the window's state (decorated/visible/iconified/bounds) at creation, when it is shown and on every minimize/maximize/restore, plus the Skiko render API and the screen-recording hint; always created and exported like the others.
+- [ ] DE: OBS/screen recording — verified that window capture sees and captures VIVI in **both** chrome modes (`SunAwtFrame`, no `WS_EX_TOOLWINDOW`, BitBlt returns real pixels in 80% of the sampled area); waiting for the exact symptom (window missing from the list vs black preview) before automating/documenting the WGC method.
 - [x] DE 1.50.66 (FIX): application callbacks leave the audio threads — position/level/buffered/duration go through a dedicated pump thread, so the seek bar, lyrics, crossfade and history can no longer delay the writer (#4).
 - [x] DE 1.50.66 (FIX): the device buffer is verified, maximized (up to 4 s) and logged at every track start; PCM is handed over in ~120 ms blocks; a cushion monitor logs `audio cushion low` before the ring can run dry, and a JVM stall watchdog logs stop-the-world pauses with heap/GC counters (#4).
 - [x] DE 1.50.66: JVM tuned for low pause times — 2 GB heap cap, 384 MB young-gen cap, 20 ms G1 pause target (the default 25%-of-RAM heap let G1 build far longer pauses) (#4).

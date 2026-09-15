@@ -19,5 +19,11 @@ data class SearchLyricsResponse(
         val productFrom: String, // Consider choosing '官方推荐歌词'
         val duration: Long,
         val accesskey: String,
+        // Names of the song this lyrics file belongs to (seconds-long
+        // duration). KuGou sometimes swaps them (song holds the artist and
+        // vice versa), which the matcher accounts for. Nullable so the model
+        // keeps working if the endpoint ever omits them.
+        val song: String? = null,
+        val singer: String? = null,
     )
 }

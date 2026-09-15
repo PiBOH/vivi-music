@@ -476,6 +476,42 @@ fun main(args: Array<String>) {
         val frameWindow = window
         awtWindowRef[0] = frameWindow
 
+        // Screen-recording tools (OBS and friends) list a window only when it
+        // is VISIBLE and NOT minimized — they enumerate with
+        // `EXCLUDE_MINIMIZED`, so a minimized VIVI (or one whose window has not
+        // been shown yet) is simply absent from the list. Recording the state
+        // turns "my recorder does not see VIVI" into something diagnosable
+        // from an exported log instead of guesswork. VIVI's window is a plain
+        // top-level frame (class `SunAwtFrame`) in BOTH chrome modes, without
+        // WS_EX_TOOLWINDOW, so it passes that filter once it is on screen.
+        DisposableEffect(frameWindow) {
+            fun recordWindowState(reason: String) {
+                runCatching {
+                    val iconified = (frameWindow.extendedState and java.awt.Frame.ICONIFIED) != 0
+                    AppLog.log(
+                        "window",
+                        "state=$reason decorated=${!frameWindow.isUndecorated} " +
+                            "visible=${frameWindow.isVisible} iconified=$iconified " +
+                            "bounds=${frameWindow.width}x${frameWindow.height}@${frameWindow.x},${frameWindow.y}",
+                    )
+                }
+            }
+            val listener = object : java.awt.event.WindowAdapter() {
+                override fun windowOpened(e: java.awt.event.WindowEvent) = recordWindowState("opened")
+                override fun windowStateChanged(e: java.awt.event.WindowEvent) = recordWindowState("state-changed")
+            }
+            frameWindow.addWindowListener(listener)
+            AppLog.log(
+                "window",
+                "render: skiko.renderApi=${System.getProperty("skiko.renderApi") ?: "default"}, " +
+                    "os=${System.getProperty("os.name")} ${System.getProperty("os.arch")} — " +
+                    "screen recorders find VIVI as VIVIMusic.exe; if the capture is black, " +
+                    "select the WGC method (Windows 10 19041+) instead of Automatic",
+            )
+            recordWindowState("created")
+            onDispose { runCatching { frameWindow.removeWindowListener(listener) } }
+        }
+
         // Restore the last placement with the OS APIs: OS maximize respects the
         // taskbar and the Windows DPI scaling, unlike Compose's placement which
         // can oversize an undecorated window. Floating bounds are clamped to the
