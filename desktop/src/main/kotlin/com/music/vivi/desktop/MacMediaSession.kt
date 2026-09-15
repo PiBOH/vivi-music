@@ -48,6 +48,13 @@ object MacMediaSession {
         fun invoke(positionMs: Double)
     }
 
+    /** Diagnostics channel: the native side reports every remote command the
+     *  system actually delivered ("remote play", "remote next", …), so a user
+     *  report can prove whether a media key reached the app at all (issue #67). */
+    private fun interface EventCb : Callback {
+        fun invoke(message: String?)
+    }
+
     // Typed JNA proxy (codebase pattern, e.g. MediaKeys' User32LL) — the C
     // functions are looked up once at load time.
     private interface ViviMediaLib : Library {
@@ -64,6 +71,7 @@ object MacMediaSession {
         fun viviNotify(title: String?, message: String?)
         fun viviSetCommandsEnabled(enabled: Int)
         fun viviSetWindowAppearance(dark: Int)
+        fun viviRegisterEventCallback(cb: EventCb)
     }
 
     private val native: ViviMediaLib? by lazy {
@@ -135,6 +143,10 @@ object MacMediaSession {
     @Volatile
     private var callbacks: NativeCallbacks? = null
 
+    /** Strong reference to the diagnostics callback (JNA requires it). */
+    @Volatile
+    private var eventCallback: EventCb? = null
+
     /** Latest playback state, re-applied on [start] and on artwork arrival. */
     private class Metadata(
         val title: String = "",
@@ -203,6 +215,13 @@ object MacMediaSession {
                 seek = SeekCb { posMs -> this.onSeek?.invoke(posMs.toLong()) },
             )
             callbacks = cbs
+            // Remote-command diagnostics: without this, "the media key did
+            // nothing" cannot be told apart from "the key never reached the
+            // app" (macOS routing), which is exactly the open question in
+            // issue #67.
+            val events = EventCb { message -> log("$message") }
+            eventCallback = events
+            api.viviRegisterEventCallback(events)
             api.viviRegisterCallbacks(cbs.playPause, cbs.next, cbs.previous, cbs.seek, VoidCb {})
             api.viviSetAppIdentity(appName)
             started.set(true)
@@ -259,6 +278,7 @@ object MacMediaSession {
     /** Releases the handlers (app shutdown). */
     fun stop() {
         endSession()
+        eventCallback = null
         onPlayPause = null
         onNext = null
         onPrevious = null

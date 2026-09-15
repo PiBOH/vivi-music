@@ -130,6 +130,31 @@ compose.desktop {
     application {
         mainClass = "com.music.vivi.desktop.MainKt"
 
+        // JVM tuning for glitch-free audio (issue #4).
+        //
+        // Audio is played by a Java thread that hands PCM to the sound card, and
+        // a stop-the-world pause freezes that thread no matter how much audio
+        // the app has buffered in its own queues: the device ring drains while
+        // the JVM is frozen, and the user hears a gap (the same pause is what
+        // makes the UI hitch at that moment).
+        //
+        // The default heap is 25% of the machine's RAM (a 6 GB max heap on a
+        // 24 GB Mac, as reported in a user's system info) and G1 is then free to
+        // grow the young generation up to 60% of it — i.e. collection sizes (and
+        // pauses) far beyond what a music player needs. Capping the heap and the
+        // young generation, and asking G1 for a 20 ms pause target, keeps the
+        // stop-the-world part in the low-millisecond range. All flags are
+        // product flags (no -XX:+UnlockExperimentalVMOptions needed) and were
+        // verified to start on Temurin 21.
+        jvmArgs += listOf(
+            "-Xmx2g",
+            "-XX:+UseG1GC",
+            "-XX:MaxGCPauseMillis=20",
+            "-XX:NewSize=128m",
+            "-XX:MaxNewSize=384m",
+            "-XX:MaxMetaspaceSize=256m",
+        )
+
         nativeDistributions {
             targetFormats(
                 TargetFormat.Msi,

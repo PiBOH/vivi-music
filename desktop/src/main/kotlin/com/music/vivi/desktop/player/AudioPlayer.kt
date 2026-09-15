@@ -135,6 +135,34 @@ class AudioPlayer {
          */
         const val AUDIO_QUEUE_SECONDS = 8.0
 
+        /**
+         * Seconds of audio we ASK the output line to buffer. The device decides
+         * what it grants: the granted size is what actually absorbs jitter, so
+         * it is logged at every track start (issue #4 — the real cushion has to
+         * be visible in the exported log, otherwise "it still skips" cannot be
+         * told apart from "the device kept the buffer small").
+         */
+        const val LINE_BUFFER_SECONDS = 1.0
+
+        /**
+         * PCM handed to the line in ONE `SourceDataLine.write` call (~120 ms).
+         * One write per AAC frame (~23 ms) means ~43 wakeups per second, each of
+         * which has to be scheduled in time to keep the device ring fed; bigger
+         * blocks mean ~8 wakeups per second and a steadier ring fill, with no
+         * extra latency (the audio is written ahead anyway).
+         */
+        const val WRITE_CHUNK_SECONDS = 0.12
+
+        /**
+         * Unplayed audio left in the device ring below which an audible gap is
+         * possible (issue #4). This is the cushion the user actually hears: the
+         * software PCM queue can hold seconds of audio, but if the ring empties
+         * there is nothing left to play, so crossing this line is the definitive
+         * evidence of a real (audible) underrun — and it is logged even when the
+         * decode queue is full, which is what no diagnostic could see before.
+         */
+        const val CUSHION_WARN_MS = 50.0
+
         /** How long the closing track waits for the writer to play out the
          *  queued tail before the line is force-closed. */
         const val WRITER_JOIN_MS = 15_000L
@@ -164,10 +192,22 @@ class AudioPlayer {
      */
     @Volatile var skipSilenceInstant: Boolean = false
 
-    private var onPosition: ((Long) -> Unit)? = null
-    private var onDuration: ((Long) -> Unit)? = null
+    @Volatile private var onPosition: ((Long) -> Unit)? = null
+    @Volatile private var onDuration: ((Long) -> Unit)? = null
     private var onError: ((String) -> Unit)? = null
     private var onComplete: (() -> Unit)? = null
+
+    /**
+     * Single thread that delivers the UI-facing callbacks (issue #4), so no
+     * application code ever runs on the decode/writer threads. See
+     * [CallbackPump].
+     */
+    private val pump = CallbackPump(
+        position = { onPosition?.invoke(it) },
+        level = { onLevel?.invoke(it) },
+        buffered = { onBufferedFraction?.invoke(it) },
+        duration = { onDuration?.invoke(it) },
+    )
 
     /**
      * Called with the instantaneous PCM level (0..1, RMS-normalized) once per
@@ -234,6 +274,9 @@ class AudioPlayer {
         this.onDuration = onDuration
         this.onError = onError
         this.onComplete = onComplete
+        // Records JVM stop-the-world pauses (the one thing our own buffering
+        // cannot cover) in playback.log from the first track on (issue #4).
+        JvmStallWatchdog.ensureRunning()
         startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction, fallbackDurationMs)
     }
 
@@ -508,6 +551,29 @@ class AudioPlayer {
     }.getOrDefault(false)
 
     /**
+     * Opens [line] with the biggest device buffer it will accept and returns the
+     * granted size in bytes (0 when nothing worked) — see the call site in
+     * [decodeAndPlay] for why this matters to issue #4.
+     *
+     * The candidates descend from 4× the wanted size to the legacy 8 KB: the
+     * first accepted one is the largest the device offers, and the granted size
+     * is read back with `getBufferSize()` because a backend is free to keep its
+     * own smaller ring even after accepting the request (the exported log then
+     * shows the real cushion instead of the wish).
+     */
+    private fun openWithLargestBuffer(line: SourceDataLine, format: AudioFormat, bytesPerSecond: Double): Int {
+        val target = (bytesPerSecond * LINE_BUFFER_SECONDS).toInt().coerceAtLeast(32768)
+        val candidates = intArrayOf(target * 4, target * 2, target, target / 2, target / 4, 16384, 8192)
+        for (size in candidates) {
+            if (size <= 0) continue
+            if (runCatching { line.open(format, size) }.isSuccess) {
+                return runCatching { line.bufferSize }.getOrDefault(size)
+            }
+        }
+        return 0
+    }
+
+    /**
      * Walks the root atoms of a possibly still-growing fragmented MP4, from
      * [from] until [until], appending the AAC sample table of every complete
      * `moof` box to [samples]. Returns the offset just past the last atom
@@ -778,7 +844,7 @@ class AudioPlayer {
                 val dur = currentDurationMs()
                 if (dur > reportedDurationMs && gen == generation) {
                     reportedDurationMs = dur
-                    onDuration?.invoke(dur)
+                    pump.publishDuration(dur)
                 }
             }
             reportDuration()
@@ -807,27 +873,38 @@ class AudioPlayer {
             val out = AudioOutput.openLine(format)
                 ?: throw IOException("No audio output device supports $format")
             line = out
-            // The line buffer is the LAST safety net: the PCM queue in front of
-            // the writer covers decoder stalls (seconds), this covers the writer
-            // thread itself being scheduled late (device changes, a CPU-saturated
-            // machine, the OS ignoring the JVM priority). Ask for ~1 s of audio
-            // (computed from the real format) and only fall back to smaller
-            // sizes if the device rejects the bigger ones — the old 8-16 KB
-            // buffers (~50-90 ms) underran easily on macOS (issue #4).
-            val outBufferBytes = (format.sampleRate * format.channels *
-                (format.sampleSizeInBits / 8)).toInt().coerceAtLeast(32768)
-            // Fall back in halves before dropping to the legacy buffers: a
-            // device that refuses 1 s usually still accepts 500/250/125 ms, and
-            // anything above ~100 ms keeps the same underrun protection.
-            // The old chain jumped straight to 16384 B (~90 ms) and then 8192 B
-            // (~45 ms), i.e. the very sizes that made issue #4 audible.
-            var lineOpened = false
-            for (size in intArrayOf(outBufferBytes, outBufferBytes / 2, outBufferBytes / 4, 16384, 8192)) {
-                if (size <= 0) continue
-                if (runCatching { out.open(format, size); lineOpened = true }.isSuccess) break
-            }
-            if (!lineOpened) throw IOException("Could not open the audio output device")
+            // The device buffer is the cushion the user actually hears: the PCM
+            // queue in front of the writer covers decoder stalls (seconds), but
+            // when the writer is frozen (JVM/GC pause) or simply scheduled late,
+            // the only audio left to play is what the device ring already holds.
+            // So: ask for more than we need, let the device decide, and LOG what
+            // it granted — the real cushion has to be visible in the exported log
+            // (issue #4), otherwise "it still skips" cannot be told apart from
+            // "the device kept the buffer small". A too-large request is refused
+            // rather than clamped by most backends, so the candidates descend:
+            // the first accepted size is the biggest one available, and the
+            // legacy 8-16 KB sizes (~45-90 ms, the ones that made issue #4
+            // audible) stay as the very last resort.
+            val bytesPerSecond = format.sampleRate.toDouble() * format.channels *
+                (format.sampleSizeInBits / 8)
+            val grantedBytes = openWithLargestBuffer(out, format, bytesPerSecond)
+            if (grantedBytes <= 0) throw IOException("Could not open the audio output device")
             out.start()
+            val lineBufferMs = (grantedBytes * 1000.0 / bytesPerSecond).toInt()
+            val silenceMode = when {
+                skipSilenceInstant -> "instant"
+                skipSilence -> "on"
+                else -> "off"
+            }
+            AppLog.log(
+                "playback",
+                "audio output: ${format.sampleRate.toInt()}Hz ${format.sampleSizeInBits}bit " +
+                    "${format.channels}ch, device buffer ${lineBufferMs}ms (asked " +
+                    "${(LINE_BUFFER_SECONDS * 1000).toInt()}ms), pcm queue " +
+                    "${AUDIO_QUEUE_SECONDS.toInt()}s, writes of " +
+                    "${(WRITE_CHUNK_SECONDS * 1000).toInt()}ms, volume ${(volume * 100).toInt()}%, " +
+                    "skip silence $silenceMode, equalizer ${if (equalizer != null) "on" else "off"}",
+            )
 
             val bigEndian = buffer.isBigEndian
             val bitsPerSample = buffer.bitsPerSample
@@ -936,7 +1013,10 @@ class AudioPlayer {
                 if (dur > 0) posMs = posMs.coerceAtMost(dur)
                 if (posMs - lastReportMs >= POSITION_REPORT_INTERVAL_MS) {
                     lastReportMs = posMs
-                    onPosition?.invoke(posMs)
+                    // Published to the callback pump: the app code behind this
+                    // (seek bar, lyrics, crossfade, history) must never run on
+                    // the thread that feeds the sound card (issue #4).
+                    pump.publishPosition(posMs)
                 }
             }
 
@@ -948,6 +1028,57 @@ class AudioPlayer {
              * real output instead of the decode look-ahead.
              */
             var lastStarveLogMs = 0L
+            var lastCushionLogMs = 0L
+            // One write per ~WRITE_CHUNK_SECONDS of audio instead of one per
+            // decoded frame (~23 ms): ~43 wakeups per second each have to be
+            // scheduled in time to keep the device fed, ~8 are far easier to
+            // honour, and the ring is refilled in bigger, steadier steps.
+            val writeChunkBytes = (bytesPerSecond * WRITE_CHUNK_SECONDS).toInt().coerceAtLeast(8192)
+            val writeBuffer = ByteArray(writeChunkBytes + 8192)
+            var pendingBytes = 0
+            var handedOverBytes = 0L
+
+            /** Audio already given to the device minus the audio it played: the
+             *  cushion that absorbs a late writer. Computed from the line's own
+             *  frame counter (verified to be the PLAYED position), so it does
+             *  not depend on our bookkeeping. */
+            fun cushionMs(): Double = runCatching {
+                val playedBytes = out.longFramePosition * format.frameSize.toLong()
+                (handedOverBytes - playedBytes) * 1000.0 / bytesPerSecond
+            }.getOrDefault(-1.0)
+
+            /** Hands the accumulated PCM to the line (blocking while the device
+             *  ring is full — that backpressure is the natural pacing). */
+            fun flushPending() {
+                if (pendingBytes <= 0) return
+                var done = 0
+                while (done < pendingBytes) {
+                    val n = out.write(writeBuffer, done, pendingBytes - done)
+                    if (n <= 0) break
+                    done += n
+                }
+                handedOverBytes += done.toLong()
+                pendingBytes = 0
+                // The only situation that can be audible: the device ring is
+                // about to run dry. Previously this was invisible, because the
+                // PCM queue in front of the writer can be seconds long while
+                // the ring empties (issue #4).
+                val cushion = cushionMs()
+                if (cushion >= 0.0 && cushion <= CUSHION_WARN_MS) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastCushionLogMs >= 3_000L) {
+                        lastCushionLogMs = now
+                        AppLog.log(
+                            "playback",
+                            "audio cushion low: only ${cushion.toInt()}ms of audio left in the device " +
+                                "buffer (~${lineBufferMs}ms total) — the output can run dry here " +
+                                "(queued for the writer: ${queuedPcmMs()}ms)",
+                        )
+                    }
+                }
+                reportPosition()
+            }
+
             val writer = Thread {
                 try {
                     while (!stopped && gen == generation) {
@@ -988,17 +1119,22 @@ class AudioPlayer {
                             }
                             continue
                         }
-                        var written = 0
-                        while (written < chunk.size) {
-                            val n = out.write(chunk, written, chunk.size - written)
-                            if (n <= 0) break
-                            written += n
-                        }
-                        reportPosition()
+                        // Bigger blocks: accumulate until the target size (or
+                        // until the incoming chunk would not fit).
+                        if (pendingBytes + chunk.size > writeBuffer.size) flushPending()
+                        System.arraycopy(chunk, 0, writeBuffer, pendingBytes, chunk.size)
+                        pendingBytes += chunk.size
+                        if (pendingBytes >= writeChunkBytes) flushPending()
                     }
                 } catch (_: Throwable) {
                     // stop()/seek closes the line under a blocked write: exit.
                 } finally {
+                    // Normal end of track: play out what is still held locally
+                    // (a few dozen ms) before draining the device ring. On a
+                    // stop/seek/pause the audio is dropped instead.
+                    if (producerDone.get() && !stopped && gen == generation && !paused) {
+                        runCatching { flushPending() }
+                    }
                     runCatching { out.drain() }
                     runCatching { out.stop() }
                     runCatching { out.close() }
@@ -1032,7 +1168,7 @@ class AudioPlayer {
                 val now = System.currentTimeMillis()
                 if (now - lastBufferedReportAt >= BUFFERED_POLL_MS) {
                     lastBufferedReportAt = now
-                    onBufferedFraction?.invoke(frac)
+                    pump.publishBuffered(frac)
                 }
             }
 
@@ -1045,6 +1181,12 @@ class AudioPlayer {
             var leading = true
             var silentRunFrames = 0
             var suppressing = false
+            // "Skip silence" deliberately drops audio, so it can be HEARD as a
+            // short skip: it must be visible in the log (issue #4 — a user
+            // hearing gaps must not be left wondering whether the app was
+            // supposed to cut that bit of the song).
+            var skippedFrames = 0
+            var skipLogs = 0
 
             fun emit() {
                 // Render the current frame into the PCM queue for the writer
@@ -1061,12 +1203,28 @@ class AudioPlayer {
                         // mode after the longer minimum (~150 ms) so breaths
                         // and quiet attacks stay intact.
                         val minRun = if (skipSilenceInstant) 2 else MIN_SILENCE_RUN_FRAMES
+                        // Count every frame of the run (also while suppressing)
+                        // so the log can report the real length of what was cut.
+                        silentRunFrames++
                         if (!suppressing) {
-                            if (leading || ++silentRunFrames >= minRun) suppressing = true
+                            if (leading || silentRunFrames >= minRun) suppressing = true
                         }
                         if (suppressing) suppressed = true
                     } else {
-                        // An audible frame ends any suppression window.
+                        // An audible frame ends any suppression window: report the
+                        // run that was just cut (few lines per track, so this can
+                        // never flood the log).
+                        if (suppressing) {
+                            skippedFrames += silentRunFrames
+                            if (skipLogs < 5) {
+                                skipLogs++
+                                AppLog.log(
+                                    "playback",
+                                    "skip silence: cut ${(silentRunFrames * buffer.length * 1000).toInt()}ms " +
+                                        "of silence at ~${elapsedSeconds.toInt()}s",
+                                )
+                            }
+                        }
                         suppressing = false
                         silentRunFrames = 0
                     }
@@ -1092,7 +1250,7 @@ class AudioPlayer {
                     enqueue(outData.copyOf())
                     if (bitsPerSample == 16) {
                         levelTick = !levelTick
-                        if (levelTick) onLevel?.invoke(rms16(outData, bigEndian))
+                        if (levelTick) pump.publishLevel(rms16(outData, bigEndian))
                     }
                 }
                 elapsedSeconds += buffer.length
@@ -1152,6 +1310,14 @@ class AudioPlayer {
                 produceFrames()
                 endedNormally = true
             } finally {
+                if (skippedFrames > 0) {
+                    AppLog.log(
+                        "playback",
+                        "skip silence: ${(skippedFrames * frameSeconds).toInt()}s of silence cut in " +
+                            "this track (${skippedFrames} frames) — " +
+                            "turn the option off if those jumps are unwanted",
+                    )
+                }
                 // Never leave the writer behind: on a normal end it plays out
                 // the queued tail first (so the last seconds are not cut), on a
                 // stop/seek/error the queued audio is dropped and the line is
@@ -1211,6 +1377,127 @@ class AudioPlayer {
         }
         if (count == 0) return 0f
         return kotlin.math.sqrt((sum / count).toFloat()).coerceIn(0f, 1f)
+    }
+
+    /**
+     * Delivers the playback callbacks (position/level/buffered/duration) to the
+     * app from ONE dedicated thread instead of the audio threads themselves
+     * (issue #4).
+     *
+     * The seek bar, the synced lyrics, the crossfade scheduling and the listen
+     * history all hang off these callbacks, i.e. off application code that can
+     * log to disk, hit the database or wake up the whole Compose tree. Running
+     * that on the thread that hands PCM to the sound card is a stall waiting to
+     * happen. Here the audio threads only publish the latest value (a couple of
+     * field writes) and this thread — which nothing waits on — invokes the
+     * callbacks at ~50 Hz, dropping intermediate values instead of queueing
+     * them (the UI only ever wants the newest position).
+     */
+    private class CallbackPump(
+        private val position: (Long) -> Unit,
+        private val level: (Float) -> Unit,
+        private val buffered: (Float) -> Unit,
+        private val duration: (Long) -> Unit,
+    ) : Thread("vivimusic-ui-pump") {
+
+        private val lock = Any()
+        private var pendingPosition: Long? = null
+        private var pendingLevel: Float? = null
+        private var pendingBuffered: Float? = null
+        private var pendingDuration: Long? = null
+
+        init {
+            isDaemon = true
+            priority = NORM_PRIORITY
+            start()
+        }
+
+        fun publishPosition(ms: Long) = synchronized(lock) { pendingPosition = ms }
+        fun publishLevel(value: Float) = synchronized(lock) { pendingLevel = value }
+        fun publishBuffered(fraction: Float) = synchronized(lock) { pendingBuffered = fraction }
+        fun publishDuration(ms: Long) = synchronized(lock) { pendingDuration = ms }
+
+        override fun run() {
+            while (true) {
+                var pos: Long? = null
+                var lvl: Float? = null
+                var buf: Float? = null
+                var dur: Long? = null
+                synchronized(lock) {
+                    pos = pendingPosition; pendingPosition = null
+                    lvl = pendingLevel; pendingLevel = null
+                    buf = pendingBuffered; pendingBuffered = null
+                    dur = pendingDuration; pendingDuration = null
+                }
+                // Duration first: the seek range must exist before a position
+                // can be interpreted against it.
+                dur?.let { runCatching { duration(it) } }
+                buf?.let { runCatching { buffered(it) } }
+                pos?.let { runCatching { position(it) } }
+                lvl?.let { runCatching { level(it) } }
+                try {
+                    Thread.sleep(20L)
+                } catch (_: InterruptedException) {
+                    return
+                }
+            }
+        }
+    }
+
+    /**
+     * Logs JVM-wide stalls (issue #4). A stop-the-world pause (GC, a safepoint
+     * operation) freezes EVERY thread, the writer included, so no amount of
+     * buffering inside our own threads can cover it: the device ring drains for
+     * as long as the pause lasts. This watcher measures how late a 50 ms sleep
+     * actually returned — a delay nobody in this process can cause except the
+     * JVM being frozen — and records it next to the heap and GC counters so a
+     * user report can be correlated with the audible gaps.
+     */
+    private object JvmStallWatchdog {
+
+        private val started = AtomicBoolean(false)
+
+        fun ensureRunning() {
+            if (!started.compareAndSet(false, true)) return
+            Thread {
+                val gcBeans = runCatching {
+                    java.lang.management.ManagementFactory.getGarbageCollectorMXBeans()
+                }.getOrDefault(emptyList())
+                val memory = runCatching {
+                    java.lang.management.ManagementFactory.getMemoryMXBean()
+                }.getOrNull()
+                var lastLogMs = 0L
+                while (true) {
+                    val start = System.currentTimeMillis()
+                    try {
+                        Thread.sleep(50L)
+                    } catch (_: InterruptedException) {
+                        return@Thread
+                    }
+                    val late = System.currentTimeMillis() - start - 50L
+                    if (late < 120L) continue
+                    val now = System.currentTimeMillis()
+                    if (now - lastLogMs < 1_000L) continue
+                    lastLogMs = now
+                    val heap = memory?.heapMemoryUsage
+                    val used = (heap?.used ?: 0L) / 1024 / 1024
+                    val max = (heap?.max ?: 0L) / 1024 / 1024
+                    val gc = gcBeans.joinToString(" ") { b -> "${b.name}:${b.collectionCount}/${b.collectionTime}ms" }
+                    runCatching {
+                        AppLog.log(
+                            "playback",
+                            "jvm stall: 50ms sleep returned ${late + 50}ms late " +
+                                "(= ${late}ms frozen; heap ${used}/${max}MB, gc $gc)",
+                        )
+                    }
+                }
+            }.apply {
+                isDaemon = true
+                name = "vivimusic-jvm-watchdog"
+                priority = Thread.MIN_PRIORITY
+                start()
+            }
+        }
     }
 
     /** Scales 16-bit PCM samples by [gain] (0..1), honoring [bigEndian] order. */

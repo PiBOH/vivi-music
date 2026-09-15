@@ -819,9 +819,9 @@ fun WindowScope.App(
     // macOS only: keep the system "Now Playing" tile in sync with the current
     // track. Gated by the same "Media keys" toggle as the session above (so
     // disabling it clears the tile; re-enabling re-pushes the current state).
-    // Runs once per track (and again when playback pauses) and pushes a
-    // position update every 500 ms while playing. Artwork is downloaded in the
-    // background by MacMediaSession itself.
+    // Runs once per track and pushes a position update every 500 ms while
+    // playing. Artwork is downloaded in the background by MacMediaSession
+    // itself (and decoded once per path on the native side).
     if (isMac && mediaKeysEnabled) {
         LaunchedEffect(nowPlaying?.videoId, isPlaying) {
             val np = nowPlaying
@@ -844,8 +844,14 @@ fun WindowScope.App(
                         it.startsWith("http://") || it.startsWith("https://")
                     },
                 )
-                if (!playerState.isPlaying) break
-                delay(500)
+                // While PAUSED the claim must stay alive too: with a track
+                // restored from the persistent queue nothing has been played
+                // since launch, and if the app stops being the system's "Now
+                // Playing" owner the first media-key press can't reach it, so
+                // the paused track could only be started by hand (issue #67).
+                // Refreshing the claim is cheap now that the native side caches
+                // the decoded artwork.
+                delay(if (playerState.isPlaying) 500L else 2_000L)
             }
         }
     }

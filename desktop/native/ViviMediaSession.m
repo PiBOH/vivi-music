@@ -25,12 +25,22 @@ typedef void (*vivi_next_cb)(void);
 typedef void (*vivi_previous_cb)(void);
 typedef void (*vivi_seek_cb)(double positionMs);
 typedef void (*vivi_artwork_cb)(void);
+typedef void (*vivi_event_cb)(const char *message);
 
 static vivi_play_pause_cb g_playPause = NULL;
 static vivi_next_cb g_next = NULL;
 static vivi_previous_cb g_previous = NULL;
 static vivi_seek_cb g_seek = NULL;
 static vivi_artwork_cb g_artwork = NULL;
+
+// Diagnostics callback (issue #67): reports every remote command the system
+// actually delivers to the app, so a user report can show whether a media key
+// ever reached VIVI at all (routing problem) or arrived and was mishandled.
+static vivi_event_cb g_event = NULL;
+
+static void ReportEvent(const char *message) {
+    if (g_event) g_event(message);
+}
 
 void viviRegisterSeekCallback(vivi_seek_cb cb);   // defined below
 void viviDispatchSeek(double positionMs);         // defined below
@@ -89,7 +99,29 @@ static NSImage *LoadImageSafely(NSString *path) {
     return img;
 }
 
+// Artwork is decoded ONCE per path. The metadata is re-pushed on every
+// position tick (twice a second), and re-reading + re-decoding the file every
+// time was pure main-thread work for an image that cannot change within a
+// track — the same main thread the system UI and the app's window run on.
+static NSString *g_artworkLoadedPath = nil;
+static NSImage *g_artworkImage = nil;
+
+static NSImage *CurrentArtwork(void) {
+    if (g_artworkPath.length == 0) return nil;
+    if (g_artworkImage != nil && [g_artworkLoadedPath isEqualToString:g_artworkPath]) {
+        return g_artworkImage;
+    }
+    g_artworkImage = LoadImageSafely(g_artworkPath);
+    g_artworkLoadedPath = g_artworkPath;
+    return g_artworkImage;
+}
+
 static void PushNowPlayingInfo(void) {
+    // The user switched the system integration OFF: never re-claim the tile or
+    // the media keys. Without this guard every later metadata push (the player
+    // re-publishes while playing) brought the tile straight back, which is why
+    // turning the switch off only took effect after a restart (issue #67).
+    if (!g_commandsEnabled) return;
     // Nothing to advertise yet: publishing an empty dictionary would put a
     // title-less tile in Control Center before the first track starts.
     if (g_title.length == 0 && g_artworkPath.length == 0) return;
@@ -102,7 +134,7 @@ static void PushNowPlayingInfo(void) {
     // scrubber slider state visible and correct.
     info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(MAX(g_position, 0.0));
     info[MPNowPlayingInfoPropertyPlaybackRate] = g_playing ? @1.0 : @0.0;
-    NSImage *art = LoadImageSafely(g_artworkPath);
+    NSImage *art = CurrentArtwork();
     if (art) {
         info[MPMediaItemPropertyArtwork] =
             [[MPMediaItemArtwork alloc] initWithBoundsSize:art.size
@@ -125,11 +157,75 @@ static void PushNowPlayingInfo(void) {
 // Exported C API (loaded by JNA).
 // ---------------------------------------------------------------------------
 
-// Applies g_commandsEnabled to every remote command (main queue only). The
-// handlers stay installed for the whole process; only their enabled flag
-// follows the switch, and re-asserting it is what makes a restart behave like
-// toggling the switch twice.
+// Installs the remote-command handlers exactly once (main queue only).
+static BOOL g_handlersInstalled = NO;
+
+static void InstallCommandHandlers(void) {
+    if (g_handlersInstalled) return;
+    MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+
+    [center.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote play");
+        if (g_playPause) g_playPause();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote pause");
+        if (g_playPause) g_playPause();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.togglePlayPauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote play/pause");
+        if (g_playPause) g_playPause();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.nextTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote next");
+        if (g_next) g_next();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.previousTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote previous");
+        if (g_previous) g_previous();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    // Scrubbing from the Lock Screen / Control Center slider.
+    [center.changePlaybackPositionCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        MPChangePlaybackPositionCommandEvent *posEvent =
+            (MPChangePlaybackPositionCommandEvent *)event;
+        ReportEvent("remote seek");
+        viviDispatchSeek(posEvent.positionTime * 1000.0);
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+
+    g_handlersInstalled = YES;
+}
+
+// Removes them again: this is what makes switching "Media keys" off take
+// effect immediately. Only flipping `enabled` left the app as the system's now
+// playing owner, so the keys kept arriving until the next restart (issue #67).
+static void RemoveCommandHandlers(void) {
+    if (!g_handlersInstalled) return;
+    MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+    [center.playCommand removeTarget:nil];
+    [center.pauseCommand removeTarget:nil];
+    [center.togglePlayPauseCommand removeTarget:nil];
+    [center.nextTrackCommand removeTarget:nil];
+    [center.previousTrackCommand removeTarget:nil];
+    [center.changePlaybackPositionCommand removeTarget:nil];
+    g_handlersInstalled = NO;
+}
+
+// Applies g_commandsEnabled to the remote commands (main queue only): enabled
+// installs/re-arms them, disabled removes them (and the tile is dropped by
+// viviSetCommandsEnabled). Re-asserting this is also what makes a restart
+// behave like toggling the switch twice.
 static void ApplyCommandsEnabled(void) {
+    if (g_commandsEnabled) {
+        InstallCommandHandlers();
+    } else {
+        RemoveCommandHandlers();
+    }
     MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
     center.playCommand.enabled = g_commandsEnabled;
     center.pauseCommand.enabled = g_commandsEnabled;
@@ -151,37 +247,13 @@ void viviRegisterCallbacks(vivi_play_pause_cb pp, vivi_next_cb nx, vivi_previous
 
     dispatch_async(dispatch_get_main_queue(), ^{
         ApplyCommandsEnabled();
-        // Local handle for the handler registrations below.
-        MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
-
-        [center.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_playPause) g_playPause();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_playPause) g_playPause();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.togglePlayPauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_playPause) g_playPause();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.nextTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_next) g_next();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.previousTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_previous) g_previous();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        // Scrubbing from the Lock Screen / Control Center slider.
-        [center.changePlaybackPositionCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            MPChangePlaybackPositionCommandEvent *posEvent =
-                (MPChangePlaybackPositionCommandEvent *)event;
-            viviDispatchSeek(posEvent.positionTime * 1000.0);
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
     });
+}
+
+// Registers the diagnostics callback (see vivi_event_cb). Optional: without it
+// the helper behaves exactly as before.
+void viviRegisterEventCallback(vivi_event_cb cb) {
+    g_event = cb;
 }
 
 // Sets the app identity shown in the system tile. The tile takes the visible

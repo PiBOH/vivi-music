@@ -3,6 +3,11 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.66 (FIX): application callbacks leave the audio threads — position/level/buffered/duration go through a dedicated pump thread, so the seek bar, lyrics, crossfade and history can no longer delay the writer (#4).
+- [x] DE 1.50.66 (FIX): the device buffer is verified, maximized (up to 4 s) and logged at every track start; PCM is handed over in ~120 ms blocks; a cushion monitor logs `audio cushion low` before the ring can run dry, and a JVM stall watchdog logs stop-the-world pauses with heap/GC counters (#4).
+- [x] DE 1.50.66: JVM tuned for low pause times — 2 GB heap cap, 384 MB young-gen cap, 20 ms G1 pause target (the default 25%-of-RAM heap let G1 build far longer pauses) (#4).
+- [x] DE 1.50.66: "Skip silence" reports what it cuts (per-run length + per-track total) so an intentional jump can't be mistaken for a playback gap (#4).
+- [x] DE 1.50.66 (FIX): macOS "Media keys" off applies immediately (handlers removed, tile can't be re-claimed) and a paused loaded track keeps the "Now Playing" claim, with every delivered remote command logged (#67).
 - [x] DE 1.50.65 (FIX): playback is gap-free — the decode thread only renders PCM into an 8 s queue and a dedicated max-priority writer thread owns the sound card, so scans/network waits/GC pauses are no longer audible; the queued tail plays out on a normal end of track, and stop/seek/failure drops it immediately (#4).
 - [x] DE 1.50.65 (FIX): the output gap is diagnosable — the stall line in `playback.log` now includes the queued audio, and the writer logs `audio output starved: queue empty waiting for decode` with the line headroom when the queue runs dry (#4).
 - [x] DE 1.50.65 (FIX): macOS "Now Playing" works on a fresh launch without toggling the switch — the tile is cleared with the new `viviClearNowPlaying` (session, handlers and app identity stay alive) instead of `endSession`, and pushing a track re-registers the session on its own (#67).
