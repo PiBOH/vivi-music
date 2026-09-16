@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.70-alpha] - 2026-09-16
+
+### Fixed
+- [DE] **Wrong lyrics finally disappear**: fetched lyrics are cached on disk and served without asking a provider again, so a wrong association survives any fix to the resolver — the reported `Blu Da Ba Dee` kept showing `Move Your Body (DJ Gabry Ponte Original Video Edit) - Eiffel 65` even after 1.50.67 fixed exactly that matching, because the entry was written before it. Verified on the reporting machine: `~/.vivimusic/cache/lyrics` held a single file, `68ugkg9RePc.s.v4.txt` (the video id of `Blu Da Ba Dee`), containing that other song. The cache version is bumped to v5, so entries written by an older resolver are ignored and re-fetched once with the current matching; the version is a named constant now, with the rule that **any** change to provider selection or validation must bump it. ([issue #84](https://github.com/PiBOH/vivi-music/issues/84))
+
+### Removed
+- [DE] **The video-captions lyrics source added in 1.50.69 is gone again**: `get_transcript` answers `400 FAILED_PRECONDITION` to the synthesised params for **every** video — captioned ones included (`dQw4w9WgXcQ`, `9bZkp7q19f0` and the reported track tested with the exact client context and headers the app sends, with and without a visitor id) — so that source cannot answer anything; the Android app lists the same one as `YouTubeSubtitle`, which means it is failing silently there as well. It only added a failed round-trip to every lookup, so the 1.50.69 entry above is corrected by this one. ([issue #84](https://github.com/PiBOH/vivi-music/issues/84))
+
 ## [6.0.6.3_DE-1.50.69-alpha] - 2026-09-16
 
 ### Fixed
