@@ -47,9 +47,11 @@ object LyricsCache {
      * without a bump a wrong association survives the fix forever: the reported
      * `Blu Da Ba Dee` kept showing `Move Your Body - Eiffel 65` (the exact
      * mismatch fixed by the KuGou matching in 1.50.67) because that entry was
-     * still on disk in `68ugkg9RePc.s.v4.txt`. v5 invalidates it; v4 separated
-     * the fetch modes; v3 invalidated first-answer-wins entries; v2 invalidated
-     * single-provider, no-duration lookups.
+     * still on disk in `68ugkg9RePc.s.v4.txt`. v6 invalidates the answers of the
+     * pre-Unicode-folding matcher (stylized titles could only match the wrong
+     * song or nothing at all); v5 invalidated the wrong-song KuGou match; v4
+     * separated the fetch modes; v3 invalidated first-answer-wins entries; v2
+     * invalidated single-provider, no-duration lookups.
      */
     private fun file(videoId: String, preferSynced: Boolean): File {
         val safe = videoId.replace(Regex("[^A-Za-z0-9._-]"), "_")
@@ -58,7 +60,7 @@ object LyricsCache {
     }
 
     /** Cache format version — see [file] for when and why to bump it. */
-    private const val CACHE_VERSION = 5
+    private const val CACHE_VERSION = 6
 
     private fun memKey(videoId: String, preferSynced: Boolean) = "$videoId|${if (preferSynced) "s" else "p"}"
 }

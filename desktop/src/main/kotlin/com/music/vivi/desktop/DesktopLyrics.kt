@@ -4,6 +4,7 @@ import com.music.innertube.YouTube
 import com.music.innertube.models.WatchEndpoint
 import com.music.kugou.KuGou
 import com.music.lrclib.LrcLib
+import com.music.lyrics.TextFolding
 import com.music.musixmatch.Musixmatch
 import com.music.paxsenix.Paxsenix
 import com.music.unison.Unison
@@ -108,14 +109,24 @@ object DesktopLyrics {
         // YouTube Music lyrics last as an exact-text guarantee. Album is
         // passed through like the mobile app does — it helps the providers
         // pick the right recording (radio edit vs original, live vs studio).
+        // Providers match against plain-text catalogues, while YouTube Music
+        // titles/artists are full of decorative Unicode (`ＭＩＧＵＥＬ 𝑷𝒉𝒐𝒏𝒌`,
+        // `𝗖𝗥𝗢𝗪𝗡 𝗕𝗘𝗔𝗥`): the folded text (`MIGUEL Phonk`, `CROWN BEAR`) is
+        // what every provider is queried with, while the original stays in the
+        // log so the user still recognises the track. Without this, those tracks
+        // matched nothing anywhere and ended up with no lyrics at all.
+        val queryTitle = TextFolding.fold(title)
+        val queryArtist = TextFolding.fold(artist)
+        val queryAlbum = album?.let { TextFolding.fold(it) }
+
         val providers: List<Pair<String, suspend () -> Result<String>>> = listOf(
-            "LrcLib" to { LrcLib.getLyrics(title, artist, durationSec, album) },
-            "BetterLyrics" to { BetterLyrics.getLyrics(title, artist, durationSec, album) },
-            "YouLyPlus" to { YouLyPlus.getLyrics(title, artist, durationSec, album, id = videoId) },
-            "KuGou" to { KuGou.getLyrics(title, artist, durationSec, album) },
-            "Musixmatch" to { Musixmatch.getLyrics(title, artist, durationSec, album) },
-            "Paxsenix" to { Paxsenix.getLyrics(title, artist, durationSec, album) },
-            "Unison" to { Unison.getLyrics(title, artist, durationSec, album, videoId = videoId) },
+            "LrcLib" to { LrcLib.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "BetterLyrics" to { BetterLyrics.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "YouLyPlus" to { YouLyPlus.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum, id = videoId) },
+            "KuGou" to { KuGou.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "Musixmatch" to { Musixmatch.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "Paxsenix" to { Paxsenix.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "Unison" to { Unison.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum, videoId = videoId) },
         )
 
         AppLog.log(

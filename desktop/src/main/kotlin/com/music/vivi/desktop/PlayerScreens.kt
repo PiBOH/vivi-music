@@ -182,7 +182,9 @@ fun PlayerScreen(
     background: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
-    audioLevel: Float = 0f,
+    /** Live audio level for the VISUALIZER background (never collected here —
+     *  [PlayerBackground] collects it inside that one branch). */
+    audioLevel: kotlinx.coroutines.flow.StateFlow<Float>? = null,
     onBack: (() -> Unit)? = null,
     progressiveSeek: Boolean = false,
 ) {

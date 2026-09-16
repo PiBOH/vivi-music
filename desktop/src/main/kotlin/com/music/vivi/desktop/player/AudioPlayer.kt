@@ -94,6 +94,17 @@ class AudioPlayer {
     @Volatile private var paused = false
     @Volatile private var stopped = false
     @Volatile private var volume = 1f
+
+    /**
+     * Device-side gain, when the sound card exposes one. The fallback (scaling
+     * the PCM we hand to the line) can only affect audio that has NOT reached
+     * the device yet, and the device ring holds up to a full second — so the
+     * slider used to be heard only after that already-queued second had played
+     * out. The driver's own gain is applied while the ring is consumed, which
+     * makes the change audible immediately.
+     */
+    @Volatile private var deviceGain: javax.sound.sampled.FloatControl? = null
+    @Volatile private var deviceMute: javax.sound.sampled.BooleanControl? = null
     private val lock = Object()
 
     private companion object {
@@ -102,6 +113,17 @@ class AudioPlayer {
          *  audio by up to ~50 ms because the UI only ever saw every second
          *  decoded tick. Still throttled well below one report per frame. */
         const val POSITION_REPORT_INTERVAL_MS = 50L
+
+        /**
+         * Level callbacks are decimated (every third decoded frame, ~14/s) so
+         * the audio-reactive visualizer drives about a third of the UI
+         * recompositions of a per-frame feed: the frame-rate UI load was
+         * starving the audio scheduler on slower machines, causing micro
+         * pauses/skips that coincided with small UI hitches. The visualizer
+         * tween (120 ms) is far longer than the gap between updates, so it
+         * still looks continuous.
+         */
+        const val LEVEL_DECIMATION = 3
 
         /** Bytes that must be on disk before the MP4 demuxer is created: the
          *  `moov` box (decoder setup) lives at the head of the file, before the
@@ -341,6 +363,27 @@ class AudioPlayer {
     /** Sets playback volume in the 0f..1f range. */
     fun setVolume(v: Float) {
         volume = v.coerceIn(0f, 1f)
+        applyDeviceVolume()
+    }
+
+    /**
+     * Pushes [volume] to the device gain when the line has one (instant, and it
+     * applies to what is already buffered); without one the writer keeps
+     * scaling the PCM it hands over, one block at a time.
+     */
+    private fun applyDeviceVolume() {
+        val gain = deviceGain ?: return
+        val v = volume
+        runCatching {
+            if (v <= 0.0005f) {
+                deviceMute?.value = true
+                gain.value = gain.minimum
+            } else {
+                deviceMute?.value = false
+                val db = (20.0 * kotlin.math.log10(v.toDouble())).toFloat()
+                gain.value = db.coerceIn(gain.minimum, gain.maximum)
+            }
+        }
     }
 
     fun pause() {
@@ -361,6 +404,8 @@ class AudioPlayer {
         runCatching { line?.stop() }
         runCatching { line?.close() }
         line = null
+        deviceGain = null
+        deviceMute = null
     }
 
     private fun startDecode(
@@ -378,6 +423,9 @@ class AudioPlayer {
         runCatching { line?.stop() }
         runCatching { line?.close() }
         line = null
+        // The gain control belongs to the line that was just closed.
+        deviceGain = null
+        deviceMute = null
         paused = startPaused
         stopped = false
         currentStreams = streams
@@ -1008,6 +1056,12 @@ class AudioPlayer {
             val grantedBytes = openWithLargestBuffer(out, format, bytesPerSecond)
             if (grantedBytes <= 0) throw IOException("Could not open the audio output device")
             out.start()
+            // Instant volume: hand the level to the driver's own gain when the
+            // backend has one (see [deviceGain]); otherwise the writer keeps
+            // scaling the PCM blocks it writes.
+            deviceGain = AudioOutput.masterGain(out)
+            deviceMute = AudioOutput.mute(out)
+            applyDeviceVolume()
             val lineBufferMs = (grantedBytes * 1000.0 / bytesPerSecond).toInt()
             val silenceMode = when {
                 skipSilenceInstant -> "instant"
@@ -1020,7 +1074,8 @@ class AudioPlayer {
                     "${format.channels}ch, device buffer ${lineBufferMs}ms (asked " +
                     "${(LINE_BUFFER_SECONDS * 1000).toInt()}ms), pcm queue " +
                     "${AUDIO_QUEUE_SECONDS.toInt()}s, writes of " +
-                    "${(WRITE_CHUNK_SECONDS * 1000).toInt()}ms, volume ${(volume * 100).toInt()}%, " +
+                    "${(WRITE_CHUNK_SECONDS * 1000).toInt()}ms, volume ${(volume * 100).toInt()}% " +
+                    "(${if (deviceGain != null) "device gain" else "pcm scaling"}), " +
                     "skip silence $silenceMode, equalizer ${if (equalizer != null) "on" else "off"}",
             )
 
@@ -1038,12 +1093,8 @@ class AudioPlayer {
             // not recompose once per decoded frame (~43/s). Reporting ~10/s keeps
             // the slider smooth and draggable while staying accurate to ~100 ms.
             var lastReportMs = -POSITION_REPORT_INTERVAL_MS
-            // Level callbacks are decimated (every other decoded frame, ~20/s)
-            // so the audio-reactive visualizer drives about half the UI
-            // recompositions of before: the frame-rate UI load was starving the
-            // audio scheduler on macOS, causing micro pauses/skips that
-            // coincided with small UI hitches.
-            var levelTick = false
+            // Level callbacks are decimated (see [LEVEL_DECIMATION]).
+            var levelTick = 0
 
             // Jump straight to the AAC frame that contains the requested
             // position instead of decoding (and discarding) every frame from
@@ -1180,7 +1231,7 @@ class AudioPlayer {
                 // write block (~120 ms), and the value the output actually used
                 // is logged.
                 val gain = volume
-                val data = if (gain < 0.999f && bitsPerSample == 16) {
+                val data = if (deviceGain == null && gain < 0.999f && bitsPerSample == 16) {
                     scale16(writeBuffer, gain, bigEndian)
                 } else {
                     writeBuffer
@@ -1449,11 +1500,11 @@ class AudioPlayer {
                     // it after the following decodeFrame call).
                     enqueue(outData.copyOf())
                     if (bitsPerSample == 16) {
-                        levelTick = !levelTick
+                        levelTick = (levelTick + 1) % LEVEL_DECIMATION
                         // The level keeps the volume in its scale so the
                         // visualizer still follows the slider, even though the
                         // gain itself is applied later, by the writer.
-                        if (levelTick) pump.publishLevel(rms16(outData, bigEndian) * volume)
+                        if (levelTick == 0) pump.publishLevel(rms16(outData, bigEndian) * volume)
                     }
                 }
                 elapsedSeconds += buffer.length

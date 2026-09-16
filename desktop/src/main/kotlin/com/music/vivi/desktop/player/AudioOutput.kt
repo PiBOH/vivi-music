@@ -3,7 +3,9 @@ package com.music.vivi.desktop.player
 import com.music.vivi.desktop.DesktopSettings
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
+import javax.sound.sampled.BooleanControl
 import javax.sound.sampled.DataLine
+import javax.sound.sampled.FloatControl
 import javax.sound.sampled.SourceDataLine
 
 /**
@@ -83,6 +85,20 @@ object AudioOutput {
      * saved device is gone or does not accept the format, the system default is
      * used instead.
      */
+    /**
+     * The line's own [FloatControl.Type.MASTER_GAIN], when the backend exposes
+     * one (Windows DirectSound, CoreAudio and ALSA all do; a bare software
+     * mixer may not). The driver applies this gain while it consumes its ring,
+     * so a change is audible instantly — unlike scaling the PCM we hand over,
+     * which can only affect audio that has not reached the device yet.
+     */
+    fun masterGain(line: SourceDataLine): FloatControl? =
+        runCatching { line.getControl(FloatControl.Type.MASTER_GAIN) as? FloatControl }.getOrNull()
+
+    /** The line's own mute switch, used for the exact 0% case of the gain path. */
+    fun mute(line: SourceDataLine): BooleanControl? =
+        runCatching { line.getControl(BooleanControl.Type.MUTE) as? BooleanControl }.getOrNull()
+
     fun openLine(format: AudioFormat): SourceDataLine? {
         val name = selectedName
         if (name.isNotBlank()) {

@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -31,6 +33,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /** Player layout variant (ported from the mobile player-design toggles). */
 enum class PlayerDesign(val key: String) {
@@ -132,11 +136,14 @@ fun PlayerBackground(
     accent: Color,
     modifier: Modifier = Modifier,
     /**
-     * Current audio level (0..1) driving the VISUALIZER style; ignored by the
-     * other styles. Supplied by the caller so it stays decoupled from the
-     * audio pipeline.
+     * Live audio level flow (0..1) driving the VISUALIZER style; ignored by the
+     * other styles, and never collected outside that branch. It is handed over
+     * as a FLOW on purpose: collecting it in the caller (the app root, as it
+     * used to be) recomposed the whole player/app tree on every audio tick
+     * (~14/s), which is real UI load competing with the audio scheduler while
+     * music plays. Collecting it here means only this small wrapper recomposes.
      */
-    audioLevel: Float = 0f,
+    audioLevel: StateFlow<Float>? = null,
     /** True while audio is actually playing (drives the visualizer decay). */
     isPlaying: Boolean = true,
 ) {
@@ -222,10 +229,13 @@ fun PlayerBackground(
                 }
             }
             PlayerBackgroundStyle.LIVE_MESH -> LiveMeshBackground(accent)
-            PlayerBackgroundStyle.VISUALIZER -> VisualizerBackground(
-                level = if (isPlaying) audioLevel else 0f,
-                accent = accent,
-            )
+            PlayerBackgroundStyle.VISUALIZER -> {
+                val level by (audioLevel ?: remember { MutableStateFlow(0f) }).collectAsState()
+                VisualizerBackground(
+                    level = if (isPlaying) level else 0f,
+                    accent = accent,
+                )
+            }
         }
     }
 }

@@ -796,7 +796,12 @@ fun WindowScope.App(
     val recentSeedTracks by player.recentTracks.collectAsState()
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
-    val audioLevel by player.audioLevel.collectAsState()
+    // NOTE: the live audio level is deliberately NOT collected here. Reading it
+    // at the app root recomposed this whole composable (and every screen below
+    // it) on every audio tick (~14/s while a track plays), which is exactly the
+    // steady UI load that competes with the audio writer on slower machines.
+    // It is passed down as a flow instead and collected only inside the
+    // visualizer background that displays it.
 
     // Restore the active EQ profile (Settings → Player & audio → Equalizer) on
     // startup so the saved equalization applies from the first track.
@@ -1575,6 +1580,14 @@ fun WindowScope.App(
     // locally-applied remote value isn't bounced straight back.
     LaunchedEffect(syncManager) {
         while (true) {
+            // Unpaired: nothing to push. Idling here keeps the loop from
+            // building snapshots (and poking the sync socket) several times a
+            // second for the whole session, on the same machine that is playing
+            // audio.
+            if (!syncManager.paired.value) {
+                delay(2_000L)
+                continue
+            }
             if (DesktopSettings.load().syncViviVolume) {
                 val v = player.state.value.volume
                 val isEcho = System.currentTimeMillis() < volumeGuard.echoUntil &&
@@ -1610,6 +1623,7 @@ fun WindowScope.App(
         var lastPushedPositionMs = -1L
         while (true) {
             delay(SyncServer.RESYNC_TICK_MS)
+            if (!syncManager.paired.value) continue
             val s = player.state.value
             // Only push when the position actually advanced: a stalled/frozen
             // player must not repeatedly drag the peer back to the same point.
@@ -1628,6 +1642,13 @@ fun WindowScope.App(
     // in-app VIVI volume slider).
     LaunchedEffect(syncManager) {
         while (true) {
+            // Unpaired: there is no peer to mirror the OS volume with, so skip
+            // the native read (a COM round-trip on Windows) altogether instead
+            // of doing it twice a second for nothing.
+            if (!syncManager.paired.value) {
+                delay(2_000L)
+                continue
+            }
             val sv = SystemVolume.get()
             if (sv != null) {
                 val isEcho = System.currentTimeMillis() < systemVolumeGuard.echoUntil &&
@@ -2864,7 +2885,7 @@ fun WindowScope.App(
                         background = playerBackground,
                         rotatingThumbnail = rotatingThumbnail,
                         accent = accent,
-                        audioLevel = audioLevel,
+                        audioLevel = player.audioLevel,
                         onBack = goBack,
                         progressiveSeek = progressiveSeek,
                     )

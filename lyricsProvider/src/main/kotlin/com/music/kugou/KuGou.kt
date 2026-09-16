@@ -4,6 +4,7 @@ import com.music.kugou.models.DownloadLyricsResponse
 import com.music.kugou.models.Keyword
 import com.music.kugou.models.SearchLyricsResponse
 import com.music.kugou.models.SearchSongResponse
+import com.music.lyrics.TextFolding
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.compression.ContentEncoding
@@ -202,8 +203,14 @@ object KuGou {
 
     private val NON_ALPHANUMERIC = Regex("[^\\p{L}\\p{Nd}]+")
 
+    /**
+     * Tokens of [text], folded to plain Unicode first: a stylized title
+     * (`ＭＩＧＵＥＬ 𝑷𝒉𝒐𝒏𝒌`) and a catalogue entry (`Miguel Phonk`) must produce
+     * the same tokens, otherwise the title/artist check below rejects the
+     * correct candidate and those tracks never get lyrics at all.
+     */
     private fun tokens(text: String?): Set<String> =
-        text.orEmpty()
+        TextFolding.fold(text.orEmpty())
             .lowercase()
             .split(NON_ALPHANUMERIC)
             .asSequence()
