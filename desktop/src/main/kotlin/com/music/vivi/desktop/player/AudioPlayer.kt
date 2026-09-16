@@ -80,6 +80,13 @@ class AudioPlayer {
 
     private var thread: Thread? = null
 
+    /**
+     * Probe for the playback cushion (issue #4): decoded PCM still queued plus
+     * source already downloaded but not yet decoded, in seconds. Set by the
+     * running decode session (see [playbackCushionSeconds]).
+     */
+    @Volatile private var cushionProbe: (() -> Double)? = null
+
     /** Incremented on every (re)start; stale threads ignore their callbacks. */
     private var generation = 0
 
@@ -143,6 +150,34 @@ class AudioPlayer {
          * told apart from "the device kept the buffer small").
          */
         const val LINE_BUFFER_SECONDS = 1.0
+
+        /**
+         * Seconds of audio that must already be on disk before the output line
+         * is opened (issue #4). Playback used to start with only the first
+         * fragment (~2 s) downloaded, so the PCM queue could never fill and the
+         * whole pipeline ran pinned to the download frontier: every pause in the
+         * delivery — and every "skip silence" cut, which consumes source WITHOUT
+         * producing output — reached the sound card as a gap. A few seconds of
+         * source first turn those into inaudible stalls.
+         */
+        const val PREBUFFER_SECONDS = 8.0
+
+        /**
+         * Wall-clock cap on the pre-buffer wait (ms): progressive playback must
+         * still start in seconds on a slow link, so after this the track starts
+         * with whatever the network managed to deliver.
+         */
+        const val PREBUFFER_MAX_WAIT_MS = 3_000L
+
+        /**
+         * Source seconds (downloaded, not yet decoded) a silence cut requires
+         * before it is allowed (issue #4). A cut runs the decoder forward
+         * without producing output, so making one while the download is close
+         * behind is exactly what starves the sound card; when the cushion is
+         * thin the silence is played instead (a natural pause beats a dropout)
+         * and the download catches back up.
+         */
+        const val CUT_MIN_CUSHION_SECONDS = 3.0
 
         /**
          * PCM handed to the line in ONE `SourceDataLine.write` call (~120 ms).
@@ -420,6 +455,16 @@ class AudioPlayer {
         cacheDir.listFiles { f -> f.name.startsWith("$safe.m4a") && f.name.endsWith(".part") }
             ?.forEach { it.delete() }
     }
+
+    /**
+     * Seconds of headroom the playback pipeline already holds (decoded PCM in
+     * the queue + source on disk not yet decoded). Used to keep the look-ahead
+     * prefetch from competing with the track the user is listening to.
+     * [Double.MAX_VALUE] when nothing is playing, so an idle or paused player
+     * never blocks caching.
+     */
+    fun playbackCushionSeconds(): Double =
+        runCatching { cushionProbe?.invoke() ?: Double.MAX_VALUE }.getOrDefault(Double.MAX_VALUE)
 
     /** Downloads [streams] for [cacheKey] without playing (look-ahead prefetch).
      *  Joins an in-flight download if one already exists, so a play that starts
@@ -765,12 +810,17 @@ class AudioPlayer {
             // Declared here (not next to its first assignment below) so the
             // stall diagnostics can report the current playback time.
             var elapsedSeconds = 0.0
+            // Byte rate of the decoded stream, assigned once the format is known
+            // (further down): with it the stall diagnostics turn "waited 424 ms
+            // for data" into "the download was N s behind", which is what
+            // separates a slow network from a slow decoder (issue #4).
+            var audioBytesPerSecond = 0.0
             // Same reason: the PCM queue and the output line are built further
             // down (they need the decoded format), so the stall diagnostics ask
             // this provider for the queued audio instead of referencing them
             // directly (-1 = not created yet).
             var queuedPcmMs: () -> Int = { -1 }
-            fun logStall(waitMs: Long) {
+            fun logStall(waitMs: Long, missingBytes: Long) {
                 if (waitMs < 40) return
                 val now = System.currentTimeMillis()
                 if (now - lastStallLogMs < 2_000L) return
@@ -787,10 +837,22 @@ class AudioPlayer {
                 // queued: it separates "decoder was slow but covered" from a
                 // real output gap.
                 val queuedMs = queuedPcmMs()
+                // The missing source in SECONDS, measured the moment the wait
+                // started: "waited X ms for Y s of audio" says how far behind
+                // the download was and at what speed it caught up (issue #4).
+                val missingText = if (audioBytesPerSecond > 0.0) {
+                    "%.1fs behind".format(
+                        java.util.Locale.US,
+                        missingBytes / audioBytesPerSecond,
+                    )
+                } else {
+                    "lag unknown"
+                }
                 AppLog.log(
                     "playback",
                     "audio stall: waited ${waitMs}ms for data at ~${elapsedSeconds.toInt()}s " +
-                        "(line headroom ${freeMs.toInt()}ms, queued ${queuedMs}ms)",
+                        "(line headroom ${freeMs.toInt()}ms, queued ${queuedMs}ms, " +
+                        "download $missingText)",
                 )
             }
 
@@ -799,6 +861,9 @@ class AudioPlayer {
             fun awaitSample(index: Int) {
                 val (offset, size) = samples[index]
                 val waitStart = System.currentTimeMillis()
+                // How much source the decoder was still missing when it started
+                // to wait: reported as seconds by [logStall] (issue #4).
+                val missingAtStart = (offset + size - handle.downloadedBytes).coerceAtLeast(0L)
                 while (offset + size > handle.downloadedBytes && !handle.complete && !handle.failed) {
                     Thread.sleep(DOWNLOAD_POLL_MS)
                     scanMore()
@@ -806,7 +871,7 @@ class AudioPlayer {
                 // Only a wait that RESOLVED (the sample did arrive) is a stall:
                 // the other exit path throws right below.
                 if (offset + size <= handle.downloadedBytes) {
-                    logStall(System.currentTimeMillis() - waitStart)
+                    logStall(System.currentTimeMillis() - waitStart, missingAtStart)
                 }
                 if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
                 if (offset + size > handle.downloadedBytes) {
@@ -876,6 +941,34 @@ class AudioPlayer {
                 )
             }
 
+            // Source pre-buffer (issue #4). With only the starting fragment on
+            // disk the PCM queue could never fill, so the whole pipeline ran
+            // pinned to the download frontier and every delivery pause (or
+            // silence cut) was audible. Waiting for [PREBUFFER_SECONDS] of source
+            // first — bounded by [PREBUFFER_MAX_WAIT_MS] so a slow link still
+            // starts in seconds, and skipped entirely for a complete file —
+            // gives the queue something to absorb those hiccups with.
+            if (!handle.complete && firstFrameSeconds > 0.0) {
+                val prebufferDeadline = System.currentTimeMillis() + PREBUFFER_MAX_WAIT_MS
+                val neededSeconds = PREBUFFER_SECONDS
+                while (!stopped && gen == generation && !handle.failed &&
+                    firstFrameSeconds * samples.size < neededSeconds &&
+                    System.currentTimeMillis() < prebufferDeadline
+                ) {
+                    Thread.sleep(DOWNLOAD_POLL_MS)
+                    scanMore()
+                    reportDuration()
+                }
+                AppLog.log(
+                    "playback",
+                    "pre-buffered ${("%.1f".format(java.util.Locale.US, firstFrameSeconds * samples.size))}s " +
+                        "of source before starting the output " +
+                        "(wanted ${PREBUFFER_SECONDS.toInt()}s)",
+                )
+                if (handle.failed) throw IOException(handle.failure ?: "Audio download failed")
+                if (stopped || gen != generation) return@use
+            }
+
             val format = AudioFormat(
                 buffer.sampleRate.toFloat(),
                 buffer.bitsPerSample,
@@ -900,6 +993,7 @@ class AudioPlayer {
             // audible) stay as the very last resort.
             val bytesPerSecond = format.sampleRate.toDouble() * format.channels *
                 (format.sampleSizeInBits / 8)
+            audioBytesPerSecond = bytesPerSecond
             val grantedBytes = openWithLargestBuffer(out, format, bytesPerSecond)
             if (grantedBytes <= 0) throw IOException("Could not open the audio output device")
             out.start()
@@ -1124,10 +1218,20 @@ class AudioPlayer {
                                     if (bytesPerSec <= 0f) -1.0
                                     else out.available().toDouble() / bytesPerSec * 1000.0
                                 }.getOrDefault(-1.0)
+                                // The cushion is the only number that decides
+                                // whether this wait is AUDIBLE (issue #4): with
+                                // nothing unplayed left the device has gone
+                                // silent, and this is the one state the
+                                // "cushion low" check cannot see, because it
+                                // only runs when there is something to write.
+                                val cushion = cushionMs()
+                                val ranDry = cushion >= 0.0 && cushion <= CUSHION_WARN_MS
+                                val dryNote = if (ranDry) " — the device ran dry here" else ""
                                 AppLog.log(
                                     "playback",
                                     "audio output starved: queue empty waiting for decode " +
-                                        "(line headroom ${freeMs.toInt()}ms)",
+                                        "(line headroom ${freeMs.toInt()}ms, unplayed " +
+                                        "${cushion.toInt()}ms)$dryNote",
                                 )
                             }
                             continue
@@ -1160,6 +1264,24 @@ class AudioPlayer {
                 // late. The decode thread may stall, this one must not.
                 priority = Thread.MAX_PRIORITY
                 start()
+            }
+
+            // Playback cushion probe (issue #4): what the look-ahead prefetch
+            // checks before it takes bandwidth (see [playbackCushionSeconds]).
+            // MAX_VALUE means "no playback to protect", which keeps an idle or
+            // paused player from blocking the cache pass.
+            cushionProbe = {
+                if (gen != generation || stopped) {
+                    Double.MAX_VALUE
+                } else {
+                    val queuedSeconds = queuedPcmMs().coerceAtLeast(0) / 1000.0
+                    val frontierSeconds = if (audioBytesPerSecond > 0.0) {
+                        handle.downloadedBytes / audioBytesPerSecond
+                    } else {
+                        elapsedSeconds
+                    }
+                    queuedSeconds + (frontierSeconds - elapsedSeconds).coerceAtLeast(0.0)
+                }
             }
 
             // Throttled buffered-fraction reports: decoded time available (samples
@@ -1200,6 +1322,16 @@ class AudioPlayer {
             // supposed to cut that bit of the song).
             var skippedFrames = 0
             var skipLogs = 0
+            var cutHoldLogs = 0
+            /**
+             * Source seconds already on disk but not decoded yet: the headroom a
+             * silence cut consumes from (issue #4). It is thin exactly when the
+             * download is at the frontier, which is when a cut must not happen.
+             */
+            fun sourceCushionSeconds(): Double {
+                if (audioBytesPerSecond <= 0.0) return Double.MAX_VALUE
+                return handle.downloadedBytes / audioBytesPerSecond - elapsedSeconds
+            }
 
             fun emit() {
                 // Render the current frame into the PCM queue for the writer
@@ -1220,7 +1352,26 @@ class AudioPlayer {
                         // so the log can report the real length of what was cut.
                         silentRunFrames++
                         if (!suppressing) {
-                            if (leading || silentRunFrames >= minRun) suppressing = true
+                            if (leading || silentRunFrames >= minRun) {
+                                // A cut runs the decoder forward WITHOUT producing
+                                // output, so it may only consume headroom that
+                                // exists (issue #4): with the download close
+                                // behind, skipping the silence would starve the
+                                // sound card, while playing it costs nothing and
+                                // lets the download catch back up.
+                                val cushion = sourceCushionSeconds()
+                                if (cushion >= CUT_MIN_CUSHION_SECONDS) {
+                                    suppressing = true
+                                } else if (cutHoldLogs < 3) {
+                                    cutHoldLogs++
+                                    AppLog.log(
+                                        "playback",
+                                        "skip silence: held back at ~${elapsedSeconds.toInt()}s — only " +
+                                            "${"%.1f".format(java.util.Locale.US, cushion.coerceAtLeast(0.0))}s " +
+                                            "of source buffered (cutting here would starve the output)",
+                                    )
+                                }
+                            }
                         }
                         if (suppressing) suppressed = true
                     } else {

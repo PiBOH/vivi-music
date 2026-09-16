@@ -1515,9 +1515,24 @@ fun WindowScope.App(
                 // (an old pass must not keep downloading stale tracks).
                 prefetchJob?.cancel()
                 prefetchJob = launch(Dispatchers.IO) {
+                    // Seconds of the playing track's own headroom below which the
+                    // cache pass yields (see the wait inside the loop).
+                    val prefetchMinCushionSeconds = 20.0
                     val order = (listOfNotNull(currentTrack) + nearestFirst + restOfQueue).distinctBy { it.videoId }
                     for (track in order) {
                         if (player.isCached(track.videoId)) continue
+                        // The cache pass must never take bandwidth away from the
+                        // track the user is actually listening to (issue #4):
+                        // while that track's own cushion is thin the pass waits
+                        // and resumes as soon as the stream is comfortably
+                        // ahead. Bounded, so a failed download cannot park it
+                        // forever.
+                        val cushionDeadline = System.currentTimeMillis() + 60_000L
+                        while (player.playbackCushionSeconds() < prefetchMinCushionSeconds &&
+                            System.currentTimeMillis() < cushionDeadline
+                        ) {
+                            delay(500)
+                        }
                         val streams = StreamResolver.resolveAacStream(
                             track.videoId,
                             StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),

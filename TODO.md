@@ -3,6 +3,10 @@
 Legend: `[x]` done · `[ ]` to do · `[~]` in progress
 
 ## Phase 0 — Desktop foundation (completed)
+- [x] DE 1.50.68 (FIX): streaming playback pre-buffers 8 s of source before the output line is opened (capped at 3 s of wall clock, skipped for a cached file), so the PCM queue has something to absorb delivery pauses with instead of running pinned to the download frontier (#4).
+- [x] DE 1.50.68 (FIX): "Skip silence" only cuts when at least 3 s of source is buffered ahead — it consumes source without producing output, so cutting at the frontier was what starved the sound card; otherwise the silence plays and the hold-back is logged (#4).
+- [x] DE 1.50.68 (FIX): the stall line now reports the missing source in seconds (`download 0.9s behind`) and `audio output starved` reports the unplayed cushion plus "the device ran dry here", closing the one hole the `audio cushion low` check could not see (#4).
+- [x] DE 1.50.68 (FIX): the look-ahead cache pass waits while the playing track's cushion is below 20 s (bounded at 60 s), so prefetching can no longer take bandwidth from the stream being listened to (#4).
 - [x] DE 1.50.67 (FIX): the Home "Your artists feed" header browses `FEmusic_library_corpus_artists` instead of the param-less library container (which the server rejects with 400), and a rejected browse gets the new E1032 code instead of being mislabelled E1031 ("sign in again") in the error box and in `browse.log` (#82).
 - [x] DE 1.50.67 (FIX): the live log window no longer crashes the app — log lines are keyed by a monotonic id from the logger instead of their text (two identical lines in the same millisecond killed it), and the home chip/mix rows (whose titles can repeat) are keyed by position + title (#80).
 - [x] DE 1.50.67 (FIX): the lyrics shown belong to the playing song — a KuGou candidate must match the requested song and artist names (token overlap, both field orderings, `feat.`/parenthesised suffixes ignored), not just the duration, and a synced file running >60 s past the end of the track is discarded; the module is shared with the Android app (#81).

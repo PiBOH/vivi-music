@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.68-alpha] - 2026-09-16
+
+### Fixed
+- [DE] **Streaming playback keeps a real cushion instead of running on the download frontier**: playback started with only the first fragment (~2 s) on disk, so the 8 s PCM queue could never fill up and the whole pipeline stayed pinned to the frontier — every pause in the delivery reached the sound card as a gap. The output line now waits for the pre-buffer (8 s of source) before it is opened, capped at 3 s of wall clock so a slow link still starts in seconds and skipped entirely for a cached file, and the wait is written to `playback.log` (`pre-buffered 6.2s of source before starting the output (wanted 8s)`). ([issue #4](https://github.com/PiBOH/vivi-music/issues/4))
+- [DE] **"Skip silence" can no longer starve the sound card**: a cut runs the decoder forward *without* producing output, so making one while the download is close behind is exactly what caused the reported dropouts (the log shows 1.5-2.2 s of silence cut every few seconds on a silence-heavy track, and `audio stall: waited 424ms for data` right next to it, while the output line was empty). A cut is now only allowed when at least 3 s of source is already buffered ahead; otherwise the silence is played instead — a natural pause beats a dropout, and it lets the download catch back up — with each hold-back logged (`skip silence: held back at ~42s — only 0.4s of source buffered`). ([issue #4](https://github.com/PiBOH/vivi-music/issues/4))
+- [DE] **The stall diagnostics now say how far behind the download is**: `audio stall: waited 424ms for data at ~1s (line headroom 1000ms, queued 0ms, download 0.9s behind)` — the pair "waited X ms for Y s of source" tells a slow network apart from a slow decoder, which the previous line could not. The `audio output starved` line also reports the unplayed cushion now and states when the device ran dry, the one state the `audio cushion low` check could never see because it only runs when there is something left to write. ([issue #4](https://github.com/PiBOH/vivi-music/issues/4))
+- [DE] **The look-ahead cache pass yields to the track that is playing**: the queue prefetch waits while the playing track's own cushion (decoded PCM + source already downloaded) is below 20 s, so filling the cache can no longer take bandwidth away from the stream the user is listening to; the wait is bounded at 60 s per track, so a failed download cannot park the pass. ([issue #4](https://github.com/PiBOH/vivi-music/issues/4))
+
 ## [6.0.6.3_DE-1.50.67-alpha] - 2026-09-15
 
 ### Fixed
