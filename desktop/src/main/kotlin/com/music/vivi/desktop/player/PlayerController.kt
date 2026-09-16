@@ -130,6 +130,9 @@ class PlayerController {
 
         /** Cap for the related tracks fetched at the end of the queue. */
         const val MAX_AUTO_LOAD_RELATED = 15
+
+        /** Idle time after the last volume change before it is persisted (ms). */
+        const val VOLUME_PERSIST_DEBOUNCE_MS = 400L
     }
 
     private val _state = MutableStateFlow(PlayerState())
@@ -677,8 +680,21 @@ class PlayerController {
         _state.update { it.copy(volume = clamped) }
         // Persist the volume so it survives restarts instead of resetting to
         // the default maximum (also covers volumes applied by device sync).
-        runCatching { DesktopSettings.update { it.copy(playerVolume = clamped) } }
+        // The write is coalesced: dragging the slider emits ~20 changes per
+        // second and every DesktopSettings.update() re-reads and rewrites the
+        // whole settings file on the calling thread — pathologically, on the
+        // very thread that has to keep the UI responsive while audio plays.
+        // The audio and the UI state still follow the slider instantly; only
+        // the last value is written, once the drag has been still for a moment.
+        volumePersistJob?.cancel()
+        volumePersistJob = scope.launch {
+            delay(VOLUME_PERSIST_DEBOUNCE_MS)
+            runCatching { DesktopSettings.update { it.copy(playerVolume = clamped) } }
+        }
     }
+
+    /** Pending coalesced volume write (see [setVolume]). */
+    private var volumePersistJob: Job? = null
 
     /**
      * Applies an EQ profile to the PCM stream (null = equalization off). The

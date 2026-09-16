@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
+import kotlin.math.roundToInt
 
 /**
  * Self-contained AAC player: downloads the MP4 stream to a local cache file,
@@ -322,9 +323,10 @@ class AudioPlayer {
         this.onDuration = onDuration
         this.onError = onError
         this.onComplete = onComplete
-        // Records JVM stop-the-world pauses (the one thing our own buffering
-        // cannot cover) in playback.log from the first track on (issue #4).
-        JvmStallWatchdog.ensureRunning()
+        // Records the stalls that reach the audio path — measured at the
+        // writer's own thread priority, with heap/GC/CPU context — in
+        // playback.log from the first track on (issue #4).
+        AudioPriorityWatchdog.ensureRunning()
         startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction, fallbackDurationMs)
     }
 
@@ -810,11 +812,14 @@ class AudioPlayer {
             // Declared here (not next to its first assignment below) so the
             // stall diagnostics can report the current playback time.
             var elapsedSeconds = 0.0
-            // Byte rate of the decoded stream, assigned once the format is known
-            // (further down): with it the stall diagnostics turn "waited 424 ms
-            // for data" into "the download was N s behind", which is what
-            // separates a slow network from a slow decoder (issue #4).
-            var audioBytesPerSecond = 0.0
+            // SOURCE (compressed) bytes per second, measured from the sample
+            // walk and assigned once the table exists: with it the stall
+            // diagnostics turn "waited 424 ms for data" into "the download was
+            // N s behind", which is what separates a slow network from a slow
+            // decoder. The PCM byte rate must NOT be used here — the stream is
+            // compressed, so dividing AAC bytes by the PCM rate under-reports
+            // by an order of magnitude.
+            var sourceBytesPerSecond: () -> Double = { 0.0 }
             // Same reason: the PCM queue and the output line are built further
             // down (they need the decoded format), so the stall diagnostics ask
             // this provider for the queued audio instead of referencing them
@@ -840,11 +845,9 @@ class AudioPlayer {
                 // The missing source in SECONDS, measured the moment the wait
                 // started: "waited X ms for Y s of audio" says how far behind
                 // the download was and at what speed it caught up (issue #4).
-                val missingText = if (audioBytesPerSecond > 0.0) {
-                    "%.1fs behind".format(
-                        java.util.Locale.US,
-                        missingBytes / audioBytesPerSecond,
-                    )
+                val sourceRate = sourceBytesPerSecond()
+                val missingText = if (sourceRate > 0.0) {
+                    "%.1fs behind".format(java.util.Locale.US, missingBytes / sourceRate)
                 } else {
                     "lag unknown"
                 }
@@ -941,6 +944,15 @@ class AudioPlayer {
                 )
             }
 
+            // The compressed source rate, from what the sample walk has measured
+            // so far (scanned bytes / scanned seconds); used by the stall
+            // diagnostics only, and recomputed on every read because both sides
+            // grow as the download advances.
+            sourceBytesPerSecond = {
+                val scannedSeconds = samples.size * firstFrameSeconds
+                if (scannedTo > 0L && scannedSeconds > 0.0) scannedTo / scannedSeconds else 0.0
+            }
+
             // Source pre-buffer (issue #4). With only the starting fragment on
             // disk the PCM queue could never fill, so the whole pipeline ran
             // pinned to the download frontier and every delivery pause (or
@@ -993,7 +1005,6 @@ class AudioPlayer {
             // audible) stay as the very last resort.
             val bytesPerSecond = format.sampleRate.toDouble() * format.channels *
                 (format.sampleSizeInBits / 8)
-            audioBytesPerSecond = bytesPerSecond
             val grantedBytes = openWithLargestBuffer(out, format, bytesPerSecond)
             if (grantedBytes <= 0) throw IOException("Could not open the audio output device")
             out.start()
@@ -1144,6 +1155,8 @@ class AudioPlayer {
             val writeBuffer = ByteArray(writeChunkBytes + 8192)
             var pendingBytes = 0
             var handedOverBytes = 0L
+            /** Last gain actually used for a write (logged when it changes). */
+            var appliedVolume = -1f
 
             /** Audio already given to the device minus the audio it played: the
              *  cushion that absorbs a late writer. Computed from the line's own
@@ -1158,9 +1171,30 @@ class AudioPlayer {
              *  ring is full — that backpressure is the natural pacing). */
             fun flushPending() {
                 if (pendingBytes <= 0) return
+                // The volume is applied HERE, on the block that is about to be
+                // handed to the device — not while the frames are decoded. The
+                // producer renders up to AUDIO_QUEUE_SECONDS ahead, so scaling
+                // at decode time made a volume change audible only after the
+                // whole queue had played out: on a cached track that is ~8 s of
+                // "the slider moved but nothing happened". Here the delay is one
+                // write block (~120 ms), and the value the output actually used
+                // is logged.
+                val gain = volume
+                val data = if (gain < 0.999f && bitsPerSample == 16) {
+                    scale16(writeBuffer, gain, bigEndian)
+                } else {
+                    writeBuffer
+                }
+                if (gain != appliedVolume) {
+                    appliedVolume = gain
+                    AppLog.log(
+                        "volume",
+                        "output gain now ${(gain * 100).roundToInt()}%",
+                    )
+                }
                 var done = 0
                 while (done < pendingBytes) {
-                    val n = out.write(writeBuffer, done, pendingBytes - done)
+                    val n = out.write(data, done, pendingBytes - done)
                     if (n <= 0) break
                     done += n
                 }
@@ -1275,11 +1309,10 @@ class AudioPlayer {
                     Double.MAX_VALUE
                 } else {
                     val queuedSeconds = queuedPcmMs().coerceAtLeast(0) / 1000.0
-                    val frontierSeconds = if (audioBytesPerSecond > 0.0) {
-                        handle.downloadedBytes / audioBytesPerSecond
-                    } else {
-                        elapsedSeconds
-                    }
+                    // Source already scanned (therefore fully on disk) that has
+                    // not been consumed yet — measured in frames so the
+                    // compressed size of the file cannot skew it.
+                    val frontierSeconds = samples.size * firstFrameSeconds
                     queuedSeconds + (frontierSeconds - elapsedSeconds).coerceAtLeast(0.0)
                 }
             }
@@ -1324,14 +1357,16 @@ class AudioPlayer {
             var skipLogs = 0
             var cutHoldLogs = 0
             /**
-             * Source seconds already on disk but not decoded yet: the headroom a
-             * silence cut consumes from (issue #4). It is thin exactly when the
-             * download is at the frontier, which is when a cut must not happen.
+             * Source seconds that are scanned (therefore fully on disk) but not
+             * consumed yet: the headroom a silence cut consumes from (issue #4).
+             * It is thin exactly when the download is at the frontier, which is
+             * when a cut must not happen. Measured in FRAMES on purpose: the
+             * first version converted the downloaded bytes with the PCM byte
+             * rate, and since the stream is compressed that under-reported the
+             * cushion ~10x — it even held cuts back on fully cached tracks.
              */
-            fun sourceCushionSeconds(): Double {
-                if (audioBytesPerSecond <= 0.0) return Double.MAX_VALUE
-                return handle.downloadedBytes / audioBytesPerSecond - elapsedSeconds
-            }
+            fun sourceCushionSeconds(): Double =
+                samples.size * firstFrameSeconds - elapsedSeconds
 
             fun emit() {
                 // Render the current frame into the PCM queue for the writer
@@ -1395,14 +1430,15 @@ class AudioPlayer {
                 }
                 if (doWrite && !suppressed) {
                     leading = false
-                    val data = if (volume < 0.999f && bitsPerSample == 16) {
-                        scale16(buffer.data, volume, bigEndian)
-                    } else {
-                        buffer.data
-                    }
-                    // Optional EQ: applied to the final PCM buffer (after the
-                    // volume scale) so it stays a pure add-on — null default
-                    // keeps the audio path identical to before.
+                    // Gain is applied by the writer, not here: see flushPending
+                    // (scaling at decode time delayed every volume change by the
+                    // whole PCM queue).
+                    val data = buffer.data
+                    // Optional EQ: applied to the decoded PCM as a pure add-on —
+                    // null default keeps the audio path identical to before.
+                    // (The gain is applied later, by the writer; a scalar gain
+                    // and a linear equalizer commute, so the result is the
+                    // same.)
                     val outData = equalizer?.let { eq ->
                         if (bitsPerSample == 16) eq.process(data, bigEndian, buffer.sampleRate, buffer.channels)
                         else data
@@ -1414,7 +1450,10 @@ class AudioPlayer {
                     enqueue(outData.copyOf())
                     if (bitsPerSample == 16) {
                         levelTick = !levelTick
-                        if (levelTick) pump.publishLevel(rms16(outData, bigEndian))
+                        // The level keeps the volume in its scale so the
+                        // visualizer still follows the slider, even though the
+                        // gain itself is applied later, by the writer.
+                        if (levelTick) pump.publishLevel(rms16(outData, bigEndian) * volume)
                     }
                 }
                 elapsedSeconds += buffer.length
@@ -1612,15 +1651,21 @@ class AudioPlayer {
     }
 
     /**
-     * Logs JVM-wide stalls (issue #4). A stop-the-world pause (GC, a safepoint
-     * operation) freezes EVERY thread, the writer included, so no amount of
-     * buffering inside our own threads can cover it: the device ring drains for
-     * as long as the pause lasts. This watcher measures how late a 50 ms sleep
-     * actually returned — a delay nobody in this process can cause except the
-     * JVM being frozen — and records it next to the heap and GC counters so a
-     * user report can be correlated with the audible gaps.
+     * Logs the stalls that can actually reach the sound card (issue #4).
+     *
+     * This probe sleeps 50 ms at the SAME thread priority as the writer thread
+     * that feeds the output line, so a late return cannot be blamed on thread
+     * starvation of a low-priority helper: the audio path was held up the same
+     * way. The heap, GC and process-CPU figures next to it tell whether it was
+     * the JVM (a stop-the-world pause shows GC counters moving) or the machine
+     * (everything small, CPU pegged).
+     *
+     * The first version ran this probe at MIN_PRIORITY, which measured the
+     * opposite thing: on a busy machine the process starves a lowest-priority
+     * thread by hundreds of milliseconds whatever the audio is doing, so it
+     * reported "frozen" for delays the writer never saw.
      */
-    private object JvmStallWatchdog {
+    private object AudioPriorityWatchdog {
 
         private val started = AtomicBoolean(false)
 
@@ -1650,18 +1695,39 @@ class AudioPlayer {
                     val used = (heap?.used ?: 0L) / 1024 / 1024
                     val max = (heap?.max ?: 0L) / 1024 / 1024
                     val gc = gcBeans.joinToString(" ") { b -> "${b.name}:${b.collectionCount}/${b.collectionTime}ms" }
+                    // Process/system CPU disambiguates the two possible causes
+                    // without another measurement round: a frozen JVM shows GC
+                    // counters moving, a saturated machine shows high CPU here.
+                    // Not every platform reports these (NaN when unavailable).
+                    val os = runCatching {
+                        java.lang.management.ManagementFactory.getOperatingSystemMXBean()
+                    }.getOrNull() as? com.sun.management.OperatingSystemMXBean
+                    val cpu = os?.let { bean ->
+                        val proc = runCatching { bean.processCpuLoad }.getOrDefault(-1.0)
+                        val all = runCatching { bean.cpuLoad }.getOrDefault(-1.0)
+                        when {
+                            proc < 0.0 && all < 0.0 -> ""
+                            proc >= 0.0 && all >= 0.0 ->
+                                ", cpu ${(proc * 100).roundToInt()}% of ${(all * 100).roundToInt()}% busy"
+                            proc >= 0.0 -> ", cpu ${(proc * 100).roundToInt()}% of the process"
+                            else -> ", system cpu ${(all * 100).roundToInt()}%"
+                        }
+                    } ?: ""
                     runCatching {
                         AppLog.log(
                             "playback",
-                            "jvm stall: 50ms sleep returned ${late + 50}ms late " +
-                                "(= ${late}ms frozen; heap ${used}/${max}MB, gc $gc)",
+                            "audio priority stall: 50ms sleep returned ${late + 50}ms late " +
+                                "(= ${late}ms held up at the writer's priority; heap " +
+                                "${used}/${max}MB, gc $gc$cpu)",
                         )
                     }
                 }
             }.apply {
                 isDaemon = true
-                name = "vivimusic-jvm-watchdog"
-                priority = Thread.MIN_PRIORITY
+                name = "vivimusic-audio-watchdog"
+                // Same priority as the audio writer: what this measures must be
+                // representative of the thread that feeds the sound card.
+                priority = Thread.MAX_PRIORITY
                 start()
             }
         }

@@ -111,6 +111,14 @@ object DesktopLyrics {
             "Musixmatch" to { Musixmatch.getLyrics(title, artist, durationSec, album) },
             "Paxsenix" to { Paxsenix.getLyrics(title, artist, durationSec, album) },
             "Unison" to { Unison.getLyrics(title, artist, durationSec, album, videoId = videoId) },
+            // The video's OWN timed captions — the same source the mobile app
+            // asks as its "YouTubeSubtitle" provider. It is keyed by videoId, so
+            // it can never be another song's lyrics, and it is timed, which is
+            // exactly what remixes, slowed/"phonk" edits and covers need:
+            // community providers have nothing for those and the desktop used to
+            // end up with no lyrics at all (the reported case: every provider
+            // failed on 'ＭＩＧＵＥＬ 𝑷𝒉𝒐𝒏𝒌 (𝕊𝕃𝕆𝕎𝔼𝔻)' while the video itself has captions).
+            "YouTubeSubtitle" to { YouTube.transcript(videoId) },
         )
 
         AppLog.log(

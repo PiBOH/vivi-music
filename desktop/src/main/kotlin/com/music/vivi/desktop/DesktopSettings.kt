@@ -259,19 +259,33 @@ object DesktopSettings {
         }
     }
 
-    fun load(): DesktopSyncState = synchronized(lock) {
-        try {
-            if (file.exists()) json.decodeFromString(DesktopSyncState.serializer(), file.readText())
-            else DesktopSyncState()
-        } catch (_: Exception) {
-            DesktopSyncState()
-        }
+    /**
+     * In-memory snapshot of the file, so [load] does not have to read and parse
+     * it every time. It is called from the polling loops that run for the whole
+     * session (volume sync every 500 ms, mute watchdog every 800 ms, command
+     * poll every 500 ms), and each call used to re-read AND re-parse ~58 KB of
+     * JSON on an IO thread while audio was playing — the same file that the
+     * writer of a settings change rewrites. Every writer goes through [save],
+     * which refreshes this snapshot, so the cache cannot go stale.
+     */
+    @Volatile private var cached: DesktopSyncState? = null
+
+    fun load(): DesktopSyncState = cached ?: synchronized(lock) {
+        cached ?: read().also { cached = it }
+    }
+
+    private fun read(): DesktopSyncState = try {
+        if (file.exists()) json.decodeFromString(DesktopSyncState.serializer(), file.readText())
+        else DesktopSyncState()
+    } catch (_: Exception) {
+        DesktopSyncState()
     }
 
     fun save(state: DesktopSyncState) {
         synchronized(lock) {
             try {
                 file.writeText(json.encodeToString(DesktopSyncState.serializer(), state))
+                cached = state
             } catch (_: Exception) {
                 // best-effort
             }
