@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.72-alpha] - 2026-09-17
+
+### Changed
+- [DE] **The installers are much smaller**: the packaged app carried the whole `material-icons-extended` artifact (~36 MB, ~10k vector icons) while the desktop app references fewer than 300 of them. A new `MinimizeIconsJarTask` (`desktop/build.gradle.kts`) keeps that artifact on the *compile* classpath but puts a jar holding only the referenced icons on the *runtime* classpath — the one every jpackage setup consumes — so the installed app image drops from ~194 MB to ~134 MB. No user-visible change: the same icons are shown, and the task takes the six style directories into account (`Default` maps to `filled`).
+- [DE] **Windows `.exe` setup compressed harder**: `installer/windows/VIVIMusic.iss` now uses `lzma2/max` with `SolidCompression=yes` (there are no optional `[Components]`, only the two shortcut `[Tasks]`, so a partial install still does not decompress the whole block). Together with the icon trimming the setup goes from 156.0 MB to ~129 MB, and the same payload reduction applies to the `.msi`, the macOS `.dmg`/`.pkg` and the Linux `.deb`/`.AppImage` (their formats are unchanged).
+- [DE] Published formats are unchanged: Windows ships both `setup.exe` and `.msi`, macOS both `.dmg` and `.pkg`, Linux `.deb` + `.AppImage` + `PKGBUILD`. The JavaFX WebView jars (`javafx-web`, `icudtl.dat`) are required by the working sign-in WebView and were deliberately left untouched.
+
 ## [6.0.6.3_DE-1.50.71-alpha] - 2026-09-16
 
 ### Fixed

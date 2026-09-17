@@ -1,4 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 // version.txt is the single source of truth for release metadata. Layout:
 //   line 1 = mobile (Android) version, e.g. 6.4.21
@@ -44,6 +47,97 @@ tasks.processResources {
 
 kotlin {
     jvmToolchain(21)
+}
+
+// --- Keep every installer small: runtime icon minimization -----------------
+// The extended Material icons artifact bundles ~10k vector icons (~36 MB) while
+// the desktop app references fewer than a hundred. Compilation must keep using
+// the full artifact (every reference resolves at compile time), but no packaged
+// runtime ever needs the other icons: this task copies the full jar into a
+// minimized jar that keeps every non-icon class plus the per-icon classes whose
+// icon name is referenced in desktop/src (all styles). The minimized jar
+// replaces the original on the RUNTIME classpath — the classpath that dev
+// `run`, tests and every jpackage setup (hence every installer) consume.
+abstract class MinimizeIconsJarTask : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    // Compile classpath: contains the full extended icons jar + core jar.
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.NAME_ONLY)
+    abstract val compileClasspath: ConfigurableFileCollection
+
+    @get:OutputFile
+    abstract val minimizedJar: RegularFileProperty
+
+    @TaskAction
+    fun minimize() {
+        val styleDirs = setOf("filled", "outlined", "rounded", "sharp", "twotone", "automirrored")
+        // Base accessor names kept unconditionally so `Icons.*` never breaks.
+        val used = mutableSetOf("icons", "automirrored")
+        fun normalize(name: String): String = name.lowercase().removePrefix("kt").trimStart('_')
+        val iconRef = Regex(
+            """Icons\.(?:Filled|Outlined|Rounded|Sharp|TwoTone|AutoMirrored)(?:\.(?:Filled|Outlined|Rounded|Sharp|TwoTone))?\.([A-Za-z_][A-Za-z0-9_]*)"""
+        )
+        sources.files.filter { it.isDirectory }.forEach { dir ->
+            dir.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
+                iconRef.findAll(file.readText()).forEach { used.add(normalize(it.groupValues[1])) }
+            }
+        }
+
+        val fullJarFile = compileClasspath.files.first { it.name.startsWith("material-icons-extended-desktop") }
+        val coreJarFile = compileClasspath.files.firstOrNull { it.name.startsWith("material-icons-core-desktop") }
+
+        // Per-icon classes already provided by the core artifact must not be
+        // duplicated on the runtime classpath.
+        val coreClasses = HashSet<String>()
+        coreJarFile?.let { core ->
+            ZipInputStream(core.inputStream().buffered()).use { zin ->
+                while (true) {
+                    val entry = zin.nextEntry ?: break
+                    if (!entry.isDirectory && entry.name.endsWith(".class")) coreClasses.add(entry.name)
+                    zin.closeEntry()
+                }
+            }
+        }
+
+        val out = minimizedJar.get().asFile
+        out.parentFile.mkdirs()
+        var kept = 0
+        var total = 0
+        ZipInputStream(fullJarFile.inputStream().buffered()).use { zin ->
+            ZipOutputStream(out.outputStream().buffered()).use { zout ->
+                while (true) {
+                    val entry = zin.nextEntry ?: break
+                    total++
+                    val keep = when {
+                        entry.isDirectory -> true
+                        entry.name.endsWith(".class") && coreClasses.contains(entry.name) -> false
+                        !entry.name.endsWith(".class") -> true
+                        !entry.name.startsWith("androidx/compose/material/icons/") -> true
+                        else -> {
+                            val simple = entry.name.substringAfterLast('/').removeSuffix(".class")
+                            if (!simple.endsWith("Kt")) true
+                            else {
+                                val segments = entry.name.split('/')
+                                val inStyleDir = segments.size >= 2 && segments[segments.size - 2] in styleDirs
+                                !inStyleDir || normalize(simple.removeSuffix("Kt")) in used
+                            }
+                        }
+                    }
+                    if (keep) {
+                        kept++
+                        zout.putNextEntry(ZipEntry(entry.name))
+                        zin.copyTo(zout)
+                        zout.closeEntry()
+                    }
+                    zin.closeEntry()
+                }
+            }
+        }
+        logger.lifecycle("minimizeIconsJar: kept $kept/$total entries (referenced icon names: ${used.size})")
+    }
 }
 
 dependencies {
@@ -124,6 +218,23 @@ dependencies {
 
     // Drag-to-reorder for the Queue screen (same lib as the Android app)
     implementation(libs.compose.reorderable)
+}
+
+val minimizeIconsJar = tasks.register<MinimizeIconsJarTask>("minimizeIconsJar") {
+    group = "build"
+    description = "Ships only the Material icons the desktop app actually references"
+    sources.from(files("src/main/kotlin", "src/main/java"))
+    compileClasspath.from(configurations.compileClasspath)
+    minimizedJar.set(layout.buildDirectory.file("libs/material-icons-extended-desktop-minimized.jar"))
+}
+
+// Compilation keeps the full icons artifact; the packaged runtime (dev run,
+// tests and every jpackage/Inno Setup image) gets the minimized jar instead.
+configurations.runtimeClasspath {
+    exclude(group = "org.jetbrains.compose.material", module = "material-icons-extended-desktop")
+}
+dependencies {
+    runtimeOnly(files(minimizeIconsJar))
 }
 
 compose.desktop {
