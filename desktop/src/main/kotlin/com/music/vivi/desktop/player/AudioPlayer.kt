@@ -92,6 +92,11 @@ class AudioPlayer {
     private var generation = 0
 
     @Volatile private var paused = false
+
+    /** True once the current output line has been started. While it is false
+     *  the line is stopped and its writes are buffered, so the device never
+     *  begins consuming from an empty ring (see [LINE_PRIME_SECONDS]). */
+    @Volatile private var lineStarted = false
     @Volatile private var stopped = false
     @Volatile private var volume = 1f
 
@@ -173,6 +178,18 @@ class AudioPlayer {
          * told apart from "the device kept the buffer small").
          */
         const val LINE_BUFFER_SECONDS = 1.0
+
+        /**
+         * Seconds of audio that must already sit in the device ring BEFORE the
+         * line starts consuming (issue #4). A line started while its ring is
+         * still empty goes dry at once — the reporting log shows `the device
+         * ran dry here` 70 ms after a track had started — and that underrun is
+         * the click/skip heard at the very beginning of a track. Writes are
+         * buffered while the line is stopped, so the writer fills the ring
+         * first and starts the line once this much audio is queued in it (or
+         * as soon as the producer has nothing more to hand over).
+         */
+        const val LINE_PRIME_SECONDS = 0.3
 
         /**
          * Seconds of audio that must already be on disk before the output line
@@ -394,7 +411,10 @@ class AudioPlayer {
     fun resume() {
         paused = false
         synchronized(lock) { lock.notifyAll() }
-        line?.start()
+        // Only re-start a line that was already playing: when playback was
+        // paused before the first block was handed over, the writer owns the
+        // start so the ring can be primed first (issue #4).
+        if (lineStarted) line?.start()
     }
 
     fun stop() {
@@ -1055,7 +1075,12 @@ class AudioPlayer {
                 (format.sampleSizeInBits / 8)
             val grantedBytes = openWithLargestBuffer(out, format, bytesPerSecond)
             if (grantedBytes <= 0) throw IOException("Could not open the audio output device")
-            out.start()
+            // Deliberately NOT out.start() here: the device would start pulling
+            // from an empty ring and underrun in its first milliseconds, which
+            // is the click heard at the beginning of a track (issue #4). Writes
+            // are buffered while the line is stopped and the writer starts it
+            // once the ring is primed — see flushPending().
+            lineStarted = false
             // Instant volume: hand the level to the driver's own gain when the
             // backend has one (see [deviceGain]); otherwise the writer keeps
             // scaling the PCM blocks it writes.
@@ -1251,12 +1276,37 @@ class AudioPlayer {
                 }
                 handedOverBytes += done.toLong()
                 pendingBytes = 0
+                // Prime the device before it starts consuming (issue #4): a
+                // line started with an empty ring goes dry right away — the
+                // reporting log shows "the device ran dry here" 70 ms after a
+                // track had started, and that underrun is the click/skip heard
+                // at the beginning of a track. The ring is filled while the
+                // line is stopped and the start happens once
+                // [LINE_PRIME_SECONDS] of audio is queued in it, or as soon as
+                // the producer has nothing more to hand over (a slow decode
+                // must not delay the start for ever).
+                if (!lineStarted) {
+                    val primed = cushionMs()
+                    if (primed >= LINE_PRIME_SECONDS * 1000.0 ||
+                        pcmQueue.isEmpty() || producerDone.get()
+                    ) {
+                        lineStarted = true
+                        runCatching { out.start() }
+                        AppLog.log(
+                            "playback",
+                            "audio output primed: device started with ${primed.toInt()}ms " +
+                                "already queued in its buffer (ring ~${lineBufferMs}ms)",
+                        )
+                    }
+                }
                 // The only situation that can be audible: the device ring is
                 // about to run dry. Previously this was invisible, because the
                 // PCM queue in front of the writer can be seconds long while
-                // the ring empties (issue #4).
+                // the ring empties (issue #4). Only meaningful once the device
+                // is actually playing: before the start there is nothing to
+                // run dry.
                 val cushion = cushionMs()
-                if (cushion >= 0.0 && cushion <= CUSHION_WARN_MS) {
+                if (lineStarted && cushion >= 0.0 && cushion <= CUSHION_WARN_MS) {
                     val now = System.currentTimeMillis()
                     if (now - lastCushionLogMs >= 3_000L) {
                         lastCushionLogMs = now
@@ -1311,7 +1361,12 @@ class AudioPlayer {
                                 // only runs when there is something to write.
                                 val cushion = cushionMs()
                                 val ranDry = cushion >= 0.0 && cushion <= CUSHION_WARN_MS
-                                val dryNote = if (ranDry) " — the device ran dry here" else ""
+                                val dryNote = when {
+                                    !ranDry -> ""
+                                    handedOverBytes == 0L ->
+                                        " — nothing had been handed to the device yet"
+                                    else -> " — the device ran dry here"
+                                }
                                 AppLog.log(
                                     "playback",
                                     "audio output starved: queue empty waiting for decode " +

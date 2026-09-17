@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.74-alpha] - 2026-09-17
+
+### Changed
+- [DE] **Exported logs stop growing forever**: `Export logs` now packages the logs of the **20 newest sessions** only (`LogExporter.collectSessionDirs`, i.e. the newest 20 `~/.vivimusic/logs/<yyyyMMdd-HHmmss>/` folders, sorted by name so it is chronological). Older sessions are **not deleted** — they stay on disk, they are just no longer part of the support zip, so a long-lived install no longer produces an archive nobody can open.
+
+### Fixed
+- [DE] **No more dropout at the very beginning of a track**: the output line was started the moment it was opened, so the device began consuming from a ring that was still empty and went dry before the first decoded block arrived — the reported `playback.log` shows exactly that (`audio output starved … the device ran dry here` **70 ms** after a track had started, `line headroom 1000ms, unplayed 0ms`), which is the click/skip heard at the start of a song. The line is now left stopped (JavaSound buffers writes) and started only once 300 ms of audio already sit in the device ring — or sooner, when the producer has nothing more to hand over, so a slow decode cannot delay the start forever; the cushion is logged (`audio output primed: device started with 360ms already queued in its buffer`). Pausing before the first block now keeps the start with the writer instead of starting an empty ring on resume, and the starvation line distinguishes `nothing had been handed to the device yet` from a real `the device ran dry here`. ([issue #4](https://github.com/PiBOH/vivi-music/issues/4))
+
 ## [6.0.6.3_DE-1.50.73-alpha] - 2026-09-17
 
 ### Changed
