@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.73-alpha] - 2026-09-17
+
+### Changed
+- [DE] **The activity log keeps the full picture**: the change history written to `~/.vivimusic/logs/<session>/settings.log` now records every setting at its complete value, instead of shortening long ones, so an exported log zip describes exactly what was changed when a report is reproduced.
+
 ## [6.0.6.3_DE-1.50.72-alpha] - 2026-09-17
 
 ### Changed

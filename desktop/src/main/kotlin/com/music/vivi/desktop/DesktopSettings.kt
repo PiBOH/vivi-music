@@ -2,8 +2,6 @@ package com.music.vivi.desktop
 
 import com.music.vivi.sync.LibrarySnapshot
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
@@ -323,28 +321,26 @@ object DesktopSettings {
         "firstLaunchDate",
     )
 
-    /** Secrets / personal data that must never be written to the activity log. */
+    /** Credentials and API keys that must never be written to the activity log
+     *  in clear text (they would be handed out inside every exported log zip). */
     private val redactedFields = setOf(
-        "cookie", "dataSyncId", "visitorData", "aiApiKey", "deeplApiKey",
-        "lastfmSession", "accountEmail", "accountChannelHandle",
+        "cookie", "dataSyncId", "visitorData",
+        "aiApiKey", "deeplApiKey", "lastfmSession",
         "listenTogetherSessionToken",
     )
 
-    private fun jsonSummary(el: kotlinx.serialization.json.JsonElement?): String = when (el) {
+    private fun jsonValue(el: kotlinx.serialization.json.JsonElement?): String = when (el) {
         null -> "unset"
-        is JsonPrimitive -> {
-            val s = el.content
-            if (s.length > 60) s.take(34) + "…(" + s.length + " chars)" else s
-        }
-        is JsonArray -> "[${el.size} items]"
-        is JsonObject -> "{${el.size} fields}"
+        is JsonPrimitive -> el.content
         else -> el.toString()
     }
 
     /**
      * Records every setting the user actually changed (field: old → new) into
-     * the activity log. Skipping [volatileFields] keeps the log readable;
-     * [redactedFields] are never dumped in clear text.
+     * the activity log at full value — nothing is shortened, because a
+     * truncated value is what makes a support log useless. Skipping
+     * [volatileFields] keeps the log readable; [redactedFields] (credentials
+     * and API keys only) are never dumped in clear text.
      */
     private fun logChanges(before: DesktopSyncState, after: DesktopSyncState) {
         if (before == after) return
@@ -356,8 +352,8 @@ object DesktopSettings {
                 if (key in volatileFields) continue
                 val oldValue = b[key]
                 if (oldValue == newValue) continue
-                val shownOld = if (key in redactedFields) "[redacted]" else jsonSummary(oldValue)
-                val shownNew = if (key in redactedFields) "[redacted]" else jsonSummary(newValue)
+                val shownOld = if (key in redactedFields) "[redacted]" else jsonValue(oldValue)
+                val shownNew = if (key in redactedFields) "[redacted]" else jsonValue(newValue)
                 parts += "$key: $shownOld → $shownNew"
             }
             if (parts.isNotEmpty()) AppLog.log("settings", parts.joinToString(" | "))
