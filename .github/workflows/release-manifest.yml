@@ -8,12 +8,22 @@ name: Release Manifest
 # often not even then). An authenticated request has a 5000/hour quota, so the
 # site never depends on the anonymous one again.
 #
-# Triggered by a push that changes version.txt (every release bumps it) and
-# manually. Deliberately NOT by schedule/release events: those run the version
-# of the workflow that lives on the repository's DEFAULT branch, and `main` is
-# the upstream mirror that must never be written to.
+# Triggered by a push that changes version.txt (every release bumps it), once
+# an hour, and manually. The hourly run exists because the push above fires the
+# moment version.txt changes — i.e. minutes BEFORE the release workflow has
+# uploaded its assets — so the manifest it built described a release whose files
+# did not exist yet, and the download dialog/downloads page stayed incomplete
+# (and needed a manual page refresh) until the next release bumped version.txt.
+#
+# A schedule is safe here because the repository's DEFAULT branch is
+# `vivi-music-de`, not the upstream `main` mirror: a scheduled run executes the
+# version of this file that lives on the default branch — this one — and commits
+# back to it. The explicit `ref` on the checkout below keeps that true even if
+# the default branch ever changes.
 
 on:
+  schedule:
+    - cron: '0 * * * *'  # every hour, at :00 CEST (UTC+2 in summer)
   push:
     paths:
       - version.txt
@@ -32,6 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Always refresh the manifest on the DE branch, whatever the default
+          # branch happens to be.
+          ref: vivi-music-de
 
       - name: Fetch every release (authenticated)
         env:

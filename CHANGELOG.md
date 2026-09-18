@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.76-alpha] - 2026-09-18
+
+### Changed
+- [DE] **The site's release manifest now refreshes itself every hour**: `Release Manifest` only ran when `version.txt` changed, and that happens the moment a release is pushed — minutes *before* the release workflow has built and uploaded the assets. The manifest it wrote therefore described a release whose files did not exist yet, so the downloads page and the download dialog stayed incomplete (and needed a manual page refresh) until the next release happened to bump `version.txt`. It now also runs on `cron: '0 * * * *'` (every hour, at :00 CEST), re-reads the published releases and commits `releases.json`/`changelog.json` only when something really changed. Running it on a schedule is safe here because the repository's default branch is `vivi-music-de`, not the upstream `main` mirror (which stays a read-only mirror), and the job now pins `ref: vivi-music-de` on its checkout so that stays true even if the default branch ever changes.
+- [DE] **A manual release can be published without the APKs**: `Auto Release (Desktop)` gained a `workflow_dispatch` input named `ignore_apk_failure` (**off by default**, manual dispatch only) which makes the release step warn and publish the desktop assets instead of failing when the Android build for that commit failed, its artifacts cannot be downloaded, or `vivi-gsm.apk`/`vivi-foss.apk` are missing. With the toggle off nothing changes: on a release push the two APKs remain mandatory assets and a failed Android build still fails the release.
+
 ## [6.0.6.3_DE-1.50.75-alpha] - 2026-09-18
 
 ### Fixed
