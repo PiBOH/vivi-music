@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.50.75-alpha] - 2026-09-18
+
+### Fixed
+- [DE] **Emergency fix — the app crashed on launch in 1.50.72, 1.50.73 and 1.50.74**: every build in that range died before drawing its first frame with `NoClassDefFoundError: androidx.compose.material.icons.Icons$Outlined` (the crash dump points at `MainKt.Sidebar`, the first icon the UI asks for). The cause was the icon-minimization change of 1.50.72: it replaced the ~36 MB `material-icons-extended` artifact on the **runtime** classpath by *excluding* that module, but `material-icons-extended-desktop` is the only route through which `material-icons-core-desktop` reaches the app, and `material-icons-core` is the artifact that declares the `Icons` accessors (`Icons.class`, `Icons$Filled`, `Icons$Outlined`, `Icons$Rounded`, `Icons$Sharp`, `Icons$TwoTone`, `Icons$AutoMirrored`). The extended jar itself only carries the per-icon `...Kt.class` files, so no additional entry in the minimized jar could have repaired it. The exclusion now drops only the extended jar, and `material-icons-core` is put back explicitly at the version the Compose plugin resolves (read from the resolved compile classpath, so it can never drift away from the plugin's own selection). Verified against the packaged app image: its `app/` folder now holds `material-icons-core-desktop-1.7.3.jar` (858 KB) next to the minimized jar (1.3 MB), and a probe that loads every `Icons` accessor plus the per-icon classes on that classpath succeeds — while the same probe without the core jar reproduces exactly the reported `ClassNotFoundException: Icons$Outlined`. A `check` in `desktop/build.gradle.kts` now fails the packaging loudly if `material-icons-core` ever leaves the graph again, so a build that cannot start can no longer ship silently.
+- [DE] **If you are on 1.50.72, 1.50.73 or 1.50.74, install this build by hand**: those versions cannot start, so the in-app updater never gets a chance to run. Windows: download `VIVIMusic-6.0.6.3_DE-1.50.75-setup.exe` and run it over the existing installation (your settings and cache are kept). macOS: the `.dmg`/`.pkg` for your architecture; Linux: `.deb` or `.AppImage`.
+
 ## [6.0.6.3_DE-1.50.74-alpha] - 2026-09-17
 
 ### Changed

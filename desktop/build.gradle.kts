@@ -58,6 +58,13 @@ kotlin {
 // icon name is referenced in desktop/src (all styles). The minimized jar
 // replaces the original on the RUNTIME classpath — the classpath that dev
 // `run`, tests and every jpackage setup (hence every installer) consume.
+//
+// The extended jar holds ONLY per-icon `...Kt.class` files: the `Icons`
+// accessors the sources use (`Icons.Filled.Home`, `Icons.Outlined.X`, ...) live
+// in the separate material-icons-core artifact, which stays on the runtime
+// classpath on purpose — see the runtimeClasspath block at the end of this
+// file. Once minimized, this task can therefore never fix a missing `Icons$...`
+// class by keeping more entries: that class was never in this jar.
 abstract class MinimizeIconsJarTask : DefaultTask() {
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -235,6 +242,39 @@ configurations.runtimeClasspath {
 }
 dependencies {
     runtimeOnly(files(minimizeIconsJar))
+
+    // The extended artifact is the ONLY route through which material-icons-core
+    // reaches this project (extended -> core), and core is the artifact that
+    // declares the `Icons` accessors the sources use (`Icons.class`,
+    // `Icons$Filled`, `Icons$Outlined`, ...); the extended jar itself only holds
+    // the per-icon `...Kt.class` files. Excluding the extended artifact above
+    // therefore took core away with it, and every build from 1.50.72 to 1.50.74
+    // crashed on the very first icon it drew — the crash dump reads
+    // `NoClassDefFoundError: androidx/compose/material/icons/Icons$Outlined`
+    // from `MainKt.Sidebar`, i.e. the app never got past its first frame.
+    //
+    // So the exclude above may only ever drop the ~36 MB extended jar, and core
+    // is put back here. Its version is read from the already-resolved compile
+    // classpath instead of being written out by hand, so it can never drift away
+    // from the version the Compose plugin selects; the `check` turns a future
+    // change that removes core from the graph into a loud packaging failure
+    // instead of a release that crashes on startup for every user.
+    runtimeOnly(
+        files(
+            configurations.compileClasspath.map { compileClasspath ->
+                val iconsCore = compileClasspath.files.filter {
+                    it.name.startsWith("material-icons-core-desktop")
+                }
+                check(iconsCore.isNotEmpty()) {
+                    "material-icons-core-desktop is missing from the compile classpath: without it " +
+                        "the runtime classpath has no `androidx.compose.material.icons.Icons` " +
+                        "accessor classes and the packaged app crashes on its first icon " +
+                        "(NoClassDefFoundError: Icons\$Outlined)."
+                }
+                iconsCore
+            },
+        ),
+    )
 }
 
 compose.desktop {
