@@ -153,6 +153,15 @@ class AudioPlayer {
          *  thread in a single giant scan (see [decodeAndPlay]). */
         const val SCAN_WINDOW_BYTES = 256 * 1024L
 
+        /** How often the writer samples what the sound card actually played
+         *  (see the device-health check in `flushPending`). */
+        const val DEVICE_CHECK_INTERVAL_MS = 10_000L
+
+        /** Slack allowed in that sample before it counts as a device stall: a
+         *  line may legitimately be a little behind real time without anything
+         *  being audible. */
+        const val DEVICE_STALL_TOLERANCE_MS = 500L
+
         /** RMS level below which a decoded frame counts as silence (~-62 dBFS). */
         const val SILENCE_RMS_LEVEL = 0.0008f
 
@@ -828,6 +837,9 @@ class AudioPlayer {
             // running, new `moof` fragments (and their samples) keep arriving.
             val samples = mutableListOf<Pair<Long, Int>>()
             var scannedTo = 0L
+            /** Discontinuities seen in the sample table (see
+             *  [validateNewSamples]); reported as a total at the end. */
+            var boundaryIssueCount = 0
 
             /** Scans [scannedTo..downloadedBytes) for complete `moof` boxes and
              *  appends their AAC samples; advances [scannedTo] past them. The
@@ -844,11 +856,48 @@ class AudioPlayer {
                 }
             }
 
+            /**
+             * Verifies that the samples just appended continue EXACTLY where the
+             * previous one ended (issue #4).
+             *
+             * A gap or an overlap here means the `moof` walk mis-parsed the
+             * container: the decoder then feeds a discontinuity to the sound
+             * card, which is heard as the brief jump/pause macOS users reported,
+             * while none of the existing diagnostics (starvation, cushion,
+             * device ring) can see it — they all assume the PCM itself is
+             * continuous. Reported once per problem, plus a total, so the log
+             * says whether the audio was ever discontinuous at the source.
+             */
+            fun validateNewSamples(before: Int) {
+                if (before <= 0 || samples.size <= before) return
+                val previous = samples[before - 1]
+                val next = samples[before]
+                val previousEnd = previous.first + previous.second
+                if (next.first == previousEnd) return
+                boundaryIssueCount++
+                if (boundaryIssueCount <= 10) {
+                    AppLog.log(
+                        "playback",
+                        "sample table discontinuity at frame $before: the previous sample ends at " +
+                            "$previousEnd but the next starts at ${next.first} " +
+                            "(delta ${next.first - previousEnd} bytes) — the decoded audio skips/repeats here",
+                    )
+                }
+            }
+
+            /** [scanMore] plus the continuity check (the sample table only ever
+             *  grows, so the append boundary is where a problem can appear). */
+            fun scanStep() {
+                val before = samples.size
+                scanMore()
+                validateNewSamples(before)
+            }
+
             // Wait until the first audio fragment is fully downloaded.
-            scanMore()
+            scanStep()
             while (samples.isEmpty() && !handle.complete && !handle.failed) {
                 Thread.sleep(DOWNLOAD_POLL_MS)
-                scanMore()
+                scanStep()
             }
             // The whole file is already on disk: scan it ALL before deriving the
             // duration or judging truncation. Otherwise the sample table only
@@ -858,10 +907,12 @@ class AudioPlayer {
             // ~19 s and "ends" — the seek bar never moving past ~19 s.
             if (handle.complete) {
                 while (scannedTo < handle.downloadedBytes) {
+                    val before = samples.size
                     scannedTo = walkAtoms(
                         channel, trackId, scannedTo,
                         minOf(handle.downloadedBytes, scannedTo + SCAN_WINDOW_BYTES), samples,
                     )
+                    validateNewSamples(before)
                 }
             }
             if (samples.isEmpty()) {
@@ -937,7 +988,7 @@ class AudioPlayer {
                 val missingAtStart = (offset + size - handle.downloadedBytes).coerceAtLeast(0L)
                 while (offset + size > handle.downloadedBytes && !handle.complete && !handle.failed) {
                     Thread.sleep(DOWNLOAD_POLL_MS)
-                    scanMore()
+                    scanStep()
                 }
                 // Only a wait that RESOLVED (the sample did arrive) is a stall:
                 // the other exit path throws right below.
@@ -1233,6 +1284,22 @@ class AudioPlayer {
             var handedOverBytes = 0L
             /** Last gain actually used for a write (logged when it changes). */
             var appliedVolume = -1f
+            // Device health sampling (issue #4). Every other diagnostic assumes
+            // the sound card keeps consuming what it was given; a device that
+            // stops (or plays back slower than real time) is audible and used to
+            // leave no trace at all, which is exactly the case where the logs
+            // looked perfectly clean while the user heard a jump.
+            var lastDeviceCheckMs = 0L
+            var lastDeviceCheckPlayedMs = 0L
+            var deviceStallLogged = 0
+            /** Audio the line reports as actually played, in ms. */
+            fun playedAudioMs(): Long =
+                if (format.sampleRate > 0f) {
+                    runCatching { out.longFramePosition * 1000L / format.sampleRate.toLong() }
+                        .getOrDefault(0L)
+                } else {
+                    0L
+                }
 
             /** Audio already given to the device minus the audio it played: the
              *  cushion that absorbs a late writer. Computed from the line's own
@@ -1316,6 +1383,43 @@ class AudioPlayer {
                                 "buffer (~${lineBufferMs}ms total) — the output can run dry here " +
                                 "(queued for the writer: ${queuedPcmMs()}ms)",
                         )
+                    }
+                }
+                // Device health check: how much audio the line actually played
+                // in the last window, measured against the wall time it took.
+                // Real-time playback gives ~100%; a figure far below that is the
+                // device itself stalling (or dropping frames), which the
+                // starvation/cushion checks cannot see because the writer keeps
+                // handing over audio happily.
+                if (lineStarted) {
+                    val playedMs = playedAudioMs()
+                    val now = System.currentTimeMillis()
+                    if (lastDeviceCheckMs == 0L) {
+                        lastDeviceCheckMs = now
+                        lastDeviceCheckPlayedMs = playedMs
+                    } else if (now - lastDeviceCheckMs >= DEVICE_CHECK_INTERVAL_MS) {
+                        val windowMs = now - lastDeviceCheckMs
+                        val played = playedMs - lastDeviceCheckPlayedMs
+                        val ratio = if (windowMs > 0) played * 100 / windowMs else 100
+                        if (played < windowMs - DEVICE_STALL_TOLERANCE_MS && deviceStallLogged < 20) {
+                            deviceStallLogged++
+                            AppLog.log(
+                                "playback",
+                                "audio device stall: the sound card played only ${played}ms of audio in " +
+                                    "${windowMs}ms of wall time (${ratio}%) — the gap is BELOW our buffers " +
+                                    "(cushion ${cushionMs().toInt()}ms, handed over " +
+                                    "${(handedOverBytes * 1000L / bytesPerSecond.toLong())}ms so far)",
+                            )
+                        } else {
+                            AppLog.log(
+                                "playback",
+                                "audio device check: played ${played}ms of ${windowMs}ms wall (${ratio}%), " +
+                                    "cushion ${cushionMs().toInt()}ms, handed over " +
+                                    "${(handedOverBytes * 1000L / bytesPerSecond.toLong())}ms",
+                            )
+                        }
+                        lastDeviceCheckMs = now
+                        lastDeviceCheckPlayedMs = playedMs
                     }
                 }
                 reportPosition()
@@ -1585,7 +1689,7 @@ class AudioPlayer {
                         // refreshed, instead of sleeping until resume.
                         while (paused && !stopped && queuedPcmMs() < PAUSE_PREROLL_MS) {
                             lock.wait(BUFFERED_POLL_MS)
-                            scanMore()
+                            scanStep()
                             reportBuffered()
                             reportDuration()
                         }
@@ -1597,13 +1701,13 @@ class AudioPlayer {
                         index++
                         decodeAt(index)
                         emit()
-                        scanMore()
+                        scanStep()
                         reportBuffered()
                         reportDuration()
                     } else {
                         // No next sample yet: grow the sample table as fragments
                         // arrive, then poll until the download catches up.
-                        scanMore()
+                        scanStep()
                         reportBuffered()
                         reportDuration()
                         if (index + 1 < samples.size) continue
@@ -1630,6 +1734,16 @@ class AudioPlayer {
                             "turn the option off if those jumps are unwanted",
                     )
                 }
+                // One line per track that states whether the SOURCE audio was
+                // ever discontinuous (see [validateNewSamples]): "0" plus a
+                // clean device check rules the whole pipeline out for that
+                // track, which is what makes a "still lags" report actionable
+                // instead of a guess (issue #4).
+                AppLog.log(
+                    "playback",
+                    "audio integrity: ${boundaryIssueCount} sample-table discontinuities, " +
+                        "${deviceStallLogged} device stalls, ${samples.size} frames scanned",
+                )
                 // Never leave the writer behind: on a normal end it plays out
                 // the queued tail first (so the last seconds are not cut), on a
                 // stop/seek/error the queued audio is dropped and the line is

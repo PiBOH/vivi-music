@@ -11,6 +11,17 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.51.1-alpha] - 2026-09-19
+
+### Changed
+- [DE] **Playback diagnostics now cover the two things the exported logs could not see (#4).** Every existing check (device starvation, cushion, JVM/priority stalls) assumes the PCM handed to the sound card is itself continuous, so a report of "it still skips" could come back with a perfectly clean log while the audio was in fact discontinuous. Two new measurements close that gap:
+  - the **sample table is verified for continuity**: each newly scanned `moof` fragment must continue exactly where the previous sample ended, and a gap/overlap is now logged as `sample table discontinuity at frame N … (delta X bytes) — the decoded audio skips/repeats here`;
+  - the **sound card is sampled every 10 s** for how much audio it actually played against the wall time (`audio device check: played 10000ms of 10000ms wall (100%)…`), and a device that consumes less than real time is logged as `audio device stall` — a gap *below* our buffers, which no other check can detect.
+  Each track then ends with a one-line summary (`audio integrity: N sample-table discontinuities, M device stalls, K frames scanned`), so a log alone says whether that track was ever fed discontinuous audio.
+
+### Notes
+- [DE] Findings behind this change, from the exported 1.50.71/1.50.76 logs: on the reporting macOS machine there is **not one** starvation, starved-queue, low-cushion or device-stall line, and the device granted a **4 s** ring (the app asks 1 s, macOS accepts the 4 s candidate first) in front of the 8 s PCM queue; on the reporting Windows machine the only events are `audio priority stall`s of ~120-160 ms every few minutes (GC counters frozen, heap ~32 MB of 2048 MB, CPU ~10 %) and the 8 s queue + 1 s ring absorb every one of them. The macOS ring is deliberately left at 4 s: those same logs contain pauses of the writer thread of over a second, and a smaller ring would turn them into audible dropouts.
+
 ## [6.0.6.3_DE-1.51.0-alpha] - 2026-09-19
 
 ### Added
