@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.51.0-alpha] - 2026-09-19
+
+### Added
+- [DE] **Animated lyrics, ported from the mobile app.** The desktop lyrics panel used to be a plain list of lines with the current one in bold. It now has the APK's word-by-word animation styles, selectable in *Settings → Lyrics*: **Simple** (per-word weights), **Fade**, **Glow**, **Slide** (a gradient sweeps the word), **Karaoke**, **Apple Music**, **Apple Music V2** and **VIVI Music** (the last two bloom each word in place with its own scale and blur).
+- [DE] **Every display option around them**: word glow, blur of the lines that are not being sung (standard and the stronger Apple Music variant), tap-a-line-to-seek, auto-scroll, text alignment (left / center / right) and the text size / line spacing sliders. The derived switches only appear once their parent option is on, so the list never fills up with toggles that cannot do anything.
+- [DE] **Romanization and lyric translation actually render.** The lyrics screen now shows the romanized text under each line (`LyricsRomanizer`, a pure-JVM port of the mobile tables: katakana incl. the sokuon, Hangul with the final-consonant assimilation rules, the seven Cyrillic orthographies with per-language detection, Devanagari and Gurmukhi with the inherent vowel restored) or as the main line, and — when *Translate lyrics* is on — a translation of every line, obtained from the AI provider already configured in Settings (OpenRouter/OpenAI-compatible chat completions, or DeepL) and cached per track/language.
+
+### Changed
+- [DE] **The lyrics parser keeps the per-word timings.** The desktop used to strip every `<mm:ss.xx>` tag and keep only the line times, which is why no karaoke animation was possible; the shared `lyricsProvider` module now parses classic LRC, rich-sync, the TTML word-list layout and the `{agent:v1}` / `{bg}` markers (JVM port of the mobile `LyricsUtils`, with unit tests).
+- [DE] The lyrics position is read per line, so the ~40 playback updates per second recompose only the visible lines instead of the whole panel; the sung line is still decided by a slower poll so the list is not scrolled at the full position rate.
+- [DE] Settings search (already able to reach sub-screens) now indexes the new lyrics keys as well.
+
 ## [6.0.6.3_DE-1.50.76-alpha] - 2026-09-18
 
 ### Changed

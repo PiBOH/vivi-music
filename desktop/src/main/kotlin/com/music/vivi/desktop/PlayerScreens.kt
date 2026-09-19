@@ -141,6 +141,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.music.vivi.canvas.CanvasArtwork
+import com.music.lyrics.LyricLine
+import com.music.lyrics.LyricsParser
 import com.music.vivi.desktop.player.LoadPhase
 import com.music.vivi.desktop.player.RepeatMode
 import kotlinx.coroutines.delay
@@ -694,6 +696,12 @@ private fun M3EPlayerContent(
                             positionMs = positionMs,
                             isPlaying = isPlaying,
                             language = language,
+                            display = lyricsDisplayOptionsFrom(DesktopSettings.load()),
+                            translate = lyricsTranslationConfig(
+                                DesktopSettings.load(),
+                                DesktopSettings.load().translateLyrics,
+                            ),
+                            onSeek = onSeek,
                             onTogglePlay = onTogglePlay,
                             onBack = { activeTab = M3ETab.NONE },
                         )
@@ -1945,51 +1953,6 @@ private fun cleanLyrics(text: String): List<String> =
         .map { it.replace(Regex("""\[\d{1,2}:\d{1,2}(\.\d{1,3})?\]"""), "").trim() }
         .filter { it.isNotEmpty() }
 
-/** A single synced lyric line with its start time in milliseconds. */
-private data class LyricLine(val timeMs: Long, val text: String)
-
-/**
- * Parses LRC synced lyrics. Returns null when the text has no timestamps
- * (plain lyrics). Rich-sync `<mm:ss.xx>` word tags are stripped.
- */
-private fun parseLrc(text: String): List<LyricLine>? {
-    val timeRegex = Regex("""\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?]""")
-    val lineRegex = Regex("""((\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?]\s*)+)(.*)""")
-    val result = mutableListOf<LyricLine>()
-    var hasTimestamps = false
-
-    for (raw in text.lines()) {
-        val line = raw.trim()
-        if (line.isEmpty()) continue
-        val match = lineRegex.find(line) ?: continue
-        val timeTokens = match.groupValues[1]
-        var content = match.groupValues[3]
-            .replace(Regex("""<\d{1,2}:\d{2}(?:\.\d{1,3})?>\s*"""), "")
-            .trim()
-        if (content.isEmpty()) continue
-
-        timeRegex.findAll(timeTokens).forEach { t ->
-            val min = t.groupValues[1].toLongOrNull() ?: 0L
-            val sec = t.groupValues[2].toLongOrNull() ?: 0L
-            val frac = (t.groupValues[3].padEnd(3, '0').take(3).toLongOrNull() ?: 0L)
-            result.add(LyricLine(min * 60_000 + sec * 1_000 + frac, content))
-            hasTimestamps = true
-        }
-    }
-
-    if (!hasTimestamps) return null
-    return result.sortedBy { it.timeMs }
-}
-
-/** Index of the line currently being sung (last line with time <= position). */
-private fun currentLineIndex(lines: List<LyricLine>, positionMs: Long): Int {
-    var index = -1
-    for (i in lines.indices) {
-        if (lines[i].timeMs <= positionMs) index = i else break
-    }
-    return index
-}
-
 @Composable
 fun LyricsScreen(
     nowPlaying: NowPlaying?,
@@ -1999,9 +1962,16 @@ fun LyricsScreen(
     synced: Boolean = true,
     textSizeSp: Float = 18f,
     lineSpacing: Float = 1.35f,
+    /** Full animation/display configuration (mobile port); built from the
+     * single size/spacing arguments when the caller does not pass one. */
+    display: LyricsDisplayOptions? = null,
+    /** AI translation settings, or null when translation is off. */
+    translate: LyricsTranslator.Config? = null,
+    onSeek: (Long) -> Unit = {},
     onTogglePlay: () -> Unit = {},
     onBack: () -> Unit,
 ) {
+    val options = display ?: LyricsDisplayOptions(textSizeSp = textSizeSp, lineSpacing = lineSpacing)
     var lyrics by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -2092,7 +2062,12 @@ fun LyricsScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
             else -> {
-                val lines = remember(lyrics) { parseLrc(lyrics.orEmpty()) }
+                // The shared parser keeps the per-word timings (the old local
+                // `parseLrc` threw them away), which is what the karaoke family
+                // of animations needs.
+                val lines = remember(lyrics) {
+                    LyricsParser.parse(lyrics.orEmpty()).takeIf { LyricsParser.hasTimestamps(lyrics.orEmpty()) }
+                }
                 if (!synced || lines.isNullOrEmpty()) {
                     // Plain (non-synced) lyrics fallback.
                     Column(
@@ -2101,47 +2076,34 @@ fun LyricsScreen(
                         cleanLyrics(lyrics!!).forEach { line ->
                             Text(
                                 line,
-                                fontSize = textSizeSp.sp,
-                                lineHeight = (textSizeSp * lineSpacing).sp,
+                                fontSize = options.textSizeSp.sp,
+                                lineHeight = (options.textSizeSp * options.lineSpacing).sp,
                                 modifier = Modifier.padding(vertical = 2.dp),
                             )
                         }
                     }
                 } else {
-                    val listState = rememberLazyListState()
-                    var currentIndex by remember(lines) { mutableStateOf(-1) }
-                    val latestPosition by rememberUpdatedState(positionMs)
-
-                    // Debounce: poll the position ~5x/s and only commit the
-                    // highlighted line when it actually changes, so the lyric
-                    // list isn't recomposed on every decoded-frame position
-                    // update (~40/s).
-                    LaunchedEffect(lines) {
-                        while (true) {
-                            val idx = currentLineIndex(lines, latestPosition)
-                            if (idx != currentIndex) currentIndex = idx
-                            delay(200)
-                        }
+                    // AI translation: one translated line per lyric line, fetched
+                    // once per track/language and cached by the translator.
+                    var translated by remember(lines) { mutableStateOf<List<String?>?>(null) }
+                    val translateEnabled = translate != null && options.translated == null
+                    LaunchedEffect(lines, translate) {
+                        if (!translateEnabled || translate == null) return@LaunchedEffect
+                        val cacheKey = "${np?.videoId}|${translate.targetLanguage}|${translate.mode}"
+                        translated = LyricsTranslator.translate(lines.map { it.text }, translate, cacheKey)
                     }
-
-                    LaunchedEffect(currentIndex) {
-                        if (currentIndex >= 0) {
-                            listState.animateScrollToItem(maxOf(0, currentIndex - 3))
-                        }
+                    val effective = if (options.translated != null) {
+                        options
+                    } else {
+                        options.copy(translated = translated)
                     }
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
-                        itemsIndexed(lines) { i, line ->
-                            val isCurrent = i == currentIndex
-                            Text(
-                                line.text,
-                                fontSize = if (isCurrent) (textSizeSp + 4).sp else textSizeSp.sp,
-                                lineHeight = (textSizeSp * lineSpacing).sp,
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 6.dp),
-                            )
-                        }
-                    }
+                    LyricsList(
+                        lines = lines,
+                        positionMs = positionMs,
+                        options = effective,
+                        onSeek = onSeek,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                 }
             }
         }
@@ -3461,6 +3423,9 @@ fun LyricsFocusScreen(
     lineSpacing: Float,
     bgUrl: String? = null,
     accent: Color = MaterialTheme.colorScheme.primary,
+    display: LyricsDisplayOptions? = null,
+    translate: LyricsTranslator.Config? = null,
+    onSeek: (Long) -> Unit = {},
     onTogglePlay: () -> Unit = {},
     onNext: () -> Unit = {},
     onPrevious: () -> Unit = {},
@@ -3516,6 +3481,9 @@ fun LyricsFocusScreen(
             synced = synced,
             textSizeSp = textSizeSp,
             lineSpacing = lineSpacing,
+            display = display,
+            translate = translate,
+            onSeek = onSeek,
             onTogglePlay = onTogglePlay,
             onBack = onBack,
         )

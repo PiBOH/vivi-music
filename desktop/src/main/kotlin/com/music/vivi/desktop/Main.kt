@@ -1085,6 +1085,10 @@ fun WindowScope.App(
     var syncViviVolume by remember { mutableStateOf(DesktopSettings.load().syncViviVolume) }
     var lyricsTextSize by remember { mutableStateOf(DesktopSettings.load().lyricsTextSize) }
     var lyricsLineSpacing by remember { mutableStateOf(DesktopSettings.load().lyricsLineSpacing) }
+    // Animation style + display options (mobile lyrics port). Kept as one object
+    // so the renderer, the settings screen and the file always agree.
+    var lyricsDisplay by remember { mutableStateOf(lyricsDisplayOptionsFrom(DesktopSettings.load())) }
+    var translateLyrics by remember { mutableStateOf(DesktopSettings.load().translateLyrics) }
     var streamCacheMinutes by remember { mutableStateOf(DesktopSettings.load().streamCacheMinutes) }
     var discordRpcEnabled by remember { mutableStateOf(DesktopSettings.load().discordRpcEnabled) }
     var discordClientId by remember { mutableStateOf(DesktopSettings.load().discordClientId) }
@@ -2687,6 +2691,16 @@ fun WindowScope.App(
                             lyricsLineSpacing = ls
                             DesktopSettings.update { it.copy(lyricsLineSpacing = ls) }
                         },
+                        options = lyricsDisplay,
+                        onOptionsChange = { opts ->
+                            lyricsDisplay = opts
+                            DesktopSettings.update { it.copy(lyricsTextSize = opts.textSizeSp, lyricsLineSpacing = opts.lineSpacing).withLyricsDisplayOptions(opts) }
+                        },
+                        translateLyrics = translateLyrics,
+                        onToggleTranslateLyrics = { on ->
+                            translateLyrics = on
+                            DesktopSettings.update { it.copy(translateLyrics = on) }
+                        },
                     )
                     is Screen.SettingsStorage -> SettingsStorageScreen(
                         language = language,
@@ -2897,6 +2911,9 @@ fun WindowScope.App(
                         synced = syncedLyrics,
                         textSizeSp = lyricsTextSize,
                         lineSpacing = lyricsLineSpacing,
+                        display = lyricsDisplay,
+                        translate = lyricsTranslationConfig(DesktopSettings.load(), translateLyrics),
+                        onSeek = { ms -> player.seekTo(ms) },
                         onTogglePlay = { player.toggle() },
                         onNext = { player.next() },
                         onPrevious = { player.previous() },
@@ -2910,6 +2927,9 @@ fun WindowScope.App(
                         synced = syncedLyrics,
                         textSizeSp = lyricsTextSize,
                         lineSpacing = lyricsLineSpacing,
+                        display = lyricsDisplay,
+                        translate = lyricsTranslationConfig(DesktopSettings.load(), translateLyrics),
+                        onSeek = { ms -> player.seekTo(ms) },
                         onTogglePlay = { player.toggle() },
                         onBack = goBack,
                     )
@@ -4593,7 +4613,23 @@ fun SettingsScreen(
         "device_sync" to listOf("connection_method", "method_relay", "method_lan", "relay_server", "lan_sync", "connect", "generate_code", "regenerate_pair_code", "code_expires_in", "code_hint", "lan_hint", "pair", "unpair", "scan_qr", "connected", "disconnected", "status", "download_mobile_apk", "how_to_connect", "waiting_for_pairing"),
         "content" to listOf("content", "content_country", "content_language", "system_default"),
         "ai_lyrics_translation" to listOf("ai_api_key", "ai_base_url", "ai_deepl_formality", "ai_deepl_formality_default", "ai_deepl_formality_less", "ai_deepl_formality_more", "ai_lyrics_translation", "ai_model", "ai_provider", "ai_target_language", "ai_translation_literal", "ai_translation_mode", "ai_translation_transcribed", "not_set", "ai_setup_guide"),
-        "lyrics" to listOf("lyrics", "lyrics_line_spacing", "lyrics_text_size", "synced_lyrics", "synced_lyrics_desc", "lyrics_focus"),
+        "lyrics" to listOf(
+            "lyrics", "lyrics_line_spacing", "lyrics_text_size", "synced_lyrics", "synced_lyrics_desc", "lyrics_focus",
+            // Advanced lyrics (mobile port): animation styles, display options,
+            // romanization and translation.
+            "lyrics_animation_style", "lyrics_animation_style_desc",
+            "lyrics_style_none", "lyrics_style_fade", "lyrics_style_glow", "lyrics_style_slide",
+            "lyrics_style_karaoke", "lyrics_style_apple", "lyrics_style_apple_v2", "lyrics_style_vivimusic",
+            "lyrics_glow_effect", "lyrics_glow_effect_desc",
+            "lyrics_apple_blur", "lyrics_apple_blur_desc", "lyrics_standard_blur", "lyrics_standard_blur_desc",
+            "lyrics_click_to_seek", "lyrics_click_to_seek_desc", "lyrics_auto_scroll", "lyrics_auto_scroll_desc",
+            "lyrics_text_position", "lyrics_position_left", "lyrics_position_center", "lyrics_position_right",
+            "lyrics_romanize", "lyrics_romanize_desc", "lyrics_romanize_as_main", "lyrics_romanize_as_main_desc",
+            "romanize_japanese", "romanize_korean", "romanize_chinese", "romanize_russian",
+            "romanize_ukrainian", "romanize_serbian", "romanize_bulgarian", "romanize_belarusian",
+            "romanize_kyrgyz", "romanize_macedonian", "romanize_hindi", "romanize_punjabi",
+            "translate_lyrics", "translate_lyrics_desc", "ai_lyrics_translation",
+        ),
         "privacy" to listOf("clear_search_history", "pause_listen_history", "pause_search_history", "privacy", "privacy_desc"),
         "data_saver" to listOf("data_saver", "data_saver_desc", "data_saver_turns_off_header", "data_saver_album_canvas", "data_saver_player_canvas", "data_saver_artist_video", "data_saver_artist_bg_video", "data_saver_high_quality_images"),
         "storage" to listOf("storage", "cache_size", "clear_cache", "cache_cleared", "delete_installers", "installers_deleted"),

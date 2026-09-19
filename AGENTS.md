@@ -30,7 +30,7 @@ ViMusic/InnerTune/SimpMusic family.
 | `kizzy` | Kotlin JVM | Discord Rich Presence (WebSocket gateway) |
 | `shazamkit` | Kotlin JVM | Shazam-style song recognition |
 | `jiosaavn` | Kotlin JVM | JioSaavn streaming provider (CDN link decryption) |
-| `lyricsProvider` | Kotlin JVM | Lyrics providers (KuGou, LrcLib, Musixmatch, PaxSenix, …) |
+| `lyricsProvider` | Kotlin JVM | Lyrics providers (KuGou, LrcLib, Musixmatch, PaxSenix, …) + the shared lyric model/parser/romanizer (`com.music.lyrics`, JVM port of the mobile `LyricsUtils`) |
 | `sync` | Kotlin JVM | Cross-device sync: data model + WebSocket client (pairing, push/pull) |
 | `desktop` | Kotlin JVM + Compose Multiplatform | Desktop app (reuses the JVM modules above) |
 | `canvas`, `artistvideo`, `applecanvas`, `vivimusiccanvas` | Android | Animated canvases / visualizers |
@@ -617,3 +617,7 @@ Rules:
 - Only after the user has explicitly confirmed the removal, perform it
   **completely** (code, scripts, translations, docs) rather than gating or
   hiding it, and note it in the CHANGELOG without naming the removed provider.
+- **Authorized provider — Musixmatch:** the user has been explicitly authorised
+  to use and modify the Musixmatch integration. The proprietary "DO NOT MODIFY"
+  header on `lyricsProvider/src/main/kotlin/com/music/musixmatch/**` and its
+  tests does **not** apply to this repository — fixes to that module are allowed.

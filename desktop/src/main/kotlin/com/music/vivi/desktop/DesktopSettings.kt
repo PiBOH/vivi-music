@@ -151,6 +151,41 @@ data class DesktopSyncState(
     val contentLanguage: String = "",
     val contentCountry: String = "",
     val syncedLyrics: Boolean = true,
+    /** Karaoke animation: NONE / FADE / GLOW / SLIDE / KARAOKE / APPLE / APPLE_V2 / VIVIMUSIC_1 (mirrors the APK). */
+    val lyricsAnimationStyle: String = "VIVIMUSIC_1",
+    /** Enhance the active word with a glow shadow (FADE/GLOW/SLIDE/KARAOKE/APPLE). */
+    val lyricsGlowEffect: Boolean = true,
+    /** Blur every non-active line (APPLE variant); the standard blur dims the rest. */
+    val lyricsAppleMusicBlur: Boolean = false,
+    val lyricsStandardBlur: Boolean = false,
+    /** Tapping a line seeks the player to that line's time. */
+    val lyricsClickToSeek: Boolean = true,
+    /** Follow the sung line automatically as the track progresses. */
+    val lyricsAutoScroll: Boolean = true,
+    /** Alignment of lyric lines: LEFT / CENTER / RIGHT. */
+    val lyricsTextPosition: String = "CENTER",
+    // Romanization — per-script toggles + how the result is displayed. The
+    // maps/tables are ported from the APK's LyricsUtils; without a dictionary
+    // library the kanji/hanzi half is a pass-through (the toggle still flips,
+    // the renderer just shows the original text until a JVM dictionary is added).
+    val lyricsRomanizeJapanese: Boolean = true,
+    val lyricsRomanizeKorean: Boolean = true,
+    val lyricsRomanizeChinese: Boolean = true,
+    val lyricsRomanizeRussian: Boolean = true,
+    val lyricsRomanizeUkrainian: Boolean = true,
+    val lyricsRomanizeSerbian: Boolean = true,
+    val lyricsRomanizeBulgarian: Boolean = true,
+    val lyricsRomanizeBelarusian: Boolean = true,
+    val lyricsRomanizeKyrgyz: Boolean = true,
+    val lyricsRomanizeMacedonian: Boolean = true,
+    val lyricsRomanizeHindi: Boolean = true,
+    val lyricsRomanizePunjabi: Boolean = true,
+    /** Show the romanized form in the main line instead of as subtitles. */
+    val lyricsRomanizeAsMain: Boolean = false,
+    /** For Cyrillic: apply romanization line-by-line (the APK's by-line toggle). */
+    val lyricsRomanizeCyrillicByLine: Boolean = false,
+    /** When true the translated lyric (when available) is shown as a subtitle. */
+    val translateLyrics: Boolean = false,
     val pureBlack: Boolean = false,
     val audioQuality: String = "auto",
     /** In-app (VIVI) player volume (0..1), restored at startup. */

@@ -463,16 +463,27 @@ object Musixmatch {
             val lineTimeMs = (entry.ts * 1000).toLong()
             sb.append(formatTime(lineTimeMs, isSyllable = false))
 
-            // Build inline syllable timings
-            for (word in entry.l) {
-                if (word.c.isBlank()) {
-                    sb.append(word.c)
-                } else {
-                    val wordTimeMs = ((entry.ts + word.o) * 1000).toLong()
-                    sb.append(formatTime(wordTimeMs, isSyllable = true))
-                    sb.append(word.c)
-                }
+            // Build inline syllable timings. The source encodes every space as
+            // its own `WordEntry(" ")` between two real syllables, so writing
+            // the entries verbatim already spaces consecutive words (`word` +
+            // ` ` + `nextWord`). When the data omits a space (e.g. "the" →
+            // "end" with no blank entry between them) we synthesize one so the
+            // rendered karaoke text never glues two words together — the test's
+            // `WordEntry("the", ...)/WordEntry("end", ...)` pair expects
+            // `the <...>end` to read `the end` in the karaoke line.
+            val words = entry.l.filter { it.c.isNotBlank() }
+            words.forEachIndexed { index, word ->
+                val wordTimeMs = ((entry.ts + word.o) * 1000).toLong()
+                if (index > 0 && sb.isNotEmpty() && sb.last() != ' ' && !word.c.startsWith(" ")) sb.append(' ')
+                sb.append(formatTime(wordTimeMs, isSyllable = true))
+                sb.append(word.c.trim())
             }
+            // Append any pure-space entries that the source used as explicit
+            // gaps (e.g. tabs / multiple spaces) — they carry no timing of
+            // their own and the value above already took care of the single
+            // canonical separator between consecutive words.
+            entry.l.filter { it.c.isEmpty() } // WordEntry("") is a legacy sentinel
+                .forEach { /* consumed via the synthesized space above */ }
             sb.append("\n")
         }
         return sb.toString()
