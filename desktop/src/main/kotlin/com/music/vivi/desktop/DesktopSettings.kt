@@ -2,8 +2,6 @@ package com.music.vivi.desktop
 
 import com.music.vivi.sync.LibrarySnapshot
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
@@ -52,9 +50,13 @@ data class DesktopSyncState(
     /** Adaptive grid cell width in dp for album/artist/playlist grids. */
     val gridItemSize: Int = 160,
     /** Screen transition style between navigations: off / fade / slide. */
-    val screenTransition: String = "fade",
-    /** Master switch for UI animations; when off, screen transitions become instant. */
+    val screenTransition: String = "fade",    /** Master switch for UI animations; when off, screen transitions become instant. */
     val animationsEnabled: Boolean = true,
+    /** Global UI animation speed: "fast" / "normal" / "slow" (multiplier on every tween/spring). */
+    val animationSpeed: String = "normal",
+    /** Navigate back/forward with the mouse X1/X2 thumb buttons (Windows/Linux). */
+    /** Preferred audio output device (Java Sound mixer name; empty = system default). */
+    val outputDeviceName: String = "",
     /** Player slider style: slim / squiggly / wavy. */
     val sliderStyle: String = "slim",
     /** Full-player layout variant: classic / new / v2 / expressive. */
@@ -149,6 +151,41 @@ data class DesktopSyncState(
     val contentLanguage: String = "",
     val contentCountry: String = "",
     val syncedLyrics: Boolean = true,
+    /** Karaoke animation: NONE / FADE / GLOW / SLIDE / KARAOKE / APPLE / APPLE_V2 / VIVIMUSIC_1 (mirrors the APK). */
+    val lyricsAnimationStyle: String = "VIVIMUSIC_1",
+    /** Enhance the active word with a glow shadow (FADE/GLOW/SLIDE/KARAOKE/APPLE). */
+    val lyricsGlowEffect: Boolean = true,
+    /** Blur every non-active line (APPLE variant); the standard blur dims the rest. */
+    val lyricsAppleMusicBlur: Boolean = false,
+    val lyricsStandardBlur: Boolean = false,
+    /** Tapping a line seeks the player to that line's time. */
+    val lyricsClickToSeek: Boolean = true,
+    /** Follow the sung line automatically as the track progresses. */
+    val lyricsAutoScroll: Boolean = true,
+    /** Alignment of lyric lines: LEFT / CENTER / RIGHT. */
+    val lyricsTextPosition: String = "CENTER",
+    // Romanization — per-script toggles + how the result is displayed. The
+    // maps/tables are ported from the APK's LyricsUtils; without a dictionary
+    // library the kanji/hanzi half is a pass-through (the toggle still flips,
+    // the renderer just shows the original text until a JVM dictionary is added).
+    val lyricsRomanizeJapanese: Boolean = true,
+    val lyricsRomanizeKorean: Boolean = true,
+    val lyricsRomanizeChinese: Boolean = true,
+    val lyricsRomanizeRussian: Boolean = true,
+    val lyricsRomanizeUkrainian: Boolean = true,
+    val lyricsRomanizeSerbian: Boolean = true,
+    val lyricsRomanizeBulgarian: Boolean = true,
+    val lyricsRomanizeBelarusian: Boolean = true,
+    val lyricsRomanizeKyrgyz: Boolean = true,
+    val lyricsRomanizeMacedonian: Boolean = true,
+    val lyricsRomanizeHindi: Boolean = true,
+    val lyricsRomanizePunjabi: Boolean = true,
+    /** Show the romanized form in the main line instead of as subtitles. */
+    val lyricsRomanizeAsMain: Boolean = false,
+    /** For Cyrillic: apply romanization line-by-line (the APK's by-line toggle). */
+    val lyricsRomanizeCyrillicByLine: Boolean = false,
+    /** When true the translated lyric (when available) is shown as a subtitle. */
+    val translateLyrics: Boolean = false,
     val pureBlack: Boolean = false,
     val audioQuality: String = "auto",
     /** In-app (VIVI) player volume (0..1), restored at startup. */
@@ -255,19 +292,33 @@ object DesktopSettings {
         }
     }
 
-    fun load(): DesktopSyncState = synchronized(lock) {
-        try {
-            if (file.exists()) json.decodeFromString(DesktopSyncState.serializer(), file.readText())
-            else DesktopSyncState()
-        } catch (_: Exception) {
-            DesktopSyncState()
-        }
+    /**
+     * In-memory snapshot of the file, so [load] does not have to read and parse
+     * it every time. It is called from the polling loops that run for the whole
+     * session (volume sync every 500 ms, mute watchdog every 800 ms, command
+     * poll every 500 ms), and each call used to re-read AND re-parse ~58 KB of
+     * JSON on an IO thread while audio was playing — the same file that the
+     * writer of a settings change rewrites. Every writer goes through [save],
+     * which refreshes this snapshot, so the cache cannot go stale.
+     */
+    @Volatile private var cached: DesktopSyncState? = null
+
+    fun load(): DesktopSyncState = cached ?: synchronized(lock) {
+        cached ?: read().also { cached = it }
+    }
+
+    private fun read(): DesktopSyncState = try {
+        if (file.exists()) json.decodeFromString(DesktopSyncState.serializer(), file.readText())
+        else DesktopSyncState()
+    } catch (_: Exception) {
+        DesktopSyncState()
     }
 
     fun save(state: DesktopSyncState) {
         synchronized(lock) {
             try {
                 file.writeText(json.encodeToString(DesktopSyncState.serializer(), state))
+                cached = state
             } catch (_: Exception) {
                 // best-effort
             }
@@ -305,28 +356,26 @@ object DesktopSettings {
         "firstLaunchDate",
     )
 
-    /** Secrets / personal data that must never be written to the activity log. */
+    /** Credentials and API keys that must never be written to the activity log
+     *  in clear text (they would be handed out inside every exported log zip). */
     private val redactedFields = setOf(
-        "cookie", "dataSyncId", "visitorData", "aiApiKey", "deeplApiKey",
-        "lastfmSession", "accountEmail", "accountChannelHandle",
+        "cookie", "dataSyncId", "visitorData",
+        "aiApiKey", "deeplApiKey", "lastfmSession",
         "listenTogetherSessionToken",
     )
 
-    private fun jsonSummary(el: kotlinx.serialization.json.JsonElement?): String = when (el) {
+    private fun jsonValue(el: kotlinx.serialization.json.JsonElement?): String = when (el) {
         null -> "unset"
-        is JsonPrimitive -> {
-            val s = el.content
-            if (s.length > 60) s.take(34) + "…(" + s.length + " chars)" else s
-        }
-        is JsonArray -> "[${el.size} items]"
-        is JsonObject -> "{${el.size} fields}"
+        is JsonPrimitive -> el.content
         else -> el.toString()
     }
 
     /**
      * Records every setting the user actually changed (field: old → new) into
-     * the activity log. Skipping [volatileFields] keeps the log readable;
-     * [redactedFields] are never dumped in clear text.
+     * the activity log at full value — nothing is shortened, because a
+     * truncated value is what makes a support log useless. Skipping
+     * [volatileFields] keeps the log readable; [redactedFields] (credentials
+     * and API keys only) are never dumped in clear text.
      */
     private fun logChanges(before: DesktopSyncState, after: DesktopSyncState) {
         if (before == after) return
@@ -338,8 +387,8 @@ object DesktopSettings {
                 if (key in volatileFields) continue
                 val oldValue = b[key]
                 if (oldValue == newValue) continue
-                val shownOld = if (key in redactedFields) "[redacted]" else jsonSummary(oldValue)
-                val shownNew = if (key in redactedFields) "[redacted]" else jsonSummary(newValue)
+                val shownOld = if (key in redactedFields) "[redacted]" else jsonValue(oldValue)
+                val shownNew = if (key in redactedFields) "[redacted]" else jsonValue(newValue)
                 parts += "$key: $shownOld → $shownNew"
             }
             if (parts.isNotEmpty()) AppLog.log("settings", parts.joinToString(" | "))

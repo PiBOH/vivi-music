@@ -48,9 +48,12 @@ OutputDir={#OutputDir}
 OutputBaseFilename=VIVIMusic-{#AppVersion}-setup
 SetupIconFile={#IconFile}
 WizardStyle=modern
-; The jpackage image is 200+ MB; avoid solid compression so CI stays fast.
-Compression=lzma
-SolidCompression=no
+; Maximize compression: the shipped image is trimmed (see MinimizeIconsJarTask in
+; desktop/build.gradle.kts), so the lzma2/max + solid pass is affordable and the
+; setup stays as small as possible. There are no optional [Components], so solid
+; compression does not make a partial install decompress the whole block.
+Compression=lzma2/max
+SolidCompression=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible

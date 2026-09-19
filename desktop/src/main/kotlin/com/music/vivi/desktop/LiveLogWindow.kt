@@ -34,12 +34,12 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun LiveLogWindowContent(language: String, onClose: () -> Unit) {
-    val lines by AppLog.lines.collectAsState()
+    val entries by AppLog.entries.collectAsState()
     val listState = rememberLazyListState()
 
     // Keep the view pinned to the newest line while the log grows.
-    LaunchedEffect(lines.size) {
-        if (lines.isNotEmpty()) listState.scrollToItem(lines.lastIndex)
+    LaunchedEffect(entries.size) {
+        if (entries.isNotEmpty()) listState.scrollToItem(entries.lastIndex)
     }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -68,9 +68,13 @@ fun LiveLogWindowContent(language: String, onClose: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(1.dp),
                 ) {
-                    items(lines, key = { it }) { line ->
+                    // Keyed by the line's unique sequence id, never by its
+                    // text: identical lines are normal (a resolve logged twice
+                    // in the same millisecond) and a duplicated key crashed the
+                    // window with `Key "…" was already used`.
+                    items(entries, key = { it.seq }) { entry ->
                         Text(
-                            line,
+                            entry.text,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontFamily = FontFamily.Monospace,
                             ),

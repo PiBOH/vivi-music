@@ -33,15 +33,21 @@
   <meta name="theme-color" content="#6c5ce7">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"VIVI Music DE","applicationCategory":"MultimediaApplication","operatingSystem":"Windows 10+, Linux, macOS 10.15+","url":"https://piboh.github.io/vivi-music/downloads.html","downloadUrl":"https://github.com/PiBOH/vivi-music/releases/latest","image":"https://piboh.github.io/vivi-music/images/logo_vmde.png","description":"Download VIVI Music DE: free installers for Windows 10/11 (.exe/.msi), Linux (.deb, AppImage, AUR PKGBUILD) and macOS (.dmg/.pkg — Apple Silicon & Intel). Stable and prerelease channels, straight from GitHub Releases.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 
-      <link rel="icon" type="image/png" href="images/logo_vmde.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link rel="icon" type="image/png" sizes="96x96" href="images/favicon.png">
+  <!-- Font hints: the fonts would otherwise only be requested once fonts.css has
+       been parsed, which is late enough that the swap re-paints the hero text and
+       delays LCP. These pull the same four files (latin subset only, thanks to the
+       unicode-range in fonts.css) forward; `crossorigin` makes the hint match the
+       real CORS-mode font request instead of triggering a second download. -->
+  <link rel="preload" href="assets/fonts/Geist-400-a147f99cd5.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/Sora-300-0d0e5e4d2f.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/InstrumentSans-400-fa41c43a3d.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/material-symbols-outlined.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts.css">
   <link rel="stylesheet" href="assets/tpl.css">
   <link rel="stylesheet" href="assets/site-chrome.css">
   <link rel="stylesheet" href="style.css">
   <script>document.documentElement.classList.add("js");try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
-  <script src="assets/tpl.js"></script>
 </head>
 <body class="bg-transparent text-white font-sora selection:bg-white/20 overflow-x-hidden">
 
@@ -205,7 +211,8 @@
               <a class="btn sm" data-dl=".apk-gsm" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download GMS</a>
               <a class="btn sm" data-dl=".apk-foss" href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">Download FOSS</a>
             </div>
-            <span class="miss mono" style="font-size:11px;color:var(--faint)">GMS = with Google services · FOSS = without</span>
+            <span class="miss mono" data-miss=".apk-gsm" style="font-size:11px;color:var(--faint)">GMS = with Google services</span>
+            <span class="miss mono" data-miss=".apk-foss" style="font-size:11px;color:var(--faint)">FOSS = without Google services</span>
           </div>
           <div class="dl">
             <span class="t">VIVI Music (upstream mobile)</span>
@@ -325,13 +332,29 @@
 
   /* navbar: shrink after scrolling a bit */
   var nav = $('#top-navbar');
-  function onScroll() {
-    if (!nav) return;
-    if (window.scrollY > 40) nav.classList.add('scrolled');
-    else nav.classList.remove('scrolled');
+  /* The navbar shrinks once the page is scrolled past 40px. This must not read
+     the scroll position: `window.scrollY` forces a synchronous layout, which is
+     what Lighthouse reported as "forced reflow" (710 ms on a throttled phone,
+     and it flagged the same read again once it was merely deferred a frame). A
+     1px sentinel 40px down the document observed by IntersectionObserver gives
+     the same answer without touching layout, and it is also correct when the
+     page is opened with a #fragment, where no scroll event fires at all.
+   */
+  if (nav) {
+    var navMark = document.createElement('div');
+    navMark.setAttribute('aria-hidden', 'true');
+    navMark.style.cssText = 'position:absolute;top:40px;left:0;width:1px;height:1px;pointer-events:none';
+    document.body.appendChild(navMark);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        nav.classList.toggle('scrolled', !entries[0].isIntersecting);
+      }, { threshold: 0 }).observe(navMark);
+    } else {
+      window.addEventListener('scroll', function () {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+      }, { passive: true });
+    }
   }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
 
   /* mobile menu */
   var menuBtn = $('#mobile-menu-btn');
@@ -363,6 +386,10 @@
   var grid = $('#dl-grid');
   var variant = $('#dl-variant');
   var rel = null;
+  /* Platform panel currently on screen, so arriving data can re-render it. */
+  var curPlat = null;
+  var relLoading = false;
+  var relFailed = false;
 
   function findAsset(re) {
     var assets = (rel && rel.assets) || [];
@@ -400,8 +427,17 @@
   };
 
   function showVariants(plat) {
+    curPlat = plat;
     var items = VARIANTS[plat] || [];
     variant.innerHTML = '';
+    /* No release data yet: say so instead of advertising every asset as "not in
+       this release". This branch is exactly what the dialog used to draw when
+       it was opened before the API answered - the reason the assets only
+       showed up after refreshing the page. */
+    if (!rel) {
+      renderPending();
+      return;
+    }
     var any = false;
     items.forEach(function (it) {
       var url = assetUrl(it.re);
@@ -455,26 +491,70 @@
     return rels[0] || null;
   }
 
+  function renderPending() {
+    variant.innerHTML = '';
+    if (relFailed && !relLoading) {
+      var again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'helium-dialog-btn w-full py-3 text-sm font-bold text-white';
+      again.textContent = 'Retry';
+      again.addEventListener('click', function () { relFailed = false; loadRelease(); });
+      variant.appendChild(again);
+      var hint = document.createElement('p');
+      hint.className = 'text-[10px] text-[#afbeff]/60 font-geist text-left px-1';
+      hint.textContent = 'GitHub did not answer - every asset is also on the releases page.';
+      variant.appendChild(hint);
+    } else {
+      var wait = document.createElement('p');
+      wait.className = 'text-xs font-geist text-[#afbeff]/70 text-left px-1';
+      wait.textContent = 'Loading the latest release\u2026';
+      variant.appendChild(wait);
+      if (!relLoading) loadRelease();
+    }
+    variant.classList.remove('hidden');
+    variant.classList.add('flex');
+  }
+
+  /* Applies whatever the shared cache/proxy hands over and re-renders the panel
+     the user is looking at: the data can arrive, or be replaced by a newer
+     copy, while the dialog is already open. */
+  function applyRelease(r) {
+    if (r) {
+      rel = r;
+      relFailed = false;
+      var ch = r.prerelease ? 'prerelease' : 'stable';
+      tagline.innerHTML = 'Latest release: <b class="text-white">' + r.tag_name + '</b> \u00b7 ' + ch;
+    } else if (!rel) {
+      tagline.textContent = 'Could not reach GitHub - pick a platform to retry.';
+    }
+    if (curPlat) showVariants(curPlat);
+  }
+
   function loadRelease() {
+    if (relLoading) return;
+    relLoading = true;
+    function done(r) {
+      relLoading = false;
+      if (!r && rel) return; /* a failed revalidation keeps what is on screen */
+      if (!r) relFailed = true;
+      applyRelease(r);
+    }
+    /* main.js owns the local cache and the retry; this fallback only runs if it
+       could not be loaded at all (so the dialog still works without it). */
+    if (window.vmWatchLatestRelease) {
+      window.vmWatchLatestRelease(function (r) { done(r); });
+      return;
+    }
     fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=30', {
       headers: { Accept: 'application/vnd.github+json' }
     }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (list) {
-        rel = pickRelease(list);
-        if (rel) {
-          var ch = rel.prerelease ? 'prerelease' : 'stable';
-          tagline.innerHTML = 'Latest release: <b class="text-white">' + rel.tag_name + '</b> · ' + ch;
-        } else {
-          tagline.textContent = 'No release published yet.';
-        }
-      })
-      .catch(function () { tagline.textContent = 'Could not reach GitHub — try the downloads page.'; });
+      .then(function (list) { done(pickRelease(list)); })
+      .catch(function () { done(null); });
   }
 
   function openModal() {
     if (!modal) return;
-    if (!rel) loadRelease();
-    else if (tagline && !tagline.dataset.loaded) { /* keep */ }
+    loadRelease();
     modal.showModal();
     void modal.offsetWidth;
     modal.classList.add('is-open');
@@ -498,6 +578,15 @@
     var backdrop = modal.querySelector('.dialog-backdrop');
     if (backdrop) backdrop.addEventListener('click', closeModal);
     modal.addEventListener('cancel', function (e) { e.preventDefault(); closeModal(); });
+  }
+
+  /* Warm the release data while the page is idle, so the dialog is already
+     filled the first time it is opened. The shared helper lives in main.js,
+     which is loaded after this inline script - hence the DOMContentLoaded wait. */
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', loadRelease);
+  } else {
+    loadRelease();
   }
   $$('.dl-plat').forEach(function (b) {
     b.addEventListener('click', function () { showVariants(b.dataset.plat); });
@@ -576,7 +665,10 @@
         var b = document.querySelector('[data-dl="' + w.fmt + '"]');
         if (!b) return;
         var dl = b.closest(".dl");
-        var miss = dl && dl.querySelector(".miss");
+        /* The Android card holds two buttons in one card, so each one has its
+           own label: a single .miss made the second write overwrite the first
+           (both rows showed the FOSS size). */
+        var miss = dl && (dl.querySelector('[data-miss="' + w.fmt + '"]') || dl.querySelector(".miss"));
         if (rel) {
           var a = window.vmFindAsset(rel, w.re);
           if (a) {
@@ -618,24 +710,39 @@
       return !!(r && (r.prerelease || /-(nightly|alpha|beta|rc)\d*(?:$|[-.])/i.test(r.tag_name || "")));
     }
 
-    window.vmReleases(100).then(function (list) {
+    function applyAllReleases(list) {
+      if (!list || !list.length) { failed = true; render(); return; }
+      failed = false;
+      /* Recomputed from scratch: this runs once for the cached list and once for
+         the network copy, and the guard below would otherwise keep the older of
+         the two. */
+      data.stable = null;
+      data.prerelease = null;
       list.forEach(function (r) {
         if (isPrerelease(r)) { if (!data.prerelease) data.prerelease = r; }
         else if (!data.stable) data.stable = r;
       });
-      if (!data.stable && !data.prerelease) throw new Error("empty");
       /* Stable is the default, but it intentionally falls back to the newest
-         prerelease when no stable tag exists. vmReleases already sorted by
+         prerelease when no stable tag exists. The list is already sorted by
          publish date (chronological) so the first match is the latest one. */
       if (current === "prerelease" && !data.prerelease) current = "stable";
       $$(".tabs [data-channel-tab]").forEach(function (t) {
         t.classList.toggle("active", t.dataset.channelTab === current);
       });
       render();
-    })["catch"](function () {
-      failed = true;
-      render();
-    });
+    }
+
+    /* The shared helper paints the cached list synchronously and then replaces it
+       with the network copy, so the buttons are filled without refreshing the
+       page and a rate-limited request keeps the last known assets. */
+    if (window.vmReleasesSWR) {
+      window.vmReleasesSWR(100, function (list) { applyAllReleases(list); });
+    } else {
+      window.vmReleases(100).then(applyAllReleases)["catch"](function () {
+        failed = true;
+        render();
+      });
+    }
   })();
   </script>
 </body>

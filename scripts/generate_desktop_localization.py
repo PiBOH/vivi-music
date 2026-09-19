@@ -115,6 +115,10 @@ MAPPING = {
     "auto_skip_next_on_error": "auto_skip_next_on_error",
     "auto_skip_next_on_error_desc": "auto_skip_next_on_error_desc",
     "retry": "retry",
+    # "System default" already exists as an Android string, so map it instead of
+    # duplicating its 40 translations by hand (the languages whose Android table
+    # lacks it are covered by desktop_extra_translations_69.py).
+    "output_device_default": "system_default",
     "skip_silence": "skip_silence",
     "undo": "undo",
     "songs": "songs",
@@ -744,6 +748,52 @@ ENGLISH = {
     "crossfade_duration_desc": "How long the fade between songs lasts (1 to 12 seconds)",
     "disable_crossfade_gapless": "Disable for gapless albums",
     "disable_crossfade_gapless_desc": "Skip the crossfade between tracks of the same album so they flow seamlessly",
+    # Advanced lyrics (port of the mobile renderer): animation styles and the
+    # display options around them. English is the source here; the other
+    # languages are covered by a dedicated batch when the translation pass runs
+    # (the runtime falls back to English until then).
+    "lyrics_animation_style": "Animation style",
+    "lyrics_animation_style_desc": "How the words light up as the song plays",
+    "lyrics_style_none": "Simple",
+    "lyrics_style_fade": "Fade",
+    "lyrics_style_glow": "Glow",
+    "lyrics_style_slide": "Slide",
+    "lyrics_style_karaoke": "Karaoke",
+    "lyrics_style_apple": "Apple Music",
+    "lyrics_style_apple_v2": "Apple Music V2",
+    "lyrics_style_vivimusic": "VIVI Music",
+    "lyrics_glow_effect": "Word glow",
+    "lyrics_glow_effect_desc": "Add a halo of light around the word being sung",
+    "lyrics_apple_blur": "Apple Music blur",
+    "lyrics_apple_blur_desc": "Blur the lines around the current one, like the Apple Music player",
+    "lyrics_standard_blur": "Blur lyrics",
+    "lyrics_standard_blur_desc": "Blur every line that is not the one being sung",
+    "lyrics_click_to_seek": "Tap a line to seek",
+    "lyrics_click_to_seek_desc": "Jump to that point in the song by tapping its lyric line",
+    "lyrics_auto_scroll": "Auto scroll",
+    "lyrics_auto_scroll_desc": "Keep the sung line in view as the song advances",
+    "lyrics_text_position": "Text position",
+    "lyrics_position_left": "Left",
+    "lyrics_position_center": "Center",
+    "lyrics_position_right": "Right",
+    "lyrics_romanize": "Romanize lyrics",
+    "lyrics_romanize_desc": "Show lyrics written in another alphabet in the Latin one",
+    "lyrics_romanize_as_main": "Romanized as main line",
+    "lyrics_romanize_as_main_desc": "Show the romanized text on the main line and the original below it",
+    "romanize_japanese": "Japanese",
+    "romanize_korean": "Korean",
+    "romanize_chinese": "Chinese",
+    "romanize_russian": "Russian",
+    "romanize_ukrainian": "Ukrainian",
+    "romanize_serbian": "Serbian",
+    "romanize_bulgarian": "Bulgarian",
+    "romanize_belarusian": "Belarusian",
+    "romanize_kyrgyz": "Kyrgyz",
+    "romanize_macedonian": "Macedonian",
+    "romanize_hindi": "Hindi",
+    "romanize_punjabi": "Punjabi",
+    "translate_lyrics": "Translate lyrics",
+    "translate_lyrics_desc": "Show a translation of every line under it",
     "storage": "Storage",
     "cache_size": "Cache size",
     "clear_cache": "Clear cache",
@@ -914,6 +964,14 @@ ENGLISH = {
     "intro_background_gradient": "Gradient",
     "intro_background_glow": "Glow",
     "intro_background_dark": "Dark",
+    "animation_speed": "Animation speed",
+    "animation_speed_fast": "Fast",
+    "animation_speed_normal": "Normal",
+    "animation_speed_slow": "Slow",
+    "mouse_back_forward": "Mouse back / forward buttons",
+    "mouse_back_forward_desc": "Use the mouse thumb buttons (X1 / X2) to go back and forward in VIVI Music DE",
+    "output_device": "Audio output device",
+    "refresh": "Refresh",
 }
 
 # Desktop-only translations (keys with no Android source string) plus gap-fills
@@ -1560,12 +1618,13 @@ from desktop_extra_translations_65 import EXTRA_TRANSLATIONS as _EXTRA_65
 from desktop_extra_translations_66 import EXTRA_TRANSLATIONS as _EXTRA_66
 from desktop_extra_translations_67 import EXTRA_TRANSLATIONS as _EXTRA_67
 from desktop_extra_translations_68 import EXTRA_TRANSLATIONS as _EXTRA_68
+from desktop_extra_translations_69 import EXTRA_TRANSLATIONS as _EXTRA_69
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

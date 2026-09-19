@@ -77,6 +77,8 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Button
@@ -108,7 +110,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import coil3.compose.AsyncImage
+import com.music.vivi.desktop.player.AudioOutput
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -121,6 +125,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import sh.calvin.reorderable.ReorderableItem
@@ -136,6 +141,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.music.vivi.canvas.CanvasArtwork
+import com.music.lyrics.LyricLine
+import com.music.lyrics.LyricsParser
 import com.music.vivi.desktop.player.LoadPhase
 import com.music.vivi.desktop.player.RepeatMode
 import kotlinx.coroutines.delay
@@ -177,7 +184,9 @@ fun PlayerScreen(
     background: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
-    audioLevel: Float = 0f,
+    /** Live audio level for the VISUALIZER background (never collected here —
+     *  [PlayerBackground] collects it inside that one branch). */
+    audioLevel: kotlinx.coroutines.flow.StateFlow<Float>? = null,
     onBack: (() -> Unit)? = null,
     progressiveSeek: Boolean = false,
 ) {
@@ -203,7 +212,7 @@ fun PlayerScreen(
     // track changes, like Apple Music — no more hard "flash" cut between songs.
     AnimatedContent(
         targetState = np?.videoId,
-        transitionSpec = { fadeIn(tween(320)) togetherWith fadeOut(tween(220)) },
+        transitionSpec = { fadeIn(tween(Animations.ms(320))) togetherWith fadeOut(tween(Animations.ms(220))) },
         label = "playerTrack",
     ) { id ->
         val track = queue.firstOrNull { it.videoId == id }
@@ -354,7 +363,7 @@ private fun M3EPlayerContent(
     onBack: (() -> Unit)? = null,
 ) {
     var activeTab by remember { mutableStateOf(M3ETab.QUEUE) }
-    var isFavorite by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 24.dp)) {
         Row(
             Modifier.fillMaxSize(),
@@ -604,6 +613,30 @@ private fun M3EPlayerContent(
                                 }
                             }
                         }
+
+                        // Real like/unlike for the current track (account state).
+                        val liked = SongActions.isLiked(np.videoId)
+                        Tooltip(Localization.get(language, "tooltip_favorite")) {
+                            Surface(
+                                onClick = {
+                                    val next = !liked
+                                    SongActions.setLiked(np.videoId, next, title = np.title)
+                                    scope.launch { YouTube.likeVideo(np.videoId, next) }
+                                },
+                                shape = CircleShape,
+                                color = if (liked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(skipButtonSize),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                        contentDescription = Localization.get(language, "tooltip_favorite"),
+                                        tint = if (liked) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(14.dp))
@@ -663,6 +696,12 @@ private fun M3EPlayerContent(
                             positionMs = positionMs,
                             isPlaying = isPlaying,
                             language = language,
+                            display = lyricsDisplayOptionsFrom(DesktopSettings.load()),
+                            translate = lyricsTranslationConfig(
+                                DesktopSettings.load(),
+                                DesktopSettings.load().translateLyrics,
+                            ),
+                            onSeek = onSeek,
                             onTogglePlay = onTogglePlay,
                             onBack = { activeTab = M3ETab.NONE },
                         )
@@ -1248,7 +1287,9 @@ private fun PlayerControlPanel(
 
     Spacer(Modifier.height(16.dp))
 
-    // Transport controls: shuffle / previous / play / next / repeat.
+    val scope = rememberCoroutineScope()
+
+    // Transport controls: shuffle / previous / play / next / repeat / like.
     // Apple-style "glass" circles (semi-transparent, subtle sheen + border)
     // instead of flat Material buttons, so the controls sit on the artwork.
     val onSurface = MaterialTheme.colorScheme.onSurface
@@ -1313,6 +1354,20 @@ private fun PlayerControlPanel(
             size = 42.dp,
             iconSize = 22.dp,
             tint = if (repeatMode != RepeatMode.OFF) MaterialTheme.colorScheme.primary else onSurface.copy(alpha = 0.85f),
+        )
+        // Real like/unlike for the current track (account state).
+        val liked = SongActions.isLiked(np.videoId)
+        GlassCircleButton(
+            onClick = {
+                val next = !liked
+                SongActions.setLiked(np.videoId, next, title = np.title)
+                scope.launch { YouTube.likeVideo(np.videoId, next) }
+            },
+            icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            contentDescription = Localization.get(language, "tooltip_favorite"),
+            size = 42.dp,
+            iconSize = 22.dp,
+            tint = if (liked) MaterialTheme.colorScheme.primary else onSurface.copy(alpha = 0.85f),
         )
     }
 
@@ -1898,51 +1953,6 @@ private fun cleanLyrics(text: String): List<String> =
         .map { it.replace(Regex("""\[\d{1,2}:\d{1,2}(\.\d{1,3})?\]"""), "").trim() }
         .filter { it.isNotEmpty() }
 
-/** A single synced lyric line with its start time in milliseconds. */
-private data class LyricLine(val timeMs: Long, val text: String)
-
-/**
- * Parses LRC synced lyrics. Returns null when the text has no timestamps
- * (plain lyrics). Rich-sync `<mm:ss.xx>` word tags are stripped.
- */
-private fun parseLrc(text: String): List<LyricLine>? {
-    val timeRegex = Regex("""\[(\d{1,2}):(\d{1,2})(?:\.(\d{1,3}))?]""")
-    val lineRegex = Regex("""((\[\d{1,2}:\d{1,2}(?:\.\d{1,3})?]\s*)+)(.*)""")
-    val result = mutableListOf<LyricLine>()
-    var hasTimestamps = false
-
-    for (raw in text.lines()) {
-        val line = raw.trim()
-        if (line.isEmpty()) continue
-        val match = lineRegex.find(line) ?: continue
-        val timeTokens = match.groupValues[1]
-        var content = match.groupValues[3]
-            .replace(Regex("""<\d{1,2}:\d{2}(?:\.\d{1,3})?>\s*"""), "")
-            .trim()
-        if (content.isEmpty()) continue
-
-        timeRegex.findAll(timeTokens).forEach { t ->
-            val min = t.groupValues[1].toLongOrNull() ?: 0L
-            val sec = t.groupValues[2].toLongOrNull() ?: 0L
-            val frac = (t.groupValues[3].padEnd(3, '0').take(3).toLongOrNull() ?: 0L)
-            result.add(LyricLine(min * 60_000 + sec * 1_000 + frac, content))
-            hasTimestamps = true
-        }
-    }
-
-    if (!hasTimestamps) return null
-    return result.sortedBy { it.timeMs }
-}
-
-/** Index of the line currently being sung (last line with time <= position). */
-private fun currentLineIndex(lines: List<LyricLine>, positionMs: Long): Int {
-    var index = -1
-    for (i in lines.indices) {
-        if (lines[i].timeMs <= positionMs) index = i else break
-    }
-    return index
-}
-
 @Composable
 fun LyricsScreen(
     nowPlaying: NowPlaying?,
@@ -1952,9 +1962,16 @@ fun LyricsScreen(
     synced: Boolean = true,
     textSizeSp: Float = 18f,
     lineSpacing: Float = 1.35f,
+    /** Full animation/display configuration (mobile port); built from the
+     * single size/spacing arguments when the caller does not pass one. */
+    display: LyricsDisplayOptions? = null,
+    /** AI translation settings, or null when translation is off. */
+    translate: LyricsTranslator.Config? = null,
+    onSeek: (Long) -> Unit = {},
     onTogglePlay: () -> Unit = {},
     onBack: () -> Unit,
 ) {
+    val options = display ?: LyricsDisplayOptions(textSizeSp = textSizeSp, lineSpacing = lineSpacing)
     var lyrics by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -2045,7 +2062,12 @@ fun LyricsScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
             else -> {
-                val lines = remember(lyrics) { parseLrc(lyrics.orEmpty()) }
+                // The shared parser keeps the per-word timings (the old local
+                // `parseLrc` threw them away), which is what the karaoke family
+                // of animations needs.
+                val lines = remember(lyrics) {
+                    LyricsParser.parse(lyrics.orEmpty()).takeIf { LyricsParser.hasTimestamps(lyrics.orEmpty()) }
+                }
                 if (!synced || lines.isNullOrEmpty()) {
                     // Plain (non-synced) lyrics fallback.
                     Column(
@@ -2054,47 +2076,34 @@ fun LyricsScreen(
                         cleanLyrics(lyrics!!).forEach { line ->
                             Text(
                                 line,
-                                fontSize = textSizeSp.sp,
-                                lineHeight = (textSizeSp * lineSpacing).sp,
+                                fontSize = options.textSizeSp.sp,
+                                lineHeight = (options.textSizeSp * options.lineSpacing).sp,
                                 modifier = Modifier.padding(vertical = 2.dp),
                             )
                         }
                     }
                 } else {
-                    val listState = rememberLazyListState()
-                    var currentIndex by remember(lines) { mutableStateOf(-1) }
-                    val latestPosition by rememberUpdatedState(positionMs)
-
-                    // Debounce: poll the position ~5x/s and only commit the
-                    // highlighted line when it actually changes, so the lyric
-                    // list isn't recomposed on every decoded-frame position
-                    // update (~40/s).
-                    LaunchedEffect(lines) {
-                        while (true) {
-                            val idx = currentLineIndex(lines, latestPosition)
-                            if (idx != currentIndex) currentIndex = idx
-                            delay(200)
-                        }
+                    // AI translation: one translated line per lyric line, fetched
+                    // once per track/language and cached by the translator.
+                    var translated by remember(lines) { mutableStateOf<List<String?>?>(null) }
+                    val translateEnabled = translate != null && options.translated == null
+                    LaunchedEffect(lines, translate) {
+                        if (!translateEnabled || translate == null) return@LaunchedEffect
+                        val cacheKey = "${np?.videoId}|${translate.targetLanguage}|${translate.mode}"
+                        translated = LyricsTranslator.translate(lines.map { it.text }, translate, cacheKey)
                     }
-
-                    LaunchedEffect(currentIndex) {
-                        if (currentIndex >= 0) {
-                            listState.animateScrollToItem(maxOf(0, currentIndex - 3))
-                        }
+                    val effective = if (options.translated != null) {
+                        options
+                    } else {
+                        options.copy(translated = translated)
                     }
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
-                        itemsIndexed(lines) { i, line ->
-                            val isCurrent = i == currentIndex
-                            Text(
-                                line.text,
-                                fontSize = if (isCurrent) (textSizeSp + 4).sp else textSizeSp.sp,
-                                lineHeight = (textSizeSp * lineSpacing).sp,
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 6.dp),
-                            )
-                        }
-                    }
+                    LyricsList(
+                        lines = lines,
+                        positionMs = positionMs,
+                        options = effective,
+                        onSeek = onSeek,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
                 }
             }
         }
@@ -2831,7 +2840,8 @@ fun NewDesktopMiniPlayer(
     val mutedColor = if (isDynamicBg || (pureBlack && isAppInDarkTheme())) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
     val progress = (positionMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
-    var isFavorite by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var showOutputPicker by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -2941,21 +2951,39 @@ fun NewDesktopMiniPlayer(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Tooltip(Localization.get(language, "tooltip_output_device")) {
-                    IconButton(onClick = { onVolume((volume + 0.1f) % 1.05f) }) {
+                    IconButton(onClick = { showOutputPicker = true }) {
                         Icon(
                             Icons.Filled.SpeakerGroup,
-                            contentDescription = "Output device",
+                            contentDescription = Localization.get(language, "output_device"),
                             tint = mutedColor,
                             modifier = Modifier.size(20.dp),
                         )
                     }
                 }
+                if (showOutputPicker) {
+                    OutputDeviceDialog(
+                        language = language,
+                        onDismiss = { showOutputPicker = false },
+                        onSelect = { name ->
+                            AudioOutput.apply(name)
+                            showOutputPicker = false
+                        },
+                    )
+                }
+                // Real like: reads/writes the account state (SongActions) and
+                // calls the InnerTube like endpoint, so the heart reflects the
+                // actual account instead of a local, lost-on-exit flag.
+                val liked = SongActions.isLiked(nowPlaying.videoId)
                 Tooltip(Localization.get(language, "tooltip_favorite")) {
-                    IconButton(onClick = { isFavorite = !isFavorite }) {
+                    IconButton(onClick = {
+                        val next = !liked
+                        SongActions.setLiked(nowPlaying.videoId, next, title = nowPlaying.title)
+                        scope.launch { YouTube.likeVideo(nowPlaying.videoId, next) }
+                    }) {
                         Icon(
-                            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isFavorite) primaryColor else mutedColor,
+                            if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = Localization.get(language, "tooltip_favorite"),
+                            tint = if (liked) primaryColor else mutedColor,
                             modifier = Modifier.size(20.dp),
                         )
                     }
@@ -3395,6 +3423,9 @@ fun LyricsFocusScreen(
     lineSpacing: Float,
     bgUrl: String? = null,
     accent: Color = MaterialTheme.colorScheme.primary,
+    display: LyricsDisplayOptions? = null,
+    translate: LyricsTranslator.Config? = null,
+    onSeek: (Long) -> Unit = {},
     onTogglePlay: () -> Unit = {},
     onNext: () -> Unit = {},
     onPrevious: () -> Unit = {},
@@ -3450,6 +3481,9 @@ fun LyricsFocusScreen(
             synced = synced,
             textSizeSp = textSizeSp,
             lineSpacing = lineSpacing,
+            display = display,
+            translate = translate,
+            onSeek = onSeek,
             onTogglePlay = onTogglePlay,
             onBack = onBack,
         )
@@ -3502,5 +3536,58 @@ fun LyricsFocusScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Real audio output device picker: lists the Java Sound mixers the OS exposes
+ * (Speakers, Headphones, virtual devices…) plus "System default". The choice is
+ * persisted and picked up by the engine from the next track/seek.
+ */
+@Composable
+internal fun OutputDeviceDialog(
+    language: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit,
+) {
+    // Probing the mixers touches the OS audio stack, so do it once per opening.
+    val devices = remember { AudioOutput.devices() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(Localization.get(language, "output_device")) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                OutputDeviceRow(
+                    label = Localization.get(language, "output_device_default"),
+                    selected = AudioOutput.selectedName.isBlank(),
+                    onClick = { onSelect("") },
+                )
+                devices.forEach { device ->
+                    OutputDeviceRow(
+                        label = device.label,
+                        selected = AudioOutput.selectedName == device.name,
+                        onClick = { onSelect(device.name) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(Localization.get(language, "ok")) }
+        },
+    )
+}
+
+@Composable
+private fun OutputDeviceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Spacer(Modifier.width(10.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium)
     }
 }

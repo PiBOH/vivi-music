@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -382,7 +383,10 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(vertical = 4.dp),
                     ) {
-                        items(chipsList, key = { chip -> chip.title }) { chip ->
+                        // Position is part of the key: two chips can carry the
+                        // same title ("New releases" twice in one row) and a
+                        // duplicated LazyColumn key crashes the whole screen.
+                        itemsIndexed(chipsList, key = { i, chip -> "chip-$i-${chip.title}" }) { _, chip ->
                             val selected = selectedChip?.title == chip.title
                             Surface(
                                 onClick = {
@@ -554,7 +558,12 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onOpenBrowse("FEmusic_library_corpus", null) },
+                        // The tabbed library corpus root needs its selection
+                        // params: browsing `FEmusic_library_corpus` without any
+                        // is rejected by the server (400 INVALID_ARGUMENT /
+                        // E1032). The artists view is browsable on its own —
+                        // it is the page the Android app opens too.
+                        .clickable { onOpenBrowse("FEmusic_library_corpus_artists", null) },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -584,7 +593,9 @@ fun HomeScreen(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(curatedMixes, key = { it.title }) { mix ->
+                    // Same reason as the chips above: a mixed-for-you row can
+                    // legitimately repeat a playlist title.
+                    itemsIndexed(curatedMixes, key = { i, mix -> "mix-$i-${mix.title}" }) { _, mix ->
                         Box(
                             modifier = Modifier
                                 .width(220.dp)
@@ -739,19 +750,25 @@ fun BrowseScreen(
             onSuccess = { result = it; error = null },
             onFailure = { t ->
                 val raw = t.message.orEmpty()
-                val tagged = if (raw.contains("401") && raw.contains("browse", ignoreCase = true)) {
-                    "E1031 $raw"
-                } else {
-                    raw.ifBlank { t.javaClass.simpleName }
+                // The status is what the error code means: a 401 really is a
+                // missing/expired session (E1031), while a 400 INVALID_ARGUMENT
+                // is the server rejecting the request itself (E1032, e.g. a
+                // browse page opened without the params it needs). Labelling
+                // every failure E1031 sent users to re-sign-in for a request
+                // problem — the log line below used to hardcode that code.
+                val code = when {
+                    raw.contains("401") && raw.contains("UNAUTHENTICATED", ignoreCase = true) -> "E1031"
+                    raw.contains("400") && raw.contains("INVALID_ARGUMENT", ignoreCase = true) -> "E1032"
+                    else -> null
                 }
-                // Visible to the user (covers the unreadable 401 JSON).
-                error = tagged
+                // Visible to the user (covers the unreadable 401/400 JSON).
+                error = if (code != null) "$code $raw" else raw.ifBlank { t.javaClass.simpleName }
                 // Always land in the session logs — the support zip was missing
                 // this failure completely, leaving nothing to debug.
                 runCatching {
                     AppLog.log(
                         "browse",
-                        "browse failed E1031 — browseId=$browseId params=${params?.take(64)} loggedIn=${LoginManager.isLoggedIn()} cookie=${YouTube.cookie?.length ?: 0}b visitorData=${!YouTube.visitorData.isNullOrBlank()} dataSyncId=${!YouTube.dataSyncId.isNullOrBlank()} — $tagged — ${t.javaClass.name}"
+                        "browse failed ${code ?: "-"} — browseId=$browseId params=${params?.take(64)} loggedIn=${LoginManager.isLoggedIn()} cookie=${YouTube.cookie?.length ?: 0}b visitorData=${!YouTube.visitorData.isNullOrBlank()} dataSyncId=${!YouTube.dataSyncId.isNullOrBlank()} — $raw — ${t.javaClass.name}"
                     )
                 }
             },

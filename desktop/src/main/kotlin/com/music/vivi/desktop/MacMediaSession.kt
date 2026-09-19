@@ -34,6 +34,11 @@ object MacMediaSession {
 
     private val started = AtomicBoolean(false)
 
+    /** App name shown by the system tile; kept so the session can be
+     *  re-registered later without the caller passing it again. */
+    @Volatile
+    private var appName: String = "VIVI Music"
+
     // Native callback signatures (JNA marshals these across the FFI boundary).
     private fun interface VoidCb : Callback {
         fun invoke()
@@ -41,6 +46,13 @@ object MacMediaSession {
 
     private fun interface SeekCb : Callback {
         fun invoke(positionMs: Double)
+    }
+
+    /** Diagnostics channel: the native side reports every remote command the
+     *  system actually delivered ("remote play", "remote next", …), so a user
+     *  report can prove whether a media key reached the app at all (issue #67). */
+    private fun interface EventCb : Callback {
+        fun invoke(message: String?)
     }
 
     // Typed JNA proxy (codebase pattern, e.g. MediaKeys' User32LL) — the C
@@ -54,8 +66,12 @@ object MacMediaSession {
             durationMs: Double, positionMs: Double, playing: Int, artworkPath: String?,
         )
         fun viviEndSession()
+        fun viviClearNowPlaying()
         fun viviRequestNotificationPermission()
         fun viviNotify(title: String?, message: String?)
+        fun viviSetCommandsEnabled(enabled: Int)
+        fun viviSetWindowAppearance(dark: Int)
+        fun viviRegisterEventCallback(cb: EventCb)
     }
 
     private val native: ViviMediaLib? by lazy {
@@ -89,8 +105,18 @@ object MacMediaSession {
                 Native.load(dylib.absolutePath, ViviMediaLib::class.java)
             }.onFailure { t ->
                 println("[mac-media] native helper load failed: $t")
+                log("native helper load failed: $t")
             }.getOrNull()
         }
+    }
+
+    /**
+     * Diagnostics (issue #67): mirrors the helper's lifecycle in the session
+     * playback log so a user report can show whether the system session was
+     * registered at all.
+     */
+    private fun log(message: String) {
+        runCatching { AppLog.log("playback", "[mac-media] $message") }
     }
 
     private val nativeApi: ViviMediaLib?
@@ -117,6 +143,10 @@ object MacMediaSession {
     @Volatile
     private var callbacks: NativeCallbacks? = null
 
+    /** Strong reference to the diagnostics callback (JNA requires it). */
+    @Volatile
+    private var eventCallback: EventCb? = null
+
     /** Latest playback state, re-applied on [start] and on artwork arrival. */
     private class Metadata(
         val title: String = "",
@@ -131,6 +161,10 @@ object MacMediaSession {
 
     @Volatile
     private var metadata = Metadata()
+
+    /** Title of the last logged track (avoids one log line per position tick). */
+    @Volatile
+    private var lastLoggedTitle: String? = null
 
     /** Guards against launching a second download for the same track. */
     private val downloadingUrl = AtomicReference<String?>(null)
@@ -154,30 +188,87 @@ object MacMediaSession {
         this.onNext = onNext
         this.onPrevious = onPrevious
         this.onSeek = onSeek
+        this.appName = appName
         if (!isMac) return
-        val api = nativeApi ?: return
-        if (started.compareAndSet(false, true)) {
-            try {
-                val cbs = NativeCallbacks(
-                    playPause = VoidCb { this.onPlayPause?.invoke() },
-                    next = VoidCb { this.onNext?.invoke() },
-                    previous = VoidCb { this.onPrevious?.invoke() },
-                    seek = SeekCb { posMs -> this.onSeek?.invoke(posMs.toLong()) },
-                )
-                callbacks = cbs
-                api.viviRegisterCallbacks(cbs.playPause, cbs.next, cbs.previous, cbs.seek, VoidCb {})
-                api.viviSetAppIdentity(appName)
-            } catch (t: Throwable) {
-                println("[mac-media] start failed: $t")
-                started.set(false)
-                return
-            }
-        }
+        ensureRegistered()
         // Re-apply the latest metadata (the tile may have been cleared).
         syncMetadata()
     }
 
-    /** Stops the session (clears the tile) but keeps the handlers registered. */
+    /**
+     * Registers the OS-level session (callbacks + app identity) exactly once.
+     * Idempotent and callable from any thread: the now-playing push re-runs it
+     * when the session was never registered OR was torn down, which is what
+     * made the tile appear only after toggling the switch (issue #67).
+     */
+    private fun ensureRegistered(): Boolean {
+        val api = nativeApi ?: run {
+            log("session NOT started: native helper unavailable")
+            return false
+        }
+        if (started.get()) return true
+        return try {
+            val cbs = NativeCallbacks(
+                playPause = VoidCb { this.onPlayPause?.invoke() },
+                next = VoidCb { this.onNext?.invoke() },
+                previous = VoidCb { this.onPrevious?.invoke() },
+                seek = SeekCb { posMs -> this.onSeek?.invoke(posMs.toLong()) },
+            )
+            callbacks = cbs
+            // Remote-command diagnostics: without this, "the media key did
+            // nothing" cannot be told apart from "the key never reached the
+            // app" (macOS routing), which is exactly the open question in
+            // issue #67.
+            val events = EventCb { message -> log("$message") }
+            eventCallback = events
+            api.viviRegisterEventCallback(events)
+            api.viviRegisterCallbacks(cbs.playPause, cbs.next, cbs.previous, cbs.seek, VoidCb {})
+            api.viviSetAppIdentity(appName)
+            started.set(true)
+            log("system Now Playing session registered (app=\"$appName\")")
+            true
+        } catch (t: Throwable) {
+            println("[mac-media] start failed: $t")
+            log("session registration failed: $t")
+            false
+        }
+    }
+
+    /**
+     * Enables/disables the system media keys and Control Center buttons
+     * (macOS). No Accessibility permission involved — MPRemoteCommandCenter is
+     * an OS-level integration. No-op on other platforms or without the helper.
+     */
+    fun setCommandsEnabled(enabled: Boolean) {
+        if (!isMac) return
+        val api = nativeApi ?: return
+        runCatching { api.viviSetCommandsEnabled(if (enabled) 1 else 0) }
+        log(if (enabled) "media keys enabled" else "media keys disabled (tile cleared)")
+    }
+
+    /**
+     * Forces the native window chrome to the app's own Light/Dark mode
+     * (issue #66). Safe to call before [start] and on every theme change.
+     */
+    fun setWindowAppearance(dark: Boolean) {
+        if (!isMac) return
+        val api = nativeApi ?: return
+        runCatching { api.viviSetWindowAppearance(if (dark) 1 else 0) }
+    }
+
+    /**
+     * Clears the system tile (nothing is playing / media keys switched off)
+     * WITHOUT tearing the session down: unregistering here is what broke the
+     * "start the app, then play" case, because nothing re-registered the
+     * session afterwards (issue #67).
+     */
+    fun clearNowPlaying() {
+        lastLoggedTitle = null
+        if (!isMac) return
+        runCatching { nativeApi?.viviClearNowPlaying() }
+    }
+
+    /** Stops the session (clears the tile and unregisters it). */
     fun endSession() {
         if (started.compareAndSet(true, false)) {
             runCatching { nativeApi?.viviEndSession() }
@@ -187,6 +278,7 @@ object MacMediaSession {
     /** Releases the handlers (app shutdown). */
     fun stop() {
         endSession()
+        eventCallback = null
         onPlayPause = null
         onNext = null
         onPrevious = null
@@ -262,9 +354,17 @@ object MacMediaSession {
     // ------------------------------------------------------------------
 
     private fun syncMetadata() {
-        if (!started.get()) return
+        if (!isMac) return
+        // Self-healing: pushing a track must always be enough to make the tile
+        // appear, even if the session was never registered or was torn down
+        // (issue #67: it used to require toggling the switch).
+        if (!ensureRegistered()) return
         val api = nativeApi ?: return
         val m = metadata
+        if (m.title != lastLoggedTitle) {
+            lastLoggedTitle = m.title
+            if (m.title.isNotEmpty()) log("now playing: \"${m.title}\" — ${m.artist}")
+        }
         try {
             api.viviStartSession()
             api.viviSetNowPlaying(
@@ -363,6 +463,7 @@ object MacMediaSession {
             }
         } catch (t: Throwable) {
             println("[mac-media] artwork download failed: $t")
+            log("artwork download failed: ${t.message}")
             null
         }
     }

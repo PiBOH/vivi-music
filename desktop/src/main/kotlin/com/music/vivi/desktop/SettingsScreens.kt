@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.History
@@ -38,7 +40,10 @@ import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VerticalAlignCenter
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -75,6 +80,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.music.innertube.models.YouTubeLocale
+import com.music.lyrics.LyricsRomanizer
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -312,6 +318,8 @@ fun SettingsAppearanceScreen(
     onBack: () -> Unit,
     animationsEnabled: Boolean = true,
     onAnimationsEnabledChange: (Boolean) -> Unit = {},
+    animationSpeed: String = "normal",
+    onAnimationSpeedChange: (String) -> Unit = {},
     onOpenTheme: () -> Unit = {},
     onOpenFont: () -> Unit = {},
     onOpenCanvas: () -> Unit = {},
@@ -337,6 +345,8 @@ fun SettingsAppearanceScreen(
             onOpenIntro = onOpenIntro,
             animationsEnabled = animationsEnabled,
             onAnimationsEnabledChange = onAnimationsEnabledChange,
+            animationSpeed = animationSpeed,
+            onAnimationSpeedChange = onAnimationSpeedChange,
             nativeTitleBar = nativeTitleBar,
             onNativeTitleBarChange = onNativeTitleBarChange,
             showRightSidebar = showRightSidebar,
@@ -503,6 +513,7 @@ fun SettingsThemeScreen(
     onAccentChange: (androidx.compose.ui.graphics.Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    onAccentIntensityChangeFinished: () -> Unit = {},
     pureBlack: Boolean,
     onPureBlackChange: (Boolean) -> Unit,
     customAccents: List<Int> = emptyList(),
@@ -518,6 +529,7 @@ fun SettingsThemeScreen(
             onAccentChange = onAccentChange,
             accentIntensity = accentIntensity,
             onAccentIntensityChange = onAccentIntensityChange,
+            onAccentIntensityChangeFinished = onAccentIntensityChangeFinished,
             pureBlack = pureBlack,
             onPureBlackChange = onPureBlackChange,
             customAccents = customAccents,
@@ -1146,6 +1158,11 @@ fun SettingsLyricsScreen(
     onLyricsTextSizeChange: (Float) -> Unit,
     lyricsLineSpacing: Float = 1.35f,
     onLyricsLineSpacingChange: (Float) -> Unit = {},
+    /** Animation style + display options (mobile port). */
+    options: LyricsDisplayOptions = LyricsDisplayOptions(),
+    onOptionsChange: (LyricsDisplayOptions) -> Unit = {},
+    translateLyrics: Boolean = false,
+    onToggleTranslateLyrics: (Boolean) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         LyricsSection(
@@ -1156,6 +1173,10 @@ fun SettingsLyricsScreen(
             onLyricsTextSizeChange,
             lyricsLineSpacing,
             onLyricsLineSpacingChange,
+            options,
+            onOptionsChange,
+            translateLyrics,
+            onToggleTranslateLyrics,
         )
     }
 }
@@ -1218,7 +1239,14 @@ fun ContentSection(
     }
 }
 
-/** Lyrics section: synced (line-by-line) highlighting toggle + text size. */
+/**
+ * Lyrics section: line-by-line highlighting, the animation style (port of the
+ * mobile renderer) and every display option around it.
+ *
+ * The romanization sub-switches are created options: like the mobile app, they
+ * only appear once "Romanize lyrics" is on, so the list does not fill up with
+ * toggles that cannot do anything.
+ */
 @Composable
 fun LyricsSection(
     language: String,
@@ -1228,7 +1256,15 @@ fun LyricsSection(
     onLyricsTextSizeChange: (Float) -> Unit,
     lyricsLineSpacing: Float = 1.35f,
     onLyricsLineSpacingChange: (Float) -> Unit = {},
+    options: LyricsDisplayOptions = LyricsDisplayOptions(),
+    onOptionsChange: (LyricsDisplayOptions) -> Unit = {},
+    translateLyrics: Boolean = false,
+    onToggleTranslateLyrics: (Boolean) -> Unit = {},
 ) {
+    var styleExpanded by remember { mutableStateOf(false) }
+    var positionExpanded by remember { mutableStateOf(false) }
+    val romanize = options.romanize
+
     Text(Localization.get(language, "lyrics"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
     M3SettingsGroup(
         items = listOf(
@@ -1241,6 +1277,123 @@ fun LyricsSection(
             ),
         ),
     )
+
+    // --- Animation style -------------------------------------------------
+    Text(
+        Localization.get(language, "lyrics_animation_style"),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+    Text(
+        Localization.get(language, "lyrics_animation_style_desc"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Box(Modifier.padding(top = 8.dp)) {
+        OutlinedButton(onClick = { styleExpanded = true }) {
+            Text(lyricsStyleLabel(language, options.style))
+        }
+        DropdownMenu(expanded = styleExpanded, onDismissRequest = { styleExpanded = false }) {
+            LyricsAnimationStyle.entries.forEach { entry ->
+                DropdownMenuItem(
+                    text = { Text(lyricsStyleLabel(language, entry)) },
+                    onClick = {
+                        styleExpanded = false
+                        onOptionsChange(options.copy(style = entry))
+                    },
+                )
+            }
+        }
+    }
+
+    // --- Display options -------------------------------------------------
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.AutoAwesome,
+                title = { Text(Localization.get(language, "lyrics_glow_effect")) },
+                description = { Text(Localization.get(language, "lyrics_glow_effect_desc")) },
+                trailing = {
+                    Switch(
+                        checked = options.glowEffect,
+                        onCheckedChange = { onOptionsChange(options.copy(glowEffect = it)) },
+                    )
+                },
+                onClick = { onOptionsChange(options.copy(glowEffect = !options.glowEffect)) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.BlurOn,
+                title = { Text(Localization.get(language, "lyrics_standard_blur")) },
+                description = { Text(Localization.get(language, "lyrics_standard_blur_desc")) },
+                trailing = {
+                    Switch(
+                        checked = options.standardBlur,
+                        onCheckedChange = { onOptionsChange(options.copy(standardBlur = it)) },
+                    )
+                },
+                onClick = { onOptionsChange(options.copy(standardBlur = !options.standardBlur)) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.BlurOn,
+                title = { Text(Localization.get(language, "lyrics_apple_blur")) },
+                description = { Text(Localization.get(language, "lyrics_apple_blur_desc")) },
+                trailing = {
+                    Switch(
+                        checked = options.appleMusicBlur,
+                        onCheckedChange = { onOptionsChange(options.copy(appleMusicBlur = it)) },
+                    )
+                },
+                onClick = { onOptionsChange(options.copy(appleMusicBlur = !options.appleMusicBlur)) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.TouchApp,
+                title = { Text(Localization.get(language, "lyrics_click_to_seek")) },
+                description = { Text(Localization.get(language, "lyrics_click_to_seek_desc")) },
+                trailing = {
+                    Switch(
+                        checked = options.clickToSeek,
+                        onCheckedChange = { onOptionsChange(options.copy(clickToSeek = it)) },
+                    )
+                },
+                onClick = { onOptionsChange(options.copy(clickToSeek = !options.clickToSeek)) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VerticalAlignCenter,
+                title = { Text(Localization.get(language, "lyrics_auto_scroll")) },
+                description = { Text(Localization.get(language, "lyrics_auto_scroll_desc")) },
+                trailing = {
+                    Switch(
+                        checked = options.autoScroll,
+                        onCheckedChange = { onOptionsChange(options.copy(autoScroll = it)) },
+                    )
+                },
+                onClick = { onOptionsChange(options.copy(autoScroll = !options.autoScroll)) },
+            ),
+        ),
+    )
+
+    // --- Text position ---------------------------------------------------
+    Text(
+        Localization.get(language, "lyrics_text_position"),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+    Box(Modifier.padding(top = 8.dp)) {
+        OutlinedButton(onClick = { positionExpanded = true }) {
+            Text(lyricsPositionLabel(language, options.position))
+        }
+        DropdownMenu(expanded = positionExpanded, onDismissRequest = { positionExpanded = false }) {
+            LyricsPosition.entries.forEach { entry ->
+                DropdownMenuItem(
+                    text = { Text(lyricsPositionLabel(language, entry)) },
+                    onClick = {
+                        positionExpanded = false
+                        onOptionsChange(options.copy(position = entry))
+                    },
+                )
+            }
+        }
+    }
 
     Text(
         "${Localization.get(language, "lyrics_text_size")}: ${lyricsTextSize.toInt()} sp",
@@ -1265,7 +1418,127 @@ fun LyricsSection(
         valueRange = 1.0f..2.0f,
         modifier = Modifier.fillMaxWidth(),
     )
+
+    // --- Romanization (master switch + per-script children) ---------------
+    Text(Localization.get(language, "lyrics_romanize"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+    Text(
+        Localization.get(language, "lyrics_romanize_desc"),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    M3SettingsGroup(
+        items = buildList {
+            add(
+                M3SettingsItem(
+                    icon = Icons.Filled.Translate,
+                    title = { Text(Localization.get(language, "lyrics_romanize")) },
+                    description = { Text(Localization.get(language, "lyrics_romanize_desc")) },
+                    trailing = {
+                        Switch(
+                            checked = romanize != null,
+                            onCheckedChange = { on ->
+                                onOptionsChange(options.copy(romanize = if (on) LyricsRomanizer.Options() else null))
+                            },
+                        )
+                    },
+                    onClick = {
+                        onOptionsChange(options.copy(romanize = if (romanize == null) LyricsRomanizer.Options() else null))
+                    },
+                ),
+            )
+            if (romanize != null) {
+                ROMANIZE_SCRIPTS.forEach { script ->
+                    add(
+                        M3SettingsItem(
+                            icon = null,
+                            title = { Text(Localization.get(language, script.labelKey)) },
+                            trailing = {
+                                Switch(
+                                    checked = script.isEnabled(romanize),
+                                    onCheckedChange = { on ->
+                                        onOptionsChange(options.copy(romanize = script.set(romanize, on)))
+                                    },
+                                )
+                            },
+                            onClick = { onOptionsChange(options.copy(romanize = script.set(romanize, !script.isEnabled(romanize)))) },
+                        ),
+                    )
+                }
+                add(
+                    M3SettingsItem(
+                        icon = null,
+                        title = { Text(Localization.get(language, "lyrics_romanize_as_main")) },
+                        description = { Text(Localization.get(language, "lyrics_romanize_as_main_desc")) },
+                        trailing = {
+                            Switch(
+                                checked = options.romanizeAsMain,
+                                onCheckedChange = { on -> onOptionsChange(options.copy(romanizeAsMain = on)) },
+                            )
+                        },
+                        onClick = { onOptionsChange(options.copy(romanizeAsMain = !options.romanizeAsMain)) },
+                    ),
+                )
+            }
+        },
+    )
+
+    // --- AI translation ---------------------------------------------------
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Translate,
+                title = { Text(Localization.get(language, "translate_lyrics")) },
+                description = { Text(Localization.get(language, "translate_lyrics_desc")) },
+                trailing = { Switch(checked = translateLyrics, onCheckedChange = onToggleTranslateLyrics) },
+                onClick = { onToggleTranslateLyrics(!translateLyrics) },
+            ),
+        ),
+    )
 }
+
+/** Localized label of an animation style. */
+private fun lyricsStyleLabel(language: String, style: LyricsAnimationStyle): String {
+    val key = when (style) {
+        LyricsAnimationStyle.NONE -> "lyrics_style_none"
+        LyricsAnimationStyle.FADE -> "lyrics_style_fade"
+        LyricsAnimationStyle.GLOW -> "lyrics_style_glow"
+        LyricsAnimationStyle.SLIDE -> "lyrics_style_slide"
+        LyricsAnimationStyle.KARAOKE -> "lyrics_style_karaoke"
+        LyricsAnimationStyle.APPLE -> "lyrics_style_apple"
+        LyricsAnimationStyle.APPLE_V2 -> "lyrics_style_apple_v2"
+        LyricsAnimationStyle.VIVIMUSIC_1 -> "lyrics_style_vivimusic"
+    }
+    return Localization.get(language, key)
+}
+
+/** Localized label of the text position. */
+private fun lyricsPositionLabel(language: String, position: LyricsPosition): String = when (position) {
+    LyricsPosition.LEFT -> Localization.get(language, "lyrics_position_left")
+    LyricsPosition.CENTER -> Localization.get(language, "lyrics_position_center")
+    LyricsPosition.RIGHT -> Localization.get(language, "lyrics_position_right")
+}
+
+/** One romanizable script: its label key and how to flip it on/off. */
+private data class RomanizeScript(
+    val labelKey: String,
+    val isEnabled: (LyricsRomanizer.Options) -> Boolean,
+    val set: (LyricsRomanizer.Options, Boolean) -> LyricsRomanizer.Options,
+)
+
+private val ROMANIZE_SCRIPTS = listOf(
+    RomanizeScript("romanize_japanese", { it.japanese }, { o, v -> o.copy(japanese = v) }),
+    RomanizeScript("romanize_korean", { it.korean }, { o, v -> o.copy(korean = v) }),
+    RomanizeScript("romanize_chinese", { it.chinese }, { o, v -> o.copy(chinese = v) }),
+    RomanizeScript("romanize_russian", { it.russian }, { o, v -> o.copy(russian = v) }),
+    RomanizeScript("romanize_ukrainian", { it.ukrainian }, { o, v -> o.copy(ukrainian = v) }),
+    RomanizeScript("romanize_serbian", { it.serbian }, { o, v -> o.copy(serbian = v) }),
+    RomanizeScript("romanize_bulgarian", { it.bulgarian }, { o, v -> o.copy(bulgarian = v) }),
+    RomanizeScript("romanize_belarusian", { it.belarusian }, { o, v -> o.copy(belarusian = v) }),
+    RomanizeScript("romanize_kyrgyz", { it.kyrgyz }, { o, v -> o.copy(kyrgyz = v) }),
+    RomanizeScript("romanize_macedonian", { it.macedonian }, { o, v -> o.copy(macedonian = v) }),
+    RomanizeScript("romanize_hindi", { it.hindi }, { o, v -> o.copy(hindi = v) }),
+    RomanizeScript("romanize_punjabi", { it.punjabi }, { o, v -> o.copy(punjabi = v) }),
+)
 
 /** Privacy section: clear the local session, cache and downloaded installers. */
 @Composable
@@ -2036,16 +2309,17 @@ fun SettingsIntegrationsScreen(
 
 /**
  * Cider-style desktop features: floating Now Playing widget, global media keys
- * (Windows) and the tray icon menu. Everything is a simple toggle.
+ * and the tray icon menu. Everything is a simple toggle.
+ *
+ * The media-keys switch needs no OS permission on any platform: Windows/Linux
+ * use the low-level hook, macOS uses the native MediaPlayer session (issue #67),
+ * which is an OS-level integration and therefore never blocked by the
+ * Accessibility permission.
  */
 @Composable
 fun SettingsDesktopScreen(
     language: String,
     onBack: () -> Unit,
-    isWindows: Boolean,
-    isMac: Boolean = false,
-    macAccessibilityTrusted: Boolean = false,
-    onOpenAccessibilitySettings: (() -> Unit)? = null,
     showWidget: Boolean,
     onShowWidgetChange: (Boolean) -> Unit,
     mediaKeysEnabled: Boolean,
@@ -2086,42 +2360,16 @@ fun SettingsDesktopScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(Localization.get(language, "media_keys"), style = MaterialTheme.typography.bodyLarge)
-                    // On Windows/Linux the hook needs no OS permission; on
-                    // macOS it is only active once the Accessibility
-                    // permission is granted, which is reflected by the switch.
-                    if (isMac && !macAccessibilityTrusted) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            Localization.get(language, "requires_accessibility"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
+                Text(Localization.get(language, "media_keys"), style = MaterialTheme.typography.bodyLarge)
                 Text(
                     Localization.get(language, "media_keys_desc"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (isMac && !macAccessibilityTrusted && onOpenAccessibilitySettings != null) {
-                    OutlinedButton(
-                        onClick = onOpenAccessibilitySettings,
-                        modifier = Modifier.padding(top = 4.dp),
-                    ) {
-                        Text(Localization.get(language, "open_system_settings"))
-                    }
-                }
             }
-            // macOS: usable only once the Accessibility permission is granted
-            // (MediaKeys activates as soon as the OS reports trust). Windows
-            // and Linux need no permission.
-            val keysUsable = isWindows || isMac && macAccessibilityTrusted || !isWindows && !isMac
             Switch(
-                checked = mediaKeysEnabled && keysUsable,
-                onCheckedChange = { onMediaKeysChange(it && keysUsable) },
-                enabled = keysUsable,
+                checked = mediaKeysEnabled,
+                onCheckedChange = onMediaKeysChange,
             )
         }
 

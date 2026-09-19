@@ -33,15 +33,21 @@
   <meta name="theme-color" content="#6c5ce7">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"VIVI Music DE","applicationCategory":"MultimediaApplication","operatingSystem":"Windows 10+, Linux, macOS 10.15+","url":"https://piboh.github.io/vivi-music/","downloadUrl":"https://github.com/PiBOH/vivi-music/releases/latest","image":"https://piboh.github.io/vivi-music/images/logo_vmde.png","description":"Download VIVI Music DE for free: an open-source YouTube Music player for PC (Windows 10 and 11), Linux and macOS that syncs the queue, playback, volume and playlists with your Android phone. No ads, no cost.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
 
-      <link rel="icon" type="image/png" href="images/logo_vmde.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link rel="icon" type="image/png" sizes="96x96" href="images/favicon.png">
+  <!-- Font hints: the fonts would otherwise only be requested once fonts.css has
+       been parsed, which is late enough that the swap re-paints the hero text and
+       delays LCP. These pull the same four files (latin subset only, thanks to the
+       unicode-range in fonts.css) forward; `crossorigin` makes the hint match the
+       real CORS-mode font request instead of triggering a second download. -->
+  <link rel="preload" href="assets/fonts/Geist-400-a147f99cd5.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/Sora-300-0d0e5e4d2f.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/InstrumentSans-400-fa41c43a3d.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/material-symbols-outlined.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="assets/fonts.css">
   <link rel="stylesheet" href="assets/tpl.css">
   <link rel="stylesheet" href="assets/site-chrome.css">
   <link rel="stylesheet" href="style.css">
   <script>document.documentElement.classList.add("js");try{var ua=navigator.userAgent||"",isTab=/iPad|Tablet|PlayBook|Kindle|Silk/i.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1),isPh=/Mobi|Android|iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry/i.test(ua);if(isTab)document.documentElement.classList.add("vm-tablet");else if(isPh)document.documentElement.classList.add("vm-phone");}catch(e){}</script>
-  <script src="assets/tpl.js"></script>
 </head>
 <body class="bg-transparent text-white font-sora selection:bg-white/20 overflow-x-hidden">
 
@@ -52,7 +58,7 @@
   <nav id="top-navbar" class="fixed top-0 w-full z-[100] py-5 px-6 md:px-12 flex justify-between items-center transition-all duration-300 ease-in-out animate-nav" data-purpose="TopNavBar">
     <div class="flex items-center gap-2">
       <a href="index" class="flex items-center gap-2">
-        <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" decoding="async">
+        <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" width="192" height="192" fetchpriority="high" decoding="async">
         <span class="text-xl font-bold tracking-tight text-white font-geist">VIVI Music <span class="text-[#afbeff]">DE</span></span>
       </a>
     </div>
@@ -85,7 +91,7 @@
 
     <!-- ============ hero (template style) ============ -->
     <section class="container mx-auto px-6 text-center relative z-10 pt-10" data-purpose="hero-content">
-      <img src="assets/logo.png" alt="VIVI Music DE Logo" class="w-16 h-16 mx-auto mb-8 invert" decoding="async">
+      <img src="assets/logo.png" alt="VIVI Music DE Logo" class="w-16 h-16 mx-auto mb-8 invert" width="192" height="192" fetchpriority="high" decoding="async">
       <h1 class="text-4xl md:text-[48px] font-medium mb-6 tracking-tight md:tracking-[-0.04em] text-white font-geist leading-[1.1] max-w-[720px] mx-auto">
         The player that follows you.
       </h1>
@@ -137,19 +143,30 @@
         return String(n);
       }
       var REPO = 'PiBOH/vivi-music';
-      fetch('https://api.github.com/repos/' + REPO, { headers: { Accept: 'application/vnd.github+json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { var el = document.getElementById('gh-stars'); if (el && d.stargazers_count) el.textContent = fmt(d.stargazers_count); })
-        .catch(function () {});
-      fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=100', { headers: { Accept: 'application/vnd.github+json' } })
-        .then(function (r) { return r.json(); })
-        .then(function (list) {
-          var total = 0;
-          (list || []).forEach(function (rel) { (rel.assets || []).forEach(function (a) { total += a.download_count || 0; }); });
-          var el = document.getElementById('gh-downloads');
-          if (el && total) el.textContent = fmt(total);
-        })
-        .catch(function () {});
+      /* Both numbers come from the static manifest shipped with the site: no
+         GitHub API request is spent on a page view (the anonymous quota is 60
+         per hour, and it running out is what emptied the download lists), and
+         they are filled on the first paint instead of after a refresh.
+         main.js loads later in the document, hence the deferred call. */
+      function setStat(id, value) {
+        var el = document.getElementById(id);
+        if (el && value) el.textContent = fmt(value);
+      }
+      function loadStats() {
+        if (window.vmStats) {
+          window.vmStats().then(function (s) {
+            setStat('gh-stars', s.stars);
+            setStat('gh-downloads', s.totalDownloads);
+          });
+          return;
+        }
+        fetch('https://api.github.com/repos/' + REPO, { headers: { Accept: 'application/vnd.github+json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { setStat('gh-stars', d.stargazers_count); })
+          .catch(function () {});
+      }
+      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', loadStats);
+      else loadStats();
     })();
     </script>
 
@@ -263,7 +280,7 @@
     <div class="container mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
       <div class="col-span-1 flex flex-col gap-6">
         <div class="flex items-center gap-3">
-          <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" loading="lazy" decoding="async">
+          <img src="assets/logo.png" alt="VIVI Music Logo" class="w-8 h-8 rounded-[8px] object-cover invert" width="192" height="192" loading="lazy" decoding="async">
           <span class="text-lg font-bold tracking-tight text-white font-geist">VIVI Music DE</span>
         </div>
         <p class="text-[#afbeff]/70 font-geist text-sm leading-relaxed max-w-xs pr-4">
@@ -363,13 +380,29 @@
 
   /* navbar: shrink after scrolling a bit */
   var nav = $('#top-navbar');
-  function onScroll() {
-    if (!nav) return;
-    if (window.scrollY > 40) nav.classList.add('scrolled');
-    else nav.classList.remove('scrolled');
+  /* The navbar shrinks once the page is scrolled past 40px. This must not read
+     the scroll position: `window.scrollY` forces a synchronous layout, which is
+     what Lighthouse reported as "forced reflow" (710 ms on a throttled phone,
+     and it flagged the same read again once it was merely deferred a frame). A
+     1px sentinel 40px down the document observed by IntersectionObserver gives
+     the same answer without touching layout, and it is also correct when the
+     page is opened with a #fragment, where no scroll event fires at all.
+   */
+  if (nav) {
+    var navMark = document.createElement('div');
+    navMark.setAttribute('aria-hidden', 'true');
+    navMark.style.cssText = 'position:absolute;top:40px;left:0;width:1px;height:1px;pointer-events:none';
+    document.body.appendChild(navMark);
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        nav.classList.toggle('scrolled', !entries[0].isIntersecting);
+      }, { threshold: 0 }).observe(navMark);
+    } else {
+      window.addEventListener('scroll', function () {
+        nav.classList.toggle('scrolled', window.scrollY > 40);
+      }, { passive: true });
+    }
   }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
 
   /* mobile menu */
   var menuBtn = $('#mobile-menu-btn');
@@ -401,6 +434,10 @@
   var grid = $('#dl-grid');
   var variant = $('#dl-variant');
   var rel = null;
+  /* Platform panel currently on screen, so arriving data can re-render it. */
+  var curPlat = null;
+  var relLoading = false;
+  var relFailed = false;
 
   function findAsset(re) {
     var assets = (rel && rel.assets) || [];
@@ -438,8 +475,17 @@
   };
 
   function showVariants(plat) {
+    curPlat = plat;
     var items = VARIANTS[plat] || [];
     variant.innerHTML = '';
+    /* No release data yet: say so instead of advertising every asset as "not in
+       this release". This branch is exactly what the dialog used to draw when
+       it was opened before the API answered - the reason the assets only
+       showed up after refreshing the page. */
+    if (!rel) {
+      renderPending();
+      return;
+    }
     var any = false;
     items.forEach(function (it) {
       var url = assetUrl(it.re);
@@ -493,26 +539,70 @@
     return rels[0] || null;
   }
 
+  function renderPending() {
+    variant.innerHTML = '';
+    if (relFailed && !relLoading) {
+      var again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'helium-dialog-btn w-full py-3 text-sm font-bold text-white';
+      again.textContent = 'Retry';
+      again.addEventListener('click', function () { relFailed = false; loadRelease(); });
+      variant.appendChild(again);
+      var hint = document.createElement('p');
+      hint.className = 'text-[10px] text-[#afbeff]/60 font-geist text-left px-1';
+      hint.textContent = 'GitHub did not answer - every asset is also on the releases page.';
+      variant.appendChild(hint);
+    } else {
+      var wait = document.createElement('p');
+      wait.className = 'text-xs font-geist text-[#afbeff]/70 text-left px-1';
+      wait.textContent = 'Loading the latest release\u2026';
+      variant.appendChild(wait);
+      if (!relLoading) loadRelease();
+    }
+    variant.classList.remove('hidden');
+    variant.classList.add('flex');
+  }
+
+  /* Applies whatever the shared cache/proxy hands over and re-renders the panel
+     the user is looking at: the data can arrive, or be replaced by a newer
+     copy, while the dialog is already open. */
+  function applyRelease(r) {
+    if (r) {
+      rel = r;
+      relFailed = false;
+      var ch = r.prerelease ? 'prerelease' : 'stable';
+      tagline.innerHTML = 'Latest release: <b class="text-white">' + r.tag_name + '</b> \u00b7 ' + ch;
+    } else if (!rel) {
+      tagline.textContent = 'Could not reach GitHub - pick a platform to retry.';
+    }
+    if (curPlat) showVariants(curPlat);
+  }
+
   function loadRelease() {
+    if (relLoading) return;
+    relLoading = true;
+    function done(r) {
+      relLoading = false;
+      if (!r && rel) return; /* a failed revalidation keeps what is on screen */
+      if (!r) relFailed = true;
+      applyRelease(r);
+    }
+    /* main.js owns the local cache and the retry; this fallback only runs if it
+       could not be loaded at all (so the dialog still works without it). */
+    if (window.vmWatchLatestRelease) {
+      window.vmWatchLatestRelease(function (r) { done(r); });
+      return;
+    }
     fetch('https://api.github.com/repos/' + REPO + '/releases?per_page=30', {
       headers: { Accept: 'application/vnd.github+json' }
     }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (list) {
-        rel = pickRelease(list);
-        if (rel) {
-          var ch = rel.prerelease ? 'prerelease' : 'stable';
-          tagline.innerHTML = 'Latest release: <b class="text-white">' + rel.tag_name + '</b> · ' + ch;
-        } else {
-          tagline.textContent = 'No release published yet.';
-        }
-      })
-      .catch(function () { tagline.textContent = 'Could not reach GitHub — try the downloads page.'; });
+      .then(function (list) { done(pickRelease(list)); })
+      .catch(function () { done(null); });
   }
 
   function openModal() {
     if (!modal) return;
-    if (!rel) loadRelease();
-    else if (tagline && !tagline.dataset.loaded) { /* keep */ }
+    loadRelease();
     modal.showModal();
     void modal.offsetWidth;
     modal.classList.add('is-open');
@@ -537,6 +627,15 @@
     if (backdrop) backdrop.addEventListener('click', closeModal);
     modal.addEventListener('cancel', function (e) { e.preventDefault(); closeModal(); });
   }
+
+  /* Warm the release data while the page is idle, so the dialog is already
+     filled the first time it is opened. The shared helper lives in main.js,
+     which is loaded after this inline script - hence the DOMContentLoaded wait. */
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', loadRelease);
+  } else {
+    loadRelease();
+  }
   $$('.dl-plat').forEach(function (b) {
     b.addEventListener('click', function () { showVariants(b.dataset.plat); });
   });
@@ -555,7 +654,7 @@
     var grid = document.getElementById("newsGrid");
     var hv = document.querySelector("[data-hero-ver]");
     if (grid && window.vmReleases) {
-      window.vmReleases(3).then(function (list) {
+      function newsRender(list) {
         if (hv && list[0]) hv.textContent = String(list[0].tag_name || "").replace(/^v/i, "") || "1.41.14";
         var top = list.slice(0, 3);
         if (!top.length) throw new Error("empty feed");
@@ -580,7 +679,8 @@
             '<span class="dt">' + window.vmFmtDate(r.published_at) + "</span>" +
             "<p>" + (window.vmEsc(body) || "No notes this time — code moved, nothing to say.") + "</p></div>";
         }).join("");
-      })["catch"](function () {
+      }
+      function newsFallback() {
         var fb = [
           { v: "1.41.14", t: "Broken OpenGL stacks on Linux are now detected: the app drops to software rendering once and remembers the choice." },
           { v: "1.41.13", t: "Modern Google cookie sets authenticate again — the 401 UNAUTHENTICATED login wall is gone." }
@@ -588,7 +688,21 @@
         grid.innerHTML = fb.map(function (x) {
           return '<div class="news-item"><span class="ver">' + x.v + '</span><span class="dt">from the install guide</span><p>' + x.t + "</p></div>";
         }).join("") + '<div class="news-item"><span class="ver">feed</span><span class="dt">offline</span><p>The GitHub API didn\u2019t answer. The <a href="https://github.com/PiBOH/vivi-music/releases" target="_blank" rel="noopener">releases page</a> is always up.</p></div>';
-      });
+      }
+
+      /* Cached list first (the cards are there instantly), then the network copy
+         replaces it. The fallback only runs when nothing is cached and the API
+         did not answer, so a rate-limited request no longer empties the section. */
+      var newsSeen = false;
+      if (window.vmReleasesSWR) {
+        window.vmReleasesSWR(3, function (list) {
+          if (!list || !list.length) { if (!newsSeen) newsFallback(); return; }
+          newsSeen = true;
+          newsRender(list);
+        });
+      } else {
+        window.vmReleases(3).then(newsRender)["catch"](newsFallback);
+      }
     }
   })();
   </script>

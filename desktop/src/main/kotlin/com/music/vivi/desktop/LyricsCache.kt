@@ -37,19 +37,30 @@ object LyricsCache {
     }
 
     /**
-     * v4: the file name now carries BOTH a version suffix and the fetch mode
+     * The file name carries BOTH a version suffix and the fetch mode
      * (`-s` = synced-first, `-p` = plain/first-answer), so:
-     *  - v3 entries (single key per video, possibly a stale plain result that
-     *    blocked the synced hunt) are ignored and re-fetched once;
+     *  - entries written by an older resolver are ignored and re-fetched once;
      *  - toggling "Synced lyrics" never reuses the other mode's cached text.
-     * v3 invalidated first-answer-wins entries; v2 invalidated single-provider,
-     * no-duration lookups.
+     *
+     * **Any change to how a provider is picked or validated MUST bump this
+     * version.** A cached answer is served without asking any provider again, so
+     * without a bump a wrong association survives the fix forever: the reported
+     * `Blu Da Ba Dee` kept showing `Move Your Body - Eiffel 65` (the exact
+     * mismatch fixed by the KuGou matching in 1.50.67) because that entry was
+     * still on disk in `68ugkg9RePc.s.v4.txt`. v6 invalidates the answers of the
+     * pre-Unicode-folding matcher (stylized titles could only match the wrong
+     * song or nothing at all); v5 invalidated the wrong-song KuGou match; v4
+     * separated the fetch modes; v3 invalidated first-answer-wins entries; v2
+     * invalidated single-provider, no-duration lookups.
      */
     private fun file(videoId: String, preferSynced: Boolean): File {
         val safe = videoId.replace(Regex("[^A-Za-z0-9._-]"), "_")
         val mode = if (preferSynced) "s" else "p"
-        return File(dir, "$safe.$mode.v4.txt")
+        return File(dir, "$safe.$mode.v$CACHE_VERSION.txt")
     }
+
+    /** Cache format version — see [file] for when and why to bump it. */
+    private const val CACHE_VERSION = 6
 
     private fun memKey(videoId: String, preferSynced: Boolean) = "$videoId|${if (preferSynced) "s" else "p"}"
 }

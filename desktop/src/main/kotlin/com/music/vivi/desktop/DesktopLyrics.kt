@@ -4,6 +4,7 @@ import com.music.innertube.YouTube
 import com.music.innertube.models.WatchEndpoint
 import com.music.kugou.KuGou
 import com.music.lrclib.LrcLib
+import com.music.lyrics.TextFolding
 import com.music.musixmatch.Musixmatch
 import com.music.paxsenix.Paxsenix
 import com.music.unison.Unison
@@ -25,13 +26,24 @@ import kotlinx.coroutines.withTimeoutOrNull
  *  - falls back across providers in a fixed order until one answers (synced
  *    LRC preferred by each provider when it has one);
  *  - ends with the official YouTube Music lyrics for the exact video, so a
- *    track that no community server covers still shows its correct text;
+ *    track that no community server covers still shows its correct text (the
+ *    video's own *timed captions* would be even better, but the mobile app's
+ *    `YouTubeSubtitle` source cannot be used here: `get_transcript` answers
+ *    `400 FAILED_PRECONDITION` to the synthesised params for EVERY video,
+ *    captioned ones included — verified with direct requests — so that
+ *    provider is dead weight in the mobile chain too);
  *  - logs which provider answered (and every failure) through [AppLog] so a
  *    bad case is diagnosable from an exported log.
  */
 object DesktopLyrics {
     /** Per-provider ceiling; a hung provider is skipped, never blocks lyrics. */
     private const val PROVIDER_TIMEOUT_MS = 6_000L
+
+    /**
+     * How far a synced lyric file may legitimately run past the track's own
+     * duration: intros/outros and radio edits differ by seconds, not minutes.
+     */
+    private const val LYRICS_TAIL_ALLOWANCE_MS = 60_000L
 
     /** LRC line timestamp, e.g. `[01:23.45]` / `[1:23]`. */
     private val lrcTime = Regex("""\[\d{1,2}:\d{1,2}(?:[.:]\d{1,3})?]""")
@@ -41,6 +53,34 @@ object DesktopLyrics {
 
     /** True when the text carries timestamps (line-level LRC or word-level). */
     private fun looksSynced(text: String) = lrcTime.containsMatchIn(text) || richTime.containsMatchIn(text)
+
+    /**
+     * Timestamp of the LAST lyric line, in milliseconds, or null when the text
+     * has no line timestamps.
+     *
+     * Used as a sanity check: lyrics belonging to another song (or to a much
+     * longer album version) keep "singing" well past the end of the track that
+     * is playing, which is measurable even when the provider's matching looked
+     * plausible.
+     */
+    private fun lastTimestampMs(text: String): Long? {
+        var last: Long? = null
+        for (match in lrcTime.findAll(text)) {
+            val parts = match.value.trim('[', ']').split(':', '.')
+            if (parts.size < 2) continue
+            val minutes = parts[0].toLongOrNull() ?: continue
+            val seconds = parts[1].toLongOrNull() ?: continue
+            val frac = parts.getOrNull(2)?.toLongOrNull() ?: 0L
+            // Two-digit fractions are centiseconds, three-digit ones ms.
+            val fracMs = when ((parts.getOrNull(2)?.length ?: 0)) {
+                1 -> frac * 100
+                2 -> frac * 10
+                else -> frac
+            }
+            last = minutes * 60_000 + seconds * 1_000 + fracMs
+        }
+        return last
+    }
 
     /**
      * Tries the providers in order and returns the first usable text.
@@ -69,14 +109,24 @@ object DesktopLyrics {
         // YouTube Music lyrics last as an exact-text guarantee. Album is
         // passed through like the mobile app does — it helps the providers
         // pick the right recording (radio edit vs original, live vs studio).
+        // Providers match against plain-text catalogues, while YouTube Music
+        // titles/artists are full of decorative Unicode (`ＭＩＧＵＥＬ 𝑷𝒉𝒐𝒏𝒌`,
+        // `𝗖𝗥𝗢𝗪𝗡 𝗕𝗘𝗔𝗥`): the folded text (`MIGUEL Phonk`, `CROWN BEAR`) is
+        // what every provider is queried with, while the original stays in the
+        // log so the user still recognises the track. Without this, those tracks
+        // matched nothing anywhere and ended up with no lyrics at all.
+        val queryTitle = TextFolding.fold(title)
+        val queryArtist = TextFolding.fold(artist)
+        val queryAlbum = album?.let { TextFolding.fold(it) }
+
         val providers: List<Pair<String, suspend () -> Result<String>>> = listOf(
-            "LrcLib" to { LrcLib.getLyrics(title, artist, durationSec, album) },
-            "BetterLyrics" to { BetterLyrics.getLyrics(title, artist, durationSec, album) },
-            "YouLyPlus" to { YouLyPlus.getLyrics(title, artist, durationSec, album, id = videoId) },
-            "KuGou" to { KuGou.getLyrics(title, artist, durationSec, album) },
-            "Musixmatch" to { Musixmatch.getLyrics(title, artist, durationSec, album) },
-            "Paxsenix" to { Paxsenix.getLyrics(title, artist, durationSec, album) },
-            "Unison" to { Unison.getLyrics(title, artist, durationSec, album, videoId = videoId) },
+            "LrcLib" to { LrcLib.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "BetterLyrics" to { BetterLyrics.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "YouLyPlus" to { YouLyPlus.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum, id = videoId) },
+            "KuGou" to { KuGou.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "Musixmatch" to { Musixmatch.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "Paxsenix" to { Paxsenix.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
+            "Unison" to { Unison.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum, videoId = videoId) },
         )
 
         AppLog.log(
@@ -101,6 +151,21 @@ object DesktopLyrics {
                         "lyrics",
                         "  $name: got ${text.length} chars (${if (synced) "synced" else "plain"}) for '$title'",
                     )
+                    // A synced result that runs far past the end of the track
+                    // is not this song: keep looking instead of showing wrong
+                    // lyrics (an answer that is merely a different edit of the
+                    // same song stays within the allowance).
+                    if (synced && durationMs > 0) {
+                        val last = lastTimestampMs(text)
+                        if (last != null && last > durationMs + LYRICS_TAIL_ALLOWANCE_MS) {
+                            AppLog.log(
+                                "lyrics",
+                                "  $name: lyrics run ${(last - durationMs) / 1000}s past the " +
+                                    "${durationMs / 1000}s track — discarding (wrong song or version)",
+                            )
+                            return@onSuccess
+                        }
+                    }
                     // Synced result (or the option off / any answer): done.
                     if (synced || !preferSynced) return Result.success(text)
                     // Plain answer while syncing is wanted: remember it as a

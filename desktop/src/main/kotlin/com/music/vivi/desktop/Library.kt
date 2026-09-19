@@ -86,8 +86,12 @@ fun LibraryScreen(
         var error by remember { mutableStateOf<String?>(null) }
         var sortAsc by remember { mutableStateOf(true) }
         var sortByArtist by remember { mutableStateOf(false) }
+        // Manual retry: a transient failure (expired session, 401, network
+        // hiccup) used to leave an empty list with no way to reload without
+        // leaving and reopening the screen.
+        var reloadKey by remember { mutableStateOf(0) }
 
-        LaunchedEffect(selectedTab) {
+        LaunchedEffect(selectedTab, reloadKey) {
             loading = true
             error = null
             page = null
@@ -164,12 +168,17 @@ fun LibraryScreen(
                     if (sortAsc) base else base.reversed()
                 }
                 if (items.isEmpty()) {
-                    Text(
-                        Localization.get(language, "library_empty"),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 16.dp),
-                    )
+                    Column(Modifier.padding(top = 16.dp)) {
+                        Text(
+                            Localization.get(language, "library_empty"),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.size(12.dp))
+                        OutlinedButton(onClick = { reloadKey++ }) {
+                            Text(Localization.get(language, "refresh"))
+                        }
+                    }
                 } else if (selectedTab == 0) {
                     LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
                         items(items.filterIsInstance<SongItem>(), key = { it.id }) { song ->

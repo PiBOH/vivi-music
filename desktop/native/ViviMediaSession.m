@@ -25,6 +25,7 @@ typedef void (*vivi_next_cb)(void);
 typedef void (*vivi_previous_cb)(void);
 typedef void (*vivi_seek_cb)(double positionMs);
 typedef void (*vivi_artwork_cb)(void);
+typedef void (*vivi_event_cb)(const char *message);
 
 static vivi_play_pause_cb g_playPause = NULL;
 static vivi_next_cb g_next = NULL;
@@ -32,8 +33,21 @@ static vivi_previous_cb g_previous = NULL;
 static vivi_seek_cb g_seek = NULL;
 static vivi_artwork_cb g_artwork = NULL;
 
+// Diagnostics callback (issue #67): reports every remote command the system
+// actually delivers to the app, so a user report can show whether a media key
+// ever reached VIVI at all (routing problem) or arrived and was mishandled.
+static vivi_event_cb g_event = NULL;
+
+static void ReportEvent(const char *message) {
+    if (g_event) g_event(message);
+}
+
 void viviRegisterSeekCallback(vivi_seek_cb cb);   // defined below
 void viviDispatchSeek(double positionMs);         // defined below
+
+// Display name of the app (set by viviSetAppIdentity). The system tile shows
+// the app name on its own, so this must NOT be pushed as the track title.
+static NSString *g_appName = nil;
 
 // Current now-playing state (kept so a late metadata push re-applies it).
 static NSString *g_title = nil;
@@ -43,6 +57,12 @@ static BOOL g_playing = NO;
 static NSTimeInterval g_duration = 0.0;
 static NSTimeInterval g_position = 0.0;
 static NSString *g_artworkPath = nil; // local file already downloaded by Kotlin
+
+// The user's "Media keys" intent. Kept here (not only in Kotlin) so every later
+// registration / start / metadata push can re-apply it: the enabled flags used
+// to be set once, before the handlers were installed, so after a restart the
+// keys only started working when the switch was toggled (issue #67).
+static BOOL g_commandsEnabled = YES;
 
 // ---------------------------------------------------------------------------
 // Notification delegate: shows banners even while the app is in the foreground.
@@ -79,7 +99,32 @@ static NSImage *LoadImageSafely(NSString *path) {
     return img;
 }
 
+// Artwork is decoded ONCE per path. The metadata is re-pushed on every
+// position tick (twice a second), and re-reading + re-decoding the file every
+// time was pure main-thread work for an image that cannot change within a
+// track — the same main thread the system UI and the app's window run on.
+static NSString *g_artworkLoadedPath = nil;
+static NSImage *g_artworkImage = nil;
+
+static NSImage *CurrentArtwork(void) {
+    if (g_artworkPath.length == 0) return nil;
+    if (g_artworkImage != nil && [g_artworkLoadedPath isEqualToString:g_artworkPath]) {
+        return g_artworkImage;
+    }
+    g_artworkImage = LoadImageSafely(g_artworkPath);
+    g_artworkLoadedPath = g_artworkPath;
+    return g_artworkImage;
+}
+
 static void PushNowPlayingInfo(void) {
+    // The user switched the system integration OFF: never re-claim the tile or
+    // the media keys. Without this guard every later metadata push (the player
+    // re-publishes while playing) brought the tile straight back, which is why
+    // turning the switch off only took effect after a restart (issue #67).
+    if (!g_commandsEnabled) return;
+    // Nothing to advertise yet: publishing an empty dictionary would put a
+    // title-less tile in Control Center before the first track starts.
+    if (g_title.length == 0 && g_artworkPath.length == 0) return;
     NSMutableDictionary *info = [NSMutableDictionary dictionary];
     if (g_title.length > 0) info[MPMediaItemPropertyTitle] = g_title;
     if (g_artist.length > 0) info[MPMediaItemPropertyArtist] = g_artist;
@@ -89,7 +134,7 @@ static void PushNowPlayingInfo(void) {
     // scrubber slider state visible and correct.
     info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = @(MAX(g_position, 0.0));
     info[MPNowPlayingInfoPropertyPlaybackRate] = g_playing ? @1.0 : @0.0;
-    NSImage *art = LoadImageSafely(g_artworkPath);
+    NSImage *art = CurrentArtwork();
     if (art) {
         info[MPMediaItemPropertyArtwork] =
             [[MPMediaItemArtwork alloc] initWithBoundsSize:art.size
@@ -97,12 +142,98 @@ static void PushNowPlayingInfo(void) {
                                                return art;
                                            }];
     }
-    [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = info;
+    MPNowPlayingInfoCenter *center = [MPNowPlayingInfoCenter defaultCenter];
+    center.nowPlayingInfo = info;
+    // macOS also needs the playback state: without it the system does not treat
+    // the app as the "Now Playing" source, so neither the Control Center /
+    // Lock Screen tile nor the media-key routing is activated (macOS 10.12.2+).
+    if (@available(macOS 10.12.2, *)) {
+        center.playbackState = g_playing ? MPNowPlayingPlaybackStatePlaying
+                                         : MPNowPlayingPlaybackStatePaused;
+    }
 }
 
 // ---------------------------------------------------------------------------
 // Exported C API (loaded by JNA).
 // ---------------------------------------------------------------------------
+
+// Installs the remote-command handlers exactly once (main queue only).
+static BOOL g_handlersInstalled = NO;
+
+static void InstallCommandHandlers(void) {
+    if (g_handlersInstalled) return;
+    MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+
+    [center.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote play");
+        if (g_playPause) g_playPause();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote pause");
+        if (g_playPause) g_playPause();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.togglePlayPauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote play/pause");
+        if (g_playPause) g_playPause();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.nextTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote next");
+        if (g_next) g_next();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    [center.previousTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        ReportEvent("remote previous");
+        if (g_previous) g_previous();
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+    // Scrubbing from the Lock Screen / Control Center slider.
+    [center.changePlaybackPositionCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
+        MPChangePlaybackPositionCommandEvent *posEvent =
+            (MPChangePlaybackPositionCommandEvent *)event;
+        ReportEvent("remote seek");
+        viviDispatchSeek(posEvent.positionTime * 1000.0);
+        return MPRemoteCommandHandlerStatusSuccess;
+    }];
+
+    g_handlersInstalled = YES;
+}
+
+// Removes them again: this is what makes switching "Media keys" off take
+// effect immediately. Only flipping `enabled` left the app as the system's now
+// playing owner, so the keys kept arriving until the next restart (issue #67).
+static void RemoveCommandHandlers(void) {
+    if (!g_handlersInstalled) return;
+    MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+    [center.playCommand removeTarget:nil];
+    [center.pauseCommand removeTarget:nil];
+    [center.togglePlayPauseCommand removeTarget:nil];
+    [center.nextTrackCommand removeTarget:nil];
+    [center.previousTrackCommand removeTarget:nil];
+    [center.changePlaybackPositionCommand removeTarget:nil];
+    g_handlersInstalled = NO;
+}
+
+// Applies g_commandsEnabled to the remote commands (main queue only): enabled
+// installs/re-arms them, disabled removes them (and the tile is dropped by
+// viviSetCommandsEnabled). Re-asserting this is also what makes a restart
+// behave like toggling the switch twice.
+static void ApplyCommandsEnabled(void) {
+    if (g_commandsEnabled) {
+        InstallCommandHandlers();
+    } else {
+        RemoveCommandHandlers();
+    }
+    MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
+    center.playCommand.enabled = g_commandsEnabled;
+    center.pauseCommand.enabled = g_commandsEnabled;
+    center.togglePlayPauseCommand.enabled = g_commandsEnabled;
+    center.nextTrackCommand.enabled = g_commandsEnabled;
+    center.previousTrackCommand.enabled = g_commandsEnabled;
+    center.changePlaybackPositionCommand.enabled = g_commandsEnabled;
+}
 
 // Registers the Kotlin callbacks and installs the remote-command handlers.
 // Call once, before any metadata is pushed.
@@ -115,52 +246,25 @@ void viviRegisterCallbacks(vivi_play_pause_cb pp, vivi_next_cb nx, vivi_previous
     g_artwork = art;
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
-        center.playCommand.enabled = YES;
-        center.pauseCommand.enabled = YES;
-        center.togglePlayPauseCommand.enabled = YES;
-        center.nextTrackCommand.enabled = YES;
-        center.previousTrackCommand.enabled = YES;
-        center.changePlaybackPositionCommand.enabled = YES;
-
-        [center.playCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_playPause) g_playPause();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.pauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_playPause) g_playPause();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.togglePlayPauseCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_playPause) g_playPause();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.nextTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_next) g_next();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        [center.previousTrackCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            if (g_previous) g_previous();
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
-        // Scrubbing from the Lock Screen / Control Center slider.
-        [center.changePlaybackPositionCommand addTargetWithHandler:^MPRemoteCommandHandlerStatus(MPRemoteCommandEvent *event) {
-            MPChangePlaybackPositionCommandEvent *posEvent =
-                (MPChangePlaybackPositionCommandEvent *)event;
-            viviDispatchSeek(posEvent.positionTime * 1000.0);
-            return MPRemoteCommandHandlerStatusSuccess;
-        }];
+        ApplyCommandsEnabled();
     });
 }
 
-// Sets the app identity shown in the system tile.
+// Registers the diagnostics callback (see vivi_event_cb). Optional: without it
+// the helper behaves exactly as before.
+void viviRegisterEventCallback(vivi_event_cb cb) {
+    g_event = cb;
+}
+
+// Sets the app identity shown in the system tile. The tile takes the visible
+// name from the bundle, so this only records it for diagnostics (previously it
+// overwrote the track title, so the tile could show "VIVI Music" as the song).
 void viviSetAppIdentity(const char *appNameUtf8) {
     NSString *name = appNameUtf8
                          ? [NSString stringWithUTF8String:appNameUtf8]
                          : @"VIVI Music";
     dispatch_async(dispatch_get_main_queue(), ^{
-        g_title = name;
-        PushNowPlayingInfo();
+        g_appName = name;
     });
 }
 
@@ -169,13 +273,9 @@ void viviSetAppIdentity(const char *appNameUtf8) {
 // viviEndSession earlier.
 void viviStartSession(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        MPRemoteCommandCenter *center = [MPRemoteCommandCenter sharedCommandCenter];
-        center.playCommand.enabled = YES;
-        center.pauseCommand.enabled = YES;
-        center.togglePlayPauseCommand.enabled = YES;
-        center.nextTrackCommand.enabled = YES;
-        center.previousTrackCommand.enabled = YES;
-        center.changePlaybackPositionCommand.enabled = YES;
+        // Re-assert the intent: viviEndSession / a restart / a switch toggle may
+        // have turned the commands off in the meantime (issue #67).
+        ApplyCommandsEnabled();
         PushNowPlayingInfo();
     });
 }
@@ -195,14 +295,64 @@ void viviSetNowPlaying(const char *titleUtf8, const char *artistUtf8, const char
         if (thumbnailPathUtf8 && strlen(thumbnailPathUtf8) > 0) {
             g_artworkPath = [NSString stringWithUTF8String:thumbnailPathUtf8];
         }
+        // A new track is the moment the tile must work: re-assert the commands
+        // so a session that was cleared (or a fresh process launch) never ends
+        // up with a visible tile whose buttons are disabled (issue #67).
+        ApplyCommandsEnabled();
         PushNowPlayingInfo();
         if (g_artwork) g_artwork();
+    });
+}
+
+// Enables or disables the remote commands (media keys / Control Center
+// buttons). Disabling it also drops the tile, because a tile whose controls do
+// nothing is worse than no tile. Used by the "Media keys" switch on macOS,
+// which no longer depends on the Accessibility permission.
+void viviSetCommandsEnabled(int enabled) {
+    BOOL on = enabled != 0;
+    g_commandsEnabled = on;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        ApplyCommandsEnabled();
+        if (!on) {
+            if (@available(macOS 10.12.2, *)) {
+                [MPNowPlayingInfoCenter defaultCenter].playbackState =
+                    MPNowPlayingPlaybackStateStopped;
+            }
+            [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
+        } else {
+            PushNowPlayingInfo();
+        }
     });
 }
 
 // Marks the session as stopped (clears the tile; handlers stay registered).
 void viviEndSession(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
+        if (@available(macOS 10.12.2, *)) {
+            [MPNowPlayingInfoCenter defaultCenter].playbackState =
+                MPNowPlayingPlaybackStateStopped;
+        }
+        [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
+    });
+}
+
+// Clears the tile (no track playing / media keys switched off) while keeping
+// the session, its handlers and the app identity alive. Kotlin used to call
+// viviEndSession for this, which unregistered the session: nothing re-registered
+// it later, so a fresh launch had a dead "Now Playing" until the media-keys
+// switch was toggled (issue #67).
+void viviClearNowPlaying(void) {
+    g_title = @"";
+    g_artist = @"";
+    g_album = @"";
+    g_playing = NO;
+    g_position = 0.0;
+    g_artworkPath = nil;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (@available(macOS 10.12.2, *)) {
+            [MPNowPlayingInfoCenter defaultCenter].playbackState =
+                MPNowPlayingPlaybackStateStopped;
+        }
         [MPNowPlayingInfoCenter defaultCenter].nowPlayingInfo = nil;
     });
 }
@@ -248,6 +398,25 @@ void viviNotify(const char *titleUtf8, const char *messageUtf8) {
                                                  trigger:trigger];
         [[UNUserNotificationCenter currentNotificationCenter]
             addNotificationRequest:request withCompletionHandler:nil];
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Native window chrome (issue #66)
+// ---------------------------------------------------------------------------
+
+// Forces the native window chrome (title bar, native menus and dialogs) to the
+// app's own Light/Dark mode instead of the OS appearance, so a dark VIVI on a
+// light macOS desktop no longer shows a white title bar.
+void viviSetWindowAppearance(int dark) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSString *name = dark ? NSAppearanceNameDarkAqua : NSAppearanceNameAqua;
+        NSAppearance *appearance = [NSAppearance appearanceNamed:name];
+        if (!appearance) return;
+        [NSApp setAppearance:appearance];
+        for (NSWindow *window in [NSApp windows]) {
+            window.appearance = appearance;
+        }
     });
 }
 

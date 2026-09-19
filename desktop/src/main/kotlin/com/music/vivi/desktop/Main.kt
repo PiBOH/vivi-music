@@ -8,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,7 +87,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -174,6 +174,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -213,6 +214,7 @@ import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 import com.music.innertube.YouTubeExtractor
 import com.music.innertube.models.SongItem
+import com.music.vivi.desktop.player.AudioOutput
 import com.music.vivi.desktop.player.PlayerController
 import com.music.vivi.desktop.player.RepeatMode
 import com.music.vivi.desktop.player.StreamResolver
@@ -325,23 +327,30 @@ fun main(args: Array<String>) {
     YouTubeExtractor.cacheDir = File(System.getProperty("user.home"), ".vivimusic/cache").apply { mkdirs() }
     LoginManager.restore()
     DesktopSettings.ensureFirstLaunchDate()
+    // Restore the preferred audio output device (Java Sound mixer) before the
+    // first line is opened.
+    AudioOutput.load()
+    // Restore the global UI animation speed.
+    Animations.load()
     // Dev tools are non-critical: never let their initialization crash the app
     // at startup (which the jpackage launcher reports as "Failed to launch JVM").
     runCatching { DeveloperOptions.load() }
 
-    var language by remember { mutableStateOf(DesktopSettings.load().language) }
-    var themeMode by remember { mutableStateOf(ThemeMode.from(DesktopSettings.load().darkMode)) }
-    var accent by remember { mutableStateOf(argbIntToColor(DesktopSettings.load().accentColor)) }
-    var accentIntensity by remember { mutableStateOf(DesktopSettings.load().accentIntensity) }
-    var customAccents by remember { mutableStateOf(DesktopSettings.load().customAccents) }
-    var pureBlack by remember { mutableStateOf(DesktopSettings.load().pureBlack) }
-    var selectedFont by remember { mutableStateOf(AppFont.fromValue(DesktopSettings.load().selectedFont)) }
-    var customFontPath by remember { mutableStateOf(DesktopSettings.load().customFontPath) }
+    // Bootup speed: the settings file is parsed exactly ONCE (initialSettings)
+    // instead of one disk read + JSON parse per setting (~12 of them here).
+    var language by remember { mutableStateOf(initialSettings.language) }
+    var themeMode by remember { mutableStateOf(ThemeMode.from(initialSettings.darkMode)) }
+    var accent by remember { mutableStateOf(argbIntToColor(initialSettings.accentColor)) }
+    var accentIntensity by remember { mutableStateOf(initialSettings.accentIntensity) }
+    var customAccents by remember { mutableStateOf(initialSettings.customAccents) }
+    var pureBlack by remember { mutableStateOf(initialSettings.pureBlack) }
+    var selectedFont by remember { mutableStateOf(AppFont.fromValue(initialSettings.selectedFont)) }
+    var customFontPath by remember { mutableStateOf(initialSettings.customFontPath) }
     // Make the runtime-imported font resolvable before the first theme pass.
     if (customFontPath.isNotBlank()) AppFonts.customFontPath = customFontPath
     // Spotify-style layout (3 panels) + flat theme, applied together. Default
     // on; when false the app falls back to the Material 3 tonal look.
-    var spotifyLayout by remember { mutableStateOf(DesktopSettings.load().spotifyLayout) }
+    var spotifyLayout by remember { mutableStateOf(initialSettings.spotifyLayout) }
 
     fun saveTheme() {
         DesktopSettings.update {
@@ -404,15 +413,15 @@ fun main(args: Array<String>) {
     // cannot change on a displayed frame — Compose's `SwingWindow` calls
     // `setUndecorated()` on the live frame when the parameter changes, which
     // throws `IllegalComponentStateException: The frame is displayable`.
-    var nativeTitleBar by remember { mutableStateOf(DesktopSettings.load().nativeTitleBar) }
+    var nativeTitleBar by remember { mutableStateOf(initialSettings.nativeTitleBar) }
     // FROZEN at first composition: the window chrome fixed at creation. It is
     // deliberately never updated after startup, so flipping the toggle can
     // never trigger a runtime `setUndecorated` on the shown frame; the new
     // value is picked up by the restart the toggle asks for.
-    val nativeTitleBarAtStartup = remember { DesktopSettings.load().nativeTitleBar }
+    val nativeTitleBarAtStartup = remember { initialSettings.nativeTitleBar }
     // Tracks the OS-maximized state (updated by the AWT listener below) so the
     // custom title-bar buttons reflect the real window placement.
-    var windowMaximized by remember { mutableStateOf(DesktopSettings.load().windowMaximized) }
+    var windowMaximized by remember { mutableStateOf(initialSettings.windowMaximized) }
     // Placement before entering fullscreen, so leaving it restores exactly
     // where the window was (floating bounds or maximized).
     var preFullscreenMaximized by remember { mutableStateOf(false) }
@@ -466,6 +475,42 @@ fun main(args: Array<String>) {
     ) {
         val frameWindow = window
         awtWindowRef[0] = frameWindow
+
+        // Screen-recording tools (OBS and friends) list a window only when it
+        // is VISIBLE and NOT minimized — they enumerate with
+        // `EXCLUDE_MINIMIZED`, so a minimized VIVI (or one whose window has not
+        // been shown yet) is simply absent from the list. Recording the state
+        // turns "my recorder does not see VIVI" into something diagnosable
+        // from an exported log instead of guesswork. VIVI's window is a plain
+        // top-level frame (class `SunAwtFrame`) in BOTH chrome modes, without
+        // WS_EX_TOOLWINDOW, so it passes that filter once it is on screen.
+        DisposableEffect(frameWindow) {
+            fun recordWindowState(reason: String) {
+                runCatching {
+                    val iconified = (frameWindow.extendedState and java.awt.Frame.ICONIFIED) != 0
+                    AppLog.log(
+                        "window",
+                        "state=$reason decorated=${!frameWindow.isUndecorated} " +
+                            "visible=${frameWindow.isVisible} iconified=$iconified " +
+                            "bounds=${frameWindow.width}x${frameWindow.height}@${frameWindow.x},${frameWindow.y}",
+                    )
+                }
+            }
+            val listener = object : java.awt.event.WindowAdapter() {
+                override fun windowOpened(e: java.awt.event.WindowEvent) = recordWindowState("opened")
+                override fun windowStateChanged(e: java.awt.event.WindowEvent) = recordWindowState("state-changed")
+            }
+            frameWindow.addWindowListener(listener)
+            AppLog.log(
+                "window",
+                "render: skiko.renderApi=${System.getProperty("skiko.renderApi") ?: "default"}, " +
+                    "os=${System.getProperty("os.name")} ${System.getProperty("os.arch")} — " +
+                    "screen recorders find VIVI as VIVIMusic.exe; if the capture is black, " +
+                    "select the WGC method (Windows 10 19041+) instead of Automatic",
+            )
+            recordWindowState("created")
+            onDispose { runCatching { frameWindow.removeWindowListener(listener) } }
+        }
 
         // Restore the last placement with the OS APIs: OS maximize respects the
         // taskbar and the Windows DPI scaling, unlike Compose's placement which
@@ -609,10 +654,10 @@ fun main(args: Array<String>) {
                             saveTheme()
                         },
                         accentIntensity = accentIntensity,
-                        onAccentIntensityChange = {
-                            accentIntensity = it
-                            saveTheme()
-                        },
+                        // Live state during the drag; the file is written once the
+                        // pointer is released (issue #65).
+                        onAccentIntensityChange = { accentIntensity = it },
+                        onAccentIntensityChangeFinished = { saveTheme() },
                         customAccents = customAccents,
                         onAddCustomAccent = { argb ->
                             customAccents = (customAccents + argb).distinct()
@@ -725,6 +770,7 @@ fun WindowScope.App(
     onAccentChange: (Color) -> Unit,
     accentIntensity: Float = 1f,
     onAccentIntensityChange: (Float) -> Unit = {},
+    onAccentIntensityChangeFinished: () -> Unit = {},
     customAccents: List<Int> = emptyList(),
     onAddCustomAccent: (Int) -> Unit = {},
     onRemoveCustomAccent: (Int) -> Unit = {},
@@ -750,7 +796,12 @@ fun WindowScope.App(
     val recentSeedTracks by player.recentTracks.collectAsState()
     val nowPlaying = playerState.current
     val isPlaying = playerState.isPlaying
-    val audioLevel by player.audioLevel.collectAsState()
+    // NOTE: the live audio level is deliberately NOT collected here. Reading it
+    // at the app root recomposed this whole composable (and every screen below
+    // it) on every audio tick (~14/s while a track plays), which is exactly the
+    // steady UI load that competes with the audio writer on slower machines.
+    // It is passed down as a flow instead and collected only inside the
+    // visualizer background that displays it.
 
     // Restore the active EQ profile (Settings → Player & audio → Equalizer) on
     // startup so the saved equalization applies from the first track.
@@ -768,57 +819,59 @@ fun WindowScope.App(
 
     // Cider-style desktop integrations: global media keys (Windows hook),
     // tray right-click menu and tray tooltip with the current track.
-    val isWindows = System.getProperty("os.name", "").lowercase().contains("win")
     val isMac = System.getProperty("os.name", "").lowercase().contains("mac")
-    // macOS: JNativeHook only registers once the Accessibility permission is
-    // granted (MediaKeys polls and activates on its own). This state drives
-    // the truthful switch/hint on the Desktop features screen.
-    var macAccessibilityTrusted by remember {
-        mutableStateOf(isMac && MediaKeys.isAccessibilityTrusted())
-    }
-    LaunchedEffect(Unit) {
-        if (!isMac) return@LaunchedEffect
-        while (true) {
-            macAccessibilityTrusted = MediaKeys.isAccessibilityTrusted()
-            delay(1500)
-        }
-    }
+    // macOS no longer uses JNativeHook at all: the MediaPlayer session (system
+    // "Now Playing" tile + media keys) is an OS-level integration that needs NO
+    // Accessibility permission (issue #67). The session is therefore always
+    // registered — the switch below only enables/disables its remote commands.
     LaunchedEffect(mediaKeysEnabled) {
-        if (mediaKeysEnabled) {
-            if (isMac) {
-                // macOS: the native MediaPlayer session (issue #5) answers the
-                // physical media keys AND registers the app as the system
-                // "Now Playing" source — no Accessibility permission needed.
-                MacMediaSession.start(
-                    appName = "VIVI Music",
-                    onPlayPause = { player.toggle() },
-                    onNext = { player.next() },
-                    onPrevious = { player.previous() },
-                    onSeek = { ms -> player.seekTo(ms) },
-                )
-            } else {
-                MediaKeys.start(
-                    onPlayPause = { player.toggle() },
-                    onNext = { player.next() },
-                    onPrevious = { player.previous() },
-                )
-            }
-        } else if (isMac) {
-            MacMediaSession.stop()
+        if (isMac) {
+            MacMediaSession.start(
+                appName = "VIVI Music",
+                onPlayPause = { player.toggle() },
+                onNext = { player.next() },
+                onPrevious = { player.previous() },
+                onSeek = { ms -> player.seekTo(ms) },
+            )
+            MacMediaSession.setCommandsEnabled(mediaKeysEnabled)
+        } else if (mediaKeysEnabled) {
+            MediaKeys.start(
+                onPlayPause = { player.toggle() },
+                onNext = { player.next() },
+                onPrevious = { player.previous() },
+            )
+        } else {
+            MediaKeys.stop()
         }
+    }
+
+    // macOS only: the native window chrome (title bar, native menus and
+    // dialogs) follows the app's own Light/Dark mode instead of the OS one,
+    // which used to leave a white title bar over a dark VIVI (issue #66).
+    val appDark = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    LaunchedEffect(appDark) {
+        if (isMac) MacMediaSession.setWindowAppearance(appDark)
     }
 
     // macOS only: keep the system "Now Playing" tile in sync with the current
     // track. Gated by the same "Media keys" toggle as the session above (so
     // disabling it clears the tile; re-enabling re-pushes the current state).
-    // Runs once per track (and again when playback pauses) and pushes a
-    // position update every 500 ms while playing. Artwork is downloaded in the
-    // background by MacMediaSession itself.
+    // Runs once per track and pushes a position update every 500 ms while
+    // playing. Artwork is downloaded in the background by MacMediaSession
+    // itself (and decoded once per path on the native side).
     if (isMac && mediaKeysEnabled) {
         LaunchedEffect(nowPlaying?.videoId, isPlaying) {
             val np = nowPlaying
             if (np == null) {
-                MacMediaSession.endSession()
+                // No track: only the tile is cleared — the session stays
+                // registered, so the NEXT track brings it back on its own
+                // (tearing it down here left "Now Playing" dead until the
+                // media-keys switch was toggled, issue #67).
+                MacMediaSession.clearNowPlaying()
                 return@LaunchedEffect
             }
             while (true) {
@@ -832,8 +885,14 @@ fun WindowScope.App(
                         it.startsWith("http://") || it.startsWith("https://")
                     },
                 )
-                if (!playerState.isPlaying) break
-                delay(500)
+                // While PAUSED the claim must stay alive too: with a track
+                // restored from the persistent queue nothing has been played
+                // since launch, and if the app stops being the system's "Now
+                // Playing" owner the first media-key press can't reach it, so
+                // the paused track could only be started by hand (issue #67).
+                // Refreshing the claim is cheap now that the native side caches
+                // the decoded artwork.
+                delay(if (playerState.isPlaying) 500L else 2_000L)
             }
         }
     }
@@ -909,14 +968,18 @@ fun WindowScope.App(
         }
     }
 
-    var densityScale by remember { mutableStateOf(DesktopSettings.load().densityScale) }
-    var gridItemSize by remember { mutableStateOf(DesktopSettings.load().gridItemSize) }
-    var screenTransition by remember { mutableStateOf(DesktopSettings.load().screenTransition) }
-    var animationsEnabled by remember { mutableStateOf(DesktopSettings.load().animationsEnabled) }
-    var sliderStyle by remember { mutableStateOf(DesktopSettings.load().sliderStyle) }
-    var playerDesign by remember { mutableStateOf(PlayerDesign.from(DesktopSettings.load().playerDesign)) }
-    var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(DesktopSettings.load().playerBackground)) }
-    var rotatingThumbnail by remember { mutableStateOf(DesktopSettings.load().rotatingThumbnail) }
+    // Bootup speed: parse the settings file once for the whole settings block
+    // instead of one disk read + JSON parse per option.
+    val startupSettings = remember { DesktopSettings.load() }
+    var densityScale by remember { mutableStateOf(startupSettings.densityScale) }
+    var gridItemSize by remember { mutableStateOf(startupSettings.gridItemSize) }
+    var screenTransition by remember { mutableStateOf(startupSettings.screenTransition) }
+    var animationsEnabled by remember { mutableStateOf(startupSettings.animationsEnabled) }
+    var animationSpeed by remember { mutableStateOf(startupSettings.animationSpeed) }
+    var sliderStyle by remember { mutableStateOf(startupSettings.sliderStyle) }
+    var playerDesign by remember { mutableStateOf(PlayerDesign.from(startupSettings.playerDesign)) }
+    var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(startupSettings.playerBackground)) }
+    var rotatingThumbnail by remember { mutableStateOf(startupSettings.rotatingThumbnail) }
     var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
     var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
     var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
@@ -1022,6 +1085,10 @@ fun WindowScope.App(
     var syncViviVolume by remember { mutableStateOf(DesktopSettings.load().syncViviVolume) }
     var lyricsTextSize by remember { mutableStateOf(DesktopSettings.load().lyricsTextSize) }
     var lyricsLineSpacing by remember { mutableStateOf(DesktopSettings.load().lyricsLineSpacing) }
+    // Animation style + display options (mobile lyrics port). Kept as one object
+    // so the renderer, the settings screen and the file always agree.
+    var lyricsDisplay by remember { mutableStateOf(lyricsDisplayOptionsFrom(DesktopSettings.load())) }
+    var translateLyrics by remember { mutableStateOf(DesktopSettings.load().translateLyrics) }
     var streamCacheMinutes by remember { mutableStateOf(DesktopSettings.load().streamCacheMinutes) }
     var discordRpcEnabled by remember { mutableStateOf(DesktopSettings.load().discordRpcEnabled) }
     var discordClientId by remember { mutableStateOf(DesktopSettings.load().discordClientId) }
@@ -1146,6 +1213,42 @@ fun WindowScope.App(
             undoStack = undoStack + backStack.last()
             backStack = backStack + redoStack.last()
             redoStack = redoStack.dropLast(1)
+        }
+    }
+
+    // Mouse thumb / "special" buttons: X1 (button 4) goes back, X2 (button 5)
+    // goes forward, like every browser and media app. Always active — there is
+    // deliberately no setting for it. A global AWT listener is used because
+    // Compose's Skia canvas consumes the mouse event before it ever reaches a
+    // listener attached to the window itself.
+    val mouseBackRef = rememberUpdatedState(goBack)
+    val mouseForwardRef = rememberUpdatedState(redo)
+    val mainWindowComponent = window
+    DisposableEffect(mainWindowComponent) {
+        val listener = java.awt.event.AWTEventListener { e ->
+            if (e !is java.awt.event.MouseEvent) return@AWTEventListener
+            if (e.id != java.awt.event.MouseEvent.MOUSE_PRESSED) return@AWTEventListener
+            if (e.button != 4 && e.button != 5) return@AWTEventListener
+            // Only react to clicks inside the main window (the floating widget
+            // and dialogs keep their own handling).
+            val inMainWindow = generateSequence<java.awt.Component>(e.component as? java.awt.Component) { it.parent }
+                .any { it === mainWindowComponent }
+            if (!inMainWindow) return@AWTEventListener
+            when (e.button) {
+                4 -> {
+                    e.consume()
+                    mouseBackRef.value()
+                }
+                5 -> {
+                    e.consume()
+                    mouseForwardRef.value()
+                }
+            }
+        }
+        java.awt.Toolkit.getDefaultToolkit()
+            .addAWTEventListener(listener, java.awt.AWTEvent.MOUSE_EVENT_MASK)
+        onDispose {
+            java.awt.Toolkit.getDefaultToolkit().removeAWTEventListener(listener)
         }
     }
 
@@ -1421,9 +1524,24 @@ fun WindowScope.App(
                 // (an old pass must not keep downloading stale tracks).
                 prefetchJob?.cancel()
                 prefetchJob = launch(Dispatchers.IO) {
+                    // Seconds of the playing track's own headroom below which the
+                    // cache pass yields (see the wait inside the loop).
+                    val prefetchMinCushionSeconds = 20.0
                     val order = (listOfNotNull(currentTrack) + nearestFirst + restOfQueue).distinctBy { it.videoId }
                     for (track in order) {
                         if (player.isCached(track.videoId)) continue
+                        // The cache pass must never take bandwidth away from the
+                        // track the user is actually listening to (issue #4):
+                        // while that track's own cushion is thin the pass waits
+                        // and resumes as soon as the stream is comfortably
+                        // ahead. Bounded, so a failed download cannot park it
+                        // forever.
+                        val cushionDeadline = System.currentTimeMillis() + 60_000L
+                        while (player.playbackCushionSeconds() < prefetchMinCushionSeconds &&
+                            System.currentTimeMillis() < cushionDeadline
+                        ) {
+                            delay(500)
+                        }
                         val streams = StreamResolver.resolveAacStream(
                             track.videoId,
                             StreamResolver.AudioQuality.from(DesktopSettings.load().audioQuality),
@@ -1466,6 +1584,14 @@ fun WindowScope.App(
     // locally-applied remote value isn't bounced straight back.
     LaunchedEffect(syncManager) {
         while (true) {
+            // Unpaired: nothing to push. Idling here keeps the loop from
+            // building snapshots (and poking the sync socket) several times a
+            // second for the whole session, on the same machine that is playing
+            // audio.
+            if (!syncManager.paired.value) {
+                delay(2_000L)
+                continue
+            }
             if (DesktopSettings.load().syncViviVolume) {
                 val v = player.state.value.volume
                 val isEcho = System.currentTimeMillis() < volumeGuard.echoUntil &&
@@ -1501,6 +1627,7 @@ fun WindowScope.App(
         var lastPushedPositionMs = -1L
         while (true) {
             delay(SyncServer.RESYNC_TICK_MS)
+            if (!syncManager.paired.value) continue
             val s = player.state.value
             // Only push when the position actually advanced: a stalled/frozen
             // player must not repeatedly drag the peer back to the same point.
@@ -1519,6 +1646,13 @@ fun WindowScope.App(
     // in-app VIVI volume slider).
     LaunchedEffect(syncManager) {
         while (true) {
+            // Unpaired: there is no peer to mirror the OS volume with, so skip
+            // the native read (a COM round-trip on Windows) altogether instead
+            // of doing it twice a second for nothing.
+            if (!syncManager.paired.value) {
+                delay(2_000L)
+                continue
+            }
             val sv = SystemVolume.get()
             if (sv != null) {
                 val isEcho = System.currentTimeMillis() < systemVolumeGuard.echoUntil &&
@@ -1920,10 +2054,10 @@ fun WindowScope.App(
                                     fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
                                 } else {
                                     when (screenTransition) {
-                                        "slide" -> (slideInHorizontally(animationSpec = tween(220)) { it / 4 } + fadeIn(animationSpec = tween(220))) togetherWith
-                                            (slideOutHorizontally(animationSpec = tween(220)) { -it / 4 } + fadeOut(animationSpec = tween(220)))
+                                        "slide" -> (slideInHorizontally(animationSpec = tween(Animations.ms(220))) { it / 4 } + fadeIn(animationSpec = tween(Animations.ms(220)))) togetherWith
+                                            (slideOutHorizontally(animationSpec = tween(Animations.ms(220))) { -it / 4 } + fadeOut(animationSpec = tween(Animations.ms(220))))
                                         "off" -> fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
-                                        else -> fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(180))
+                                        else -> fadeIn(animationSpec = tween(Animations.ms(180))) togetherWith fadeOut(animationSpec = tween(Animations.ms(180)))
                                     }
                                 }
                             },
@@ -2061,6 +2195,12 @@ fun WindowScope.App(
                             animationsEnabled = v
                             DesktopSettings.update { it.copy(animationsEnabled = v) }
                         },
+                        animationSpeed = animationSpeed,
+                        onAnimationSpeedChange = { v ->
+                            animationSpeed = v
+                            Animations.speed = v
+                            DesktopSettings.update { it.copy(animationSpeed = v) }
+                        },
                         onOpenTheme = { navigate(Screen.SettingsTheme) },
                         onOpenFont = { navigate(Screen.SettingsFont) },
                         onOpenCanvas = { navigate(Screen.SettingsCanvas) },
@@ -2165,6 +2305,7 @@ fun WindowScope.App(
                         onAccentChange = onAccentChange,
                         accentIntensity = accentIntensity,
                         onAccentIntensityChange = onAccentIntensityChange,
+                        onAccentIntensityChangeFinished = onAccentIntensityChangeFinished,
                         pureBlack = pureBlack,
                         onPureBlackChange = onPureBlackChange,
                         customAccents = customAccents,
@@ -2438,10 +2579,6 @@ fun WindowScope.App(
                     is Screen.SettingsDesktop -> SettingsDesktopScreen(
                         language = language,
                         onBack = goBack,
-                        isWindows = isWindows,
-                        isMac = isMac,
-                        macAccessibilityTrusted = macAccessibilityTrusted,
-                        onOpenAccessibilitySettings = { MediaKeys.openAccessibilitySettings() },
                         showWidget = showWidget,
                         onShowWidgetChange = { v ->
                             showWidget = v
@@ -2553,6 +2690,16 @@ fun WindowScope.App(
                         onLyricsLineSpacingChange = { ls ->
                             lyricsLineSpacing = ls
                             DesktopSettings.update { it.copy(lyricsLineSpacing = ls) }
+                        },
+                        options = lyricsDisplay,
+                        onOptionsChange = { opts ->
+                            lyricsDisplay = opts
+                            DesktopSettings.update { it.copy(lyricsTextSize = opts.textSizeSp, lyricsLineSpacing = opts.lineSpacing).withLyricsDisplayOptions(opts) }
+                        },
+                        translateLyrics = translateLyrics,
+                        onToggleTranslateLyrics = { on ->
+                            translateLyrics = on
+                            DesktopSettings.update { it.copy(translateLyrics = on) }
                         },
                     )
                     is Screen.SettingsStorage -> SettingsStorageScreen(
@@ -2752,7 +2899,7 @@ fun WindowScope.App(
                         background = playerBackground,
                         rotatingThumbnail = rotatingThumbnail,
                         accent = accent,
-                        audioLevel = audioLevel,
+                        audioLevel = player.audioLevel,
                         onBack = goBack,
                         progressiveSeek = progressiveSeek,
                     )
@@ -2764,6 +2911,9 @@ fun WindowScope.App(
                         synced = syncedLyrics,
                         textSizeSp = lyricsTextSize,
                         lineSpacing = lyricsLineSpacing,
+                        display = lyricsDisplay,
+                        translate = lyricsTranslationConfig(DesktopSettings.load(), translateLyrics),
+                        onSeek = { ms -> player.seekTo(ms) },
                         onTogglePlay = { player.toggle() },
                         onNext = { player.next() },
                         onPrevious = { player.previous() },
@@ -2777,6 +2927,9 @@ fun WindowScope.App(
                         synced = syncedLyrics,
                         textSizeSp = lyricsTextSize,
                         lineSpacing = lyricsLineSpacing,
+                        display = lyricsDisplay,
+                        translate = lyricsTranslationConfig(DesktopSettings.load(), translateLyrics),
+                        onSeek = { ms -> player.seekTo(ms) },
                         onTogglePlay = { player.toggle() },
                         onBack = goBack,
                     )
@@ -3661,6 +3814,8 @@ fun WindowScope.SpotifyTopHeader(
     selectedFilter: YouTube.SearchFilter? = null,
     onFilterSelect: (YouTube.SearchFilter?) -> Unit = {},
 ) {
+    // Real output-device picker (the button used to be a no-op placeholder).
+    var showOutputPicker by remember { mutableStateOf(false) }
     WindowDraggableArea {
         Row(
             Modifier
@@ -3675,16 +3830,17 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Tooltip(Localization.get(language, "tooltip_menu")) {
+                // Sidebar toggle, where the (no-op) overflow menu used to be.
+                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
                     IconButton(
-                        onClick = { /* overflow menu */ },
+                        onClick = onToggleSidebar,
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
-                            Icons.Filled.MoreHoriz,
-                            contentDescription = "Menu",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                            modifier = Modifier.size(18.dp),
+                            Icons.Filled.ViewColumn,
+                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
+                            tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
@@ -3712,19 +3868,6 @@ fun WindowScope.SpotifyTopHeader(
                             Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Forward",
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
-                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
-                    IconButton(
-                        onClick = onToggleSidebar,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.ViewColumn,
-                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
-                            tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -3945,16 +4088,30 @@ fun WindowScope.SpotifyTopHeader(
             ) {
                 Tooltip(Localization.get(language, "tooltip_output_device")) {
                     IconButton(
-                        onClick = { /* output device */ },
+                        onClick = { showOutputPicker = true },
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
                             Icons.Filled.SpeakerGroup,
-                            contentDescription = "Output device",
+                            contentDescription = Localization.get(language, "output_device"),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
+                }
+                if (showOutputPicker) {
+                    OutputDeviceDialog(
+                        language = language,
+                        onDismiss = { showOutputPicker = false },
+                        onSelect = { name ->
+                            AudioOutput.apply(name)
+                            AppLog.log(
+                                "settings",
+                                "audio output device: " + name.ifBlank { "system default" },
+                            )
+                            showOutputPicker = false
+                        },
+                    )
                 }
                 Tooltip(Localization.get(language, "tooltip_lyrics")) {
                     IconButton(
@@ -4456,7 +4613,23 @@ fun SettingsScreen(
         "device_sync" to listOf("connection_method", "method_relay", "method_lan", "relay_server", "lan_sync", "connect", "generate_code", "regenerate_pair_code", "code_expires_in", "code_hint", "lan_hint", "pair", "unpair", "scan_qr", "connected", "disconnected", "status", "download_mobile_apk", "how_to_connect", "waiting_for_pairing"),
         "content" to listOf("content", "content_country", "content_language", "system_default"),
         "ai_lyrics_translation" to listOf("ai_api_key", "ai_base_url", "ai_deepl_formality", "ai_deepl_formality_default", "ai_deepl_formality_less", "ai_deepl_formality_more", "ai_lyrics_translation", "ai_model", "ai_provider", "ai_target_language", "ai_translation_literal", "ai_translation_mode", "ai_translation_transcribed", "not_set", "ai_setup_guide"),
-        "lyrics" to listOf("lyrics", "lyrics_line_spacing", "lyrics_text_size", "synced_lyrics", "synced_lyrics_desc", "lyrics_focus"),
+        "lyrics" to listOf(
+            "lyrics", "lyrics_line_spacing", "lyrics_text_size", "synced_lyrics", "synced_lyrics_desc", "lyrics_focus",
+            // Advanced lyrics (mobile port): animation styles, display options,
+            // romanization and translation.
+            "lyrics_animation_style", "lyrics_animation_style_desc",
+            "lyrics_style_none", "lyrics_style_fade", "lyrics_style_glow", "lyrics_style_slide",
+            "lyrics_style_karaoke", "lyrics_style_apple", "lyrics_style_apple_v2", "lyrics_style_vivimusic",
+            "lyrics_glow_effect", "lyrics_glow_effect_desc",
+            "lyrics_apple_blur", "lyrics_apple_blur_desc", "lyrics_standard_blur", "lyrics_standard_blur_desc",
+            "lyrics_click_to_seek", "lyrics_click_to_seek_desc", "lyrics_auto_scroll", "lyrics_auto_scroll_desc",
+            "lyrics_text_position", "lyrics_position_left", "lyrics_position_center", "lyrics_position_right",
+            "lyrics_romanize", "lyrics_romanize_desc", "lyrics_romanize_as_main", "lyrics_romanize_as_main_desc",
+            "romanize_japanese", "romanize_korean", "romanize_chinese", "romanize_russian",
+            "romanize_ukrainian", "romanize_serbian", "romanize_bulgarian", "romanize_belarusian",
+            "romanize_kyrgyz", "romanize_macedonian", "romanize_hindi", "romanize_punjabi",
+            "translate_lyrics", "translate_lyrics_desc", "ai_lyrics_translation",
+        ),
         "privacy" to listOf("clear_search_history", "pause_listen_history", "pause_search_history", "privacy", "privacy_desc"),
         "data_saver" to listOf("data_saver", "data_saver_desc", "data_saver_turns_off_header", "data_saver_album_canvas", "data_saver_player_canvas", "data_saver_artist_video", "data_saver_artist_bg_video", "data_saver_high_quality_images"),
         "storage" to listOf("storage", "cache_size", "clear_cache", "cache_cleared", "delete_installers", "installers_deleted"),

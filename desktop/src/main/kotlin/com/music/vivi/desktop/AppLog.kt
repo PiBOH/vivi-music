@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.locks.ReentrantLock
@@ -38,7 +39,7 @@ object AppLog {
 
     /** Every category that must always have a file in the session folder, even when empty. */
     private val KNOWN_CATEGORIES = listOf(
-        "actions", "browse", "cache", "lyrics", "nav", "playback", "queue", "settings", "volume"
+        "actions", "browse", "cache", "lyrics", "nav", "playback", "queue", "settings", "volume", "window"
     )
 
     private val vivimusicDir: File
@@ -61,9 +62,22 @@ object AppLog {
     private val lock = ReentrantLock()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val _lines = MutableStateFlow<List<String>>(emptyList())
-    /** Last [MAX_LINES] log lines, oldest first. */
-    val lines: StateFlow<List<String>> = _lines.asStateFlow()
+    /**
+     * One log line plus a monotonic [seq] id.
+     *
+     * The id exists for the live viewer: a log line is NOT unique (two
+     * identical lines land in the same millisecond all the time — a retried
+     * resolve logs the same text twice), and using the text itself as the
+     * `LazyColumn` key crashed the whole app with `Key "…" was already used`
+     * while the live log window was open. Lines are written from several
+     * threads, so the id is taken from an atomic counter.
+     */
+    data class Entry(val seq: Long, val text: String)
+
+    private val nextSeq = AtomicLong(0L)
+    private val _entries = MutableStateFlow<List<Entry>>(emptyList())
+    /** Last [MAX_LINES] log lines (oldest first), each with a unique id. */
+    val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
 
     private val stamp: String
         get() = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"))
@@ -95,7 +109,8 @@ object AppLog {
     /** Appends a diagnostic line with a category tag, e.g. `log("playback", "seek to 42s")`. */
     fun log(category: String, message: String) {
         val line = "[$stamp] [$category] $message"
-        _lines.update { (it + line).takeLast(MAX_LINES) }
+        val entry = Entry(nextSeq.incrementAndGet(), line)
+        _entries.update { (it + entry).takeLast(MAX_LINES) }
         scope.launch {
             lock.withLock {
                 runCatching {
@@ -123,7 +138,7 @@ object AppLog {
 
     /** Clears the in-memory buffer and the current session's on-disk logs. */
     fun clear() {
-        _lines.value = emptyList()
+        _entries.value = emptyList()
         scope.launch {
             lock.withLock {
                 runCatching {

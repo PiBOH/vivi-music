@@ -34,22 +34,32 @@
   ],
   "contributors": [
     {
-      "username": "vivizzz007",
-      "name": "VIVIDH P ASHOKAN"
-      "description": "Created the Android app that VIVI Music DE is based on, and keeps the project — and its developer — in line."
+      "username": "PiBOH",
+      "name": "Pietro Bonaldo",
+      "description": "Created the desktop version of Vivi Music, despite having a potato PC."
     },
     {
-      "username": "bogdan-developer",
-      "description": "Contributes massively by testing VIVI Music DE on macOS (Apple Silicon) and providing feedback — including several technical feedback — across every area of ​​the app. (Without him, the WebView login probably wouldn't work today.)"
+      "username": "vivizzz007",
+      "name": "VIVIDH P ASHOKAN",
+      "description": "Created the Android app that VIVI Music DE is based on, and keeps the project — and its developer — in line."
     },
     {
       "username": "Ansu216",
       "description": "Always available to help those in need in the Telegram channel, even without a PC."
     },
     {
+      "username": "bogdan-developer",
+      "description": "Contributes massively by testing VIVI Music DE on macOS (Apple Silicon) and providing feedback — including several technical feedback — across every area of ​​the app. (Without him, the WebView login probably wouldn't work today.)"
+    },
+    {
       "username": "dumbshrn",
       "name": "Sharon Thomas",
       "description": "Created the foundation of the new UX — without him, this would not exist."
+    },
+    {
+      "username": "Adithyan007hack",
+      "name": "AdithyanSM",
+      "description": "Contributes massively by testing VIVI Music DE on Fedora linux."
     }
   ]
 }

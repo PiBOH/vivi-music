@@ -29,20 +29,37 @@ object LogExporter {
 
     fun defaultFileName(): String = "vivi-de-logs-${AppInfo.FULL_VERSION}-$stamp.zip"
 
-    /** Every diagnostic log file currently present, newest first: the legacy
-     *  flat `*.log` files in `~/.vivimusic/` plus every session log under
-     *  `~/.vivimusic/logs/<timestamp>/`. */
+    /**
+     * How many session folders the archive carries. A session folder is a
+     * folder per app launch (`logs/20260917-153601/`), so a long-lived install
+     * would otherwise export hundreds of them and build a zip nobody can open;
+     * only the newest ones are packaged, while **all** of them stay on disk.
+     */
+    const val MAX_SESSION_FOLDERS = 20
+
+    /** Session folders to export, newest first (`yyyyMMdd-HHmmss` names sort
+     *  chronologically, so no filesystem timestamp is needed). */
+    fun collectSessionDirs(): List<File> {
+        val logsRoot = File(vivimusicDir, "logs")
+        if (!logsRoot.exists()) return emptyList()
+        return logsRoot.listFiles { f -> f.isDirectory }
+            ?.sortedByDescending { it.name }
+            ?.take(MAX_SESSION_FOLDERS)
+            .orEmpty()
+    }
+
+    /** Every log file the archive carries, newest first: the legacy flat
+     *  `*.log` files in `~/.vivimusic/` plus the logs of the newest
+     *  [MAX_SESSION_FOLDERS] sessions. Older sessions are skipped on purpose -
+     *  they remain on disk for the user, they are just not part of the zip. */
     fun collectLogFiles(): List<File> {
         val rootLogs = vivimusicDir.listFiles { f -> f.isFile && f.extension.equals("log", ignoreCase = true) }
             ?.toList()
             ?: emptyList()
-        val logsRoot = File(vivimusicDir, "logs")
-        val sessionLogs = if (logsRoot.exists()) {
-            logsRoot.walkTopDown()
+        val sessionLogs = collectSessionDirs().flatMap { dir ->
+            dir.walkTopDown()
                 .filter { it.isFile && it.extension.equals("log", ignoreCase = true) }
                 .toList()
-        } else {
-            emptyList()
         }
         return (rootLogs + sessionLogs).sortedByDescending { it.lastModified() }
     }

@@ -30,7 +30,7 @@ ViMusic/InnerTune/SimpMusic family.
 | `kizzy` | Kotlin JVM | Discord Rich Presence (WebSocket gateway) |
 | `shazamkit` | Kotlin JVM | Shazam-style song recognition |
 | `jiosaavn` | Kotlin JVM | JioSaavn streaming provider (CDN link decryption) |
-| `lyricsProvider` | Kotlin JVM | Lyrics providers (KuGou, LrcLib, Musixmatch, PaxSenix, …) |
+| `lyricsProvider` | Kotlin JVM | Lyrics providers (KuGou, LrcLib, Musixmatch, PaxSenix, …) + the shared lyric model/parser/romanizer (`com.music.lyrics`, JVM port of the mobile `LyricsUtils`) |
 | `sync` | Kotlin JVM | Cross-device sync: data model + WebSocket client (pairing, push/pull) |
 | `desktop` | Kotlin JVM + Compose Multiplatform | Desktop app (reuses the JVM modules above) |
 | `canvas`, `artistvideo`, `applecanvas`, `vivimusiccanvas` | Android | Animated canvases / visualizers |
@@ -150,6 +150,40 @@ dependencies there, or you break the desktop build.
   dependencies, one line before fifty. It complements the golden rule in §4 and
   never overrides explicit user requests, the trust-boundary/error-handling
   rules, or the localization rule in §6.
+
+### Installer size and the icon-minimization task
+
+The desktop installers ship a **minimized Material-icons jar**. The extended
+icons artifact is ~36 MB (~10k vectors) while the desktop app references fewer
+than 300: `MinimizeIconsJarTask` in `desktop/build.gradle.kts` keeps the full
+artifact on the **compile** classpath (so every reference still resolves) and
+puts a jar holding only the referenced icon classes on the **runtime**
+classpath — the one consumed by `run`, tests and every jpackage/Inno Setup
+image (~7.8 MB instead of 36 MB).
+
+Consequences to respect when touching icons or the build:
+
+- An icon must be referenced with the **literal** `Icons.<Style>.<Name>` form
+  (`Filled`, `Default`, `Outlined`, `Rounded`, `Sharp`, `TwoTone`,
+  `AutoMirrored[.<Style>]`) inside `desktop/src`. The task collects the names
+  from those sources with a regex; an icon reached another way (a name built at
+  runtime, reflection, a source outside `desktop/src`) is **not** put in the
+  packaged jar, and the app then dies with `NoClassDefFoundError` at the moment
+  that screen renders. The six style directories are handled; `Icons.Default`
+  maps to `filled`.
+- Verify a packaging change with `./gradlew :desktop:createDistributable` and
+  check `desktop/build/compose/binaries/main/app/VIVIMusic/app/`: the icons jar
+  must be `material-icons-extended-desktop-minimized-*.jar` and no full
+  `material-icons-extended-desktop-*.jar` may be present.
+- `installer/windows/VIVIMusic.iss` compresses with `lzma2/max` +
+  `SolidCompression=yes`. There are no optional `[Components]` (only the two
+  shortcut `[Tasks]`), so solid compression cannot make a partial install
+  decompress the whole block.
+- Published formats are fixed: Windows ships **both** `setup.exe` and `.msi`,
+macOS **both** `.dmg` and `.pkg`, Linux keeps `.deb` + `.AppImage` +
+`PKGBUILD`. Do not drop a format to save size — the payload is trimmed
+  instead. The JavaFX WebView jars (`javafx-web`, `icudtl.dat`) are required by
+the working sign-in WebView and are **never** trimmed for size.
 
 ### Commit language and co-author rules — MANDATORY (do not violate)
 
@@ -492,6 +526,16 @@ issue on `PiBOH/vivi-music` **before any code is changed**:
 4. **Close the issue** after the fix is committed and pushed:
    `gh issue close <NN> --repo PiBOH/vivi-music`.
 
+5. **NEVER close an issue opened by someone else.** Only issues authored by the
+   user (they are created through the user's `gh` auth, so the author is
+   `PiBOH`) are owned by us and get closed after the fix. An issue opened by a
+   **third party** (a contributor, a user, a bot, …) must only be **fixed and
+   referenced** — `Fixes #NN` in the CHANGELOG and in the commit message — and
+   left **open**: the reporter verifies the fix and closes it himself. Never
+   run `gh issue close` on it, never add a closing label/comment asking to
+   close it, and never treat "it is fixed" as a reason to close it.
+   The same applies to any issue whose author is not `PiBOH`.
+
 **NEVER open a GitHub issue for website or workflow changes** — for these
 categories issues must NOT be opened at all (not even "when in doubt").
 This includes:
@@ -503,6 +547,12 @@ This includes:
   `vivi-music-de-apk`.
 - **Workflow changes**: any edit to `.github/workflows/*` is done directly
   without an issue (and, per the rules above, is always a `patch`).
+- **Packaging / build-size / installer changes** count as workflow changes and
+  are therefore also done directly, with no issue: `installer/**`,
+  `desktop/build.gradle.kts`, jpackage/module/shortcut configuration, release
+  asset format decisions (which installer files are published) and payload
+  trimming (see "Installer size and the icon-minimization task" in §3). Always
+  a `patch`.
 
 **NEVER open a GitHub issue for anything involving secrets** (keystores,
 signing keys, API tokens, passwords, credentials, secret names/values,
@@ -567,3 +617,7 @@ Rules:
 - Only after the user has explicitly confirmed the removal, perform it
   **completely** (code, scripts, translations, docs) rather than gating or
   hiding it, and note it in the CHANGELOG without naming the removed provider.
+- **Authorized provider — Musixmatch:** the user has been explicitly authorised
+  to use and modify the Musixmatch integration. The proprietary "DO NOT MODIFY"
+  header on `lyricsProvider/src/main/kotlin/com/music/musixmatch/**` and its
+  tests does **not** apply to this repository — fixes to that module are allowed.
