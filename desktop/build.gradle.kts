@@ -304,6 +304,23 @@ compose.desktop {
             "-XX:NewSize=128m",
             "-XX:MaxNewSize=384m",
             "-XX:MaxMetaspaceSize=256m",
+            // Skiko (Compose Desktop's renderer) calls `System.gc()` every 30 s by
+            // design, to trim memory on a parked window. Its `FrameWatcher`
+            // coroutine reads `gcDelayMillis = 30000`, waits, and does
+            // `if (frameCounter.get() < minFramesToRenderer /* 1000 */) System.gc()`,
+            // i.e. whenever the UI is not animating at high frame rate. The
+            // counter is reset each round, so a player that only redraws a seek
+            // bar never reaches 1000 frames and gets the call every single time.
+            // An explicit gc() is a **full, stop-the-world** collection: measured
+            // on the packaged 1.50.76 image with -Xlog:gc it is `Pause Full
+            // (System.gc())` every 30.05 s, 46-69 ms on a fresh session and up to
+            // 1976 ms once the session has grown, which freezes the audio writer
+            // thread and the UI together (the "pauses/skips + UI hitch" of #4).
+            // This flag turns every explicit gc() into a concurrent G1 cycle
+            // instead: same memory reclamation, no stop-the-world full GC. Same
+            // run after the flag: zero `Pause Full`, the 30 s event becomes a
+            // bounded 2.9-9.9 ms young pause that the 8 s PCM queue absorbs.
+            "-XX:+ExplicitGCInvokesConcurrent",
         )
 
         nativeDistributions {

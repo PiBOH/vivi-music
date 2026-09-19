@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.3_DE-1.51.2-alpha] - 2026-09-19
+
+### Fixed
+- [DE] **The 30-second music stutter and UI hitch of #4 were a hidden `System.gc()`, not the audio pipeline.** Reproduced on the packaged image with `-Xlog:gc`: Skiko — Compose Desktop's own renderer — keeps a `FrameWatcher` coroutine that waits `gcDelayMillis = 30000`, then calls `System.gc()` whenever the window rendered fewer than `minFramesToRenderer = 1000` frames in that window, which is the normal state of a player that only redraws a seek bar. Each of those calls was a **full, stop-the-world collection**: the log shows `Pause Full (System.gc())` at 30.05 s intervals, 46-69 ms on a fresh session and growing to **1976 ms** in a long one, freezing the audio writer thread (the audible skip) and the Compose snapshot loop (the mini UI lag the reporter noticed at the same moment) together. The desktop JVM now runs with `-XX:+ExplicitGCInvokesConcurrent`, which turns those calls into concurrent G1 cycles: same memory reclamation, **zero `Pause Full`**, and the 30 s event becomes a bounded 2.9-9.9 ms young pause that the existing 8 s PCM queue + 1 s device ring absorb completely. Verified on the packaged image before/after, not by reading the code. (Refs #4)
+
 ## [6.0.6.3_DE-1.51.1-alpha] - 2026-09-19
 
 ### Changed
