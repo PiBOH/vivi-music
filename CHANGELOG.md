@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.52.6-alpha] - 2026-09-20
+
+### Fixed
+- [DE] **`Build Android APK` publishes the APKs again.** Both flavours built and were downloaded correctly, but the publish job assumed the artifact root (`apk/vivi-<flavor>.apk`) and stopped with `apk/vivi-gsm.apk is missing - not publishing a partial build` — `upload-artifact` picks the artifact's internal root itself (the common ancestor of the uploaded paths), so a single-file upload is not guaranteed to land there. The job now locates the two files wherever they landed and flattens them before publishing, and the presence check moved to that step, so a genuinely missing APK still aborts the run instead of publishing a partial build.
+
 ## [6.0.6.5_DE-1.52.5-alpha] - 2026-09-20
 
 ### Fixed

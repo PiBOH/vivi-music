@@ -184,6 +184,29 @@ jobs:
           path: apk
           merge-multiple: true
 
+      - name: Flatten the downloaded APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `upload-artifact` decides the artifact's internal root on its own
+          # (the common ancestor of the uploaded paths), so a single-file
+          # upload is not guaranteed to land at the artifact root: the publish
+          # step assumed `apk/vivi-<flavor>.apk` and aborted with
+          # "apk/vivi-gsm.apk is missing - not publishing a partial build"
+          # even though both APKs had built and been downloaded. Locate them
+          # wherever they landed and normalise the layout the rest of the job
+          # expects, so the step cannot depend on that detail again.
+          mkdir -p apk-flat
+          for flavor in gsm foss; do
+            file="$(find apk -type f -name "vivi-$flavor.apk" -print -quit)"
+            if [ -z "$file" ]; then
+              echo "::error::apk/vivi-$flavor.apk is missing - not publishing a partial build" >&2
+              exit 1
+            fi
+            cp "$file" "apk-flat/vivi-$flavor.apk"
+          done
+          ls -la apk-flat
+
       - name: Publish to the apk-latest branch
         shell: bash
         env:
@@ -197,17 +220,12 @@ jobs:
           CHANNEL="$(sed -n '3p' version.txt | tr -d '\r\n' | xargs)"
           TITLE="$(git log -1 --pretty=%s)"
           BASE="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/apk-latest/.releases/apk/latest"
-          for flavor in gsm foss; do
-            if [ ! -f "apk/vivi-$flavor.apk" ]; then
-              echo "::error::apk/vivi-$flavor.apk is missing - not publishing a partial build" >&2
-              exit 1
-            fi
-          done
           rm -rf assets && mkdir assets && cd assets
           git init -q -b apk-latest
           mkdir -p .releases/apk/latest
-          cp ../apk/vivi-gsm.apk .releases/apk/latest/vivi-gsm.apk
-          cp ../apk/vivi-foss.apk .releases/apk/latest/vivi-foss.apk
+          # Verified (and flattened) by the previous step.
+          cp ../apk-flat/vivi-gsm.apk .releases/apk/latest/vivi-gsm.apk
+          cp ../apk-flat/vivi-foss.apk .releases/apk/latest/vivi-foss.apk
           # version.json is what the updaters read: version + version code +
           # when it was built, with the exact URLs and sizes of both files.
           VERSION="$VERSION" VERSION_CODE="$VERSION_CODE" CHANNEL="$CHANNEL" TITLE="$TITLE" BASE="$BASE" \
