@@ -158,7 +158,7 @@ private fun cleanInline(text: String): String =
  * reference into a clickable link to the GitHub issue
  * (https://github.com/PiBOH/vivi-music-de/issues/N). The link URL always points
  * at the user's configured update source repo when it is the fork, otherwise
- * the original repo — so "Closes #3" stays clickable regardless of source.
+ * the original repo — so "Closes #2" stays clickable regardless of source.
  */
 internal fun issueLinks(
     text: String,

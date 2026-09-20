@@ -82,7 +82,7 @@ class AudioPlayer {
     private var thread: Thread? = null
 
     /**
-     * Probe for the playback cushion (issue #4): decoded PCM still queued plus
+     * Probe for the playback cushion (issue #3): decoded PCM still queued plus
      * source already downloaded but not yet decoded, in seconds. Set by the
      * running decode session (see [playbackCushionSeconds]).
      */
@@ -172,7 +172,7 @@ class AudioPlayer {
 
         /**
          * Seconds of already-decoded PCM the decode thread may run ahead of the
-         * sound card (issue #4). This is the real jitter headroom: the writer
+         * sound card (issue #3). This is the real jitter headroom: the writer
          * thread never blocks on anything but the queue, so a decode hiccup
          * (GC, disk scan, network wait) stays inaudible until the queue drains.
          * 8 s ≈ 1.4 MB at 44.1 kHz stereo 16-bit.
@@ -182,7 +182,7 @@ class AudioPlayer {
         /**
          * Seconds of audio we ASK the output line to buffer. The device decides
          * what it grants: the granted size is what actually absorbs jitter, so
-         * it is logged at every track start (issue #4 — the real cushion has to
+         * it is logged at every track start (issue #3 — the real cushion has to
          * be visible in the exported log, otherwise "it still skips" cannot be
          * told apart from "the device kept the buffer small").
          */
@@ -190,7 +190,7 @@ class AudioPlayer {
 
         /**
          * Seconds of audio that must already sit in the device ring BEFORE the
-         * line starts consuming (issue #4). A line started while its ring is
+         * line starts consuming (issue #3). A line started while its ring is
          * still empty goes dry at once — the reporting log shows `the device
          * ran dry here` 70 ms after a track had started — and that underrun is
          * the click/skip heard at the very beginning of a track. Writes are
@@ -202,7 +202,7 @@ class AudioPlayer {
 
         /**
          * Seconds of audio that must already be on disk before the output line
-         * is opened (issue #4). Playback used to start with only the first
+         * is opened (issue #3). Playback used to start with only the first
          * fragment (~2 s) downloaded, so the PCM queue could never fill and the
          * whole pipeline ran pinned to the download frontier: every pause in the
          * delivery — and every "skip silence" cut, which consumes source WITHOUT
@@ -220,7 +220,7 @@ class AudioPlayer {
 
         /**
          * Source seconds (downloaded, not yet decoded) a silence cut requires
-         * before it is allowed (issue #4). A cut runs the decoder forward
+         * before it is allowed (issue #3). A cut runs the decoder forward
          * without producing output, so making one while the download is close
          * behind is exactly what starves the sound card; when the cushion is
          * thin the silence is played instead (a natural pause beats a dropout)
@@ -239,7 +239,7 @@ class AudioPlayer {
 
         /**
          * Unplayed audio left in the device ring below which an audible gap is
-         * possible (issue #4). This is the cushion the user actually hears: the
+         * possible (issue #3). This is the cushion the user actually hears: the
          * software PCM queue can hold seconds of audio, but if the ring empties
          * there is nothing left to play, so crossing this line is the definitive
          * evidence of a real (audible) underrun — and it is logged even when the
@@ -295,7 +295,7 @@ class AudioPlayer {
     private var onComplete: (() -> Unit)? = null
 
     /**
-     * Single thread that delivers the UI-facing callbacks (issue #4), so no
+     * Single thread that delivers the UI-facing callbacks (issue #3), so no
      * application code ever runs on the decode/writer threads. See
      * [CallbackPump].
      */
@@ -373,7 +373,7 @@ class AudioPlayer {
         this.onComplete = onComplete
         // Records the stalls that reach the audio path — measured at the
         // writer's own thread priority, with heap/GC/CPU context — in
-        // playback.log from the first track on (issue #4).
+        // playback.log from the first track on (issue #3).
         AudioPriorityWatchdog.ensureRunning()
         startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction, fallbackDurationMs)
     }
@@ -422,7 +422,7 @@ class AudioPlayer {
         synchronized(lock) { lock.notifyAll() }
         // Only re-start a line that was already playing: when playback was
         // paused before the first block was handed over, the writer owns the
-        // start so the ring can be primed first (issue #4).
+        // start so the ring can be primed first (issue #3).
         if (lineStarted) line?.start()
     }
 
@@ -690,7 +690,7 @@ class AudioPlayer {
     /**
      * Opens [line] with the biggest device buffer it will accept and returns the
      * granted size in bytes (0 when nothing worked) — see the call site in
-     * [decodeAndPlay] for why this matters to issue #4.
+     * [decodeAndPlay] for why this matters to issue #3.
      *
      * The candidates descend from 4× the wanted size to the legacy 8 KB: the
      * first accepted one is the largest the device offers, and the granted size
@@ -858,7 +858,7 @@ class AudioPlayer {
 
             /**
              * Verifies that the samples just appended continue EXACTLY where the
-             * previous one ended (issue #4).
+             * previous one ended (issue #3).
              *
              * A gap or an overlap here means the `moof` walk mis-parsed the
              * container: the decoder then feeds a discontinuity to the sound
@@ -921,7 +921,7 @@ class AudioPlayer {
             }
 
             /**
-             * Throttled underrun diagnostics (issue #4). A gap is audible
+             * Throttled underrun diagnostics (issue #3). A gap is audible
              * exactly when the decode thread has to wait for the download while
              * the output line is nearly empty: recording the wait and the line's
              * remaining headroom turns "it lags sometimes" into something
@@ -963,7 +963,7 @@ class AudioPlayer {
                 val queuedMs = queuedPcmMs()
                 // The missing source in SECONDS, measured the moment the wait
                 // started: "waited X ms for Y s of audio" says how far behind
-                // the download was and at what speed it caught up (issue #4).
+                // the download was and at what speed it caught up (issue #3).
                 val sourceRate = sourceBytesPerSecond()
                 val missingText = if (sourceRate > 0.0) {
                     "%.1fs behind".format(java.util.Locale.US, missingBytes / sourceRate)
@@ -984,7 +984,7 @@ class AudioPlayer {
                 val (offset, size) = samples[index]
                 val waitStart = System.currentTimeMillis()
                 // How much source the decoder was still missing when it started
-                // to wait: reported as seconds by [logStall] (issue #4).
+                // to wait: reported as seconds by [logStall] (issue #3).
                 val missingAtStart = (offset + size - handle.downloadedBytes).coerceAtLeast(0L)
                 while (offset + size > handle.downloadedBytes && !handle.complete && !handle.failed) {
                     Thread.sleep(DOWNLOAD_POLL_MS)
@@ -1072,7 +1072,7 @@ class AudioPlayer {
                 if (scannedTo > 0L && scannedSeconds > 0.0) scannedTo / scannedSeconds else 0.0
             }
 
-            // Source pre-buffer (issue #4). With only the starting fragment on
+            // Source pre-buffer (issue #3). With only the starting fragment on
             // disk the PCM queue could never fill, so the whole pipeline ran
             // pinned to the download frontier and every delivery pause (or
             // silence cut) was audible. Waiting for [PREBUFFER_SECONDS] of source
@@ -1116,11 +1116,11 @@ class AudioPlayer {
             // the only audio left to play is what the device ring already holds.
             // So: ask for more than we need, let the device decide, and LOG what
             // it granted — the real cushion has to be visible in the exported log
-            // (issue #4), otherwise "it still skips" cannot be told apart from
+            // (issue #3), otherwise "it still skips" cannot be told apart from
             // "the device kept the buffer small". A too-large request is refused
             // rather than clamped by most backends, so the candidates descend:
             // the first accepted size is the biggest one available, and the
-            // legacy 8-16 KB sizes (~45-90 ms, the ones that made issue #4
+            // legacy 8-16 KB sizes (~45-90 ms, the ones that made issue #3
             // audible) stay as the very last resort.
             val bytesPerSecond = format.sampleRate.toDouble() * format.channels *
                 (format.sampleSizeInBits / 8)
@@ -1128,7 +1128,7 @@ class AudioPlayer {
             if (grantedBytes <= 0) throw IOException("Could not open the audio output device")
             // Deliberately NOT out.start() here: the device would start pulling
             // from an empty ring and underrun in its first milliseconds, which
-            // is the click heard at the beginning of a track (issue #4). Writes
+            // is the click heard at the beginning of a track (issue #3). Writes
             // are buffered while the line is stopped and the writer starts it
             // once the ring is primed — see flushPending().
             lineStarted = false
@@ -1194,7 +1194,7 @@ class AudioPlayer {
             }
 
             /**
-             * Output decoupling (issue #4). Before, ONE thread decoded the AAC,
+             * Output decoupling (issue #3). Before, ONE thread decoded the AAC,
              * walked the sample table, waited on the network and called the
              * blocking `SourceDataLine.write` on the same deadline: any pause of
              * that thread (GC, a 256 KB atom scan, a network wait while
@@ -1260,7 +1260,7 @@ class AudioPlayer {
                     lastReportMs = posMs
                     // Published to the callback pump: the app code behind this
                     // (seek bar, lyrics, crossfade, history) must never run on
-                    // the thread that feeds the sound card (issue #4).
+                    // the thread that feeds the sound card (issue #3).
                     pump.publishPosition(posMs)
                 }
             }
@@ -1284,7 +1284,7 @@ class AudioPlayer {
             var handedOverBytes = 0L
             /** Last gain actually used for a write (logged when it changes). */
             var appliedVolume = -1f
-            // Device health sampling (issue #4). Every other diagnostic assumes
+            // Device health sampling (issue #3). Every other diagnostic assumes
             // the sound card keeps consuming what it was given; a device that
             // stops (or plays back slower than real time) is audible and used to
             // leave no trace at all, which is exactly the case where the logs
@@ -1343,7 +1343,7 @@ class AudioPlayer {
                 }
                 handedOverBytes += done.toLong()
                 pendingBytes = 0
-                // Prime the device before it starts consuming (issue #4): a
+                // Prime the device before it starts consuming (issue #3): a
                 // line started with an empty ring goes dry right away — the
                 // reporting log shows "the device ran dry here" 70 ms after a
                 // track had started, and that underrun is the click/skip heard
@@ -1369,7 +1369,7 @@ class AudioPlayer {
                 // The only situation that can be audible: the device ring is
                 // about to run dry. Previously this was invisible, because the
                 // PCM queue in front of the writer can be seconds long while
-                // the ring empties (issue #4). Only meaningful once the device
+                // the ring empties (issue #3). Only meaningful once the device
                 // is actually playing: before the start there is nothing to
                 // run dry.
                 val cushion = cushionMs()
@@ -1458,7 +1458,7 @@ class AudioPlayer {
                                     else out.available().toDouble() / bytesPerSec * 1000.0
                                 }.getOrDefault(-1.0)
                                 // The cushion is the only number that decides
-                                // whether this wait is AUDIBLE (issue #4): with
+                                // whether this wait is AUDIBLE (issue #3): with
                                 // nothing unplayed left the device has gone
                                 // silent, and this is the one state the
                                 // "cushion low" check cannot see, because it
@@ -1510,7 +1510,7 @@ class AudioPlayer {
                 start()
             }
 
-            // Playback cushion probe (issue #4): what the look-ahead prefetch
+            // Playback cushion probe (issue #3): what the look-ahead prefetch
             // checks before it takes bandwidth (see [playbackCushionSeconds]).
             // MAX_VALUE means "no playback to protect", which keeps an idle or
             // paused player from blocking the cache pass.
@@ -1560,7 +1560,7 @@ class AudioPlayer {
             var silentRunFrames = 0
             var suppressing = false
             // "Skip silence" deliberately drops audio, so it can be HEARD as a
-            // short skip: it must be visible in the log (issue #4 — a user
+            // short skip: it must be visible in the log (issue #3 — a user
             // hearing gaps must not be left wondering whether the app was
             // supposed to cut that bit of the song).
             var skippedFrames = 0
@@ -1568,7 +1568,7 @@ class AudioPlayer {
             var cutHoldLogs = 0
             /**
              * Source seconds that are scanned (therefore fully on disk) but not
-             * consumed yet: the headroom a silence cut consumes from (issue #4).
+             * consumed yet: the headroom a silence cut consumes from (issue #3).
              * It is thin exactly when the download is at the frontier, which is
              * when a cut must not happen. Measured in FRAMES on purpose: the
              * first version converted the downloaded bytes with the PCM byte
@@ -1600,7 +1600,7 @@ class AudioPlayer {
                             if (leading || silentRunFrames >= minRun) {
                                 // A cut runs the decoder forward WITHOUT producing
                                 // output, so it may only consume headroom that
-                                // exists (issue #4): with the download close
+                                // exists (issue #3): with the download close
                                 // behind, skipping the silence would starve the
                                 // sound card, while playing it costs nothing and
                                 // lets the download catch back up.
@@ -1675,7 +1675,7 @@ class AudioPlayer {
              * Producer loop: decode frames into the PCM queue. It runs AHEAD of
              * the writer (up to the queue capacity), so disk scans, network
              * waits and GC pauses no longer have to fit between two writes to
-             * the sound card (issue #4).
+             * the sound card (issue #3).
              */
             fun produceFrames() {
                 while (true) {
@@ -1738,7 +1738,7 @@ class AudioPlayer {
                 // ever discontinuous (see [validateNewSamples]): "0" plus a
                 // clean device check rules the whole pipeline out for that
                 // track, which is what makes a "still lags" report actionable
-                // instead of a guess (issue #4).
+                // instead of a guess (issue #3).
                 AppLog.log(
                     "playback",
                     "audio integrity: ${boundaryIssueCount} sample-table discontinuities, " +
@@ -1808,7 +1808,7 @@ class AudioPlayer {
     /**
      * Delivers the playback callbacks (position/level/buffered/duration) to the
      * app from ONE dedicated thread instead of the audio threads themselves
-     * (issue #4).
+     * (issue #3).
      *
      * The seek bar, the synced lyrics, the crossfade scheduling and the listen
      * history all hang off these callbacks, i.e. off application code that can
@@ -1871,7 +1871,7 @@ class AudioPlayer {
     }
 
     /**
-     * Logs the stalls that can actually reach the sound card (issue #4).
+     * Logs the stalls that can actually reach the sound card (issue #3).
      *
      * This probe sleeps 50 ms at the SAME thread priority as the writer thread
      * that feeds the output line, so a late return cannot be blamed on thread

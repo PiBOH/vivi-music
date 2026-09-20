@@ -57,7 +57,7 @@ jobs:
           fi
           mkdir -p "$RES_DIR"
           # UserNotifications is required by the native notification API
-          # (UNUserNotificationCenter) added in DE 1.50.17 for issue #7.
+          # (UNUserNotificationCenter) added in DE 1.50.17 for issue #6.
           xcrun -sdk macosx clang $ARCH_FLAG -O2 -fobjc-arc -dynamiclib \
             -Wl,-install_name,@rpath/libvivi_media.dylib \
             -framework Foundation -framework AppKit -framework MediaPlayer \

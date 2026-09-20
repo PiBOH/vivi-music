@@ -655,7 +655,7 @@ fun getLastCheckedTime(context: Context): String {
 fun getBetaUpdatesSetting(context: Context): Boolean {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     // Default ON: our releases ship as pre-releases (alpha/nightly channels),
-    // so the prerelease switch must be enabled out of the box (issue #21).
+    // so the prerelease switch must be enabled out of the box (issue #20).
     return sharedPrefs.getBoolean(KEY_BETA_UPDATES, true)
 }
 
@@ -687,7 +687,7 @@ fun getUpdateSource(context: Context): String {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     // Default to our own repo (PiBOH/vivi-music-de), whose APK channel is the
     // apk-latest branch; users can still switch back to the upstream repo in
-    // Settings (issue #21).
+    // Settings (issue #20).
     return sharedPrefs.getString(KEY_UPDATE_SOURCE, UPDATE_SOURCE_FORK) ?: UPDATE_SOURCE_FORK
 }
 

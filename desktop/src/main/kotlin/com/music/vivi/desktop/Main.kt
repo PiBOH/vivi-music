@@ -682,7 +682,7 @@ fun main(args: Array<String>) {
                         },
                         accentIntensity = accentIntensity,
                         // Live state during the drag; the file is written once the
-                        // pointer is released (issue #65).
+                        // pointer is released (issue #61).
                         onAccentIntensityChange = { accentIntensity = it },
                         onAccentIntensityChangeFinished = { saveTheme() },
                         customAccents = customAccents,
@@ -849,7 +849,7 @@ fun WindowScope.App(
     val isMac = System.getProperty("os.name", "").lowercase().contains("mac")
     // macOS no longer uses JNativeHook at all: the MediaPlayer session (system
     // "Now Playing" tile + media keys) is an OS-level integration that needs NO
-    // Accessibility permission (issue #67). The session is therefore always
+    // Accessibility permission (issue #63). The session is therefore always
     // registered — the switch below only enables/disables its remote commands.
     LaunchedEffect(mediaKeysEnabled) {
         if (isMac) {
@@ -874,7 +874,7 @@ fun WindowScope.App(
 
     // macOS only: the native window chrome (title bar, native menus and
     // dialogs) follows the app's own Light/Dark mode instead of the OS one,
-    // which used to leave a white title bar over a dark VIVI (issue #66).
+    // which used to leave a white title bar over a dark VIVI (issue #62).
     val appDark = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -897,7 +897,7 @@ fun WindowScope.App(
                 // No track: only the tile is cleared — the session stays
                 // registered, so the NEXT track brings it back on its own
                 // (tearing it down here left "Now Playing" dead until the
-                // media-keys switch was toggled, issue #67).
+                // media-keys switch was toggled, issue #63).
                 MacMediaSession.clearNowPlaying()
                 return@LaunchedEffect
             }
@@ -916,7 +916,7 @@ fun WindowScope.App(
                 // restored from the persistent queue nothing has been played
                 // since launch, and if the app stops being the system's "Now
                 // Playing" owner the first media-key press can't reach it, so
-                // the paused track could only be started by hand (issue #67).
+                // the paused track could only be started by hand (issue #63).
                 // Refreshing the claim is cheap now that the native side caches
                 // the decoded artwork.
                 delay(if (playerState.isPlaying) 500L else 2_000L)
@@ -1558,7 +1558,7 @@ fun WindowScope.App(
                     for (track in order) {
                         if (player.isCached(track.videoId)) continue
                         // The cache pass must never take bandwidth away from the
-                        // track the user is actually listening to (issue #4):
+                        // track the user is actually listening to (issue #3):
                         // while that track's own cushion is thin the pass waits
                         // and resumes as soon as the stream is comfortably
                         // ahead. Bounded, so a failed download cannot park it
@@ -6474,7 +6474,7 @@ fun PlayerSection(
         value = if (streamCacheMinutes <= 0) 61f else streamCacheMinutes.toFloat(),
         onValueChange = {
             val v = it.roundToInt()
-            // Minimum is 10 minutes (issue #26): anything below means "forever" only at 61+.
+            // Minimum is 10 minutes (issue #25): anything below means "forever" only at 61+.
             onStreamCacheMinutesChange(if (v >= 61) 0 else v.coerceIn(10, 60))
         },
         valueRange = 10f..61f,

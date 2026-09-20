@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Desktop Player & audio port (#42) labels/descriptions, all supported languages."""
+"""Desktop Player & audio port (#38) labels/descriptions, all supported languages."""
 
 EXTRA_TRANSLATIONS = {
     "auto_download_on_like": {

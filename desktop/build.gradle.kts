@@ -281,7 +281,7 @@ compose.desktop {
     application {
         mainClass = "com.music.vivi.desktop.MainKt"
 
-        // JVM tuning for glitch-free audio (issue #4).
+        // JVM tuning for glitch-free audio (issue #3).
         //
         // Audio is played by a Java thread that hands PCM to the sound card, and
         // a stop-the-world pause freezes that thread no matter how much audio
@@ -315,7 +315,7 @@ compose.desktop {
             // on the packaged 1.50.76 image with -Xlog:gc it is `Pause Full
             // (System.gc())` every 30.05 s, 46-69 ms on a fresh session and up to
             // 1976 ms once the session has grown, which freezes the audio writer
-            // thread and the UI together (the "pauses/skips + UI hitch" of #4).
+            // thread and the UI together (the "pauses/skips + UI hitch" of #3).
             // This flag turns every explicit gc() into a concurrent G1 cycle
             // instead: same memory reclamation, no stop-the-world full GC. Same
             // run after the flag: zero `Pause Full`, the 30 s event becomes a

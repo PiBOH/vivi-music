@@ -398,7 +398,7 @@ fun ThemeSection(
             Slider(
                 value = accentIntensity,
                 onValueChange = onAccentIntensityChange,
-                // The drag itself only updates the in-memory state (issue #65:
+                // The drag itself only updates the in-memory state (issue #61:
                 // persisting on every frame made the thumb stutter); the file
                 // is written once, when the pointer is released.
                 onValueChangeFinished = onAccentIntensityChangeFinished,
@@ -486,7 +486,7 @@ fun ThemeSection(
         )
 
         Spacer(Modifier.height(16.dp))
-        // Live-updating HEX field (issue #65): typing a 6-digit value applies it
+        // Live-updating HEX field (issue #61): typing a 6-digit value applies it
         // to the picker immediately, so a color can be pasted from anywhere.
         val liveHex = "%06X".format(java.util.Locale.US, colorToArgbInt(customColor) and 0xFFFFFF)
         var hexInput by remember { mutableStateOf(liveHex) }
@@ -563,7 +563,7 @@ private fun GradientBar(
             .onSizeChanged { barWidthPx = it.width.toFloat() }
             .pointerInput(barWidthPx) {
                 fun pick(x: Float) = onFractionChange((x / barWidthPx).coerceIn(0f, 1f))
-                // ISSUE #65: `detectTapGestures` never returns (it loops
+                // ISSUE #61: `detectTapGestures` never returns (it loops
                 // forever), so the `detectDragGestures` call after it was dead
                 // code and the bar only reacted on mouse release. A single
                 // gesture loop tracks the press AND every drag movement, so the

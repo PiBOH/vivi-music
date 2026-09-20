@@ -111,6 +111,13 @@ dependencies there, or you break the desktop build.
     `chore(website): refresh the static release manifest` is filtered out of the
     `Auto Release` notes (commit list and changelog section alike), and since
     the site moved it is not even a commit of this branch any more.
+  - **Issue references use the official numbering**: the tracker lives in
+    `PiBOH/vivi-music-de`. The fork's numbering is historical and must never be
+    reused — its issues were transferred in order, so `#4` became `#3`, `#5`
+    became `#4`, …, `#85` became `#81` (the fork itself is empty and kept as a
+    read-only mirror, its URLs serving as redirects). Every `#N` in
+    `CHANGELOG.md`, in the docs and in the code comments refers to the official
+    repository, and new references are written with the official number.
   - **The Telegram bot is a separate repository**: `PiBOH/vivimusicde_bot`
     (`bot.py`, `.github/workflows/upload-release.yml`). It posts a newly
     published release to `https://t.me/vivimusicde` within the hour, resolves

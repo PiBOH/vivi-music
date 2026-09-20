@@ -227,7 +227,7 @@ fun HomeScreen(
             // LazyColumn content DSL can be re-executed by the snapshot
             // observer at that exact moment, so dereferencing it here with `!!`
             // crashed with an NPE as soon as any button on Home was clicked
-            // (see issue #58). Bail out to an empty list instead; the LoadingBox
+            // (see issue #54). Bail out to an empty list instead; the LoadingBox
             // branch of the outer `when` takes over on the next recomposition.
             val page = home ?: return@LazyColumn
 

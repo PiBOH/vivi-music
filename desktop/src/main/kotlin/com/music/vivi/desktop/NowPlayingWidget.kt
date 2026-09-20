@@ -62,7 +62,7 @@ private fun virtualScreenBounds(): Rectangle =
         .fold<Rectangle, Rectangle?>(null) { acc, b -> acc?.union(b) ?: Rectangle(b) }
         ?: Rectangle(0, 0, 1920, 1080)
 
-/** Keeps the widget fully inside [bounds], never letting it be dragged away (issue #64). */
+/** Keeps the widget fully inside [bounds], never letting it be dragged away (issue #60). */
 private fun clampToScreen(x: Int, y: Int, w: Int, h: Int, bounds: Rectangle): Pair<Int, Int> {
     val maxX = (bounds.x + bounds.width - w).coerceAtLeast(bounds.x)
     val maxY = (bounds.y + bounds.height - h).coerceAtLeast(bounds.y)
@@ -119,7 +119,7 @@ fun NowPlayingWidgetWindow(
                 // *aligned* position (WindowPosition(Alignment.TopEnd)), whose x/y
                 // are unspecified (NaN). roundToInt() throws on NaN, so persisting
                 // it crashed the whole app ~0.5s after the widget appeared, on
-                // every launch (issue #63).
+                // every launch (issue #59).
                 if (!pos.isSpecified) return@collect
                 val w = with(density) { WIDGET_WIDTH_DP.dp.roundToPx() }
                 val h = with(density) { WIDGET_HEIGHT_DP.dp.roundToPx() }
@@ -127,7 +127,7 @@ fun NowPlayingWidgetWindow(
                 val py = with(density) { pos.y.toPx().roundToInt() }
                 val (cx, cy) = clampToScreen(px, py, w, h, screenBounds)
                 // The window is drag-droppable: if it is released partly off
-                // screen, snap it back so it can never be lost (issue #64).
+                // screen, snap it back so it can never be lost (issue #60).
                 if (cx != px || cy != py) {
                     winState.position = WindowPosition(cx.dp, cy.dp)
                 }

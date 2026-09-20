@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * macOS system "Now Playing" integration (issue #5).
+ * macOS system "Now Playing" integration (issue #4).
  *
  * Loads the bundled native helper (`desktop/native/ViviMediaSession.m`, compiled
  * per-architecture by the CI workflow into `native/macos-<arch>/`) through JNA
@@ -50,7 +50,7 @@ object MacMediaSession {
 
     /** Diagnostics channel: the native side reports every remote command the
      *  system actually delivered ("remote play", "remote next", …), so a user
-     *  report can prove whether a media key reached the app at all (issue #67). */
+     *  report can prove whether a media key reached the app at all (issue #63). */
     private fun interface EventCb : Callback {
         fun invoke(message: String?)
     }
@@ -111,7 +111,7 @@ object MacMediaSession {
     }
 
     /**
-     * Diagnostics (issue #67): mirrors the helper's lifecycle in the session
+     * Diagnostics (issue #63): mirrors the helper's lifecycle in the session
      * playback log so a user report can show whether the system session was
      * registered at all.
      */
@@ -199,7 +199,7 @@ object MacMediaSession {
      * Registers the OS-level session (callbacks + app identity) exactly once.
      * Idempotent and callable from any thread: the now-playing push re-runs it
      * when the session was never registered OR was torn down, which is what
-     * made the tile appear only after toggling the switch (issue #67).
+     * made the tile appear only after toggling the switch (issue #63).
      */
     private fun ensureRegistered(): Boolean {
         val api = nativeApi ?: run {
@@ -218,7 +218,7 @@ object MacMediaSession {
             // Remote-command diagnostics: without this, "the media key did
             // nothing" cannot be told apart from "the key never reached the
             // app" (macOS routing), which is exactly the open question in
-            // issue #67.
+            // issue #63.
             val events = EventCb { message -> log("$message") }
             eventCallback = events
             api.viviRegisterEventCallback(events)
@@ -248,7 +248,7 @@ object MacMediaSession {
 
     /**
      * Forces the native window chrome to the app's own Light/Dark mode
-     * (issue #66). Safe to call before [start] and on every theme change.
+     * (issue #62). Safe to call before [start] and on every theme change.
      */
     fun setWindowAppearance(dark: Boolean) {
         if (!isMac) return
@@ -260,7 +260,7 @@ object MacMediaSession {
      * Clears the system tile (nothing is playing / media keys switched off)
      * WITHOUT tearing the session down: unregistering here is what broke the
      * "start the app, then play" case, because nothing re-registered the
-     * session afterwards (issue #67).
+     * session afterwards (issue #63).
      */
     fun clearNowPlaying() {
         lastLoggedTitle = null
@@ -357,7 +357,7 @@ object MacMediaSession {
         if (!isMac) return
         // Self-healing: pushing a track must always be enough to make the tile
         // appear, even if the session was never registered or was torn down
-        // (issue #67: it used to require toggling the switch).
+        // (issue #63: it used to require toggling the switch).
         if (!ensureRegistered()) return
         val api = nativeApi ?: return
         val m = metadata

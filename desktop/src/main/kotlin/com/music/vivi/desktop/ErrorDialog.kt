@@ -34,7 +34,7 @@ fun installGlobalErrorDialog() {
         // Persist the crash before doing anything else: ~/.vivimusic/crash.log is
         // always overwritten with the most recent crash, while a timestamped
         // copy under ~/.vivimusic/logs/<timestamp>/crash_<timestamp>.log is kept
-        // (never overwritten), so past crashes survive for diagnosis (issue #59).
+        // (never overwritten), so past crashes survive for diagnosis (issue #55).
         runCatching { writeCrashDump(thread, throwable) }
         if (!handleSkikoGlCrash(throwable)) {
             runCatching { showErrorDialog(throwable) }

@@ -2312,7 +2312,7 @@ fun SettingsIntegrationsScreen(
  * and the tray icon menu. Everything is a simple toggle.
  *
  * The media-keys switch needs no OS permission on any platform: Windows/Linux
- * use the low-level hook, macOS uses the native MediaPlayer session (issue #67),
+ * use the low-level hook, macOS uses the native MediaPlayer session (issue #63),
  * which is an OS-level integration and therefore never blocked by the
  * Accessibility permission.
  */

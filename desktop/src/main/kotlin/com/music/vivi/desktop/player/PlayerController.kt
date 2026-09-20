@@ -712,7 +712,7 @@ class PlayerController {
     /**
      * Seconds of headroom the playback pipeline already holds (decoded PCM in
      * the queue + source on disk not yet decoded). The look-ahead prefetch uses
-     * it to stay out of the way of the track being listened to (issue #4).
+     * it to stay out of the way of the track being listened to (issue #3).
      */
     fun playbackCushionSeconds(): Double = player.playbackCushionSeconds()
 
