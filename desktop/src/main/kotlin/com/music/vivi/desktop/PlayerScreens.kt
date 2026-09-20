@@ -1971,7 +1971,10 @@ fun LyricsScreen(
     onTogglePlay: () -> Unit = {},
     onBack: () -> Unit,
 ) {
-    val options = display ?: LyricsDisplayOptions(textSizeSp = textSizeSp, lineSpacing = lineSpacing)
+    // The explicit size/spacing arguments always win over whatever the display
+    // object carries: they are the ones the settings sliders write, and reading
+    // the stale copy out of `display` was why dragging them did nothing.
+    val options = (display ?: LyricsDisplayOptions()).copy(textSizeSp = textSizeSp, lineSpacing = lineSpacing)
     var lyrics by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }

@@ -12,7 +12,9 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -27,6 +29,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -125,6 +128,55 @@ fun PlayerDesign.metrics(): PlayerDesignMetrics = when (this) {
 }
 
 /**
+ * Resolution of the offscreen layer the two blurred backdrops are rasterized
+ * at.
+ *
+ * "Blur" and "Apple Music" used to draw the artwork with
+ * `fillMaxSize().blur(48.dp)`, i.e. the artwork was requested from the image
+ * loader at the CURRENT window size and then Gaussian-blurred at that size.
+ * Both are size-dependent, so every frame of a window resize (or of opening
+ * and closing the player) re-decoded and re-blurred a full-window bitmap —
+ * seconds of work at 4K — which is the stutter reported while resizing the
+ * player. Rendering the backdrop at a small fixed size and only SCALING the
+ * result up costs one blur of this layer, ever: resizing afterwards is a
+ * transform, not a re-render, and the blur is smooth enough that upscaling it
+ * is indistinguishable (the blur radius below is pre-divided for that scale).
+ */
+private val BLURRED_BACKDROP_SIZE = 256.dp
+
+/**
+ * The artwork blurred to fill [modifier]'s bounds, rasterized at a fixed size
+ * (see [BLURRED_BACKDROP_SIZE]). [extraScale] reproduces the slight zoom the
+ * "Apple Music" variant applies.
+ */
+@Composable
+private fun BlurredBackdrop(
+    url: String,
+    blurRadius: Dp,
+    modifier: Modifier = Modifier,
+    extraScale: Float = 1f,
+) {
+    BoxWithConstraints(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val cover = maxOf(
+            maxWidth / BLURRED_BACKDROP_SIZE,
+            maxHeight / BLURRED_BACKDROP_SIZE,
+        )
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .requiredSize(BLURRED_BACKDROP_SIZE)
+                .blur(blurRadius)
+                .graphicsLayer {
+                    scaleX = cover * extraScale
+                    scaleY = cover * extraScale
+                },
+        )
+    }
+}
+
+/**
  * Full-screen background behind the Player, honoring the selected
  * [PlayerBackgroundStyle] (canvas / gradient / blur / glow / apple music /
  * live mesh).
@@ -165,11 +217,7 @@ fun PlayerBackground(
             }
             PlayerBackgroundStyle.BLUR -> {
                 if (bgUrl != null) {
-                    AsyncImage(
-                        model = bgUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().blur(48.dp),
-                    )
+                    BlurredBackdrop(bgUrl, blurRadius = 13.dp)
                 }
                 // Scrim follows the app theme: strong in dark mode, lighter in
                 // light mode so the player surface adapts to Light/Dark.
@@ -206,11 +254,7 @@ fun PlayerBackground(
             }
             PlayerBackgroundStyle.APPLE_MUSIC -> {
                 if (bgUrl != null) {
-                    AsyncImage(
-                        model = bgUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().blur(36.dp).graphicsLayer { scaleX = 1.15f; scaleY = 1.15f },
-                    )
+                    BlurredBackdrop(bgUrl, blurRadius = 10.dp, extraScale = 1.15f)
                 }
                 // Overlay follows the app theme: strong in dark mode, lighter
                 // in light mode so the player surface adapts to Light/Dark.

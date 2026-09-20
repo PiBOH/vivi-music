@@ -1261,8 +1261,6 @@ fun LyricsSection(
     translateLyrics: Boolean = false,
     onToggleTranslateLyrics: (Boolean) -> Unit = {},
 ) {
-    var styleExpanded by remember { mutableStateOf(false) }
-    var positionExpanded by remember { mutableStateOf(false) }
     val romanize = options.romanize
 
     Text(Localization.get(language, "lyrics"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -1279,32 +1277,17 @@ fun LyricsSection(
     )
 
     // --- Animation style -------------------------------------------------
-    Text(
-        Localization.get(language, "lyrics_animation_style"),
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 16.dp),
+    // Rendered as the same row-style dropdown the player/audio section uses
+    // (M3SettingsDropdownItem): consistent look with every other single-choice
+    // option, and the current value is highlighted in the menu.
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.AutoAwesome,
+        title = Localization.get(language, "lyrics_animation_style"),
+        description = Localization.get(language, "lyrics_animation_style_desc"),
+        value = lyricsStyleLabel(language, options.style),
+        options = LyricsAnimationStyle.entries.map { it.id to lyricsStyleLabel(language, it) },
+        onSelect = { id -> onOptionsChange(options.copy(style = LyricsAnimationStyle.from(id))) },
     )
-    Text(
-        Localization.get(language, "lyrics_animation_style_desc"),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Box(Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = { styleExpanded = true }) {
-            Text(lyricsStyleLabel(language, options.style))
-        }
-        DropdownMenu(expanded = styleExpanded, onDismissRequest = { styleExpanded = false }) {
-            LyricsAnimationStyle.entries.forEach { entry ->
-                DropdownMenuItem(
-                    text = { Text(lyricsStyleLabel(language, entry)) },
-                    onClick = {
-                        styleExpanded = false
-                        onOptionsChange(options.copy(style = entry))
-                    },
-                )
-            }
-        }
-    }
 
     // --- Display options -------------------------------------------------
     M3SettingsGroup(
@@ -1373,27 +1356,13 @@ fun LyricsSection(
     )
 
     // --- Text position ---------------------------------------------------
-    Text(
-        Localization.get(language, "lyrics_text_position"),
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 16.dp),
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.VerticalAlignCenter,
+        title = Localization.get(language, "lyrics_text_position"),
+        value = lyricsPositionLabel(language, options.position),
+        options = LyricsPosition.entries.map { it.name to lyricsPositionLabel(language, it) },
+        onSelect = { name -> onOptionsChange(options.copy(position = LyricsPosition.from(name))) },
     )
-    Box(Modifier.padding(top = 8.dp)) {
-        OutlinedButton(onClick = { positionExpanded = true }) {
-            Text(lyricsPositionLabel(language, options.position))
-        }
-        DropdownMenu(expanded = positionExpanded, onDismissRequest = { positionExpanded = false }) {
-            LyricsPosition.entries.forEach { entry ->
-                DropdownMenuItem(
-                    text = { Text(lyricsPositionLabel(language, entry)) },
-                    onClick = {
-                        positionExpanded = false
-                        onOptionsChange(options.copy(position = entry))
-                    },
-                )
-            }
-        }
-    }
 
     Text(
         "${Localization.get(language, "lyrics_text_size")}: ${lyricsTextSize.toInt()} sp",

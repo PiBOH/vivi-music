@@ -713,7 +713,8 @@ class AudioPlayer {
     /**
      * Walks the root atoms of a possibly still-growing fragmented MP4, from
      * [from] until [until], appending the AAC sample table of every complete
-     * `moof` box to [samples]. Returns the offset just past the last atom
+     * `moof` box to [samples], recording in [fragmentStarts] where each
+     * fragment's samples begin. Returns the offset just past the last atom
      * walked, so scanning can resume as the download grows. Trailing atoms that
      * are not fully downloaded yet are skipped.
      */
@@ -723,6 +724,7 @@ class AudioPlayer {
         from: Long,
         until: Long,
         samples: MutableList<Pair<Long, Int>>,
+        fragmentStarts: MutableList<Int>,
     ): Long {
         var pos = from
         val header = ByteBuffer.allocate(16)
@@ -745,7 +747,9 @@ class AudioPlayer {
             }
             if (size <= 0 || size > until - pos) break // incomplete trailing atom
             if (fourcc == "moof") {
+                val appendedFrom = samples.size
                 collectMoofSamples(channel, trackId, pos, size, samples)
+                if (samples.size > appendedFrom) fragmentStarts.add(appendedFrom)
             }
             pos += size
         }
@@ -836,9 +840,17 @@ class AudioPlayer {
             // Sample table, grown incrementally: while the download is still
             // running, new `moof` fragments (and their samples) keep arriving.
             val samples = mutableListOf<Pair<Long, Int>>()
+            /** Index in [samples] where each `moof` fragment's samples begin: the
+             *  samples of one fragment are contiguous BY CONSTRUCTION (their
+             *  offsets are the sum of the sample sizes), so only the boundaries
+             *  between fragments can carry a real problem. */
+            val fragmentStarts = mutableListOf<Int>()
             var scannedTo = 0L
-            /** Discontinuities seen in the sample table (see
-             *  [validateNewSamples]); reported as a total at the end. */
+            /** Fragments whose boundary has been checked (see
+             *  [validateNewFragments]); the total is reported at the end. */
+            var validatedFragments = 0
+            /** Overlaps or backwards jumps seen between fragments (see
+             *  [validateNewFragments]); reported as a total at the end. */
             var boundaryIssueCount = 0
 
             /** Scans [scannedTo..downloadedBytes) for complete `moof` boxes and
@@ -851,46 +863,56 @@ class AudioPlayer {
                 if (scannedTo < until) {
                     scannedTo = walkAtoms(
                         channel, trackId, scannedTo,
-                        minOf(until, scannedTo + SCAN_WINDOW_BYTES), samples,
+                        minOf(until, scannedTo + SCAN_WINDOW_BYTES), samples, fragmentStarts,
                     )
                 }
             }
 
             /**
-             * Verifies that the samples just appended continue EXACTLY where the
-             * previous one ended (issue #3).
+             * Verifies the boundaries between the `moof` fragments just appended
+             * (issue #3).
              *
-             * A gap or an overlap here means the `moof` walk mis-parsed the
-             * container: the decoder then feeds a discontinuity to the sound
-             * card, which is heard as the brief jump/pause macOS users reported,
-             * while none of the existing diagnostics (starvation, cushion,
-             * device ring) can see it — they all assume the PCM itself is
-             * continuous. Reported once per problem, plus a total, so the log
-             * says whether the audio was ever discontinuous at the source.
+             * The samples of one fragment are contiguous by construction: their
+             * offsets are computed by adding up the sample sizes. A gap can
+             * therefore only be *between* fragments — and there a gap is normal,
+             * because YouTube's fMP4 puts the next `moof` box (the fragment's
+             * metadata, ~1.8 KB of `trun` entries) between two `mdat` payloads:
+             * a gap in BYTES, not in AUDIO. Comparing "previous sample end" with
+             * "next sample start" across fragments therefore reported a skip on
+             * every single track (`delta 1824 bytes`) while the device check
+             * showed 99-100% of the wall time played — 52 tracks out of 52 in
+             * the exported log, i.e. a diagnostic that cried wolf.
+             *
+             * What is worth checking, and what a mis-parsed container would
+             * actually produce, is that the fragments ADVANCE: a fragment that
+             * starts inside the previous one, or before it, means the `moof`
+             * walk lost its place. Reported once per problem, plus a total.
              */
-            fun validateNewSamples(before: Int) {
-                if (before <= 0 || samples.size <= before) return
-                val previous = samples[before - 1]
-                val next = samples[before]
-                val previousEnd = previous.first + previous.second
-                if (next.first == previousEnd) return
-                boundaryIssueCount++
-                if (boundaryIssueCount <= 10) {
-                    AppLog.log(
-                        "playback",
-                        "sample table discontinuity at frame $before: the previous sample ends at " +
-                            "$previousEnd but the next starts at ${next.first} " +
-                            "(delta ${next.first - previousEnd} bytes) — the decoded audio skips/repeats here",
-                    )
+            fun validateNewFragments() {
+                while (validatedFragments + 1 < fragmentStarts.size) {
+                    val nextIndex = fragmentStarts[validatedFragments + 1]
+                    val previousLast = samples[nextIndex - 1]
+                    val previousEnd = previousLast.first + previousLast.second
+                    val nextStart = samples[nextIndex].first
+                    validatedFragments++
+                    if (nextStart >= previousEnd) continue
+                    boundaryIssueCount++
+                    if (boundaryIssueCount <= 10) {
+                        AppLog.log(
+                            "playback",
+                            "sample table overlap at frame $nextIndex: this fragment starts at " +
+                                "$nextStart but the previous one ends at $previousEnd " +
+                                "(delta ${nextStart - previousEnd} bytes) — the fragment walk lost its place",
+                        )
+                    }
                 }
             }
 
-            /** [scanMore] plus the continuity check (the sample table only ever
-             *  grows, so the append boundary is where a problem can appear). */
+            /** [scanMore] plus the fragment-boundary check (the sample table only
+             *  ever grows, so a new fragment is where a problem can appear). */
             fun scanStep() {
-                val before = samples.size
                 scanMore()
-                validateNewSamples(before)
+                validateNewFragments()
             }
 
             // Wait until the first audio fragment is fully downloaded.
@@ -907,12 +929,12 @@ class AudioPlayer {
             // ~19 s and "ends" — the seek bar never moving past ~19 s.
             if (handle.complete) {
                 while (scannedTo < handle.downloadedBytes) {
-                    val before = samples.size
                     scannedTo = walkAtoms(
                         channel, trackId, scannedTo,
                         minOf(handle.downloadedBytes, scannedTo + SCAN_WINDOW_BYTES), samples,
+                        fragmentStarts,
                     )
-                    validateNewSamples(before)
+                    validateNewFragments()
                 }
             }
             if (samples.isEmpty()) {
@@ -1282,6 +1304,9 @@ class AudioPlayer {
             val writeBuffer = ByteArray(writeChunkBytes + 8192)
             var pendingBytes = 0
             var handedOverBytes = 0L
+            /** Wall time of the last block actually handed to the device: the
+             *  cushion warning is only meaningful while this line is being fed. */
+            var lastWriteWallMs = 0L
             /** Last gain actually used for a write (logged when it changes). */
             var appliedVolume = -1f
             // Device health sampling (issue #3). Every other diagnostic assumes
@@ -1343,6 +1368,7 @@ class AudioPlayer {
                 }
                 handedOverBytes += done.toLong()
                 pendingBytes = 0
+                lastWriteWallMs = System.currentTimeMillis()
                 // Prime the device before it starts consuming (issue #3): a
                 // line started with an empty ring goes dry right away — the
                 // reporting log shows "the device ran dry here" 70 ms after a
@@ -1373,7 +1399,13 @@ class AudioPlayer {
                 // is actually playing: before the start there is nothing to
                 // run dry.
                 val cushion = cushionMs()
-                if (lineStarted && cushion >= 0.0 && cushion <= CUSHION_WARN_MS) {
+                // Only while this line is actually being fed: at a track change
+                // the ring of the OUTGOING line is empty by design while the PCM
+                // queue already holds the NEXT track, which is how the log came
+                // to report "the output can run dry here (queued for the writer:
+                // 7987ms)" without a single audible gap.
+                val fedRecently = System.currentTimeMillis() - lastWriteWallMs <= 500L
+                if (lineStarted && fedRecently && cushion >= 0.0 && cushion <= CUSHION_WARN_MS) {
                     val now = System.currentTimeMillis()
                     if (now - lastCushionLogMs >= 3_000L) {
                         lastCushionLogMs = now
@@ -1735,14 +1767,15 @@ class AudioPlayer {
                     )
                 }
                 // One line per track that states whether the SOURCE audio was
-                // ever discontinuous (see [validateNewSamples]): "0" plus a
+                // ever discontinuous (see [validateNewFragments]): "0" plus a
                 // clean device check rules the whole pipeline out for that
                 // track, which is what makes a "still lags" report actionable
                 // instead of a guess (issue #3).
                 AppLog.log(
                     "playback",
-                    "audio integrity: ${boundaryIssueCount} sample-table discontinuities, " +
-                        "${deviceStallLogged} device stalls, ${samples.size} frames scanned",
+                    "audio integrity: ${boundaryIssueCount} sample-table overlaps, " +
+                        "${deviceStallLogged} device stalls, ${samples.size} frames scanned " +
+                        "in ${fragmentStarts.size} fragments",
                 )
                 // Never leave the writer behind: on a normal end it plays out
                 // the queued tail first (so the last seconds are not cut), on a

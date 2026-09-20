@@ -902,12 +902,18 @@ fun WindowScope.App(
                 return@LaunchedEffect
             }
             while (true) {
+                // Read the controller directly, not the composition value:
+                // the tile must carry the position and the playing flag as they
+                // are NOW, and `player.state` is the authoritative flow behind
+                // `playerState` (the effect is keyed on the track only, so it
+                // keeps looping while the track plays).
+                val live = player.state.value
                 MacMediaSession.setNowPlaying(
                     title = np.title,
                     artist = np.artist,
-                    durationMs = playerState.durationMs,
-                    positionMs = playerState.positionMs,
-                    playing = playerState.isPlaying,
+                    durationMs = live.durationMs,
+                    positionMs = live.positionMs,
+                    playing = live.isPlaying,
                     artworkUrl = np.thumbnail?.takeIf {
                         it.startsWith("http://") || it.startsWith("https://")
                     },
@@ -919,7 +925,7 @@ fun WindowScope.App(
                 // the paused track could only be started by hand (issue #63).
                 // Refreshing the claim is cheap now that the native side caches
                 // the decoded artwork.
-                delay(if (playerState.isPlaying) 500L else 2_000L)
+                delay(if (live.isPlaying) 500L else 2_000L)
             }
         }
     }
@@ -1035,10 +1041,13 @@ fun WindowScope.App(
     var sessionTopCount by remember { mutableStateOf(0) }
     var lastSessionSongId by remember { mutableStateOf<String?>(null) }
     var lastSessionPosition by remember { mutableStateOf(0L) }
-    LaunchedEffect(nowPlaying?.videoId, isPlaying, playerState.positionMs) {
-        val id = nowPlaying?.videoId
-        val pos = playerState.positionMs
-        if (id != null && id != lastSessionSongId) {
+    // Keyed on the TRACK, never on the position (issue #3): keying this effect
+    // on `playerState.positionMs` cancelled and restarted the coroutine on
+    // ~every position tick (the writer reports ~8/s, the player 20+/s). The
+    // position is now read from the controller inside the loop instead.
+    LaunchedEffect(nowPlaying?.videoId, isPlaying) {
+        val id = nowPlaying?.videoId ?: return@LaunchedEffect
+        if (id != lastSessionSongId) {
             // New track started in this session: count it and track the top one.
             lastSessionSongId = id
             if (sessionTopSong?.first == id) {
@@ -1048,9 +1057,14 @@ fun WindowScope.App(
                 sessionTopCount = 1
             }
             sessionTrackStarts++
-            lastSessionPosition = pos
-        } else if (isPlaying) {
+            lastSessionPosition = player.state.value.positionMs
+        }
+        while (true) {
+            delay(1_000L)
+            val pos = player.state.value.positionMs
             val delta = pos - lastSessionPosition
+            // A jump bigger than 10 s is a seek (or a track change), not
+            // listening time: the same guard the previous version used.
             if (delta in 1..10_000) sessionPlayedMs += delta
             lastSessionPosition = pos
         }
@@ -1140,7 +1154,11 @@ fun WindowScope.App(
     // Discord presence + Last.fm now-playing / scrobble feed.
     var lastfmReported by remember { mutableStateOf<String?>(null) }
     var lastfmScrobbled by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(nowPlaying?.videoId, isPlaying, playerState.positionMs, discordRpcEnabled, lastfmEnabled, lastfmSession) {
+    // Keyed on the track/options, not on the position: with `positionMs` in the
+    // keys this effect restarted ~20 times a second and pushed a Discord
+    // presence update on every one of them (issue #3). The scrobble check is
+    // polled once a second from the controller instead.
+    LaunchedEffect(nowPlaying?.videoId, isPlaying, discordRpcEnabled, lastfmEnabled, lastfmSession) {
         val np = nowPlaying
         if (np == null) {
             DiscordRPC.updateActivity(null, null, null, null)
@@ -1149,18 +1167,22 @@ fun WindowScope.App(
         if (discordRpcEnabled && discordClientId.isNotBlank() && isPlaying) {
             DiscordRPC.updateActivity(details = np.title, state = np.artist, largeImage = "vivimusic")
         }
-        if (lastfmEnabled && lastfmSession.isNotBlank() && LastFM.isInitialized()) {
-            LastFM.sessionKey = lastfmSession
-            if (isPlaying && lastfmReported != np.videoId) {
-                lastfmReported = np.videoId
-                if (lastfmNowPlaying) {
-                    runCatching { LastFM.updateNowPlaying(artist = np.artist, track = np.title, duration = (np.durationMs / 1000L).toInt().coerceAtLeast(0)) }
-                }
+        if (!(lastfmEnabled && lastfmSession.isNotBlank() && LastFM.isInitialized())) return@LaunchedEffect
+        LastFM.sessionKey = lastfmSession
+        if (isPlaying && lastfmReported != np.videoId) {
+            lastfmReported = np.videoId
+            if (lastfmNowPlaying) {
+                runCatching { LastFM.updateNowPlaying(artist = np.artist, track = np.title, duration = (np.durationMs / 1000L).toInt().coerceAtLeast(0)) }
             }
-            // Scrobble near the end of the track (>=5s before it finishes).
-            val dur = np.durationMs
-            val pos = playerState.positionMs
-            if (dur > 30_000 && pos > 0 && pos >= dur - 15_000 && lastfmScrobbled != np.videoId) {
+        }
+        // Scrobble near the end of the track (>30 s long, >=15 s before it
+        // finishes), checked once a second until it fires.
+        val dur = np.durationMs
+        if (dur <= 30_000) return@LaunchedEffect
+        while (lastfmScrobbled != np.videoId) {
+            delay(1_000L)
+            val pos = player.state.value.positionMs
+            if (pos > 0 && pos >= dur - 15_000) {
                 lastfmScrobbled = np.videoId
                 runCatching { LastFM.scrobble(artist = np.artist, track = np.title, timestamp = System.currentTimeMillis() / 1000, duration = (dur / 1000L).toInt()) }
             }
@@ -2711,11 +2733,17 @@ fun WindowScope.App(
                         lyricsTextSize = lyricsTextSize,
                         onLyricsTextSizeChange = { size ->
                             lyricsTextSize = size
+                            // The renderer draws from `lyricsDisplay`, not from
+                            // this separate state: updating only the latter made
+                            // the size slider move a number with no effect at
+                            // all until another option was touched.
+                            lyricsDisplay = lyricsDisplay.copy(textSizeSp = size)
                             DesktopSettings.update { it.copy(lyricsTextSize = size) }
                         },
                         lyricsLineSpacing = lyricsLineSpacing,
                         onLyricsLineSpacingChange = { ls ->
                             lyricsLineSpacing = ls
+                            lyricsDisplay = lyricsDisplay.copy(lineSpacing = ls)
                             DesktopSettings.update { it.copy(lyricsLineSpacing = ls) }
                         },
                         options = lyricsDisplay,

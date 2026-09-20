@@ -84,6 +84,29 @@ enum class LyricsPosition {
     }
 }
 
+/**
+ * How much faster/slower than real time a word animation settles, from the
+ * global "Animation speed" preference (Appearance → Animation speed).
+ *
+ * The lyrics animation is driven by the playback clock, so without this the
+ * setting changed every other transition in the app but left the lyrics
+ * filling at exactly the same rate (the reported "the animation ignores the
+ * speed I set"). "Fast" reaches full colour before the word ends, "Slow"
+ * lags behind it; "Normal" is 1:1 with the word's own duration.
+ */
+private val LYRICS_SPEED: Float
+    get() = when (Animations.speed) {
+        "fast" -> 1.6f
+        "slow" -> 0.62f
+        else -> 1f
+    }
+
+/** Smoothstep easing of a word's fill, scaled by the animation-speed setting. */
+private fun lyricProgress(linear: Float): Float {
+    val t = (linear * LYRICS_SPEED).coerceIn(0f, 1f)
+    return t * t * (3f - 2f * t)
+}
+
 /** Everything the renderer needs besides the lines and the position. */
 data class LyricsDisplayOptions(
     val style: LyricsAnimationStyle = LyricsAnimationStyle.VIVIMUSIC_1,
@@ -313,8 +336,6 @@ fun LyricsList(
                         AnimatedLyricLine(
                             text = mainText,
                             words = words,
-                            nextLineTimeMs = lines.getOrNull(index + 1)?.timeMs,
-                            lineTimeMs = line.timeMs,
                             isActive = isActive,
                             positionProvider = { positionState.value },
                             style = options.style,
@@ -355,8 +376,6 @@ fun LyricsList(
 private fun AnimatedLyricLine(
     text: String,
     words: List<WordTimestamp>?,
-    nextLineTimeMs: Long?,
-    lineTimeMs: Long,
     isActive: Boolean,
     positionProvider: () -> Long,
     style: LyricsAnimationStyle,
@@ -378,9 +397,8 @@ private fun AnimatedLyricLine(
             glowEffect = glowEffect,
             accent = accent,
             inactive = inactive,
-            lineTimeMs = lineTimeMs,
-            nextLineTimeMs = nextLineTimeMs,
             textStyle = textStyle,
+            textAlign = textAlign,
         )
         return
     }
@@ -438,10 +456,11 @@ private fun buildWordSpans(
         val hasPassed = isActive && position > endMs
         val isWordActive = isActive && position in startMs..endMs
         val linear = if (isWordActive) ((position - startMs).toFloat() / duration).coerceIn(0f, 1f) else 0f
-        // Smoothstep easing, shared by every style (as on mobile).
+        // Smoothstep easing, shared by every style (as on mobile) and scaled by
+        // the "Animation speed" preference (see [LYRICS_SPEED]).
         val progress = when {
             hasPassed -> 1f
-            isWordActive -> linear * linear * (3f - 2f * linear)
+            isWordActive -> lyricProgress(linear)
             else -> 0f
         }
 
@@ -602,21 +621,31 @@ private fun WordFlowLine(
     glowEffect: Boolean,
     accent: Color,
     inactive: Color,
-    lineTimeMs: Long,
-    nextLineTimeMs: Long?,
     textStyle: TextStyle,
+    textAlign: TextAlign,
 ) {
     val position = positionProvider()
-    // Bounds the fallback span of a single-word line (kept for parity with the
-    // mobile heuristic: the line's own duration, at least 300 ms).
-    val lineDuration = ((nextLineTimeMs ?: (lineTimeMs + 4000L)) - lineTimeMs).coerceAtLeast(300L)
-    @Suppress("UNUSED_VARIABLE")
-    val ignoredDuration = lineDuration
+
+    // The words are separate composables, so the line alignment cannot come
+    // from `textAlign` alone: without this the default style (VIVIMUSIC_1)
+    // always drew its words flush left and the "Text position" option looked
+    // broken on every style that uses this layout.
+    val horizontalArrangement = when (textAlign) {
+        TextAlign.Start -> Arrangement.Start
+        TextAlign.End -> Arrangement.End
+        else -> Arrangement.Center
+    }
+    // The row gap between two wrapped word rows follows the line-spacing
+    // option, which this layout used to ignore in favour of a fixed 0.25em.
+    val lineSpacingRatio = (textStyle.lineHeight.value / textStyle.fontSize.value)
+        .takeIf { it.isFinite() && it > 0f } ?: 1.35f
 
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start,
-        verticalArrangement = Arrangement.spacedBy((textStyle.fontSize.value * 0.25f).dp),
+        horizontalArrangement = horizontalArrangement,
+        verticalArrangement = Arrangement.spacedBy(
+            (textStyle.fontSize.value * 0.25f * lineSpacingRatio).dp,
+        ),
     ) {
         words.forEach { word ->
             val startMs = (word.startTime * 1000).toLong()
@@ -625,9 +654,12 @@ private fun WordFlowLine(
             val hasPassed = isActive && position > endMs
             val isWordActive = isActive && position in startMs..endMs
             val linear = if (isWordActive) ((position - startMs).toFloat() / duration).coerceIn(0f, 1f) else 0f
+            // Scaled by the "Animation speed" preference exactly like the
+            // text-based styles: this layout is the DEFAULT one, so leaving it
+            // out is why the setting changed nothing at all on a fresh install.
             val progress = when {
                 hasPassed -> 1f
-                isWordActive -> linear * linear * (3f - 2f * linear)
+                isWordActive -> lyricProgress(linear)
                 else -> 0f
             }
 
@@ -640,8 +672,16 @@ private fun WordFlowLine(
                 isActive -> 0.9f
                 else -> 2.0f
             }
+            // APPLE_V2 used to be drawn with no motion whatsoever (scale fixed
+            // at 1, no offset, no blur), so it was indistinguishable from plain
+            // text: it is now a real style — un-sung words sit slightly smaller
+            // and lower, and the sung word fades and lifts into place word by
+            // word, the way the mobile renderer animates this one.
+            val risePx = if (isVivi) 0f else (1f - progress) * textStyle.fontSize.value * 0.55f
+            val baseScale = if (isVivi) 1f else 0.94f + 0.06f * progress
             val wordAlpha = when {
-                isWordActive || hasPassed -> 1f
+                isWordActive -> if (isVivi) 1f else 0.45f + 0.55f * progress
+                hasPassed -> 1f
                 isActive -> 0.5f
                 else -> 0.4f
             }
@@ -664,8 +704,9 @@ private fun WordFlowLine(
             Box(
                 modifier = Modifier
                     .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
+                        scaleX = scale * baseScale
+                        scaleY = scale * baseScale
+                        translationY = risePx
                         alpha = wordAlpha
                     }
                     .then(if (blurRadius > 0f) Modifier.blur(blurRadius.dp) else Modifier)

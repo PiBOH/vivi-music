@@ -145,6 +145,12 @@ data class RelatedPage(
                                 ?.watchPlaylistEndpoint
                     )
                 renderer.isArtist -> {
+                    // Shuffle/radio are OPTIONAL: the library's artist grid
+                    // ("FEmusic_library_corpus_artists") cards carry neither,
+                    // and requiring them here made every card parse to null —
+                    // the sidebar "Artists" screen came up empty even though
+                    // the page itself had loaded fine. `menu` is null-safe too:
+                    // it used to NPE (failing the whole page) on cards without.
                     ArtistItem(
                         id = renderer.navigationEndpoint.browseEndpoint?.browseId ?: return null,
                         title =
@@ -160,14 +166,16 @@ data class RelatedPage(
                                     it.menuNavigationItemRenderer?.icon?.iconType == "MUSIC_SHUFFLE"
                                 }?.menuNavigationItemRenderer
                                 ?.navigationEndpoint
-                                ?.watchPlaylistEndpoint ?: return null,
+                                ?.watchPlaylistEndpoint,
                         radioEndpoint =
-                            renderer.menu.menuRenderer.items
-                                .find {
+                            renderer.menu
+                                ?.menuRenderer
+                                ?.items
+                                ?.find {
                                     it.menuNavigationItemRenderer?.icon?.iconType == "MIX"
                                 }?.menuNavigationItemRenderer
                                 ?.navigationEndpoint
-                                ?.watchPlaylistEndpoint ?: return null,
+                                ?.watchPlaylistEndpoint,
                     )
                 }
                 else -> null
