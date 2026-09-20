@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.52.4-alpha] - 2026-09-20
+
+### Fixed
+- [APK] **The Android build compiles again (no APK could be produced since 6.0.6.3).** The Azerbaijani resources were split over four files in `values-az/`, three of which came from a translation batch that wrote the language-suffixed names (`strings_az.xml`, `vivi_strings_az.xml`, `updater_strings_az.xml`); two of them declared the same 67 keys, and `aapt2` refuses to merge that (`Duplicate resources`), so `assembleUniversalGmsRelease` failed and the GMS/FOSS publishing job never ran. The batch is consolidated into the canonical `strings.xml` / `vivi_strings.xml` / `updater_strings.xml` now — same 1384 keys, none lost, and the old file's value kept wherever the batch had retranslated a key with English fragments left in it (`Already in pleylist:`) — which also means the desktop localization generator, which only reads those three names, finally sees the Azerbaijani strings.
+
 ## [6.0.6.4_DE-1.52.4-alpha] - 2026-09-20
 
 ### Changed
