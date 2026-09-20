@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.4_DE-1.52.3-alpha] - 2026-09-20
+
+### Fixed
+- [DE] **The release-notes filter really filters.** The line that was supposed to hide the hourly `chore(website): refresh the static release manifest` commit used an escaped regular expression, which GNU grep did not match as written, so the commit still showed up in the notes; it is now a literal match (`grep -F`, no anchors, so a trailing CR cannot defeat it), the same way for the commit list and for the changelog section the notes are built from, and it is verified against a real commit range.
+
 ## [6.0.6.4_DE-1.52.2-alpha] - 2026-09-20
 
 ### Changed

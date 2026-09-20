@@ -130,7 +130,7 @@ jobs:
           fi
           # Never surface the website bookkeeping commits (an older entry may
           # still carry them in its `### Commits` list).
-          SECTION="$(printf '%s\n' "$SECTION" | grep -v -E '^- chore\(website\): refresh the static release manifest$' || true)"
+          SECTION="$(printf '%s\n' "$SECTION" | grep -v -F -- '- chore(website): refresh the static release manifest' || true)"
           {
             echo "section<<CHANGELOG_EOF"
             echo "$SECTION"
@@ -143,13 +143,15 @@ jobs:
         run: |
           set -euo pipefail
           # The hourly website bookkeeping commit is not part of a release and
-          # only made the list longer, so it is never shown in the notes.
-          IGNORED='^chore\(website\): refresh the static release manifest'
+          # only made the list longer, so it is never shown in the notes. A
+          # literal (grep -F) match on the subject: no regex escaping, no
+          # anchors, so a trailing CR in the line does not defeat it.
+          IGNORED='- chore(website): refresh the static release manifest'
           PREV_TAG="$(git describe --tags --abbrev=0 2>/dev/null || true)"
           if [[ -n "$PREV_TAG" ]]; then
-            COMMITS="$(git log "$PREV_TAG..HEAD" --pretty=format:'- %s' --no-merges 2>/dev/null | grep -v -E "$IGNORED" || true)"
+            COMMITS="$(git log "$PREV_TAG..HEAD" --pretty=format:'- %s' --no-merges 2>/dev/null | grep -v -F -- "$IGNORED" || true)"
           else
-            COMMITS="$(git log --pretty=format:'- %s' --no-merges 2>/dev/null | grep -v -E "$IGNORED" || true)"
+            COMMITS="$(git log --pretty=format:'- %s' --no-merges 2>/dev/null | grep -v -F -- "$IGNORED" || true)"
           fi
           if [[ -z "$COMMITS" ]]; then
             COMMITS="- Initial release"
