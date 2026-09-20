@@ -19,9 +19,11 @@ name: Deploy Website (GitHub Pages)
 on:
   workflow_dispatch:
   schedule:
-    # Twice an hour, a few minutes after the hourly manifest refresh, so a data
-    # update that could not trigger a run by itself still reaches the site.
-    - cron: '5,35 * * * *'
+    # Five minutes after the hourly manifest refresh, so a data update that
+    # could not trigger a run by itself (the job token starts no workflow)
+    # still reaches the site. An edit pushed to `gh-pages` deploys at once
+    # instead, and the manifest asks for a deploy explicitly as well.
+    - cron: '5 * * * *'
   push:
     branches: [ vivi-music-de ]
     paths:
