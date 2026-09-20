@@ -156,7 +156,7 @@ private fun cleanInline(text: String): String =
 /**
  * Builds an annotated string for a changelog bullet, turning every "#N"
  * reference into a clickable link to the GitHub issue
- * (https://github.com/PiBOH/vivi-music/issues/N). The link URL always points
+ * (https://github.com/PiBOH/vivi-music-de/issues/N). The link URL always points
  * at the user's configured update source repo when it is the fork, otherwise
  * the original repo — so "Closes #3" stays clickable regardless of source.
  */

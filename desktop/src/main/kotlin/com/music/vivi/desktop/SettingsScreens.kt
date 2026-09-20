@@ -828,9 +828,9 @@ fun SettingsBackupScreen(language: String, onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var showRestartDialog by remember { mutableStateOf(false) }
 
-    var autoBackupEnabled by remember { mutableStateOf(DesktopSettings.load().autoBackupEnabled) }
-    var autoBackupWeekly by remember { mutableStateOf(DesktopSettings.load().autoBackupWeekly) }
-    var autoBackupBeforeUpdate by remember { mutableStateOf(DesktopSettings.load().autoBackupBeforeUpdate) }
+    var autoBackupEnabled by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoBackupEnabled) }
+    var autoBackupWeekly by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoBackupWeekly) }
+    var autoBackupBeforeUpdate by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoBackupBeforeUpdate) }
 
     var backups by remember { mutableStateOf<List<File>>(emptyList()) }
     var restoreTarget by remember { mutableStateOf<File?>(null) }

@@ -84,6 +84,48 @@ dependencies there, or you break the desktop build.
     similar docs material) must be applied and pushed on **both**
     `vivi-music-de` and `vivi-music-de-apk`, with equivalent content (their
     hashes may differ). `main` stays excluded (upstream mirror).
+  - **Official repository**: everything lives in **`PiBOH/vivi-music-de`** (the
+    branch names above are unchanged). Every link in code, docs, the installer,
+    the website and the CI points there — never at the old `PiBOH/vivi-music`
+    fork. Example URLs: `https://github.com/PiBOH/vivi-music-de`,
+    `.../blob/vivi-music-de/<file>`, `.../releases`, `.../issues`, and the site
+    at `https://piboh.github.io/vivi-music-de/`.
+- **Release assets — the APK is NEVER a release asset (mandatory)**:
+  - `Auto Release (Desktop)` publishes the **desktop installers only**. It must
+    never build, wait for or attach an APK (no `ignore_apk_failure`-style
+    toggles either), and no other workflow may create an APK release.
+  - `Build Android APK` is **manual-only** (`workflow_dispatch`). It builds GMS
+    and FOSS in parallel and publishes them, with fixed file names
+    (`vivi-gsm.apk`, `vivi-foss.apk`) plus a `version.json` (version, version
+    code, channel, build time, sizes and URLs), to `.releases/apk/latest` on the
+    dedicated **`apk-latest`** branch. That branch is recreated from scratch and
+    force-pushed on every run: it must always be **one commit**, so the APK
+    binaries never accumulate in the repository history.
+  - `.releases/apk/latest` is the **only** APK download path: the website
+    (`.websitede`, `APK_BASE`), the desktop Devices screen
+    (`ApkDownloads`) and the mobile updater (`APK_LATEST_VERSION_URL`) all read
+    it, and "latest" is decided by the **version code** (chronology/version
+    code, never a version-string comparison). Use the fixed raw URLs:
+    `https://raw.githubusercontent.com/PiBOH/vivi-music-de/apk-latest/.releases/apk/latest/<file>`.
+- **`settings.json` — the user-editable options file (mandatory)**:
+  - `~/.vivimusic/settings.json` (`SettingsFile`) mirrors **options only**, keyed
+    with the app's own camelCase field names (`hide_custom_apk_download_button`
+    is the only snake_case key). `device-sync.json` remains the app's store:
+    queue, library, playlists, histories, account/credentials and pairing data.
+  - The app rewrites the file on every change (`DesktopSettings.save` →
+    `SettingsFile.mirror`) and watches it (`SettingsFile.start`), so a hand edit
+    is applied **immediately**: every option read from the store uses
+    `settingsFileRevision()` as its `remember` key. A value edited while the app
+    was closed wins at the next startup.
+  - Every new option must be classified: an *option* (goes in the mirror,
+    `SettingsFile.allowed`) or *data* (belongs in the `excluded` set —
+    credentials, API keys, histories, queue/library/playlists, pairing
+    bookkeeping, window geometry, transient session state). Keys outside that
+    list are ignored when the file is read, so the file can never inject a
+    credential or fake an account.
+  - `hide_custom_apk_download_button` (default `true`) has **no UI switch by
+    design** — it exists only in this file; it hides the Android-APK download
+    buttons on the Devices screen.
 - **Commit style**: Conventional Commits (`feat:`, `fix:`, `ci:`, `refactor:`,
   `docs:`, `chore:`, `perf:`, …) with an optional scope, e.g.
   `feat(sync): …`.
@@ -500,10 +542,10 @@ locale tag):
 ## 7. GitHub Issues workflow — MANDATORY
 
 Every user-reported problem or feature request MUST first become a GitHub
-issue on `PiBOH/vivi-music` **before any code is changed**:
+issue on `PiBOH/vivi-music-de` **before any code is changed**:
 
 1. **Check for duplicates first**:
-   `gh issue list --repo PiBOH/vivi-music --state all --search "<keywords>"`
+   `gh issue list --repo PiBOH/vivi-music-de --state all --search "<keywords>"`
    — only open a new issue when no equivalent open/closed issue exists.
 
 2. **Open the issue first** (via the `gh` CLI; on this machine it is not on
@@ -524,7 +566,7 @@ issue on `PiBOH/vivi-music` **before any code is changed**:
    the commit message (e.g. `Closes #NN` / `Fixes #NN`).
 
 4. **Close the issue** after the fix is committed and pushed:
-   `gh issue close <NN> --repo PiBOH/vivi-music`.
+   `gh issue close <NN> --repo PiBOH/vivi-music-de`.
 
 5. **NEVER close an issue opened by someone else.** Only issues authored by the
    user (they are created through the user's `gh` auth, so the author is

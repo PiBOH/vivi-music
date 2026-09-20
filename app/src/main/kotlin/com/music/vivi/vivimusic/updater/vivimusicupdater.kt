@@ -668,12 +668,26 @@ const val KEY_UPDATE_SOURCE = "update_source"
 const val UPDATE_SOURCE_ORIGINAL = "original"
 const val UPDATE_SOURCE_FORK = "fork"
 const val REPO_ORIGINAL = "vivizzz007/vivi-music"
-const val REPO_FORK = "PiBOH/vivi-music"
+const val REPO_FORK = "PiBOH/vivi-music-de"
+
+/**
+ * Where the companion APKs are published.
+ *
+ * They are **not** GitHub release assets any more (the combined releases carry
+ * the desktop installers only): the Android workflow uploads the newest GMS and
+ * FOSS builds, with fixed file names, to `.releases/apk/latest` on the dedicated
+ * `apk-latest` branch of PiBOH/vivi-music-de, next to a `version.json` that
+ * describes the build. Those URLs therefore always serve the latest build and
+ * need no GitHub API (and no API quota).
+ */
+const val APK_LATEST_BASE = "https://raw.githubusercontent.com/PiBOH/vivi-music-de/apk-latest/.releases/apk/latest"
+const val APK_LATEST_VERSION_URL = "$APK_LATEST_BASE/version.json"
 
 fun getUpdateSource(context: Context): String {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    // Default to the fork repo (PiBOH/vivi-music) where our releases are published;
-    // users can still switch back to the upstream repo in Settings (issue #21).
+    // Default to our own repo (PiBOH/vivi-music-de), whose APK channel is the
+    // apk-latest branch; users can still switch back to the upstream repo in
+    // Settings (issue #21).
     return sharedPrefs.getString(KEY_UPDATE_SOURCE, UPDATE_SOURCE_FORK) ?: UPDATE_SOURCE_FORK
 }
 
@@ -766,10 +780,9 @@ fun isNewerVersion(latestVersion: String, currentVersion: String): Boolean {
     }
     
     return false
-}
-
-// Fetches ALL releases, finds the latest version > current, and returns its info
+}    // Fetches ALL releases, finds the latest version > current, and returns its info
 suspend fun checkForUpdate(
+
     context: Context,
     onSuccess: (tag: String, isAvailable: Boolean, changelog: List<ChangelogSection>, size: String, date: String, description: String?, imageUrl: String?, apkUrl: String?) -> Unit,
     onError: () -> Unit,
@@ -789,12 +802,19 @@ suspend fun checkForUpdate(
 
             // The nightly-workflow mechanism only exists UPSTREAM (vivizzz007):
             // its nightly.yml CI produces vivi-music-gms-nightly.zip served via
-            // nightly.link. Our fork (PiBOH/vivi-music) publishes the companion
-            // APKs as GitHub RELEASES (combined alpha tags), so when the update
-            // source is the fork the prerelease channel MUST be resolved from
-            // the releases below — never from (non-existent) nightly runs.
+            // nightly.link.
             val isUpstreamSource = updateRepo(context) == REPO_ORIGINAL
-            if (betaEnabled && isUpstreamSource) {
+
+            // Our own source is resolved from the ad-hoc APK channel
+            // (.releases/apk/latest on the apk-latest branch), because our
+            // releases never carry an APK asset. Nothing about it can be read
+            // from the releases endpoint, so this is the whole check.
+            if (!isUpstreamSource) {
+                checkForkApkUpdate(context, currentVersion, onSuccess, onError)
+                return@withContext
+            }
+
+            if (betaEnabled) {
                 try {
                     val nightlyUrl = URL("https://api.github.com/repos/${updateRepo(context)}/actions/workflows/nightly.yml/runs?status=success&per_page=100")
                     val nightlyJson = nightlyUrl.openStream().bufferedReader().use { it.readText() }
@@ -1006,11 +1026,9 @@ suspend fun checkForUpdate(
 
                     var apkSizeInMB = ""
                     var apkDownloadUrl = ""
-                    // Pick the APK that matches this build: the fork releases
-                    // carry vivi-gsm.apk (Google services) and vivi-foss.apk
-                    // (no Google services), while upstream ships vivi.apk. Fall
-                    // back to any .apk asset so a release is only offered when
-                    // an APK is actually attached.
+                    // Upstream releases ship vivi.apk; fall back to any .apk
+                    // asset so a release is only offered when an APK is
+                    // actually attached.
                     val apkAssets = (0 until assets.length()).map { assets.getJSONObject(it) }
                     val expectedApk = if (BuildConfig.CAST_AVAILABLE) "vivi-gsm.apk" else "vivi-foss.apk"
                     val apkAsset = apkAssets.firstOrNull { it.getString("name") == expectedApk }
@@ -1041,6 +1059,84 @@ suspend fun checkForUpdate(
         }
     }
 }
+
+/**
+ * Update check for our own APK build (the "fork" source).
+ *
+ * Reads `.releases/apk/latest/version.json` — the manifest the Android workflow
+ * publishes next to the two APKs — and offers the build it describes. "Latest"
+ * is decided by the **version code**, exactly like the app itself is versioned
+ * (falling back to the plain version comparison when the manifest carries none),
+ * never by comparing version strings, so a change in the versioning scheme can
+ * never stall updates. The APK URL is the fixed one from the manifest, so there
+ * is nothing to look up in the GitHub API.
+ */
+private suspend fun checkForkApkUpdate(
+    context: Context,
+    currentVersion: String,
+    onSuccess: (tag: String, isAvailable: Boolean, changelog: List<ChangelogSection>, size: String, date: String, description: String?, imageUrl: String?, apkUrl: String?) -> Unit,
+    onError: () -> Unit,
+) {
+    try {
+        val json = URL(APK_LATEST_VERSION_URL).openStream().bufferedReader().use { it.readText() }
+        val doc = JSONObject(json)
+        val target = if (BuildConfig.CAST_AVAILABLE) "vivi-gsm.apk" else "vivi-foss.apk"
+
+        var apkUrl: String? = null
+        var apkSizeBytes = 0L
+        val files = doc.optJSONArray("files")
+        if (files != null) {
+            for (i in 0 until files.length()) {
+                val file = files.getJSONObject(i)
+                if (file.optString("name") == target) {
+                    apkUrl = file.optString("url").takeIf { it.isNotBlank() }
+                    apkSizeBytes = file.optLong("sizeBytes", 0L)
+                    break
+                }
+            }
+        }
+        if (apkUrl == null) {
+            // A build that does not carry the APK this app needs is not an
+            // update: say "up to date" instead of offering a broken download.
+            withContext(Dispatchers.Main) {
+                onSuccess(currentVersion, false, emptyList(), "", "", null, null, null)
+            }
+            return
+        }
+
+        val version = doc.optString("version").takeIf { it.isNotBlank() } ?: currentVersion
+        val versionCode = doc.optInt("versionCode", 0)
+        val title = doc.optString("title").takeIf { it.isNotBlank() }
+        val builtAt = doc.optString("builtAt")
+        val isNewer = if (versionCode > 0) {
+            versionCode > BuildConfig.VERSION_CODE
+        } else {
+            isNewerVersion(version, currentVersion)
+        }
+        val sizeMb = if (apkSizeBytes > 0) {
+            String.format("%.1f", apkSizeBytes / (1024.0 * 1024.0))
+        } else {
+            ""
+        }
+        val changelog = if (isNewer) {
+            listOf(
+                ChangelogSection(
+                    context.getString(R.string.changelog),
+                    listOfNotNull(title ?: version),
+                )
+            )
+        } else {
+            emptyList()
+        }
+        withContext(Dispatchers.Main) {
+            onSuccess(version, isNewer, changelog, sizeMb, formatGitHubDate(builtAt), title, null, apkUrl)
+        }
+    } catch (e: Exception) {
+        Log.e("UpdateCheck", "Error checking the APK channel: ${e.message}", e)
+        withContext(Dispatchers.Main) { onError() }
+    }
+}
+
 fun String.extractUrls(): List<Pair<IntRange, String>> {
     val urlPattern = Pattern.compile(
         "(?:^|[\\s])((https?://|www\\.|pic\\.)[\\w-]+(\\.[\\w-]+)+([/?].*)?)"

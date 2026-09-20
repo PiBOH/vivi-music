@@ -71,7 +71,7 @@ fun LoginContent(language: String, onLoggedIn: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     // Signed-in state (restored from settings on entry).
-    var accountName by remember { mutableStateOf(DesktopSettings.load().accountName) }
+    var accountName by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().accountName) }
     var isLoggedIn by remember { mutableStateOf(LoginManager.isLoggedIn()) }
 
     var manualOpen by remember { mutableStateOf(false) }

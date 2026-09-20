@@ -13,7 +13,7 @@ checksum stable and guarantees the package always matches the release content.
 
 Usage:
     python3 scripts/generate_aur_pkgbuild.py --out DIR --sha <commit-sha> \
-        [--repo PiBOH/vivi-music]
+        [--repo PiBOH/vivi-music-de]
 """
 
 import argparse
@@ -52,7 +52,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True, help="Output directory for PKGBUILD + SRCINFO")
     parser.add_argument("--sha", required=True, help="Git commit SHA the release is built from")
-    parser.add_argument("--repo", default="PiBOH/vivi-music", help="GitHub repo (owner/name)")
+    parser.add_argument("--repo", default="PiBOH/vivi-music-de", help="GitHub repo (owner/name)")
     args = parser.parse_args()
 
     version = read_version_file()

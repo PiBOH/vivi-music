@@ -320,10 +320,34 @@ fun main(args: Array<String>) {
     installGlobalErrorDialog()
 
     application {
+    // The user-editable settings file (~/.vivimusic/settings.json): adopt what it
+    // holds (a value edited while the app was closed must win over the last one
+    // stored by the app), create it when it is missing, and watch it for edits
+    // made while the app runs. It has to run before the first load of the
+    // session, which is why it is the very first thing here.
+    SettingsFile.start()
+
     // Configure the shared YouTube client exactly like the Android App.onCreate() does,
     // honouring the saved content language/region (or the OS default).
     val initialSettings = DesktopSettings.load()
+
+    // Bumped whenever settings.json is edited from outside the app. Every option
+    // read from the store uses it as a remember key (`settingsFileRevision()`),
+    // so a hand-edited file takes effect immediately instead of at the next
+    // restart.
+    val settingsRevision = settingsFileRevision()
+
     YouTube.locale = resolveYouTubeLocale(initialSettings.contentLanguage, initialSettings.contentCountry)
+
+    // The options that are cached outside Compose follow an edit of the file too.
+    LaunchedEffect(settingsRevision) {
+        if (settingsRevision <= 0L) return@LaunchedEffect
+        runCatching { AudioOutput.load() }
+        runCatching { Animations.load() }
+        runCatching { DeveloperOptions.load() }
+        val current = DesktopSettings.load()
+        YouTube.locale = resolveYouTubeLocale(current.contentLanguage, current.contentCountry)
+    }
     YouTubeExtractor.cacheDir = File(System.getProperty("user.home"), ".vivimusic/cache").apply { mkdirs() }
     LoginManager.restore()
     DesktopSettings.ensureFirstLaunchDate()
@@ -338,19 +362,19 @@ fun main(args: Array<String>) {
 
     // Bootup speed: the settings file is parsed exactly ONCE (initialSettings)
     // instead of one disk read + JSON parse per setting (~12 of them here).
-    var language by remember { mutableStateOf(initialSettings.language) }
-    var themeMode by remember { mutableStateOf(ThemeMode.from(initialSettings.darkMode)) }
-    var accent by remember { mutableStateOf(argbIntToColor(initialSettings.accentColor)) }
-    var accentIntensity by remember { mutableStateOf(initialSettings.accentIntensity) }
-    var customAccents by remember { mutableStateOf(initialSettings.customAccents) }
-    var pureBlack by remember { mutableStateOf(initialSettings.pureBlack) }
-    var selectedFont by remember { mutableStateOf(AppFont.fromValue(initialSettings.selectedFont)) }
-    var customFontPath by remember { mutableStateOf(initialSettings.customFontPath) }
+    var language by remember(settingsFileRevision()) { mutableStateOf(initialSettings.language) }
+    var themeMode by remember(settingsFileRevision()) { mutableStateOf(ThemeMode.from(initialSettings.darkMode)) }
+    var accent by remember(settingsFileRevision()) { mutableStateOf(argbIntToColor(initialSettings.accentColor)) }
+    var accentIntensity by remember(settingsFileRevision()) { mutableStateOf(initialSettings.accentIntensity) }
+    var customAccents by remember(settingsFileRevision()) { mutableStateOf(initialSettings.customAccents) }
+    var pureBlack by remember(settingsFileRevision()) { mutableStateOf(initialSettings.pureBlack) }
+    var selectedFont by remember(settingsFileRevision()) { mutableStateOf(AppFont.fromValue(initialSettings.selectedFont)) }
+    var customFontPath by remember(settingsFileRevision()) { mutableStateOf(initialSettings.customFontPath) }
     // Make the runtime-imported font resolvable before the first theme pass.
     if (customFontPath.isNotBlank()) AppFonts.customFontPath = customFontPath
     // Spotify-style layout (3 panels) + flat theme, applied together. Default
     // on; when false the app falls back to the Material 3 tonal look.
-    var spotifyLayout by remember { mutableStateOf(initialSettings.spotifyLayout) }
+    var spotifyLayout by remember(settingsFileRevision()) { mutableStateOf(initialSettings.spotifyLayout) }
 
     fun saveTheme() {
         DesktopSettings.update {
@@ -405,7 +429,7 @@ fun main(args: Array<String>) {
         }
     }
 
-    var isFullscreen by remember { mutableStateOf(DesktopSettings.load().isFullscreen) }
+    var isFullscreen by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().isFullscreen) }
     // Native OS title bar vs VIVI's custom one (window chrome is fixed at
     // creation, so this applies on the next launch).
     // LIVE value used by the toggle UI (saved on change). The actual window
@@ -413,7 +437,7 @@ fun main(args: Array<String>) {
     // cannot change on a displayed frame — Compose's `SwingWindow` calls
     // `setUndecorated()` on the live frame when the parameter changes, which
     // throws `IllegalComponentStateException: The frame is displayable`.
-    var nativeTitleBar by remember { mutableStateOf(initialSettings.nativeTitleBar) }
+    var nativeTitleBar by remember(settingsFileRevision()) { mutableStateOf(initialSettings.nativeTitleBar) }
     // FROZEN at first composition: the window chrome fixed at creation. It is
     // deliberately never updated after startup, so flipping the toggle can
     // never trigger a runtime `setUndecorated` on the shown frame; the new
@@ -421,7 +445,7 @@ fun main(args: Array<String>) {
     val nativeTitleBarAtStartup = remember { initialSettings.nativeTitleBar }
     // Tracks the OS-maximized state (updated by the AWT listener below) so the
     // custom title-bar buttons reflect the real window placement.
-    var windowMaximized by remember { mutableStateOf(initialSettings.windowMaximized) }
+    var windowMaximized by remember(settingsFileRevision()) { mutableStateOf(initialSettings.windowMaximized) }
     // Placement before entering fullscreen, so leaving it restores exactly
     // where the window was (floating bounds or maximized).
     var preFullscreenMaximized by remember { mutableStateOf(false) }
@@ -611,6 +635,9 @@ fun main(args: Array<String>) {
             // registrar and crash with "layouts are not part of the same
             // hierarchy" on pointer events (see Compose CMP-2326). Use targeted
             // SelectionContainer wrappers on individual text instead.
+            // Deliberately NOT keyed on the settings revision: the splash is a
+            // one-shot, and re-reading its option would replay it over the UI
+            // every time settings.json is edited.
             var showIntro by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
             Crossfade(
                 targetState = showIntro,
@@ -813,9 +840,9 @@ fun WindowScope.App(
     }
 
     // Cider-style desktop features state (floating widget, media keys, tray menu).
-    var showWidget by remember { mutableStateOf(DesktopSettings.load().showNowPlayingWidget) }
-    var mediaKeysEnabled by remember { mutableStateOf(DesktopSettings.load().mediaKeysEnabled) }
-    var trayMenuEnabled by remember { mutableStateOf(DesktopSettings.load().trayMenuEnabled) }
+    var showWidget by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showNowPlayingWidget) }
+    var mediaKeysEnabled by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().mediaKeysEnabled) }
+    var trayMenuEnabled by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().trayMenuEnabled) }
 
     // Cider-style desktop integrations: global media keys (Windows hook),
     // tray right-click menu and tray tooltip with the current track.
@@ -938,27 +965,27 @@ fun WindowScope.App(
         )
     }
 
-    var autoPlayNext by remember { mutableStateOf(DesktopSettings.load().autoPlayNext) }
+    var autoPlayNext by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoPlayNext) }
     player.autoPlayNext = autoPlayNext
-    var autoLoadMore by remember { mutableStateOf(DesktopSettings.load().autoLoadMore) }
+    var autoLoadMore by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoLoadMore) }
     player.autoLoadMore = autoLoadMore
-    var preventDuplicateTracksInQueue by remember { mutableStateOf(DesktopSettings.load().preventDuplicateTracksInQueue) }
+    var preventDuplicateTracksInQueue by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().preventDuplicateTracksInQueue) }
     player.preventDuplicateTracksInQueue = preventDuplicateTracksInQueue
-    var autoSkipNextOnError by remember { mutableStateOf(DesktopSettings.load().autoSkipNextOnError) }
+    var autoSkipNextOnError by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoSkipNextOnError) }
     player.autoSkipNextOnError = autoSkipNextOnError
-    var pauseWhenMediaMuted by remember { mutableStateOf(DesktopSettings.load().pauseWhenMediaMuted) }
-    var keepScreenOnWhenPlayerExpanded by remember { mutableStateOf(DesktopSettings.load().keepScreenOnWhenPlayerExpanded) }
+    var pauseWhenMediaMuted by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseWhenMediaMuted) }
+    var keepScreenOnWhenPlayerExpanded by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().keepScreenOnWhenPlayerExpanded) }
 
-    var persistentShuffle by remember { mutableStateOf(DesktopSettings.load().persistentShuffle) }
+    var persistentShuffle by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().persistentShuffle) }
     player.persistentShuffleAcrossQueues = persistentShuffle
-    var progressiveSeek by remember { mutableStateOf(DesktopSettings.load().progressiveSeek) }
-    var historyDurationSeconds by remember { mutableStateOf(DesktopSettings.load().historyDurationSeconds) }
-    var autoDownloadOnLike by remember { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
-    var skipSilence by remember { mutableStateOf(DesktopSettings.load().skipSilence) }
-    var skipSilenceInstant by remember { mutableStateOf(DesktopSettings.load().skipSilenceInstant) }
-    var crossfade by remember { mutableStateOf(DesktopSettings.load().crossfade) }
-    var crossfadeDurationSeconds by remember { mutableStateOf(DesktopSettings.load().crossfadeDurationSeconds) }
-    var disableCrossfadeGapless by remember { mutableStateOf(DesktopSettings.load().disableCrossfadeGapless) }
+    var progressiveSeek by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().progressiveSeek) }
+    var historyDurationSeconds by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().historyDurationSeconds) }
+    var autoDownloadOnLike by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().autoDownloadOnLike) }
+    var skipSilence by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().skipSilence) }
+    var skipSilenceInstant by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().skipSilenceInstant) }
+    var crossfade by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().crossfade) }
+    var crossfadeDurationSeconds by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().crossfadeDurationSeconds) }
+    var disableCrossfadeGapless by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().disableCrossfadeGapless) }
 
     // "Auto download on like": cache a song into the audio cache the moment it
     // is liked (the setting is read live when the like happens).
@@ -970,29 +997,29 @@ fun WindowScope.App(
 
     // Bootup speed: parse the settings file once for the whole settings block
     // instead of one disk read + JSON parse per option.
-    val startupSettings = remember { DesktopSettings.load() }
-    var densityScale by remember { mutableStateOf(startupSettings.densityScale) }
-    var gridItemSize by remember { mutableStateOf(startupSettings.gridItemSize) }
-    var screenTransition by remember { mutableStateOf(startupSettings.screenTransition) }
-    var animationsEnabled by remember { mutableStateOf(startupSettings.animationsEnabled) }
-    var animationSpeed by remember { mutableStateOf(startupSettings.animationSpeed) }
-    var sliderStyle by remember { mutableStateOf(startupSettings.sliderStyle) }
-    var playerDesign by remember { mutableStateOf(PlayerDesign.from(startupSettings.playerDesign)) }
-    var playerBackground by remember { mutableStateOf(PlayerBackgroundStyle.from(startupSettings.playerBackground)) }
-    var rotatingThumbnail by remember { mutableStateOf(startupSettings.rotatingThumbnail) }
-    var miniPlayerDesign by remember { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
-    var miniPlayerBackgroundStyle by remember { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
-    var pureBlackMiniPlayer by remember { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
-    var showRightSidebar by remember { mutableStateOf(DesktopSettings.load().showRightSidebar) }
-    var homeUseLastListen by remember { mutableStateOf(DesktopSettings.load().homeUseLastListen) }
-    var randomizeHomeOrder by remember { mutableStateOf(DesktopSettings.load().randomizeHomeOrder) }
-    var showWrappedOnHome by remember { mutableStateOf(DesktopSettings.load().showWrappedOnHome) }
-    var showIntroSplash by remember { mutableStateOf(DesktopSettings.load().showIntroSplash) }
-    var introStyle by remember { mutableStateOf(DesktopSettings.load().introStyle) }
-    var introBackground by remember { mutableStateOf(DesktopSettings.load().introBackground) }
-    var pauseSearchHistory by remember { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
-    var pauseListenHistory by remember { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
-    var searchHistory by remember { mutableStateOf(DesktopSettings.load().searchHistory) }
+    val startupSettings = remember(settingsFileRevision()) { DesktopSettings.load() }
+    var densityScale by remember(settingsFileRevision()) { mutableStateOf(startupSettings.densityScale) }
+    var gridItemSize by remember(settingsFileRevision()) { mutableStateOf(startupSettings.gridItemSize) }
+    var screenTransition by remember(settingsFileRevision()) { mutableStateOf(startupSettings.screenTransition) }
+    var animationsEnabled by remember(settingsFileRevision()) { mutableStateOf(startupSettings.animationsEnabled) }
+    var animationSpeed by remember(settingsFileRevision()) { mutableStateOf(startupSettings.animationSpeed) }
+    var sliderStyle by remember(settingsFileRevision()) { mutableStateOf(startupSettings.sliderStyle) }
+    var playerDesign by remember(settingsFileRevision()) { mutableStateOf(PlayerDesign.from(startupSettings.playerDesign)) }
+    var playerBackground by remember(settingsFileRevision()) { mutableStateOf(PlayerBackgroundStyle.from(startupSettings.playerBackground)) }
+    var rotatingThumbnail by remember(settingsFileRevision()) { mutableStateOf(startupSettings.rotatingThumbnail) }
+    var miniPlayerDesign by remember(settingsFileRevision()) { mutableStateOf(MiniPlayerDesign.from(DesktopSettings.load().miniPlayerDesign)) }
+    var miniPlayerBackgroundStyle by remember(settingsFileRevision()) { mutableStateOf(MiniPlayerBackgroundStyle.from(DesktopSettings.load().miniPlayerBackgroundStyle)) }
+    var pureBlackMiniPlayer by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pureBlackMiniPlayer) }
+    var showRightSidebar by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showRightSidebar) }
+    var homeUseLastListen by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().homeUseLastListen) }
+    var randomizeHomeOrder by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().randomizeHomeOrder) }
+    var showWrappedOnHome by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showWrappedOnHome) }
+    var showIntroSplash by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showIntroSplash) }
+    var introStyle by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().introStyle) }
+    var introBackground by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().introBackground) }
+    var pauseSearchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
+    var pauseListenHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
+    var searchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().searchHistory) }
     val recordSearch: (String) -> Unit = { term ->
         if (!pauseSearchHistory && term.isNotBlank()) {
             val updated = (listOf(term.trim()) + searchHistory.filter { !it.equals(term.trim(), ignoreCase = true) }).take(12)
@@ -1028,8 +1055,8 @@ fun WindowScope.App(
             lastSessionPosition = pos
         }
     }
-    var canvasEnabled by remember { mutableStateOf(DesktopSettings.load().canvasEnabled) }
-    var canvasSource by remember { mutableStateOf(CanvasSource.from(DesktopSettings.load().canvasSource)) }
+    var canvasEnabled by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().canvasEnabled) }
+    var canvasSource by remember(settingsFileRevision()) { mutableStateOf(CanvasSource.from(DesktopSettings.load().canvasSource)) }
 
     // Guest sessions need a visitorData (like the Android app) or YouTube flags
     // the requests as bots and 403s audio playback.
@@ -1049,8 +1076,8 @@ fun WindowScope.App(
     }
 
     var isLoggedIn by remember { mutableStateOf(LoginManager.isLoggedIn()) }
-    var accountName by remember { mutableStateOf(DesktopSettings.load().accountName) }
-    var accountChannelHandle by remember { mutableStateOf(DesktopSettings.load().accountChannelHandle) }
+    var accountName by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().accountName) }
+    var accountChannelHandle by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().accountChannelHandle) }
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
@@ -1075,26 +1102,26 @@ fun WindowScope.App(
         "Not signed in"
     }
 
-    var sidebarCollapsed by remember { mutableStateOf(DesktopSettings.load().sidebarCollapsed) }
-    var contentLanguage by remember { mutableStateOf(DesktopSettings.load().contentLanguage) }
-    var contentCountry by remember { mutableStateOf(DesktopSettings.load().contentCountry) }
-    var syncedLyrics by remember { mutableStateOf(DesktopSettings.load().syncedLyrics) }
-    var audioQuality by remember { mutableStateOf(DesktopSettings.load().audioQuality) }
-    var rememberShuffleRepeat by remember { mutableStateOf(DesktopSettings.load().rememberShuffleRepeat) }
-    var persistentQueue by remember { mutableStateOf(DesktopSettings.load().persistentQueue) }
-    var syncViviVolume by remember { mutableStateOf(DesktopSettings.load().syncViviVolume) }
-    var lyricsTextSize by remember { mutableStateOf(DesktopSettings.load().lyricsTextSize) }
-    var lyricsLineSpacing by remember { mutableStateOf(DesktopSettings.load().lyricsLineSpacing) }
+    var sidebarCollapsed by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().sidebarCollapsed) }
+    var contentLanguage by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().contentLanguage) }
+    var contentCountry by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().contentCountry) }
+    var syncedLyrics by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().syncedLyrics) }
+    var audioQuality by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().audioQuality) }
+    var rememberShuffleRepeat by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().rememberShuffleRepeat) }
+    var persistentQueue by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().persistentQueue) }
+    var syncViviVolume by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().syncViviVolume) }
+    var lyricsTextSize by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsTextSize) }
+    var lyricsLineSpacing by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsLineSpacing) }
     // Animation style + display options (mobile lyrics port). Kept as one object
     // so the renderer, the settings screen and the file always agree.
-    var lyricsDisplay by remember { mutableStateOf(lyricsDisplayOptionsFrom(DesktopSettings.load())) }
-    var translateLyrics by remember { mutableStateOf(DesktopSettings.load().translateLyrics) }
-    var streamCacheMinutes by remember { mutableStateOf(DesktopSettings.load().streamCacheMinutes) }
-    var discordRpcEnabled by remember { mutableStateOf(DesktopSettings.load().discordRpcEnabled) }
-    var discordClientId by remember { mutableStateOf(DesktopSettings.load().discordClientId) }
-    var lastfmEnabled by remember { mutableStateOf(DesktopSettings.load().lastfmEnabled) }
-    var lastfmSession by remember { mutableStateOf(DesktopSettings.load().lastfmSession) }
-    var lastfmNowPlaying by remember { mutableStateOf(DesktopSettings.load().lastfmNowPlaying) }
+    var lyricsDisplay by remember(settingsFileRevision()) { mutableStateOf(lyricsDisplayOptionsFrom(DesktopSettings.load())) }
+    var translateLyrics by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().translateLyrics) }
+    var streamCacheMinutes by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().streamCacheMinutes) }
+    var discordRpcEnabled by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().discordRpcEnabled) }
+    var discordClientId by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().discordClientId) }
+    var lastfmEnabled by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lastfmEnabled) }
+    var lastfmSession by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lastfmSession) }
+    var lastfmNowPlaying by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lastfmNowPlaying) }
 
     // Integrations: initialize Last.fm with env-provided credentials (like the
     // mobile BuildConfig) and mirror the Discord toggles to the RPC client.
@@ -1298,7 +1325,7 @@ fun WindowScope.App(
 
     val playSong: (SongItem) -> Unit = { song -> player.play(songToNowPlaying(song)) }
     val addToQueue: (SongItem) -> Unit = { song -> player.addToQueue(songToNowPlaying(song)) }
-    var recognitionHistory by remember { mutableStateOf(DesktopSettings.load().recognitionHistory) }
+    var recognitionHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().recognitionHistory) }
     var addToPlaylistSong by remember { mutableStateOf<SyncedSong?>(null) }
     val addToPlaylist: (SongItem) -> Unit = { song -> addToPlaylistSong = song.toSyncedSong() }
     // Same, but for the Player / Queue (which carry NowPlaying, not SongItem).
@@ -1341,11 +1368,11 @@ fun WindowScope.App(
             DesktopSettings.load().includePreReleases || AppInfo.CHANNEL.lowercase() != "stable"
         )
     }
-    var updateIntervalHours by remember { mutableStateOf(DesktopSettings.load().updateCheckIntervalHours) }
-    var updateSource by remember { mutableStateOf(DesktopSettings.load().updateSource) }
-    var notificationMode by remember { mutableStateOf(DesktopSettings.load().notificationMode) }
-    var notificationDurationSeconds by remember { mutableStateOf(DesktopSettings.load().inAppNotificationDurationSeconds) }
-    var saveNotificationHistory by remember { mutableStateOf(DesktopSettings.load().saveNotificationHistory) }
+    var updateIntervalHours by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().updateCheckIntervalHours) }
+    var updateSource by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().updateSource) }
+    var notificationMode by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().notificationMode) }
+    var notificationDurationSeconds by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().inAppNotificationDurationSeconds) }
+    var saveNotificationHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().saveNotificationHistory) }
     var updateStatus by remember { mutableStateOf<UpdateStatus>(UpdateStatus.Idle) }
     // Keep the shared download state (used by both the notification and the
     // Updates screen) in sync with the latest update status.
@@ -2499,7 +2526,7 @@ fun WindowScope.App(
                         // Local observable state: DesktopSettings.load() is a plain
                         // file read, so without this the Switch would only reflect
                         // the change after leaving and re-entering the screen.
-                        var dataSaver by remember { mutableStateOf(DesktopSettings.load().dataSaver) }
+                        var dataSaver by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().dataSaver) }
                         SettingsDataSaverScreen(
                             language = language,
                             onBack = goBack,
@@ -4960,47 +4987,52 @@ fun DeviceSyncSection(
 
     DeviceSyncHowTo(language, relayMode)
 
-    // Download link for the mobile version of VIVI (the Android APK), so the
-    // phone runs the matching build before pairing. The APK URL is fetched
-    // from the latest GitHub release (follows the selected update source); if
-    // no APK is found, the releases page opens instead.
-    var openingDownload by remember { mutableStateOf(false) }
-    var downloadFailed by remember { mutableStateOf(false) }
-    val syncScope = rememberCoroutineScope()
-    OutlinedButton(
-        onClick = {
-            syncScope.launch {
-                openingDownload = true
-                downloadFailed = false
-                val asset = withContext(Dispatchers.IO) { UpdateChecker.latestApkAsset() }
-                val opened = if (asset != null && asset.browserDownloadUrl.isNotBlank()) {
-                    openUrl(asset.browserDownloadUrl)
-                } else {
-                    openUrl("https://github.com/${UpdateSource.repo()}/releases")
-                }
-                openingDownload = false
-                if (!opened) downloadFailed = true
-            }
-        },
-        enabled = !openingDownload,
-        modifier = Modifier.padding(top = 8.dp),
-    ) {
-        Icon(
-            Icons.Filled.Download,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(Localization.get(language, if (openingDownload) "opening_download" else "download_mobile_apk"))
+    // Download links for the Android APKs, so the phone runs the matching build
+    // before pairing. They are not release assets any more: 'Build Android APK'
+    // publishes the newest GMS/FOSS builds to .releases/apk/latest on the
+    // apk-latest branch, so those fixed URLs always serve the latest build.
+    //
+    // The whole section disappears when `hide_custom_apk_download_button` is true
+    // in settings.json — which is the default, and the only place that option
+    // exists (there is no switch for it anywhere in the UI).
+    val hideApkDownload by remember(settingsFileRevision()) {
+        mutableStateOf(DesktopSettings.load().hideCustomApkDownloadButton)
     }
-    if (downloadFailed) {
+    val syncScope = rememberCoroutineScope()
+    if (!hideApkDownload) {
+        var downloadFailed by remember { mutableStateOf(false) }
         Text(
-            Localization.get(language, "open_failed"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 4.dp),
+            Localization.get(language, "download_mobile_apk"),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 8.dp),
         )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 6.dp),
+        ) {
+            // GMS first: it is the build that installs on any phone. "GMS"/"FOSS"
+            // are variant names (file names), not prose, so they stay untranslated.
+            listOf("GMS" to ApkDownloads.GMS_URL, "FOSS" to ApkDownloads.FOSS_URL).forEach { (label, url) ->
+                OutlinedButton(onClick = { if (!openUrl(url)) downloadFailed = true }) {
+                    Icon(
+                        Icons.Filled.Download,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(label)
+                }
+            }
+        }
+        if (downloadFailed) {
+            Text(
+                Localization.get(language, "open_failed"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
     }
 
     SettingSwitch(
@@ -5909,7 +5941,7 @@ fun AboutSection(language: String, onOpenContributors: () -> Unit) {
     AboutInfoRow(
         icon = GithubIcon,
         title = Localization.get(language, "github_repository"),
-        onClick = { openUrl("https://github.com/PiBOH/vivi-music") },
+        onClick = { openUrl("https://github.com/PiBOH/vivi-music-de") },
     )
     AboutInfoRow(
         icon = Icons.Filled.Send,
@@ -5952,7 +5984,7 @@ fun AboutSection(language: String, onOpenContributors: () -> Unit) {
     AboutInfoRow(
         icon = Icons.Filled.Description,
         title = Localization.get(language, "license"),
-        onClick = { openUrl("https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE") },
+        onClick = { openUrl("https://github.com/PiBOH/vivi-music-de/blob/vivi-music-de/LICENSE") },
     )
 }
 
@@ -6081,7 +6113,7 @@ private fun loadContributors(): List<ContributorEntry> {
  * locally cached/bundled list, so the About screen degrades gracefully.
  */
 private fun fetchContributorsFromGitHub(): List<ContributorEntry> = runCatching {
-    val url = URI("https://raw.githubusercontent.com/PiBOH/vivi-music/vivi-music-de/contributorsde.json").toURL()
+    val url = URI("https://raw.githubusercontent.com/PiBOH/vivi-music-de/vivi-music-de/contributorsde.json").toURL()
     val conn = url.openConnection() as java.net.HttpURLConnection
     try {
         conn.connectTimeout = 8000
