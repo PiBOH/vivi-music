@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Начало</string>
+    <string name="nav_library">Библиотека</string>
+    <string name="nav_settings">Настройки</string>
+    <string name="nav_favorites">Любими</string>
+    <string name="nav_history">История</string>
+    <string name="nav_playlists">Плейлисти</string>
+    <string name="search_placeholder">Търсене на песни, изпълнители, албуми</string>
+    <string name="settings_language">Език на приложението</string>
+    <string name="system_language">По подразбиране на системата</string>
+    <string name="playing_now">Сега се изпълнява</string>
+    <string name="sync_status">Състояние на синхронизиране</string>
+    <string name="sync_synced">Синхронизирано</string>
+    <string name="sync_syncing">Синхронизира се</string>
+    <string name="sync_offline">Офлайн</string>
+    <string name="retry">Опитай отново</string>
+    <string name="play">Пускане</string>
+    <string name="favorite_add">Запази</string>
+    <string name="favorite_remove">Премахни</string>
+    <string name="new_playlist">Нов плейлист</string>
+    <string name="delete">Изтрий</string>
+</resources>

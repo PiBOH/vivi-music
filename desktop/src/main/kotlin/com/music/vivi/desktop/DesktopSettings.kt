@@ -1,6 +1,7 @@
 package com.music.vivi.desktop
 
 import com.music.vivi.sync.LibrarySnapshot
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.encodeToJsonElement
@@ -205,7 +206,7 @@ data class DesktopSyncState(
     val devShowInTitleBar: Boolean = false,
     val devProfile: String = "FULL",
     val updateCheckIntervalHours: Int = 24,
-    /** Update source: "fork" (PiBOH/vivi-music, default) or "original" (vivizzz007/vivi-music). */
+    /** Update source: "fork" (PiBOH/vivi-music-de, default) or "original" (vivizzz007/vivi-music). */
     val updateSource: String = "fork",
     /** Where update notifications are shown: "in_app" (default) or "native". */
     val notificationMode: String = "in_app",
@@ -278,6 +279,15 @@ data class DesktopSyncState(
     val deeplApiKey: String = "",
     /** DeepL formality: "default" / "more" / "less". */
     val deeplFormality: String = "default",
+    /**
+     * Hides the "download the Android APK" button on the Devices (sync) screen.
+     *
+     * There is deliberately no switch for this one in the UI: it is an option
+     * that only exists in `~/.vivimusic/settings.json` (see [SettingsFile]), and
+     * it defaults to true (hidden).
+     */
+    @SerialName("hide_custom_apk_download_button")
+    val hideCustomApkDownloadButton: Boolean = true,
 )
 
 object DesktopSettings {
@@ -322,6 +332,11 @@ object DesktopSettings {
             } catch (_: Exception) {
                 // best-effort
             }
+            // Keep the human-editable mirror (settings.json) in step with every
+            // change made from the UI, so editing it is always starting from the
+            // current options. Inside the lock, so two writers cannot land in
+            // the file out of order.
+            SettingsFile.mirror(state)
         }
     }
 

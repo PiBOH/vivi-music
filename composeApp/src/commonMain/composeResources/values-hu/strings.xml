@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Kezdőlap</string>
+    <string name="nav_library">Könyvtár</string>
+    <string name="nav_settings">Beállítások</string>
+    <string name="nav_favorites">Kedvencek</string>
+    <string name="nav_history">Előzmények</string>
+    <string name="nav_playlists">Lejátszási listák</string>
+    <string name="search_placeholder">Dalok, előadók, albumok keresése</string>
+    <string name="settings_language">Alkalmazás nyelve</string>
+    <string name="system_language">Rendszer alapértelmezett</string>
+    <string name="playing_now">Most játszik</string>
+    <string name="sync_status">Szinkronizálás állapota</string>
+    <string name="sync_synced">Szinkronizálva</string>
+    <string name="sync_syncing">Szinkronizálás</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Újra</string>
+    <string name="play">Lejátszás</string>
+    <string name="favorite_add">Mentés</string>
+    <string name="favorite_remove">Eltávolítás</string>
+    <string name="new_playlist">Új lejátszási lista</string>
+    <string name="delete">Törlés</string>
+</resources>

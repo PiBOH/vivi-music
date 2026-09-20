@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">முகப்பு</string>
+    <string name="nav_library">நூலகம்</string>
+    <string name="nav_settings">அமைப்புகள்</string>
+    <string name="nav_favorites">பிடித்தவை</string>
+    <string name="nav_history">வரலாறு</string>
+    <string name="nav_playlists">பிளேலிஸ்ட்கள்</string>
+    <string name="search_placeholder">பாடல்கள், கலைஞர்கள், ஆல்பங்களைத் தேடு</string>
+    <string name="settings_language">பயன்பாட்டு மொழி</string>
+    <string name="system_language">கணினி இயல்புநிலை</string>
+    <string name="playing_now">இப்போது இயங்குகிறது</string>
+    <string name="sync_status">ஒத்திசைவு நிலை</string>
+    <string name="sync_synced">ஒத்திசைந்தது</string>
+    <string name="sync_syncing">ஒத்திசைக்கிறது</string>
+    <string name="sync_offline">ஆஃப்லைன்</string>
+    <string name="retry">மீண்டும் முயற்சி</string>
+    <string name="play">இயக்கு</string>
+    <string name="favorite_add">சேமி</string>
+    <string name="favorite_remove">அகற்று</string>
+    <string name="new_playlist">புதிய பிளேலிஸ்ட்</string>
+    <string name="delete">நீக்கு</string>
+</resources>

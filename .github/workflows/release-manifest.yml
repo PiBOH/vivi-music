@@ -54,9 +54,9 @@ jobs:
           set -euo pipefail
           gh api --paginate --slurp \
             -H "Accept: application/vnd.github+json" \
-            "repos/PiBOH/vivi-music/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+            "repos/PiBOH/vivi-music-de/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
           gh api -H "Accept: application/vnd.github+json" \
-            "repos/PiBOH/vivi-music" > "$RUNNER_TEMP/repo.json"
+            "repos/PiBOH/vivi-music-de" > "$RUNNER_TEMP/repo.json"
           node -e 'const a=require(process.env.RUNNER_TEMP+"/releases.json");console.log("pages:",Array.isArray(a[0])?a.length:1)' || true
 
       - name: Build the manifest

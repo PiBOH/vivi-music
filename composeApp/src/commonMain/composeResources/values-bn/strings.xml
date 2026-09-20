@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">হোম</string>
+    <string name="nav_library">লাইব্রেরি</string>
+    <string name="nav_settings">সেটিংস</string>
+    <string name="nav_favorites">প্রিয়</string>
+    <string name="nav_history">ইতিহাস</string>
+    <string name="nav_playlists">প্লেলিস্ট</string>
+    <string name="search_placeholder">গান, শিল্পী, অ্যালবাম খুঁজুন</string>
+    <string name="settings_language">অ্যাপের ভাষা</string>
+    <string name="system_language">সিস্টেম ডিফল্ট</string>
+    <string name="playing_now">এখন চলছে</string>
+    <string name="sync_status">সিঙ্ক স্থিতি</string>
+    <string name="sync_synced">সিঙ্ক হয়েছে</string>
+    <string name="sync_syncing">সিঙ্ক হচ্ছে</string>
+    <string name="sync_offline">অফলাইন</string>
+    <string name="retry">আবার চেষ্টা করুন</string>
+    <string name="play">চালান</string>
+    <string name="favorite_add">সংরক্ষণ</string>
+    <string name="favorite_remove">সরান</string>
+    <string name="new_playlist">নতুন প্লেলিস্ট</string>
+    <string name="delete">মুছুন</string>
+</resources>

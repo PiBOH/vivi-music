@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://github.com/PiBOH/vivi-music">
+  <a href="https://github.com/PiBOH/vivi-music-de">
     <img src="desktop/icons/logo_vmde.png" alt="VIVI Music DE Logo" width="150"/>
   </a>
   <br>
@@ -7,16 +7,16 @@
   <h3>More Than Just Music — Your Ultimate Audio Experience, on Desktop</h3>
 
   <p>
-    <a href="https://github.com/PiBOH/vivi-music/releases">
-      <img src="https://img.shields.io/github/v/release/PiBOH/vivi-music?label=Download&style=for-the-badge&color=4CAF50" alt="Download Latest">
+    <a href="https://github.com/PiBOH/vivi-music-de/releases">
+      <img src="https://img.shields.io/github/v/release/PiBOH/vivi-music-de?label=Download&style=for-the-badge&color=4CAF50" alt="Download Latest">
     </a>
-    <a href="https://github.com/PiBOH/vivi-music/releases">
-      <img src="https://img.shields.io/github/downloads/PiBOH/vivi-music/total?style=for-the-badge&color=blue" alt="Downloads">
+    <a href="https://github.com/PiBOH/vivi-music-de/releases">
+      <img src="https://img.shields.io/github/downloads/PiBOH/vivi-music-de/total?style=for-the-badge&color=blue" alt="Downloads">
     </a>
     <a href="LICENSE">
       <img src="https://img.shields.io/badge/license-modifed_gpl_v3-brightgreen?style=for-the-badge&link=https%3A%2F%2Fgithub.com%2FPiBOH%2Fvivi-music%2Fblob%2Fvivi-music-de%2FLICENSE" alt="License">
     </a>
-    <a href="https://piboh.github.io/vivi-music/">
+    <a href="https://piboh.github.io/vivi-music-de/">
       <img src="https://img.shields.io/badge/Website-VIVI%20Music%20DE-ED5564?style=for-the-badge" alt="Website">
     </a>
     <a href="https://t.me/vivimusicde">
@@ -75,7 +75,7 @@
   </tr>
 </table>
 
-<p align="center">Grab the latest installer for your system from the <a href="https://github.com/PiBOH/vivi-music/releases">Releases</a> page.</p>
+<p align="center">Grab the latest installer for your system from the <a href="https://github.com/PiBOH/vivi-music-de/releases">Releases</a> page.</p>
 
 <hr>
 
@@ -142,7 +142,7 @@
 
 <h2>🔗 Pairing with your phone</h2>
 
-<p>VIVI Music DE syncs with the <a href="https://github.com/PiBOH/vivi-music/releases/latest">VIVI Music</a> Android app:</p>
+<p>VIVI Music DE syncs with the <a href="https://github.com/PiBOH/vivi-music-de/releases/latest">VIVI Music</a> Android app:</p>
 
 <ol>
   <li>On the desktop, open <strong>Settings → Device sync</strong> and tap <strong>Start LAN server</strong> (same Wi-Fi), or connect to a relay server.</li>
@@ -227,9 +227,9 @@
         </a>
         <br><br>
         <sub>
-          <a href="https://github.com/PiBOH/vivi-music/issues">🐞 Report Bugs</a> &nbsp;•&nbsp;
-          <a href="https://github.com/PiBOH/vivi-music/discussions">💬 Discussions</a> &nbsp;•&nbsp;
-          <a href="https://github.com/PiBOH/vivi-music/releases">🚀 Releases</a>
+          <a href="https://github.com/PiBOH/vivi-music-de/issues">🐞 Report Bugs</a> &nbsp;•&nbsp;
+          <a href="https://github.com/PiBOH/vivi-music-de/discussions">💬 Discussions</a> &nbsp;•&nbsp;
+          <a href="https://github.com/PiBOH/vivi-music-de/releases">🚀 Releases</a>
         </sub>
       </td>
     </tr>

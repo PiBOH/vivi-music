@@ -8,11 +8,6 @@ on:
         required: false
         type: string
         default: ''
-      ignore_apk_failure:
-        description: 'Publish anyway when the Android APK build failed or its APKs are missing (manual dispatch only)'
-        required: false
-        type: boolean
-        default: false
   push:
     branches: [ vivi-music-de, main, beta ]
     tags-ignore: [ '**' ]
@@ -44,22 +39,20 @@ jobs:
     uses: ./.github/workflows/build-desktop-macos.yml
     secrets: inherit
 
-  # The Android APKs are not built here: build-android.yml triggers on the
-  # same release signal (commit starting with "v") and builds the GMS and
-  # FOSS release APKs in parallel. The release job below waits for that run
-  # and downloads both APKs, so every release ships vivi-gsm.apk + vivi-foss.apk.
+  # The Android APKs are NOT built here and no longer ship with a desktop
+  # release: 'Build Android APK' is manual-only and publishes the GMS/FOSS
+  # APKs to .releases/apk/latest on the dedicated apk-latest branch (the
+  # stable download path the site, the Devices screen and the mobile app use).
 
   release:
     name: Publish GitHub Release
     needs: [ build-windows, build-linux, build-macos ]
-    # Only the three desktop builds are required. The Android APK is fetched
-    # best-effort from the existing CI, so a missing/failed CI run never blocks
-    # this desktop release.
+    # Desktop releases carry the desktop installers only; the APK is no longer
+    # a release asset of any kind.
     if: ${{ always() && needs.build-windows.result == 'success' && needs.build-linux.result == 'success' && needs.build-macos.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -173,69 +166,6 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-
-      - name: Wait for Android build and collect the APKs
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EVENT_NAME: ${{ github.event_name }}
-          # The input only exists on a manual dispatch, so this is empty (and the
-          # toggle off) for every release push: a normal release still requires
-          # both APKs.
-          IGNORE_APK_FAILURE: ${{ inputs.ignore_apk_failure }}
-        run: |
-          set -uo pipefail
-          # vivi-gsm.apk + vivi-foss.apk are MANDATORY release assets: they come
-          # from the parallel 'Build Android APK' run for this commit. On a
-          # release push (commit starting with "v") a missing/failed Android
-          # build fails the release. A manual dispatch skips them with a warning
-          # when no Android run exists at all, and - with the `ignore_apk_failure`
-          # toggle on - also when that run failed or its APKs are unusable, so the
-          # desktop release can still be published on purpose.
-          IGNORE="false"
-          if [[ "$EVENT_NAME" == "workflow_dispatch" && "${IGNORE_APK_FAILURE:-}" == "true" ]]; then
-            IGNORE="true"
-          fi
-          # Publish without the APKs (warning) instead of failing the release.
-          skip_without_apks() {
-            local reason="$1"
-            if [[ "$IGNORE" == "true" ]]; then
-              echo "WARNING: $reason - publishing the release without vivi-gsm.apk / vivi-foss.apk (ignore_apk_failure is on)."
-              echo "### Release published without the APKs" >> "$GITHUB_STEP_SUMMARY"
-              echo "Reason: $reason" >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            echo "ERROR: $reason - vivi-gsm.apk and vivi-foss.apk are required release assets." >&2
-            exit 1
-          }
-          RUN_ID="$(gh run list --workflow "Build Android APK" --commit "$GITHUB_SHA" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
-          if [ -z "$RUN_ID" ]; then
-            if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-              echo "No Android build run for this commit (manual dispatch) - releasing without the APKs."
-              echo "Dispatch 'Build Android APK' manually to attach vivi-gsm.apk / vivi-foss.apk."
-              exit 0
-            fi
-            skip_without_apks "no 'Build Android APK' run found for commit $GITHUB_SHA"
-          fi
-          echo "Waiting for Android build run $RUN_ID to finish..."
-          if ! gh run watch "$RUN_ID" --exit-status --interval 15; then
-            skip_without_apks "Android build run $RUN_ID failed"
-          fi
-          mkdir -p apk_dist/gms apk_dist/foss artifacts
-          if ! gh run download "$RUN_ID" -n android-apk-gms -D apk_dist/gms; then
-            skip_without_apks "could not download the android-apk-gms artifact"
-          fi
-          if ! gh run download "$RUN_ID" -n android-apk-foss -D apk_dist/foss; then
-            skip_without_apks "could not download the android-apk-foss artifact"
-          fi
-          GMS="$(find apk_dist/gms -name '*.apk' -print -quit)"
-          FOSS="$(find apk_dist/foss -name '*.apk' -print -quit)"
-          if [ -z "$GMS" ]; then skip_without_apks "vivi-gsm.apk is missing"; fi
-          if [ -z "$FOSS" ]; then skip_without_apks "vivi-foss.apk is missing"; fi
-          cp "$GMS" artifacts/vivi-gsm.apk
-          cp "$FOSS" artifacts/vivi-foss.apk
-          echo "APKs added to release assets: vivi-gsm.apk + vivi-foss.apk"
-          ls -la artifacts
 
       - name: Generate AUR packaging assets
         shell: bash

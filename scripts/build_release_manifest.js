@@ -85,7 +85,7 @@ const slim = (r, withBody) => {
 
 const meta = {
   generatedAt: new Date().toISOString(),
-  repo: "PiBOH/vivi-music",
+  repo: "PiBOH/vivi-music-de",
   totalReleases: releases.length,
   totalDownloads,
   stars: repo.stargazers_count || 0,

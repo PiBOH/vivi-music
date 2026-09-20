@@ -16,7 +16,7 @@ body:
     attributes:
       label: Pre-flight Checklist
       options:
-        - label: I am running the [latest Vivi Music DE release](https://github.com/PiBOH/vivi-music/releases).
+        - label: I am running the [latest Vivi Music DE release](https://github.com/PiBOH/vivi-music-de/releases).
           required: true
         - label: I checked for duplicate issues.
           required: true

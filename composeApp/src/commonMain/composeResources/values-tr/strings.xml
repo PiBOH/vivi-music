@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Ana sayfa</string>
+    <string name="nav_library">Kitaplık</string>
+    <string name="nav_settings">Ayarlar</string>
+    <string name="nav_favorites">Favoriler</string>
+    <string name="nav_history">Geçmiş</string>
+    <string name="nav_playlists">Çalma listeleri</string>
+    <string name="search_placeholder">Şarkı, sanatçı, albüm ara</string>
+    <string name="settings_language">Uygulama dili</string>
+    <string name="system_language">Sistem varsayılanı</string>
+    <string name="playing_now">Şimdi çalıyor</string>
+    <string name="sync_status">Eşitleme durumu</string>
+    <string name="sync_synced">Eşitlendi</string>
+    <string name="sync_syncing">Eşitleniyor</string>
+    <string name="sync_offline">Çevrimdışı</string>
+    <string name="retry">Tekrar dene</string>
+    <string name="play">Çal</string>
+    <string name="favorite_add">Kaydet</string>
+    <string name="favorite_remove">Kaldır</string>
+    <string name="new_playlist">Yeni çalma listesi</string>
+    <string name="delete">Sil</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Pradžia</string>
+    <string name="nav_library">Biblioteka</string>
+    <string name="nav_settings">Nustatymai</string>
+    <string name="nav_favorites">Mėgstamiausi</string>
+    <string name="nav_history">Istorija</string>
+    <string name="nav_playlists">Grojaraščiai</string>
+    <string name="search_placeholder">Ieškoti dainų, atlikėjų, albumų</string>
+    <string name="settings_language">Programos kalba</string>
+    <string name="system_language">Sistemos numatytoji</string>
+    <string name="playing_now">Dabar groja</string>
+    <string name="sync_status">Sinchronizavimo būsena</string>
+    <string name="sync_synced">Sinchronizuota</string>
+    <string name="sync_syncing">Sinchronizuojama</string>
+    <string name="sync_offline">Neprisijungus</string>
+    <string name="retry">Bandyti dar kartą</string>
+    <string name="play">Groti</string>
+    <string name="favorite_add">Išsaugoti</string>
+    <string name="favorite_remove">Pašalinti</string>
+    <string name="new_playlist">Naujas grojaraštis</string>
+    <string name="delete">Ištrinti</string>
+</resources>

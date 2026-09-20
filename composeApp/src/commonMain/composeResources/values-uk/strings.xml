@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Головна</string>
+    <string name="nav_library">Бібліотека</string>
+    <string name="nav_settings">Налаштування</string>
+    <string name="nav_favorites">Улюблене</string>
+    <string name="nav_history">Історія</string>
+    <string name="nav_playlists">Плейлисти</string>
+    <string name="search_placeholder">Пошук пісень, виконавців, альбомів</string>
+    <string name="settings_language">Мова застосунку</string>
+    <string name="system_language">Системна за замовчуванням</string>
+    <string name="playing_now">Зараз грає</string>
+    <string name="sync_status">Статус синхронізації</string>
+    <string name="sync_synced">Синхронізовано</string>
+    <string name="sync_syncing">Синхронізація</string>
+    <string name="sync_offline">Офлайн</string>
+    <string name="retry">Повторити</string>
+    <string name="play">Відтворити</string>
+    <string name="favorite_add">Зберегти</string>
+    <string name="favorite_remove">Видалити</string>
+    <string name="new_playlist">Новий плейлист</string>
+    <string name="delete">Видалити</string>
+</resources>

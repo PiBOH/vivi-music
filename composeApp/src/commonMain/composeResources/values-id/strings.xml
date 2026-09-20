@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Beranda</string>
+    <string name="nav_library">Perpustakaan</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="nav_favorites">Favorit</string>
+    <string name="nav_history">Riwayat</string>
+    <string name="nav_playlists">Daftar putar</string>
+    <string name="search_placeholder">Cari lagu, artis, album</string>
+    <string name="settings_language">Bahasa aplikasi</string>
+    <string name="system_language">Bawaan sistem</string>
+    <string name="playing_now">Sedang diputar</string>
+    <string name="sync_status">Status sinkronisasi</string>
+    <string name="sync_synced">Tersinkron</string>
+    <string name="sync_syncing">Menyinkronkan</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Coba lagi</string>
+    <string name="play">Putar</string>
+    <string name="favorite_add">Simpan</string>
+    <string name="favorite_remove">Hapus</string>
+    <string name="new_playlist">Daftar putar baru</string>
+    <string name="delete">Hapus</string>
+</resources>

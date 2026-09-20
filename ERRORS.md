@@ -88,5 +88,5 @@ table below to understand what happened and how to try to fix it.
 ---
 
 If your error code is not listed here, report it (with the exact code and
-message) in the [GitHub issues](https://github.com/PiBOH/vivi-music/issues)
+message) in the [GitHub issues](https://github.com/PiBOH/vivi-music-de/issues)
 so it can be added to this table.

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">홈</string>
+    <string name="nav_library">라이브러리</string>
+    <string name="nav_settings">설정</string>
+    <string name="nav_favorites">즐겨찾기</string>
+    <string name="nav_history">기록</string>
+    <string name="nav_playlists">재생목록</string>
+    <string name="search_placeholder">노래, 아티스트, 앨범 검색</string>
+    <string name="settings_language">앱 언어</string>
+    <string name="system_language">시스템 기본값</string>
+    <string name="playing_now">지금 재생 중</string>
+    <string name="sync_status">동기화 상태</string>
+    <string name="sync_synced">동기화됨</string>
+    <string name="sync_syncing">동기화 중</string>
+    <string name="sync_offline">오프라인</string>
+    <string name="retry">다시 시도</string>
+    <string name="play">재생</string>
+    <string name="favorite_add">저장</string>
+    <string name="favorite_remove">제거</string>
+    <string name="new_playlist">새 재생목록</string>
+    <string name="delete">삭제</string>
+</resources>

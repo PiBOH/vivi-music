@@ -6,7 +6,7 @@ built with Kotlin and Compose Multiplatform. It runs on **Windows 10+**,
 **Linux (x86_64)** and **macOS 10.15+**.
 
 > **Where to download:** all installers are attached to the
-> [GitHub Releases](https://github.com/PiBOH/vivi-music/releases) page. Pick
+> [GitHub Releases](https://github.com/PiBOH/vivi-music-de/releases) page. Pick
 > the latest version, then grab the file for your system below.
 
 ---
@@ -49,7 +49,7 @@ user-friendly). The `.msi` is provided for silent / enterprise deployments.
 ### Option A — Installer (.exe, recommended)
 
 1. Download `VIVIMusic-…-x64.exe` from the
-   [Releases](https://github.com/PiBOH/vivi-music/releases) page.
+   [Releases](https://github.com/PiBOH/vivi-music-de/releases) page.
 2. Double-click the file and follow the wizard.
 3. The app installs to `C:\Program Files\VIVIMusic` and starts when the wizard
    finishes (or launch it from the Start menu / desktop shortcut).
@@ -204,7 +204,7 @@ video/canvas, lyrics, logs), fonts, playlists.json and older backups are removed
    the app. The session is stored only on this device.
 
 > Pairing with the Android app (LAN or cloud) is covered in the **Sync**
-> section of the app and on the [website](https://piboh.github.io/vivi-music/sync.html).
+> section of the app and on the [website](https://piboh.github.io/vivi-music-de/sync.html).
 
 ---
 
@@ -214,7 +214,7 @@ video/canvas, lyrics, logs), fonts, playlists.json and older backups are removed
   new installer downloads (with progress) and opens for you — on Windows the
   `.exe` is preferred over the `.msi`.
 - **Manual:** download the latest installer from
-  [GitHub Releases](https://github.com/PiBOH/vivi-music/releases) and install
+  [GitHub Releases](https://github.com/PiBOH/vivi-music-de/releases) and install
   over the current version. Your settings, library and playlists are kept.
 
 ---
@@ -248,5 +248,5 @@ On Windows `~` is `C:\Users\<you>`, on Linux/macOS it's `/home/<you>` /
 ---
 
 *VIVI Music DE — free software under a
-[modified GPL-3.0](https://github.com/PiBOH/vivi-music/blob/vivi-music-de/LICENSE) license. The original
+[modified GPL-3.0](https://github.com/PiBOH/vivi-music-de/blob/vivi-music-de/LICENSE) license. The original
 mobile app is created by [VIVIDH P ASHOKAN](https://github.com/vivizzz007).*

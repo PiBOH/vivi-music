@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_library">Thư viện</string>
+    <string name="nav_settings">Cài đặt</string>
+    <string name="nav_favorites">Yêu thích</string>
+    <string name="nav_history">Lịch sử</string>
+    <string name="nav_playlists">Danh sách phát</string>
+    <string name="search_placeholder">Tìm bài hát, nghệ sĩ, album</string>
+    <string name="settings_language">Ngôn ngữ ứng dụng</string>
+    <string name="system_language">Mặc định hệ thống</string>
+    <string name="playing_now">Đang phát</string>
+    <string name="sync_status">Trạng thái đồng bộ</string>
+    <string name="sync_synced">Đã đồng bộ</string>
+    <string name="sync_syncing">Đang đồng bộ</string>
+    <string name="sync_offline">Ngoại tuyến</string>
+    <string name="retry">Thử lại</string>
+    <string name="play">Phát</string>
+    <string name="favorite_add">Lưu</string>
+    <string name="favorite_remove">Xóa</string>
+    <string name="new_playlist">Danh sách phát mới</string>
+    <string name="delete">Xóa</string>
+</resources>

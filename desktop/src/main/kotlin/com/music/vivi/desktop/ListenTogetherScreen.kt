@@ -74,11 +74,11 @@ fun ListenTogetherScreen(
     val messages by manager.chatMessages.collectAsState()
     val busy by manager.busy.collectAsState()
 
-    var usernameInput by remember { mutableStateOf(DesktopSettings.load().listenTogetherUsername) }
+    var usernameInput by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().listenTogetherUsername) }
     var roomCodeInput by remember { mutableStateOf("") }
-    var serverInput by remember { mutableStateOf(DesktopSettings.load().listenTogetherServerUrl) }
-    var autoApprove by remember { mutableStateOf(DesktopSettings.load().listenTogetherAutoApproval) }
-    var syncVolume by remember { mutableStateOf(DesktopSettings.load().listenTogetherSyncVolume) }
+    var serverInput by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().listenTogetherServerUrl) }
+    var autoApprove by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().listenTogetherAutoApproval) }
+    var syncVolume by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().listenTogetherSyncVolume) }
     var error by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     var chatInput by remember { mutableStateOf("") }

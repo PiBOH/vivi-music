@@ -41,7 +41,27 @@ sealed interface UpdateStatus {
 }
 
 /**
- * Selectable update source: the user's fork (default) or the original repo.
+ * The Android APKs are not published in any release any more: 'Build Android APK'
+ * uploads the newest GMS and FOSS builds (fixed file names) to
+ * `.releases/apk/latest` on the dedicated `apk-latest` branch, next to a
+ * `version.json` that describes the build. These URLs therefore always point at
+ * the latest build and never need the GitHub API (or a release page).
+ */
+object ApkDownloads {
+    const val BASE = "https://raw.githubusercontent.com/PiBOH/vivi-music-de/apk-latest/.releases/apk/latest"
+    const val GMS_URL = "$BASE/vivi-gsm.apk"
+    const val FOSS_URL = "$BASE/vivi-foss.apk"
+    const val VERSION_URL = "$BASE/version.json"
+
+    /**
+     * The APK matching this desktop's Devices screen: the GMS build is the one
+     * every Android phone can install, so it is offered first.
+     */
+    val DEFAULT_URL: String = GMS_URL
+}
+
+/**
+ * Selectable update source: our own repository (default) or the upstream one.
  * Resolves to the GitHub owner/name and default branch used by the update
  * checker and the live-changelog fetch.
  */
@@ -51,9 +71,9 @@ object UpdateSource {
 
     fun current(): String = DesktopSettings.load().updateSource
 
-    /** GitHub owner/name for a given source key (fork vs original). */
+    /** GitHub owner/name for a given source key (our repo vs upstream). */
     fun repoFor(source: String): String =
-        if (source == ORIGINAL) "vivizzz007/vivi-music" else "PiBOH/vivi-music"
+        if (source == ORIGINAL) "vivizzz007/vivi-music" else "PiBOH/vivi-music-de"
 
     fun repo(): String = repoFor(current())
 
@@ -199,33 +219,6 @@ object UpdateChecker {
                 ?.second
                 ?.body
                 ?.takeIf { it.isNotBlank() }
-        }
-    } catch (_: Exception) {
-        null
-    }
-
-    /**
-     * Finds the newest Android APK asset published in the repo releases (the
-     * mobile version of VIVI Music, e.g. `VIVIMusic-6.4.41-debug.apk` on the
-     * PiBOH fork). Used by the Devices screen to offer the mobile app for
-     * download before pairing. Returns null when no APK is available or the
-     * query fails.
-     */
-    fun latestApkAsset(): GitHubAsset? = try {
-        val request = Request.Builder()
-            .url("https://api.github.com/repos/${UpdateSource.repo()}/releases?per_page=100")
-            .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "VIVIMusic-Desktop-Updater")
-            .build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return null
-            val releases = json.decodeFromString<List<GitHubRelease>>(response.body.string())
-            // Releases are newest-first; pick the first one that ships an APK.
-            releases.asSequence()
-                .mapNotNull { r ->
-                    r.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
-                }
-                .firstOrNull()
         }
     } catch (_: Exception) {
         null

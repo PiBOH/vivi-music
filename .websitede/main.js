@@ -177,7 +177,7 @@
   };
 
   /* ---------- github helpers ---------- */
-  var REPO = "PiBOH/vivi-music";
+  var REPO = "PiBOH/vivi-music-de";
   window.VM_REPO = REPO;
   window.vmGH = {
     REPO: REPO,
@@ -504,7 +504,7 @@
     opts = opts || {};
     if (!container) return;
     var API = 'https://api.github.com/repos/' + REPO + '/contents/.websitede/images/screenshots?ref=vivi-music-de';
-    var PAGES = 'https://piboh.github.io/vivi-music/images/screenshots/';
+    var PAGES = 'https://piboh.github.io/vivi-music-de/images/screenshots/';
     var RAW = 'https://raw.githubusercontent.com/' + REPO + '/vivi-music-de/.websitede/images/screenshots/';
 
     function pretty(name) {

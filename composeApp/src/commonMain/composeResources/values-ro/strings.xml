@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Acasă</string>
+    <string name="nav_library">Bibliotecă</string>
+    <string name="nav_settings">Setări</string>
+    <string name="nav_favorites">Favorite</string>
+    <string name="nav_history">Istoric</string>
+    <string name="nav_playlists">Playlisturi</string>
+    <string name="search_placeholder">Caută melodii, artiști, albume</string>
+    <string name="settings_language">Limba aplicației</string>
+    <string name="system_language">Implicită de sistem</string>
+    <string name="playing_now">Se redă acum</string>
+    <string name="sync_status">Stare sincronizare</string>
+    <string name="sync_synced">Sincronizat</string>
+    <string name="sync_syncing">Se sincronizează</string>
+    <string name="sync_offline">Offline</string>
+    <string name="retry">Reîncearcă</string>
+    <string name="play">Redă</string>
+    <string name="favorite_add">Salvează</string>
+    <string name="favorite_remove">Elimină</string>
+    <string name="new_playlist">Playlist nou</string>
+    <string name="delete">Șterge</string>
+</resources>

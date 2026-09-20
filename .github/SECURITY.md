@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Only the latest [VIVI Music DE release](https://github.com/PiBOH/vivi-music/releases)
+Only the latest [VIVI Music DE release](https://github.com/PiBOH/vivi-music-de/releases)
 receives security fixes. Please reproduce the problem there before reporting it.
 
 ## Reporting a vulnerability
@@ -10,7 +10,7 @@ receives security fixes. Please reproduce the problem there before reporting it.
 Please **do not** open a public issue for a security problem — report it
 privately instead:
 
-- GitHub private reporting: [Report a vulnerability](https://github.com/PiBOH/vivi-music/security/advisories/new)
+- GitHub private reporting: [Report a vulnerability](https://github.com/PiBOH/vivi-music-de/security/advisories/new)
 - Or email **piboh.github@gmail.com**
 
 Include the version (About screen), your OS, and a short description of the

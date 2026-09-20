@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">ទំព័រដើម</string>
+    <string name="nav_library">បណ្ណាល័យ</string>
+    <string name="nav_settings">ការកំណត់</string>
+    <string name="nav_favorites">ចំណូលចិត្ត</string>
+    <string name="nav_history">ប្រវត្តិ</string>
+    <string name="nav_playlists">បញ្ជីចាក់</string>
+    <string name="search_placeholder">ស្វែងរកបទចម្រៀង សិល្បករ អាល់ប៊ុម</string>
+    <string name="settings_language">ភាសាកម្មវិធី</string>
+    <string name="system_language">លំនាំដើមរបស់ប្រព័ន្ធ</string>
+    <string name="playing_now">កំពុងចាក់</string>
+    <string name="sync_status">ស្ថានភាពធ្វើសមកាលកម្ម</string>
+    <string name="sync_synced">បានធ្វើសមកាលកម្ម</string>
+    <string name="sync_syncing">កំពុងធ្វើសមកាលកម្ម</string>
+    <string name="sync_offline">ក្រៅបណ្តាញ</string>
+    <string name="retry">ព្យាយាមម្តងទៀត</string>
+    <string name="play">ចាក់</string>
+    <string name="favorite_add">រក្សាទុក</string>
+    <string name="favorite_remove">លុប</string>
+    <string name="new_playlist">បញ្ជីចាក់ថ្មី</string>
+    <string name="delete">លុប</string>
+</resources>

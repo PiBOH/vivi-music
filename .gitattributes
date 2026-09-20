@@ -1,0 +1,4 @@
+# Force LF line endings for the Gradle wrapper shell script so its `#!/bin/sh`
+# shebang works on Linux/macOS and Git Bash regardless of the local
+# core.autocrlf setting.
+gradlew text eol=lf

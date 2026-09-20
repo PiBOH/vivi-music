@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">ਹੋਮ</string>
+    <string name="nav_library">ਲਾਇਬ੍ਰੇਰੀ</string>
+    <string name="nav_settings">ਸੈਟਿੰਗਾਂ</string>
+    <string name="nav_favorites">ਮਨਪਸੰਦ</string>
+    <string name="nav_history">ਇਤਿਹਾਸ</string>
+    <string name="nav_playlists">ਪਲੇਲਿਸਟਾਂ</string>
+    <string name="search_placeholder">ਗਾਣੇ, ਕਲਾਕਾਰ, ਐਲਬਮ ਖੋਜੋ</string>
+    <string name="settings_language">ਐਪ ਦੀ ਭਾਸ਼ਾ</string>
+    <string name="system_language">ਸਿਸਟਮ ਡਿਫਾਲਟ</string>
+    <string name="playing_now">ਹੁਣ ਚੱਲ ਰਿਹਾ ਹੈ</string>
+    <string name="sync_status">ਸਿੰਕ ਸਥਿਤੀ</string>
+    <string name="sync_synced">ਸਿੰਕ ਹੋ ਗਿਆ</string>
+    <string name="sync_syncing">ਸਿੰਕ ਹੋ ਰਿਹਾ ਹੈ</string>
+    <string name="sync_offline">ਔਫਲਾਈਨ</string>
+    <string name="retry">ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ</string>
+    <string name="play">ਚਲਾਓ</string>
+    <string name="favorite_add">ਸੰਭਾਲੋ</string>
+    <string name="favorite_remove">ਹਟਾਓ</string>
+    <string name="new_playlist">ਨਵੀਂ ਪਲੇਲਿਸਟ</string>
+    <string name="delete">ਮਿਟਾਓ</string>
+</resources>

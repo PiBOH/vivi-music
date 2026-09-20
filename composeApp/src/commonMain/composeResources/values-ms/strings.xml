@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_home">Utama</string>
+    <string name="nav_library">Perpustakaan</string>
+    <string name="nav_settings">Tetapan</string>
+    <string name="nav_favorites">Kegemaran</string>
+    <string name="nav_history">Sejarah</string>
+    <string name="nav_playlists">Senarai main</string>
+    <string name="search_placeholder">Cari lagu, artis, album</string>
+    <string name="settings_language">Bahasa aplikasi</string>
+    <string name="system_language">Lalai sistem</string>
+    <string name="playing_now">Sedang dimainkan</string>
+    <string name="sync_status">Status penyegerakan</string>
+    <string name="sync_synced">Disegerakkan</string>
+    <string name="sync_syncing">Menyegerakkan</string>
+    <string name="sync_offline">Luar talian</string>
+    <string name="retry">Cuba lagi</string>
+    <string name="play">Main</string>
+    <string name="favorite_add">Simpan</string>
+    <string name="favorite_remove">Buang</string>
+    <string name="new_playlist">Senarai main baharu</string>
+    <string name="delete">Padam</string>
+</resources>
