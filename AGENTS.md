@@ -90,6 +90,33 @@ dependencies there, or you break the desktop build.
     fork. Example URLs: `https://github.com/PiBOH/vivi-music-de`,
     `.../blob/vivi-music-de/<file>`, `.../releases`, `.../issues`, and the site
     at `https://piboh.github.io/vivi-music-de/`.
+  - **Everything is done on the official repository, on the branch that owns
+    the change** — no more work on the `PiBOH/vivi-music` fork, which stays a
+    read-only mirror. Locally `origin` is `PiBOH/vivi-music-de` and the fork is
+    the `fork` remote: never push to `fork`.
+  - **Branch map (mandatory)**:
+    - `vivi-music-de` (default): the desktop edition — program code, docs,
+      `version.txt`, the release workflows and `Auto Release`.
+    - `vivi-music-de-apk`: the Android app (moving the mobile sources here is
+      tracked in `TODO.md`).
+    - `gh-pages`: the website. Its root **is** the site — pages, styles,
+      images, fonts and the generated `releases.json` / `changelog.json` — and a
+      copy of `pages-deploy.yml` lives there so a push publishes it at once.
+      The copy on the default branch is the one that feeds `schedule` and
+      `workflow_dispatch` (GitHub always runs those from the default branch):
+      keep the two copies in sync. `Release Manifest` refreshes the two data
+      files in place, on `gh-pages`, every hour.
+    - `apk-latest`: the APK binaries only (`.releases/apk/latest`, one commit).
+  - **Release notes never show the website bookkeeping commit**:
+    `chore(website): refresh the static release manifest` is filtered out of the
+    `Auto Release` notes (commit list and changelog section alike), and since
+    the site moved it is not even a commit of this branch any more.
+  - **The Telegram bot is a separate repository**: `PiBOH/vivimusicde_bot`
+    (`bot.py`, `.github/workflows/upload-release.yml`). It posts a newly
+    published release to `https://t.me/vivimusicde` within the hour, resolves
+    "latest" by publish date, ignores `*.log` / `*.install`, and reuses the
+    `.releases/apk/latest` links for the optional custom APK (toggle off by
+    default). Update it whenever the release or asset layout changes.
 - **Release assets — the APK is NEVER a release asset (mandatory)**:
   - `Auto Release (Desktop)` publishes the **desktop installers only**. It must
     never build, wait for or attach an APK (no `ignore_apk_failure`-style
@@ -102,7 +129,7 @@ dependencies there, or you break the desktop build.
     force-pushed on every run: it must always be **one commit**, so the APK
     binaries never accumulate in the repository history.
   - `.releases/apk/latest` is the **only** APK download path: the website
-    (`.websitede`, `APK_BASE`), the desktop Devices screen
+    (the `gh-pages` branch, `APK_BASE`), the desktop Devices screen
     (`ApkDownloads`) and the mobile updater (`APK_LATEST_VERSION_URL`) all read
     it, and "latest" is decided by the **version code** (chronology/version
     code, never a version-string comparison). Use the fixed raw URLs:
@@ -148,10 +175,11 @@ dependencies there, or you break the desktop build.
   blank line), so the auto-release runs and the result can be verified. The `sync-server/` relay is deployed
   **separately** (Render Blueprint `render.yaml`) and does **not** trigger the
   auto-release. Documentation-only changes (README, AGENTS.md, CHANGELOG.md,
-  TODO.md) do **not** need the `v` prefix. The website (`.websitede/**`) is the
-  same: content-only changes there do **not** need `v` (it has its own
-  `pages-deploy.yml` trigger on `.websitede/**`); only use `v` when the commit
-  also touches program code or build/release workflows.
+  TODO.md) do **not** need the `v` prefix. The website is the same: it lives on
+  its own branch (`gh-pages`, see the branch map above), so a page, style or
+  data edit is committed there and does **not** need `v` (the `pages-deploy.yml`
+  copy on that branch publishes it on push); only use `v` when the commit also
+  touches program code or build/release workflows.
 - **Pre-commit checklist (mandatory)**: every code commit must pass the
   `version.txt` + `CHANGELOG.md` + `TODO.md` checklist defined at the end of
   §5 **before** it is created — no exceptions.
@@ -317,8 +345,9 @@ considers obvious):
   `.github/workflows/` release pipeline, or a desktop-only behavior) bumps the
   **DE** version: `version.txt` line 4 (+ line 5 version code by 1).
 - A change that affects **both** editions bumps **both** versions.
-- A change that touches **only** the website (`.websitede/` content — pages,
-  styles, scripts, images) bumps **no** version: no DE bump, no mobile bump,
+- A change that touches **only** the website (`gh-pages` content — pages,
+  styles, scripts, images, and the generated `releases.json`/`changelog.json`)
+  bumps **no** version: no DE bump, no mobile bump,
   and the commit is **not** prefixed with `v` (it's not a release signal).
   Only if the same change also touches app code, build/installer config or
   release workflows does the usual DE/mobile bump apply.
@@ -581,12 +610,12 @@ issue on `PiBOH/vivi-music-de` **before any code is changed**:
 **NEVER open a GitHub issue for website or workflow changes** — for these
 categories issues must NOT be opened at all (not even "when in doubt").
 This includes:
-- **Website-only changes**: pure `.websitede/` edits (page HTML,
-  `style.css`, site JS — nothing in the desktop/mobile app code,
+- **Website-only changes**: edits to the site branch `gh-pages` (page HTML,
+  `style.css`, site JS, screenshots — nothing in the desktop/mobile app code,
   no version bump, no release) are done directly: no GitHub issue, no
-  CHANGELOG entry. They are committed on `vivi-music-de` with a message
-  that does NOT start with `v`, then the commit is synced to
-  `vivi-music-de-apk`.
+  CHANGELOG entry, and a commit message that does NOT start with `v`. They are
+  committed and pushed on `gh-pages` only: `vivi-music-de` no longer holds the
+  site, and there is nothing to sync to the mobile branch.
 - **Workflow changes**: any edit to `.github/workflows/*` is done directly
   without an issue (and, per the rules above, is always a `patch`).
 - **Packaging / build-size / installer changes** count as workflow changes and

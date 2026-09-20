@@ -11,6 +11,19 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.4_DE-1.52.2-alpha] - 2026-09-20
+
+### Changed
+- [DE] **The website now lives on its own branch.** The site used to be a folder of this branch (`.websitede/`) published by a workflow that read it from there; it is now the root of the **`gh-pages`** branch — pages, styles, images, fonts and the two data files the site reads — with a copy of the deploy workflow next to it, so a site edit is a normal push to that branch. The default-branch copy of that workflow keeps feeding `schedule` and `workflow_dispatch` (GitHub always runs those from the default branch), and `Release Manifest` refreshes `releases.json` / `changelog.json` in place on `gh-pages` instead of committing them here. The address is unchanged: `https://piboh.github.io/vivi-music-de/`.
+- [DE] **Every change now goes to the official repository, on the branch that owns it** (`vivi-music-de` desktop, `vivi-music-de-apk` mobile, `gh-pages` website, `apk-latest` APK binaries). The old `PiBOH/vivi-music` fork is a read-only mirror from now on.
+
+### Fixed
+- [DE] **The release notes no longer show the website bookkeeping commit**: `Auto Release` filters `chore(website): refresh the static release manifest` out of the commit list and out of the extracted changelog section (and since the manifest moved, it is no longer a commit of this branch).
+- [DE] **The dead build workflows are gone.** Removed: the four legacy workflows that compiled the deleted `composeApp` project (`build-linux`, `build-macos`, `build-windows`, `build-windows-custom`) with the files only they used (`installer/windows/ViviMusicDE.iss`, `installer/windows/README.md`, `logo.png`), and the upstream leftovers that could only fail here (`nightly` and `nightly-telegram`, which built from a `beta` branch that does not exist, with their `scripts/send_telegram.py`; plus `build`, `build_pr` and `ci`, which targeted a `main` branch that does not exist either).
+
+### Notes
+- [BOT] The Telegram bot (`PiBOH/vivimusicde_bot`) now follows the new layout: it posts releases from `PiBOH/vivi-music-de`, keeps its hourly check, and builds the optional custom-APK line from the fixed `.releases/apk/latest` URLs — the APKs are no longer release assets.
+
 ## [6.0.6.4_DE-1.52.1-alpha] - 2026-09-20
 
 ### Fixed

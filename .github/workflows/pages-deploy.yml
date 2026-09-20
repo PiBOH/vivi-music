@@ -1,34 +1,54 @@
 name: Deploy Website (GitHub Pages)
 
+# The website lives on the `gh-pages` branch, at its root: that branch IS the
+# site source (pages, styles, images, fonts, plus the two data files
+# releases.json / changelog.json that `Release Manifest` refreshes every hour).
+# This workflow only publishes it with `actions/deploy-pages`; it no longer
+# reads `.websitede` from the DE branch, which no longer exists.
+#
+# A second copy of this file lives on `gh-pages`, and the two are NOT byte
+# identical — only their trigger differs on purpose:
+#   * this copy (default branch) feeds `schedule` and `workflow_dispatch`,
+#     because GitHub always runs those from the default branch;
+#   * the gh-pages copy feeds `push`, because a push can only run the workflows
+#     that exist at the pushed ref (and a push made by the `Release Manifest`
+#     job with the default token never starts a workflow at all, hence the
+#     schedule below).
+# Keep the two copies in sync whenever the steps change.
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'  # daily at midnight UTC
+    # Twice an hour, a few minutes after the hourly manifest refresh, so a data
+    # update that could not trigger a run by itself still reaches the site.
+    - cron: '5,35 * * * *'
   push:
     branches: [ vivi-music-de ]
     paths:
-      - '.websitede/**'
+      - '.github/workflows/pages-deploy.yml'
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Only one Pages deployment at a time; a newer push cancels an older one.
+# Only one Pages deployment at a time; a newer run cancels an older one.
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
   deploy:
-    name: Build & deploy site
+    name: Publish the gh-pages branch
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout the site branch
         uses: actions/checkout@v4
+        with:
+          ref: gh-pages
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -36,7 +56,7 @@ jobs:
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .websitede
+          path: .
 
       - name: Deploy to GitHub Pages
         id: deployment

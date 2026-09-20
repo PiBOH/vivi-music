@@ -1,29 +1,30 @@
 name: Release Manifest
 
-# Keeps .websitede/releases.json and .websitede/changelog.json in sync with the
-# published releases. The website reads those files instead of calling the
-# public GitHub API, which allows only 60 unauthenticated requests per hour per
-# IP: once that quota is spent every visitor behind that IP saw an empty download
-# dialog / downloads page (the assets only came back with a manual refresh, and
-# often not even then). An authenticated request has a 5000/hour quota, so the
-# site never depends on the anonymous one again.
+# Keeps the two data files the website reads — `releases.json` and
+# `changelog.json` — in sync with the published releases. They live on the
+# `gh-pages` branch (the site source), so this job checks that branch out a
+# second time and commits them there instead of committing into the DE branch.
 #
-# Triggered by a push that changes version.txt (every release bumps it), once
-# an hour, and manually. The hourly run exists because the push above fires the
+# The website reads those files instead of calling the public GitHub API, which
+# allows only 60 unauthenticated requests per hour per IP: once that quota is
+# spent every visitor behind that IP saw an empty download dialog / downloads
+# page (the assets only came back with a manual refresh, and often not even
+# then). An authenticated request has a 5000/hour quota, so the site never
+# depends on the anonymous one again.
+#
+# Triggered by a push that changes version.txt (every release bumps it), once an
+# hour, and manually. The hourly run exists because the push above fires the
 # moment version.txt changes — i.e. minutes BEFORE the release workflow has
 # uploaded its assets — so the manifest it built described a release whose files
 # did not exist yet, and the download dialog/downloads page stayed incomplete
 # (and needed a manual page refresh) until the next release bumped version.txt.
 #
-# A schedule is safe here because the repository's DEFAULT branch is
-# `vivi-music-de`, not the upstream `main` mirror: a scheduled run executes the
-# version of this file that lives on the default branch — this one — and commits
-# back to it. The explicit `ref` on the checkout below keeps that true even if
-# the default branch ever changes.
+# `schedule` and `workflow_dispatch` always run the version of this file that
+# lives on the DEFAULT branch (`vivi-music-de`), which is this one.
 
 on:
   schedule:
-    - cron: '0 * * * *'  # every hour, at :00 CEST (UTC+2 in summer)
+    - cron: '0 * * * *'  # every hour
   push:
     paths:
       - version.txt
@@ -41,11 +42,17 @@ jobs:
   manifest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout the DE branch (generator script)
+        uses: actions/checkout@v4
         with:
-          # Always refresh the manifest on the DE branch, whatever the default
-          # branch happens to be.
           ref: vivi-music-de
+          path: build
+
+      - name: Checkout the site branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
 
       - name: Fetch every release (authenticated)
         env:
@@ -61,19 +68,29 @@ jobs:
 
       - name: Build the manifest
         run: |
-          node scripts/build_release_manifest.js \
+          node build/scripts/build_release_manifest.js \
             "$RUNNER_TEMP/releases.json" "$RUNNER_TEMP/repo.json" \
-            .websitede/releases.json .websitede/changelog.json
+            site/releases.json site/changelog.json
 
       - name: Commit when it changed
+        working-directory: site
         run: |
           set -euo pipefail
-          if git diff --quiet -- .websitede/releases.json .websitede/changelog.json; then
+          if git diff --quiet -- releases.json changelog.json; then
             echo "manifest already up to date"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .websitede/releases.json .websitede/changelog.json
+          git add releases.json changelog.json
           git commit -m "chore(website): refresh the static release manifest"
           git push
+
+      - name: Publish the refreshed data
+        # A push made with the job token does not start other workflows, so ask
+        # for a deployment explicitly. Best effort: without the secret (or with a
+        # token lacking the `workflows` scope) the scheduled deploy on the
+        # default branch publishes the data within the hour anyway.
+        env:
+          GH_TOKEN: ${{ secrets.BOT_DISPATCH_TOKEN }}
+        run: gh workflow run pages-deploy.yml --ref vivi-music-de || echo "deploy dispatch skipped"

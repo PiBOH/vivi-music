@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Subset the website's Material Symbols icon font to the icons actually used.
 
-The full Material Symbols variable font is ~4 MB and every page of `.websitede`
+The full Material Symbols variable font is ~4 MB and every page of the site
 loaded it, which alone fails the PageSpeed "avoid enormous network payloads"
-audit. Only a handful of icon names are referenced anywhere, so this script
+audit. The site itself lives on the `gh-pages` branch, so run this script
+against a checkout of that branch (point it at the font file there). Only a handful of icon names are referenced anywhere, so this script
 shrinks the font to those icons (a few KB) without changing a single outline.
 
 Why three steps (a plain `pyftsubset --text=...` does NOT work here):
@@ -24,7 +25,7 @@ Requires:  python3 -m pip install fonttools brotli
 
 Usage:
     python3 scripts/subset_material_symbols.py \
-        .websitede/assets/fonts/material-symbols-outlined.woff2 \
+        <site-checkout>/assets/fonts/material-symbols-outlined.woff2 \
         block desktop_windows download expand_more laptop_mac menu_book \
         open_in_new smartphone star terminal
 
