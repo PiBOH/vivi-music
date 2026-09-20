@@ -204,7 +204,7 @@ video/canvas, lyrics, logs), fonts, playlists.json and older backups are removed
    the app. The session is stored only on this device.
 
 > Pairing with the Android app (LAN or cloud) is covered in the **Sync**
-> section of the app and on the [website](https://piboh.github.io/vivi-music/sync.html).
+> section of the app and on the [website](https://piboh.github.io/vivi-music-de/sync.html).
 
 ---
 

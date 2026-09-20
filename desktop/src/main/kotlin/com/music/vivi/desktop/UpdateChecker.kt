@@ -61,7 +61,7 @@ object ApkDownloads {
 }
 
 /**
- * Selectable update source: the user's fork (default) or the original repo.
+ * Selectable update source: our own repository (default) or the upstream one.
  * Resolves to the GitHub owner/name and default branch used by the update
  * checker and the live-changelog fetch.
  */
@@ -71,9 +71,9 @@ object UpdateSource {
 
     fun current(): String = DesktopSettings.load().updateSource
 
-    /** GitHub owner/name for a given source key (fork vs original). */
+    /** GitHub owner/name for a given source key (our repo vs upstream). */
     fun repoFor(source: String): String =
-        if (source == ORIGINAL) "vivizzz007/vivi-music" else "PiBOH/vivi-music"
+        if (source == ORIGINAL) "vivizzz007/vivi-music" else "PiBOH/vivi-music-de"
 
     fun repo(): String = repoFor(current())
 

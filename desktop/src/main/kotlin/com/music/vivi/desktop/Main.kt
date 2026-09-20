@@ -5934,7 +5934,7 @@ fun AboutSection(language: String, onOpenContributors: () -> Unit) {
     AboutInfoRow(
         icon = Icons.Filled.Public,
         title = Localization.get(language, "website"),
-        onClick = { openUrl("https://piboh.github.io/vivi-music/") },
+        onClick = { openUrl("https://piboh.github.io/vivi-music-de/") },
     )
 
     AboutSectionHeader(Localization.get(language, "community_section"))

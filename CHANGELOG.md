@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.4_DE-1.52.1-alpha] - 2026-09-20
+
+### Fixed
+- [DE] **The update source and the remaining website links point at the official repository.** The desktop's own update source still resolved `PiBOH/vivi-music`, so the update check, the download it offered and the live changelog read the old repository; the About screen's website row, the README badge, the install guide and the site notes still carried the old Pages address. Every one of them now uses `PiBOH/vivi-music-de` (the mobile app already did).
+
 ## [6.0.6.4_DE-1.52.0-alpha] - 2026-09-20
 
 ### Added
@@ -1884,7 +1889,7 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 ### Changed
 
 - [DE] The About "website" entry now points to the VIVI Music DE GitHub Pages
-  site (`https://piboh.github.io/vivi-music/`).
+  site (`https://piboh.github.io/vivi-music-de/`).
 
 ### Website
 
