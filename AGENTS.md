@@ -105,7 +105,13 @@ dependencies there, or you break the desktop build.
       The copy on the default branch is the one that feeds `schedule` and
       `workflow_dispatch` (GitHub always runs those from the default branch):
       keep the two copies in sync. `Release Manifest` refreshes the two data
-      files in place, on `gh-pages`, every hour.
+      files in place, on `gh-pages`, every hour. The **`github-pages`
+      environment lists both branches** in its deployment branch policy
+      (`vivi-music-de` and `gh-pages`): with only the default branch listed, a
+      deploy triggered by a push to `gh-pages` fails with `Branch "gh-pages" is
+      not allowed to deploy to github-pages due to environment protection
+      rules` even though the workflow itself is fine — add the policy before
+      blaming the workflow.
     - `apk-latest`: the APK binaries only (`.releases/apk/latest`, one commit).
   - **No scratch/test branches — ever (mandatory)**: never create a branch to
     try a change out. Do the work on the branch that owns it, per the branch map
