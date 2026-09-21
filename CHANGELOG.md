@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.52.8-alpha] - 2026-09-21
+
+### Changed
+- [DE] **The Arch/AUR files now ship as a single `VIVIMusic-<version>-AUR.tar.gz` asset.** They used to be attached one by one, which put a `.install` in the release listing (noise the Telegram bot had to filter out) — but `makepkg` requires the hook file to sit next to the `PKGBUILD` (`install=` points at it), so the three files cannot simply be split: they now travel together in the archive. The install guide and the site explain the two-step extract + `makepkg -si` flow.
+
+### Fixed
+- [DE] **A half-finished update download can no longer look finished (issue #82).** The installer was written straight to its final name, so leaving the Updates screen — or quitting the app — during a transfer left a truncated file that every later check accepted: the screen said "downloaded", and "open installer" then failed on a broken installer. The transfer is now written to `<name>.part` and renamed only after every byte arrived (with the release asset's size as the check when the API reported one), leftover `.part` files are cleaned up, and the download runs on `UpdateState`'s own scope instead of the screen's `rememberCoroutineScope` — leaving the screen no longer cancels it, and both the Updates screen and the notification banner keep showing the progress. Failures are logged in `cache.log` (`update download failed: …`), successes with the final size.
+- [DE] **Two playback diagnostics were measuring pauses (issue #3).** On macOS a resume after a long pause produced `audio priority stall: 50ms sleep returned 393772ms late` and `audio device stall: the sound card played only 7445ms of audio in 581733ms of wall time (1%)` — both figures are the pause itself: the probe slept while the writer was parked and the device check compared played audio against a window that spanned the pause. The watchdog now skips while paused (and discards the first sample after a resume) and the device check starts a fresh window after every resume, so a reported stall is a stall. In the same logs, with all sessions of the reporter counted, there was **no** `audio stall`, `audio output starved` or "device ran dry" line — the audible dropouts are not reproducing on 1.52.6, and the device played 99-100% of the wall time with a ~3 s cushion.
+
 ## [6.0.6.5_DE-1.52.7-alpha] - 2026-09-21
 
 ### Added

@@ -265,8 +265,11 @@ Consequences to respect when touching icons or the build:
   shortcut `[Tasks]`), so solid compression cannot make a partial install
   decompress the whole block.
 - Published formats are fixed: Windows ships **both** `setup.exe` and `.msi`,
-macOS **both** `.dmg` and `.pkg`, Linux keeps `.deb` + `.AppImage` +
-`PKGBUILD`. Do not drop a format to save size — the payload is trimmed
+macOS **both** `.dmg` and `.pkg`, Linux keeps `.deb` + `.rpm` (Fedora) +
+`.AppImage` + the AUR archive (`VIVIMusic-<version>-AUR.tar.gz`, holding the
+`PKGBUILD`, `SRCINFO` and the `.install` hook — the three files must travel
+together because makepkg requires the hook next to the PKGBUILD, and a loose
+`*.install` in the asset list is noise). Do not drop a format to save size — the payload is trimmed
   instead. The JavaFX WebView jars (`javafx-web`, `icudtl.dat`) are required by
 the working sign-in WebView and are **never** trimmed for size.
 

@@ -375,6 +375,9 @@ class AudioPlayer {
         // writer's own thread priority, with heap/GC/CPU context — in
         // playback.log from the first track on (issue #3).
         AudioPriorityWatchdog.ensureRunning()
+        // A paused player is parked, so a sample taken across a pause measures
+        // the pause and not a stall: tell the probe when not to measure.
+        AudioPriorityWatchdog.pausedProbe = { paused }
         startDecode(streams, cacheKey, startAtMs, startPaused, startAtFraction, fallbackDurationMs)
     }
 
@@ -1317,6 +1320,9 @@ class AudioPlayer {
             var lastDeviceCheckMs = 0L
             var lastDeviceCheckPlayedMs = 0L
             var deviceStallLogged = 0
+            /** Set while the writer sits in the pause wait, so the next device
+             *  sample starts a new window instead of counting the pause. */
+            var pausedWindow = false
             /** Audio the line reports as actually played, in ms. */
             fun playedAudioMs(): Long =
                 if (format.sampleRate > 0f) {
@@ -1466,11 +1472,22 @@ class AudioPlayer {
                             while (paused && !stopped && gen == generation &&
                                 !producerDone.get()
                             ) {
+                                pausedWindow = true
                                 lock.wait(25L)
                             }
                         }
                         if (stopped || gen != generation) break
                         if (paused && producerDone.get()) break
+                        // The device check compares the audio the line played
+                        // against the wall time it took. A pause is not a stall:
+                        // the line is stopped and nothing is played by design, so
+                        // a window that spans one would report "played 7445ms in
+                        // 581733ms (1%)" — a warning the exported log cannot
+                        // disprove. Start a fresh window after every resume.
+                        if (pausedWindow) {
+                            pausedWindow = false
+                            lastDeviceCheckMs = 0L
+                        }
 
                         val chunk = pcmQueue.poll(50L, TimeUnit.MILLISECONDS)
                         if (chunk == null) {
@@ -1922,6 +1939,15 @@ class AudioPlayer {
 
         private val started = AtomicBoolean(false)
 
+        /**
+         * True while playback is paused, published by the player that owns the
+         * probe. Without it a 50 ms sleep that spans a pause is reported as a
+         * multi-minute "stall held up at the writer's priority" (a real export
+         * contained `50ms sleep returned 393772ms late` right after a resume),
+         * which is a diagnostic crying wolf instead of evidence.
+         */
+        @Volatile var pausedProbe: (() -> Boolean)? = null
+
         fun ensureRunning() {
             if (!started.compareAndSet(false, true)) return
             Thread {
@@ -1932,12 +1958,29 @@ class AudioPlayer {
                     java.lang.management.ManagementFactory.getMemoryMXBean()
                 }.getOrNull()
                 var lastLogMs = 0L
+                var skippedPause = false
                 while (true) {
+                    if (pausedProbe?.invoke() == true) {
+                        // Nothing to measure: the writer is parked and the sound
+                        // card is stopped. The first sample after the resume is
+                        // thrown away too, since it can still span it.
+                        skippedPause = true
+                        try {
+                            Thread.sleep(100L)
+                        } catch (_: InterruptedException) {
+                            return@Thread
+                        }
+                        continue
+                    }
                     val start = System.currentTimeMillis()
                     try {
                         Thread.sleep(50L)
                     } catch (_: InterruptedException) {
                         return@Thread
+                    }
+                    if (skippedPause) {
+                        skippedPause = false
+                        continue
                     }
                     val late = System.currentTimeMillis() - start - 50L
                     if (late < 120L) continue

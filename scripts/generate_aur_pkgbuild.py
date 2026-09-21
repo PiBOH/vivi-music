@@ -2,9 +2,11 @@
 """Generate AUR packaging assets (PKGBUILD + SRCINFO) for a Vivi Music DE release.
 
 Run by .github/workflows/auto-release.yml right before the GitHub release is
-created. The generated files are attached to the release as assets, so Arch
-users (or an AUR maintainer) can grab the PKGBUILD, drop it in a directory
-with the matching SRCINFO, and run `makepkg -si` locally.
+created. The three generated files are packaged into a single
+`VIVIMusic-<version>-AUR.tar.gz` release asset: `makepkg` requires the hook file
+(`install=`) to sit next to the PKGBUILD, so they have to travel together, and
+shipping them as loose assets put a stray `.install` in the release listing.
+Arch users extract the archive and run `makepkg -si` locally.
 
 The source tarball is pinned to the exact commit of the release
 (`https://github.com/<repo>/archive/<sha>.tar.gz`), because the release tag is

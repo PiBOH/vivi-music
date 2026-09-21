@@ -151,14 +151,17 @@ If your system blocks AppImages (no FUSE), extract and run it instead:
 
 ### Option D — Arch Linux (AUR-style PKGBUILD)
 
-Every release also ships a **`PKGBUILD`** (plus `SRCINFO` and an uninstall
-hook `vivi-music-de.install`) as release assets.
+Every release also ships a **`VIVIMusic-….AUR.tar.gz`** archive holding the
+**`PKGBUILD`**, its `SRCINFO` and the uninstall hook (`vivi-music-de.install`).
+They travel together because `makepkg` needs the hook file next to the
+`PKGBUILD` (that is what `install=` points at).
 To build and install a proper system package:
 
 ```bash
-# 1. Create a directory, put the PKGBUILD from the release assets inside it
-mkdir vivi-music-de && cd vivi-music-de
-# 2. Copy the PKGBUILD file from the release assets here, then:
+# 1. Download the .AUR.tar.gz from the release assets and extract it
+mkdir vivi-music-de && tar -xzf VIVIMusic-….AUR.tar.gz -C vivi-music-de
+cd vivi-music-de
+# 2. The three files are side by side now
 makepkg -si
 ```
 

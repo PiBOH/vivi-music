@@ -5597,8 +5597,11 @@ fun BoxScope.UpdateNotification(
                         onDone()
                     } else {
                         scope.launch {
-                            val file = UpdateState.download(asset)
-                            if (file != null) prepareAndOpenInstaller(file)
+                            // Started on UpdateState's own scope: the transfer is
+                            // not tied to this banner (or to the Updates screen),
+                            // so a screen change can no longer cut it in half.
+                            UpdateState.startDownload(asset).join()
+                            UpdateState.downloadedFile.value?.let { prepareAndOpenInstaller(it) }
                             onDone()
                         }
                     }
@@ -5779,7 +5782,9 @@ fun UpdateSection(
                 }
                 else -> Button(
                     onClick = {
-                        scope.launch { UpdateState.download(asset) }
+                        // Owned by UpdateState, not by this screen: leaving the
+                        // screen no longer cancels the download (#82).
+                        UpdateState.startDownload(asset)
                     },
                     modifier = Modifier.padding(top = 4.dp),
                 ) {

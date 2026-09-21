@@ -178,9 +178,18 @@ jobs:
       - name: Generate AUR packaging assets
         shell: bash
         run: |
-          # PKGBUILD + SRCINFO for Arch users (AUR). Pinned to this exact
-          # commit so the source checksum is stable and matches the release.
-          python3 scripts/generate_aur_pkgbuild.py --out artifacts --sha "${{ github.sha }}"
+          set -euo pipefail
+          # PKGBUILD + SRCINFO + the uninstall hook for Arch users (AUR), pinned
+          # to this exact commit so the source checksum is stable and matches
+          # the release. They ship as ONE archive, not as three loose files: an
+          # `.install` sitting in the asset list is noise (and the bot had to
+          # filter it out), while makepkg needs the hook file next to the
+          # PKGBUILD anyway to honour `install=`, so the three files have to
+          # travel together.
+          AUR_DIR="$(mktemp -d)"
+          python3 scripts/generate_aur_pkgbuild.py --out "$AUR_DIR" --sha "${{ github.sha }}"
+          tar -czf "artifacts/VIVIMusic-${{ steps.version.outputs.version }}-AUR.tar.gz" -C "$AUR_DIR" .
+          rm -rf "$AUR_DIR"
           # The install guide ships with every release.
           cp INSTALL-GUIDE.md artifacts/
           ls -la artifacts
