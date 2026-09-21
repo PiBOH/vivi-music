@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.4-alpha] - 2026-09-21
+
+### Fixed
+- [DE] **The history now remembers.** Only pressing Enter saved a search term, while the results appear as you type — so acting on a result (playing it, queueing it, adding it to a playlist, opening an album or artist) is what records the search now. Below that, the app keeps a real local history in `~/.vivimusic/history.json`: the 200 most recently started tracks (one row per track, with a play count) and the 50 most recent search terms. The **History** screen shows both, above the signed-in account's server history, each with its own `Clear`, and tapping a remembered term reopens it in Search — which is also what makes the screen useful without a signed-in account. `Pause listen history` now stops the writes (it used to only hide the screen), the file is written with a 1.5 s debounce so skipping tracks does not rewrite it per skip, and the last write is flushed on exit. The Home recommendations keep their seeds across restarts for the same reason. **Constraint:** the history is per machine and local — nothing here is pushed to the account.
+- [DE] **Six settings keys were showing as raw keys in the UI** (`hide_explicit`, `hide_video_songs`, `hide_youtube_shorts`, `lyrics_provider_priority`, `show_artist_description`, `show_artist_subscriber_count`): the Content screen port translated them in every language, but the English table had no wording for them, and the extra translation batches cannot define English. They now map to the Android resources, like the rest.
+- [DE] **The lyrics options are no longer English-only in every language.** The 42 keys of the lyrics section had no Android mapping, so the whole section fell back to English everywhere. 33 of them now map to the mobile app's own wording (`lyrics_animation_style`, `lyrics_auto_scroll`, `lyrics_text_position`, the style names `Simple`/`Fade`/`Glow`/`Slide`/`Karaoke`/`Apple Music`…, the romanization scripts, Apple Music blur), which took the untranslated leftovers from 2184 to 860 strings, and the nine desktop-only sentences with no mobile counterpart are translated in all 49 languages (`desktop_extra_translations_75.py`). **Note:** the remaining 860 are concentrated in the ~15 languages the mobile app itself does not translate those keys in (as, be, bn, et, eu, fa, fi, fil, hi, hr, iw, km, ml, ms, sr, sv, ta, te…); they are listed by `scripts/check_localization.py`.
+
 ## [6.0.6.5_DE-1.53.3-alpha] - 2026-09-21
 
 ### Added

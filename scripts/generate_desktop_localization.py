@@ -583,6 +583,60 @@ MAPPING = {
     "ai_provider_mistral_help": "ai_provider_mistral_help",
     "ai_provider_deepl_help": "ai_provider_deepl_help",
     "not_set": "not_set",
+
+    # ------------------------------------------------------------------
+    # Lyrics options and the content filters (1.53.4).
+    # ------------------------------------------------------------------
+    # These keys were desktop-only until the lyrics port, so they had no
+    # mapping and no translations: the whole lyrics section sat in English in
+    # every language. The mobile app already ships almost all of this wording,
+    # so the Android resources are the source of the translations and every
+    # language that has one gets it for free (the wording of the desktop
+    # English table is kept, see the ENGLISH block below).
+    "lyrics_animation_style": "lyrics_animation_style",
+    "lyrics_auto_scroll": "lyrics_auto_scroll",
+    "lyrics_glow_effect": "lyrics_glow_effect",
+    "lyrics_glow_effect_desc": "lyrics_glow_effect_desc",
+    "lyrics_text_position": "lyrics_text_position",
+    "lyrics_position_left": "left",
+    "lyrics_position_center": "center",
+    "lyrics_position_right": "right",
+    "lyrics_style_none": "none",
+    "lyrics_style_fade": "fade",
+    "lyrics_style_glow": "glow",
+    "lyrics_style_slide": "slide",
+    "lyrics_style_karaoke": "karaoke",
+    "lyrics_style_apple": "apple_music_style",
+    "lyrics_style_apple_v2": "apple_music_style_letter",
+    "lyrics_style_vivimusic": "vivimusic_1",
+    "lyrics_style_lyrics_v2": "lyrics_v2_fluid",
+    "lyrics_style_metro": "lyrics_animation_metro",
+    "lyrics_apple_blur": "apple_music_lyrics_blur",
+    "lyrics_apple_blur_desc": "apple_music_lyrics_blur_desc",
+    "lyrics_romanize": "lyrics_romanization",
+    "lyrics_romanize_as_main": "lyrics_romanize_as_main",
+    "romanize_japanese": "lyrics_romanize_japanese",
+    "romanize_korean": "lyrics_romanize_korean",
+    "romanize_chinese": "lyrics_romanize_chinese",
+    "romanize_russian": "lyrics_romanize_russian",
+    "romanize_ukrainian": "lyrics_romanize_ukrainian",
+    "romanize_serbian": "lyrics_romanize_serbian",
+    "romanize_bulgarian": "lyrics_romanize_bulgarian",
+    "romanize_belarusian": "lyrics_romanize_belarusian",
+    "romanize_kyrgyz": "lyrics_romanize_kyrgyz",
+    "romanize_macedonian": "lyrics_romanize_macedonian",
+    "romanize_hindi": "lyrics_romanize_hindi",
+    "romanize_punjabi": "lyrics_romanize_punjabi",
+    "translate_lyrics": "ai_lyrics_translation",
+    # Content screen filters: these four were in the English table only through
+    # the extra batches, which cannot define English, so the UI showed the raw
+    # key in English builds.
+    "hide_explicit": "hide_explicit",
+    "hide_video_songs": "hide_video_songs",
+    "hide_youtube_shorts": "hide_youtube_shorts",
+    "lyrics_provider_priority": "lyrics_provider_priority",
+    "show_artist_description": "show_artist_description",
+    "show_artist_subscriber_count": "show_artist_subscriber_count",
 }
 
 # Full desktop English table (source language).
@@ -718,6 +772,8 @@ ENGLISH = {
     "clear_queue": "Clear queue",
     "history": "History",
     "history_empty": "No history yet",
+    "recently_played": "Recently played",
+    "clear_history": "Clear",
     "player_audio": "Player & audio",
     "autoplay_next": "Autoplay next track",
     "auto_load_more": "Auto load more songs",
@@ -1629,12 +1685,14 @@ from desktop_extra_translations_70 import EXTRA_TRANSLATIONS as _EXTRA_70
 from desktop_extra_translations_71 import EXTRA_TRANSLATIONS as _EXTRA_71
 from desktop_extra_translations_72 import EXTRA_TRANSLATIONS as _EXTRA_72
 from desktop_extra_translations_73 import EXTRA_TRANSLATIONS as _EXTRA_73
+from desktop_extra_translations_74 import EXTRA_TRANSLATIONS as _EXTRA_74
+from desktop_extra_translations_75 import EXTRA_TRANSLATIONS as _EXTRA_75
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69, _EXTRA_70, _EXTRA_71, _EXTRA_72, _EXTRA_73):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69, _EXTRA_70, _EXTRA_71, _EXTRA_72, _EXTRA_73, _EXTRA_74, _EXTRA_75):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 

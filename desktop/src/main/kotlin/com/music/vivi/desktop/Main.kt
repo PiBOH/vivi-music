@@ -479,6 +479,7 @@ fun main(args: Array<String>) {
 
     Window(
         onCloseRequest = {
+            runCatching { HistoryStore.flush() }
             runCatching {
                 awtWindowRef[0]?.let { w ->
                     val maximized = (w.extendedState and java.awt.Frame.MAXIMIZED_BOTH) != 0
@@ -1051,8 +1052,15 @@ fun WindowScope.App(
             val updated = (listOf(term.trim()) + searchHistory.filter { !it.equals(term.trim(), ignoreCase = true) }).take(12)
             searchHistory = updated
             DesktopSettings.update { it.copy(searchHistory = updated) }
+            // The same term goes to the persistent history, so the History
+            // screen can offer every search of the past sessions, not just the
+            // twelve the sidebar remembers.
+            HistoryStore.recordSearch(term)
         }
     }
+    // The player owns the local playback history: keep its "pause listen" flag
+    // in sync with the setting (read once here, then on every change below).
+    remember(pauseListenHistory) { player.listenHistoryPaused = pauseListenHistory }
 
     // Session listening stats for the Home "VIVI Wrapped" card (session-only).
     var sessionTrackStarts by remember { mutableStateOf(0) }
@@ -2206,6 +2214,12 @@ fun WindowScope.App(
                         onPlaySong = playSong,
                         onAddToQueue = addToQueue,
                         onAddToPlaylist = addToPlaylist,
+                        // Tapping a remembered search reopens it in the Search
+                        // screen, which is what makes the local history useful.
+                        onSearch = { term ->
+                            headerSearchQuery = term
+                            navigate(Screen.Search)
+                        },
                     )
                     is Screen.NewReleases -> NewReleasesScreen(
                         language = language,

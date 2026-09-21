@@ -5,6 +5,7 @@ import com.music.innertube.models.SongItem
 import com.music.innertube.models.WatchEndpoint
 import com.music.vivi.desktop.AppLog
 import com.music.vivi.desktop.DesktopSettings
+import com.music.vivi.desktop.HistoryStore
 import com.music.vivi.desktop.EqualizerProcessor
 import com.music.vivi.desktop.GuestSession
 import com.music.vivi.desktop.NowPlaying
@@ -139,13 +140,32 @@ class PlayerController {
     val state: StateFlow<PlayerState> = _state.asStateFlow()
 
     /** Most recently started tracks (newest first), used as seeds for the Home
-     *  "Recommended" section (port of the mobile Daily-Discover mechanism). */
-    private val _recentTracks = MutableStateFlow<List<NowPlaying>>(emptyList())
+     *  "Recommended" section (port of the mobile Daily-Discover mechanism).
+     *  Seeded from the persistent [HistoryStore] so the recommendations survive a
+     *  restart (before it was an in-memory list that started empty every launch). */
+    private val _recentTracks = MutableStateFlow(
+        HistoryStore.tracks.value.map {
+            NowPlaying(it.videoId, it.title, it.artist, it.thumbnail, it.durationMs, it.album)
+        }.take(12),
+    )
     val recentTracks: StateFlow<List<NowPlaying>> = _recentTracks.asStateFlow()
+
+    /** "Pause listen history": when on, started tracks are not written to the disk history. */
+    @Volatile var listenHistoryPaused: Boolean = false
 
     private fun noteTrackStarted(track: NowPlaying) {
         _recentTracks.value =
             (listOf(track) + _recentTracks.value).distinctBy { it.videoId }.take(12)
+        if (!listenHistoryPaused) {
+            HistoryStore.recordTrack(
+                videoId = track.videoId,
+                title = track.title,
+                artist = track.artist,
+                thumbnail = track.thumbnail,
+                durationMs = track.durationMs,
+                album = track.album,
+            )
+        }
     }
 
     /** User-initiated seeks (emitted so the sync layer can push them instantly). */

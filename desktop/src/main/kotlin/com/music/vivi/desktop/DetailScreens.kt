@@ -2,6 +2,7 @@ package com.music.vivi.desktop
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,14 +17,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.music.innertube.YouTube
 import com.music.innertube.models.AlbumItem
+import com.music.innertube.models.Artist
 import com.music.innertube.models.BrowseEndpoint
 import com.music.innertube.models.SongItem
 import com.music.innertube.pages.AlbumPage
@@ -358,9 +363,16 @@ fun HistoryScreen(
     onPlaySong: (SongItem) -> Unit,
     onAddToQueue: (SongItem) -> Unit,
     onAddToPlaylist: (SongItem) -> Unit,
+    /** Re-runs one of the remembered searches. */
+    onSearch: (String) -> Unit = {},
 ) {
     var page by remember { mutableStateOf<HistoryPage?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Local history: what was played and searched on this machine, across
+    // restarts. The server list below only covers the signed-in account, which
+    // is why an unsigned or offline user saw an empty screen forever.
+    val localTracks by HistoryStore.tracks.collectAsState()
+    val localSearches by HistoryStore.searches.collectAsState()
 
     LaunchedEffect(Unit) {
         YouTube.musicHistory().fold(
@@ -372,35 +384,105 @@ fun HistoryScreen(
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         BackButton(language, onBack)
         Text(Localization.get(language, "history"), style = MaterialTheme.typography.headlineMedium)
-        when {
-            error != null -> ErrorBox(language, error)
-            page == null -> LoadingBox(language)
-            else -> {
-                val sections = page!!.sections.orEmpty()
-                if (sections.isEmpty()) {
-                    Text(
-                        Localization.get(language, "history_empty"),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 16.dp),
+        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            if (localSearches.isNotEmpty()) {
+                item(key = "header-local-searches") {
+                    HistorySectionHeader(
+                        title = Localization.get(language, "search_history"),
+                        clearLabel = Localization.get(language, "clear_search_history"),
+                        onClear = { HistoryStore.clearSearches() },
                     )
-                } else {
-                    LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                        sections.forEach { section ->
-                            item(key = "header-${section.title}") {
-                                Text(
-                                    section.title,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
-                                )
-                            }
-                            items(section.songs, key = { "song-${it.id}" }) { song ->
-                                SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
-                            }
+                }
+                item(key = "local-searches") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        localSearches.take(20).forEach { entry ->
+                            FilterChip(
+                                selected = false,
+                                onClick = { onSearch(entry.term) },
+                                label = { Text(entry.term) },
+                            )
                         }
+                    }
+                }
+            }
+
+            if (localTracks.isNotEmpty()) {
+                item(key = "header-local-tracks") {
+                    HistorySectionHeader(
+                        title = Localization.get(language, "recently_played"),
+                        clearLabel = Localization.get(language, "clear_history"),
+                        onClear = { HistoryStore.clearTracks() },
+                    )
+                }
+                items(localTracks.take(50), key = { "local-${it.videoId}" }) { entry ->
+                    val song = entry.toSongItem()
+                    SongRow(
+                        song,
+                        language,
+                        { onPlaySong(song) },
+                        onAddToQueue = { onAddToQueue(song) },
+                        onAddToPlaylist = { onAddToPlaylist(song) },
+                    )
+                }
+            }
+
+            val err = error
+            val loaded = page
+            when {
+                err != null -> item(key = "server-error") { ErrorBox(language, err) }
+                loaded == null -> item(key = "server-loading") { LoadingBox(language) }
+                loaded.sections.orEmpty().isEmpty() -> if (localTracks.isEmpty()) {
+                    item(key = "server-empty") {
+                        Text(
+                            Localization.get(language, "history_empty"),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 16.dp),
+                        )
+                    }
+                }
+                else -> loaded.sections.orEmpty().forEach { section ->
+                    item(key = "header-${section.title}") {
+                        Text(
+                            section.title,
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
+                        )
+                    }
+                    items(section.songs, key = { "song-${it.id}" }) { song ->
+                        SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
                     }
                 }
             }
         }
     }
 }
+
+/** Section title of the local history lists, with its "clear" action. */
+@Composable
+private fun HistorySectionHeader(title: String, clearLabel: String, onClear: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onClear) { Text(clearLabel) }
+    }
+}
+
+/**
+ * Rebuilds a playable [SongItem] from a stored history row. The album id is
+ * not kept (only its name), so the entry plays as a standalone song: that is
+ * the same thing the row would do when tapped from the server history.
+ */
+private fun HistoryEntry.toSongItem(): SongItem = SongItem(
+    id = videoId,
+    title = title,
+    artists = artist.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { Artist(name = it, id = null) },
+    duration = if (durationMs > 0) (durationMs / 1000).toInt() else null,
+    thumbnail = thumbnail?.takeIf { it.isNotBlank() } ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg",
+)

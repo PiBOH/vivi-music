@@ -1030,7 +1030,22 @@ fun SearchScreen(
                         )
                     }
                     item(key = "body-${summary.title}") {
-                        SummaryBody(summary, language, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong, onAddToQueue, onAddToPlaylist)
+                        SummaryBody(
+                            summary,
+                            language,
+                            onOpenAlbum,
+                            onOpenArtist,
+                            onOpenPlaylist,
+                            onPlaySong,
+                            onAddToQueue,
+                            onAddToPlaylist,
+                            // Acting on a result is what proves the search was
+                            // meant: only pressing Enter used to save it, and
+                            // results appear while typing, so nothing was ever
+                            // remembered ("history does not remember what I
+                            // search").
+                            onActed = { query.trim().takeIf { it.isNotEmpty() }?.let(onRecordSearch) },
+                        )
                     }
                 }
                 if (result.summaries.isEmpty()) {
@@ -1046,10 +1061,17 @@ fun SearchScreen(
             }
             filterItems != null -> {
                 val results = filterItems!!
+                val record = { query.trim().takeIf { it.isNotEmpty() }?.let(onRecordSearch) }
                 if (results.all { it is SongItem }) {
                     LazyColumn(Modifier.fillMaxSize().padding(top = 8.dp)) {
                         items(results.filterIsInstance<SongItem>(), key = { it.id }) { song ->
-                            SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                            SongRow(
+                                song,
+                                language,
+                                { record(); onPlaySong(song) },
+                                onAddToQueue = { record(); onAddToQueue(song) },
+                                onAddToPlaylist = { record(); onAddToPlaylist(song) },
+                            )
                         }
                     }
                 } else {
@@ -1063,7 +1085,7 @@ fun SearchScreen(
                             YtItemCard(
                                 item = item,
                                 width = null,
-                                onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) },
+                                onClick = { record(); onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) },
                             )
                         }
                     }
@@ -1091,18 +1113,29 @@ private fun SummaryBody(
     onPlaySong: (SongItem) -> Unit,
     onAddToQueue: (SongItem) -> Unit,
     onAddToPlaylist: (SongItem) -> Unit,
+    /** Called before acting on a result: acting on a search is what saves it. */
+    onActed: () -> Unit = {},
 ) {
     val songs = summary.items.filterIsInstance<SongItem>()
     val others = summary.items.filterNot { it is SongItem }
 
     Column {
         songs.forEach { song ->
-            SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
+            SongRow(
+                song,
+                language,
+                { onActed(); onPlaySong(song) },
+                onAddToQueue = { onActed(); onAddToQueue(song) },
+                onAddToPlaylist = { onActed(); onAddToPlaylist(song) },
+            )
         }
         if (others.isNotEmpty()) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(others, key = { it.id }) { item ->
-                    YtItemCard(item = item, onClick = { onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) })
+                    YtItemCard(
+                        item = item,
+                        onClick = { onActed(); onItemClick(item, onOpenAlbum, onOpenArtist, onOpenPlaylist, onPlaySong) },
+                    )
                 }
             }
         }
