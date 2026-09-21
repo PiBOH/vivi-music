@@ -4504,14 +4504,11 @@ fun SettingsScreen(
         ThemeMode.LIGHT -> Localization.get(language, "theme_light")
         ThemeMode.DARK -> Localization.get(language, "theme_dark")
     }
+    // The four groups below mirror the mobile app's settings screen, in the
+    // same order and with the same composition: the account/update group, the
+    // media & player group (where mobile also keeps the lyrics options, inside
+    // Appearance), the features & data group and the system & support group.
     val generalItems = listOf(
-        M3SettingsItem(
-            icon = Icons.Filled.Translate,
-            title = { Text(Localization.get(language, "language")) },
-            description = { Text(Languages.name(language)) },
-            trailing = { SettingsChevron() },
-            onClick = { onOpen(Screen.SettingsLanguage) },
-        ),
         M3SettingsItem(
             icon = Icons.Filled.Refresh,
             title = { Text(Localization.get(language, "updates")) },
@@ -4520,6 +4517,13 @@ fun SettingsScreen(
             },
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsUpdates) },
+        ),
+        M3SettingsItem(
+            icon = Icons.Filled.Person,
+            title = { Text(Localization.get(language, "account")) },
+            description = { Text(if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsAccount) },
         ),
         M3SettingsItem(
             icon = Icons.Filled.Notifications,
@@ -4531,7 +4535,7 @@ fun SettingsScreen(
             onClick = { onOpen(Screen.SettingsNotifications) },
         ),
     )
-    val appearanceItems = listOf(
+    val mediaItems = listOf(
         M3SettingsItem(
             icon = Icons.Filled.Palette,
             title = { Text(Localization.get(language, "appearance")) },
@@ -4539,22 +4543,17 @@ fun SettingsScreen(
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsAppearance) },
         ),
-    )
-    val playerItems = listOf(
+        M3SettingsItem(
+            icon = Icons.Filled.Lyrics,
+            title = { Text(Localization.get(language, "lyrics")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsLyrics) },
+        ),
         M3SettingsItem(
             icon = Icons.Filled.GraphicEq,
             title = { Text(Localization.get(language, "player_audio")) },
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsPlayer) },
-        ),
-    )
-    val accountItems = listOf(
-        M3SettingsItem(
-            icon = Icons.Filled.Person,
-            title = { Text(Localization.get(language, "account")) },
-            description = { Text(if (isLoggedIn) accountName.ifBlank { "YouTube" } else Localization.get(language, "not_logged_in")) },
-            trailing = { SettingsChevron() },
-            onClick = { onOpen(Screen.SettingsAccount) },
         ),
         M3SettingsItem(
             icon = Icons.Filled.Devices,
@@ -4562,8 +4561,6 @@ fun SettingsScreen(
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsDevices) },
         ),
-    )
-    val contentItems = listOf(
         M3SettingsItem(
             icon = Icons.Filled.Language,
             title = { Text(Localization.get(language, "content")) },
@@ -4571,30 +4568,25 @@ fun SettingsScreen(
             onClick = { onOpen(Screen.SettingsContent) },
         ),
         M3SettingsItem(
+            icon = Icons.Filled.Translate,
+            title = { Text(Localization.get(language, "language")) },
+            description = { Text(Languages.name(language)) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsLanguage) },
+        ),
+    )
+    val privacyItems = listOf(
+        M3SettingsItem(
             icon = Icons.Filled.AutoAwesome,
             title = { Text(Localization.get(language, "ai_lyrics_translation")) },
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsAi) },
         ),
         M3SettingsItem(
-            icon = Icons.Filled.Lyrics,
-            title = { Text(Localization.get(language, "lyrics")) },
-            trailing = { SettingsChevron() },
-            onClick = { onOpen(Screen.SettingsLyrics) },
-        ),
-    )
-    val privacyItems = listOf(
-        M3SettingsItem(
             icon = Icons.Filled.Security,
             title = { Text(Localization.get(language, "privacy")) },
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsPrivacy) },
-        ),
-        M3SettingsItem(
-            icon = Icons.Filled.EnergySavingsLeaf,
-            title = { Text(Localization.get(language, "data_saver")) },
-            trailing = { SettingsChevron() },
-            onClick = { onOpen(Screen.SettingsDataSaver) },
         ),
         M3SettingsItem(
             icon = Icons.Filled.Storage,
@@ -4603,13 +4595,19 @@ fun SettingsScreen(
             onClick = { onOpen(Screen.SettingsStorage) },
         ),
         M3SettingsItem(
+            icon = Icons.Filled.EnergySavingsLeaf,
+            title = { Text(Localization.get(language, "data_saver")) },
+            trailing = { SettingsChevron() },
+            onClick = { onOpen(Screen.SettingsDataSaver) },
+        ),
+    )
+    val aboutItems = listOf(
+        M3SettingsItem(
             icon = Icons.Filled.SettingsBackupRestore,
             title = { Text(Localization.get(language, "backup_restore")) },
             trailing = { SettingsChevron() },
             onClick = { onOpen(Screen.SettingsBackup) },
         ),
-    )
-    val aboutItems = listOf(
         M3SettingsItem(
             icon = Icons.Filled.AutoAwesome,
             title = { Text(Localization.get(language, "wrapped_title")) },
@@ -4686,6 +4684,7 @@ fun SettingsScreen(
             "lyrics_animation_style", "lyrics_animation_style_desc",
             "lyrics_style_none", "lyrics_style_fade", "lyrics_style_glow", "lyrics_style_slide",
             "lyrics_style_karaoke", "lyrics_style_apple", "lyrics_style_apple_v2", "lyrics_style_vivimusic",
+            "lyrics_style_lyrics_v2", "lyrics_style_metro", "animation_speed",
             "lyrics_glow_effect", "lyrics_glow_effect_desc",
             "lyrics_apple_blur", "lyrics_apple_blur_desc", "lyrics_standard_blur", "lyrics_standard_blur_desc",
             "lyrics_click_to_seek", "lyrics_click_to_seek_desc", "lyrics_auto_scroll", "lyrics_auto_scroll_desc",
@@ -4757,67 +4756,59 @@ fun SettingsScreen(
                 rowTermsText(key).contains(query, ignoreCase = true)
         }
 
-        if (!searching || matches("language") || matches("updates") || matches("notifications")) {
+        // Group 1 — account and updates (mobile's first group).
+        val generalKeys = listOf("updates", "account", "notifications")
+        if (!searching || generalKeys.any { matches(it) }) {
             M3SettingsGroup(
                 title = if (searching) null else Localization.get(language, "general"),
                 items = listOfNotNull(
-                    generalItems[0].takeIf { !searching || matches("language") },
-                    generalItems[1].takeIf { !searching || matches("updates") },
+                    generalItems[0].takeIf { !searching || matches("updates") },
+                    generalItems[1].takeIf { !searching || matches("account") },
                     generalItems[2].takeIf { !searching || matches("notifications") },
                 ),
             )
         }
-        if (!searching || matches("appearance")) {
+        // Group 2 — media & player experience (mobile's second group; the
+        // lyrics options live in it because that is where mobile keeps them).
+        val mediaKeys = listOf("appearance", "lyrics", "player_audio", "device_sync", "content", "language")
+        if (!searching || mediaKeys.any { matches(it) }) {
             M3SettingsGroup(
                 title = if (searching) null else Localization.get(language, "appearance"),
-                items = listOfNotNull(appearanceItems[0].takeIf { !searching || matches("appearance") }),
-            )
-        }
-        if (!searching || matches("player_audio")) {
-            M3SettingsGroup(
-                title = if (searching) null else Localization.get(language, "player_audio"),
-                items = listOfNotNull(playerItems[0].takeIf { !searching || matches("player_audio") }),
-            )
-        }
-        if (!searching || matches("account") || matches("device_sync")) {
-            M3SettingsGroup(
-                title = if (searching) null else Localization.get(language, "account"),
                 items = listOfNotNull(
-                    accountItems[0].takeIf { !searching || matches("account") },
-                    accountItems[1].takeIf { !searching || matches("device_sync") },
+                    mediaItems[0].takeIf { !searching || matches("appearance") },
+                    mediaItems[1].takeIf { !searching || matches("lyrics") },
+                    mediaItems[2].takeIf { !searching || matches("player_audio") },
+                    mediaItems[3].takeIf { !searching || matches("device_sync") },
+                    mediaItems[4].takeIf { !searching || matches("content") },
+                    mediaItems[5].takeIf { !searching || matches("language") },
                 ),
             )
         }
-        if (!searching || matches("content") || matches("ai_lyrics_translation") || matches("lyrics")) {
-            M3SettingsGroup(
-                title = if (searching) null else Localization.get(language, "content"),
-                items = listOfNotNull(
-                    contentItems[0].takeIf { !searching || matches("content") },
-                    contentItems[1].takeIf { !searching || matches("ai_lyrics_translation") },
-                    contentItems[2].takeIf { !searching || matches("lyrics") },
-                ),
-            )
-        }
-        if (!searching || matches("privacy") || matches("data_saver") || matches("storage") || matches("backup_restore")) {
+        // Group 3 — features & data (mobile's third group).
+        val privacyKeys = listOf("ai_lyrics_translation", "privacy", "storage", "data_saver")
+        if (!searching || privacyKeys.any { matches(it) }) {
             M3SettingsGroup(
                 title = if (searching) null else Localization.get(language, "privacy"),
                 items = listOfNotNull(
-                    privacyItems[0].takeIf { !searching || matches("privacy") },
-                    privacyItems[1].takeIf { !searching || matches("data_saver") },
+                    privacyItems[0].takeIf { !searching || matches("ai_lyrics_translation") },
+                    privacyItems[1].takeIf { !searching || matches("privacy") },
                     privacyItems[2].takeIf { !searching || matches("storage") },
-                    privacyItems[3].takeIf { !searching || matches("backup_restore") },
+                    privacyItems[3].takeIf { !searching || matches("data_saver") },
                 ),
             )
         }
-        if (!searching || matches("wrapped_title") || matches("integrations") || matches("desktop_features") || matches("system") || matches("about")) {
+        // Group 4 — system & support (mobile's fourth group).
+        val aboutKeys = listOf("backup_restore", "wrapped_title", "integrations", "desktop_features", "system", "about")
+        if (!searching || aboutKeys.any { matches(it) }) {
             M3SettingsGroup(
                 title = if (searching) null else Localization.get(language, "about"),
                 items = listOfNotNull(
-                    aboutItems[0].takeIf { !searching || matches("wrapped_title") },
-                    aboutItems[1].takeIf { !searching || matches("integrations") },
-                    aboutItems[2].takeIf { !searching || matches("desktop_features") },
-                    aboutItems[3].takeIf { !searching || matches("system") },
-                    aboutItems[4].takeIf { !searching || matches("about") },
+                    aboutItems[0].takeIf { !searching || matches("backup_restore") },
+                    aboutItems[1].takeIf { !searching || matches("wrapped_title") },
+                    aboutItems[2].takeIf { !searching || matches("integrations") },
+                    aboutItems[3].takeIf { !searching || matches("desktop_features") },
+                    aboutItems[4].takeIf { !searching || matches("system") },
+                    aboutItems[5].takeIf { !searching || matches("about") },
                 ),
             )
         }
@@ -6342,14 +6333,64 @@ fun PlayerSection(
         onSelect = onAudioQualityChange,
     )
 
-    M3SettingsDropdownItem(
-        icon = Icons.Filled.SwapHoriz,
-        title = Localization.get(language, "slider_style"),
-        value = sliderStyleLabel(language, sliderStyle),
-        options = listOf("slim", "squiggly", "wavy").map { it to sliderStyleLabel(language, it) },
-        onSelect = onSliderStyleChange,
+    // --- Crossfade (mobile keeps these three in their own group) ---------
+    M3SettingsGroup(
+        items = listOfNotNull(
+            M3SettingsItem(
+                icon = Icons.Filled.CompareArrows,
+                title = { Text(Localization.get(language, "crossfade")) },
+                description = { Text(Localization.get(language, "crossfade_desc")) },
+                trailing = { Switch(checked = crossfade, onCheckedChange = onToggleCrossfade) },
+                onClick = { onToggleCrossfade(!crossfade) },
+            ),
+            if (crossfade) M3SettingsItem(
+                icon = Icons.Filled.DiscFull,
+                title = { Text(Localization.get(language, "disable_crossfade_gapless")) },
+                description = { Text(Localization.get(language, "disable_crossfade_gapless_desc")) },
+                trailing = { Switch(checked = disableCrossfadeGapless, onCheckedChange = onToggleDisableCrossfadeGapless) },
+                onClick = { onToggleDisableCrossfadeGapless(!disableCrossfadeGapless) },
+            ) else null,
+        ),
     )
 
+    if (crossfade) {
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.CompareArrows,
+                    title = { Text("${Localization.get(language, "crossfade_duration")}: $crossfadeDurationSeconds s") },
+                    description = { Text(Localization.get(language, "crossfade_duration_desc")) },
+                ),
+            ),
+        )
+        Slider(
+            value = crossfadeDurationSeconds.coerceIn(1, 12).toFloat(),
+            onValueChange = { onCrossfadeDurationSecondsChange(it.roundToInt().coerceIn(1, 12)) },
+            valueRange = 1f..12f,
+            steps = 10,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+    }
+
+    // --- History duration -------------------------------------------------
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Schedule,
+                title = { Text("${Localization.get(language, "history_duration")}: $historyDurationSeconds s") },
+                description = { Text(Localization.get(language, "history_duration_desc")) },
+            ),
+        ),
+    )
+    Slider(
+        value = historyDurationSeconds.coerceIn(1, 100).toFloat(),
+        onValueChange = { onHistoryDurationSecondsChange(it.roundToInt().coerceIn(1, 100)) },
+        valueRange = 1f..100f,
+        steps = 98,
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+
+    // --- Playback (mobile's "Player" group) ------------------------------
     M3SettingsGroup(
         items = listOfNotNull(
             M3SettingsItem(
@@ -6371,12 +6412,6 @@ fun PlayerSection(
                 onClick = { onTogglePersistentQueue(!persistentQueue) },
             ),
             M3SettingsItem(
-                icon = Icons.Filled.VolumeUp,
-                title = { Text(Localization.get(language, "sync_vivi_volume")) },
-                trailing = { Switch(checked = syncViviVolume, onCheckedChange = onToggleSyncViviVolume) },
-                onClick = { onToggleSyncViviVolume(!syncViviVolume) },
-            ),
-            M3SettingsItem(
                 icon = Icons.Filled.Autorenew,
                 title = { Text(Localization.get(language, "auto_load_more")) },
                 description = { Text(Localization.get(language, "auto_load_more_desc")) },
@@ -6396,18 +6431,6 @@ fun PlayerSection(
                 description = { Text(Localization.get(language, "auto_skip_next_on_error_desc")) },
                 trailing = { Switch(checked = autoSkipNextOnError, onCheckedChange = onToggleAutoSkipNextOnError) },
                 onClick = { onToggleAutoSkipNextOnError(!autoSkipNextOnError) },
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.VolumeOff,
-                title = { Text(Localization.get(language, "pause_music_when_media_muted")) },
-                trailing = { Switch(checked = pauseWhenMediaMuted, onCheckedChange = onTogglePauseWhenMediaMuted) },
-                onClick = { onTogglePauseWhenMediaMuted(!pauseWhenMediaMuted) },
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.BrightnessHigh,
-                title = { Text(Localization.get(language, "keep_screen_on_player_expanded")) },
-                trailing = { Switch(checked = keepScreenOnWhenPlayerExpanded, onCheckedChange = onToggleKeepScreenOnWhenPlayerExpanded) },
-                onClick = { onToggleKeepScreenOnWhenPlayerExpanded(!keepScreenOnWhenPlayerExpanded) },
             ),
             M3SettingsItem(
                 icon = Icons.Filled.Shuffle,
@@ -6446,57 +6469,39 @@ fun PlayerSection(
                 trailing = { Switch(checked = skipSilenceInstant, onCheckedChange = onToggleSkipSilenceInstant) },
                 onClick = { onToggleSkipSilenceInstant(!skipSilenceInstant) },
             ) else null,
-            M3SettingsItem(
-                icon = Icons.Filled.CompareArrows,
-                title = { Text(Localization.get(language, "crossfade")) },
-                description = { Text(Localization.get(language, "crossfade_desc")) },
-                trailing = { Switch(checked = crossfade, onCheckedChange = onToggleCrossfade) },
-                onClick = { onToggleCrossfade(!crossfade) },
-            ),
-            if (crossfade) M3SettingsItem(
-                icon = Icons.Filled.DiscFull,
-                title = { Text(Localization.get(language, "disable_crossfade_gapless")) },
-                description = { Text(Localization.get(language, "disable_crossfade_gapless_desc")) },
-                trailing = { Switch(checked = disableCrossfadeGapless, onCheckedChange = onToggleDisableCrossfadeGapless) },
-                onClick = { onToggleDisableCrossfadeGapless(!disableCrossfadeGapless) },
-            ) else null,
         ),
     )
 
-    if (crossfade) {
-        M3SettingsGroup(
-            items = listOf(
-                M3SettingsItem(
-                    icon = Icons.Filled.CompareArrows,
-                    title = { Text("${Localization.get(language, "crossfade_duration")}: $crossfadeDurationSeconds s") },
-                    description = { Text(Localization.get(language, "crossfade_duration_desc")) },
-                ),
-            ),
-        )
-        Slider(
-            value = crossfadeDurationSeconds.coerceIn(1, 12).toFloat(),
-            onValueChange = { onCrossfadeDurationSecondsChange(it.roundToInt().coerceIn(1, 12)) },
-            valueRange = 1f..12f,
-            steps = 10,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-        )
-    }
-
+    // --- Misc (mobile's "Misc" group) ------------------------------------
     M3SettingsGroup(
         items = listOf(
             M3SettingsItem(
-                icon = Icons.Filled.Schedule,
-                title = { Text("${Localization.get(language, "history_duration")}: $historyDurationSeconds s") },
-                description = { Text(Localization.get(language, "history_duration_desc")) },
+                icon = Icons.Filled.VolumeUp,
+                title = { Text(Localization.get(language, "sync_vivi_volume")) },
+                trailing = { Switch(checked = syncViviVolume, onCheckedChange = onToggleSyncViviVolume) },
+                onClick = { onToggleSyncViviVolume(!syncViviVolume) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.VolumeOff,
+                title = { Text(Localization.get(language, "pause_music_when_media_muted")) },
+                trailing = { Switch(checked = pauseWhenMediaMuted, onCheckedChange = onTogglePauseWhenMediaMuted) },
+                onClick = { onTogglePauseWhenMediaMuted(!pauseWhenMediaMuted) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.BrightnessHigh,
+                title = { Text(Localization.get(language, "keep_screen_on_player_expanded")) },
+                trailing = { Switch(checked = keepScreenOnWhenPlayerExpanded, onCheckedChange = onToggleKeepScreenOnWhenPlayerExpanded) },
+                onClick = { onToggleKeepScreenOnWhenPlayerExpanded(!keepScreenOnWhenPlayerExpanded) },
             ),
         ),
     )
-    Slider(
-        value = historyDurationSeconds.coerceIn(1, 100).toFloat(),
-        onValueChange = { onHistoryDurationSecondsChange(it.roundToInt().coerceIn(1, 100)) },
-        valueRange = 1f..100f,
-        steps = 98,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.SwapHoriz,
+        title = Localization.get(language, "slider_style"),
+        value = sliderStyleLabel(language, sliderStyle),
+        options = listOf("slim", "squiggly", "wavy").map { it to sliderStyleLabel(language, it) },
+        onSelect = onSliderStyleChange,
     )
 
     M3SettingsGroup(

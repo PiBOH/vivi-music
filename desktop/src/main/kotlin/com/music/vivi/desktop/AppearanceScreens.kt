@@ -117,17 +117,26 @@ fun AppearanceSection(
                 trailing = { SettingsChevron() },
                 onClick = onOpenTheme,
             ),
+            // Mobile's Appearance screen leads with Theme, then the player
+            // (mini player / player design) and only after that the rest; the
+            // two rows are ordered the same way here.
             M3SettingsItem(
-                icon = Icons.Filled.FontDownload,
-                title = { Text(Localization.get(language, "app_font")) },
+                icon = Icons.Filled.MusicNote,
+                title = { Text(Localization.get(language, "player_design")) },
                 trailing = { SettingsChevron() },
-                onClick = onOpenFont,
+                onClick = onOpenPlayerDesign,
             ),
             M3SettingsItem(
                 icon = Icons.Filled.Movie,
                 title = { Text(Localization.get(language, "vivimusic_canvas")) },
                 trailing = { SettingsChevron() },
                 onClick = onOpenCanvas,
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.FontDownload,
+                title = { Text(Localization.get(language, "app_font")) },
+                trailing = { SettingsChevron() },
+                onClick = onOpenFont,
             ),
             M3SettingsItem(
                 icon = Icons.Filled.SettingsBrightness,
@@ -140,12 +149,6 @@ fun AppearanceSection(
                 title = { Text(Localization.get(language, "screen_transitions")) },
                 trailing = { SettingsChevron() },
                 onClick = onOpenTransitions,
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.MusicNote,
-                title = { Text(Localization.get(language, "player_design")) },
-                trailing = { SettingsChevron() },
-                onClick = onOpenPlayerDesign,
             ),
             M3SettingsItem(
                 icon = Icons.Filled.Movie,
@@ -207,23 +210,27 @@ fun AppearanceSection(
         ),
     )
 
-    // "Animation speed" applies a multiplier to every UI transition
-    // (screen transitions, player crossfade, …).
-    M3SettingsDropdownItem(
-        icon = Icons.Filled.MotionPhotosOn,
-        title = Localization.get(language, "animation_speed"),
-        value = Localization.get(language, when (animationSpeed) {
-            "fast" -> "animation_speed_fast"
-            "slow" -> "animation_speed_slow"
-            else -> "animation_speed_normal"
-        }),
-        options = listOf(
-            "fast" to Localization.get(language, "animation_speed_fast"),
-            "normal" to Localization.get(language, "animation_speed_normal"),
-            "slow" to Localization.get(language, "animation_speed_slow"),
-        ),
-        onSelect = onAnimationSpeedChange,
-    )
+    // "Animation speed" applies a multiplier to every UI transition (screen
+    // transitions, player crossfade, the lyric animations, …). It is a
+    // derivative of the master "Animations" switch, so it is only offered
+    // while transitions are enabled at all.
+    if (animationsEnabled) {
+        M3SettingsDropdownItem(
+            icon = Icons.Filled.MotionPhotosOn,
+            title = Localization.get(language, "animation_speed"),
+            value = Localization.get(language, when (animationSpeed) {
+                "fast" -> "animation_speed_fast"
+                "slow" -> "animation_speed_slow"
+                else -> "animation_speed_normal"
+            }),
+            options = listOf(
+                "fast" to Localization.get(language, "animation_speed_fast"),
+                "normal" to Localization.get(language, "animation_speed_normal"),
+                "slow" to Localization.get(language, "animation_speed_slow"),
+            ),
+            onSelect = onAnimationSpeedChange,
+        )
+    }
 
     if (showRestartDialog) {
         AlertDialog(

@@ -1276,6 +1276,18 @@ fun LyricsSection(
         ),
     )
 
+    // --- Text position ---------------------------------------------------
+    // The rows below follow the mobile "Lyrics" group order: position, style,
+    // glow, Apple Music blur (VIVI Music style only), standard blur, text size,
+    // line spacing, tap-to-seek, auto-scroll.
+    M3SettingsDropdownItem(
+        icon = Icons.Filled.VerticalAlignCenter,
+        title = Localization.get(language, "lyrics_text_position"),
+        value = lyricsPositionLabel(language, options.position),
+        options = LyricsPosition.entries.map { it.name to lyricsPositionLabel(language, it) },
+        onSelect = { name -> onOptionsChange(options.copy(position = LyricsPosition.from(name))) },
+    )
+
     // --- Animation style -------------------------------------------------
     // Rendered as the same row-style dropdown the player/audio section uses
     // (M3SettingsDropdownItem): consistent look with every other single-choice
@@ -1291,43 +1303,84 @@ fun LyricsSection(
 
     // --- Display options -------------------------------------------------
     M3SettingsGroup(
+        items = buildList {
+            add(
+                M3SettingsItem(
+                    icon = Icons.Filled.AutoAwesome,
+                    title = { Text(Localization.get(language, "lyrics_glow_effect")) },
+                    description = { Text(Localization.get(language, "lyrics_glow_effect_desc")) },
+                    trailing = {
+                        Switch(
+                            checked = options.glowEffect,
+                            onCheckedChange = { onOptionsChange(options.copy(glowEffect = it)) },
+                        )
+                    },
+                    onClick = { onOptionsChange(options.copy(glowEffect = !options.glowEffect)) },
+                ),
+            )
+            // Mobile hides the Apple Music blur for every style but VIVI Music:
+            // the renderer only applies it there, so the row is shown only then
+            // instead of offering a switch that would change nothing.
+            if (options.style == LyricsAnimationStyle.VIVIMUSIC_1) {
+                add(
+                    M3SettingsItem(
+                        icon = Icons.Filled.BlurOn,
+                        title = { Text(Localization.get(language, "lyrics_apple_blur")) },
+                        description = { Text(Localization.get(language, "lyrics_apple_blur_desc")) },
+                        trailing = {
+                            Switch(
+                                checked = options.appleMusicBlur,
+                                onCheckedChange = { onOptionsChange(options.copy(appleMusicBlur = it)) },
+                            )
+                        },
+                        onClick = { onOptionsChange(options.copy(appleMusicBlur = !options.appleMusicBlur)) },
+                    ),
+                )
+            }
+            add(
+                M3SettingsItem(
+                    icon = Icons.Filled.BlurOn,
+                    title = { Text(Localization.get(language, "lyrics_standard_blur")) },
+                    description = { Text(Localization.get(language, "lyrics_standard_blur_desc")) },
+                    trailing = {
+                        Switch(
+                            checked = options.standardBlur,
+                            onCheckedChange = { onOptionsChange(options.copy(standardBlur = it)) },
+                        )
+                    },
+                    onClick = { onOptionsChange(options.copy(standardBlur = !options.standardBlur)) },
+                ),
+            )
+        },
+    )
+
+    Text(
+        "${Localization.get(language, "lyrics_text_size")}: ${lyricsTextSize.toInt()} sp",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+    androidx.compose.material3.Slider(
+        value = lyricsTextSize,
+        onValueChange = onLyricsTextSizeChange,
+        valueRange = 12f..32f,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    Text(
+        "${Localization.get(language, "lyrics_line_spacing")}: ${String.format("%.2f", lyricsLineSpacing)}",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+    androidx.compose.material3.Slider(
+        value = lyricsLineSpacing,
+        onValueChange = onLyricsLineSpacingChange,
+        valueRange = 1.0f..2.0f,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    // --- Interaction -----------------------------------------------------
+    M3SettingsGroup(
         items = listOf(
-            M3SettingsItem(
-                icon = Icons.Filled.AutoAwesome,
-                title = { Text(Localization.get(language, "lyrics_glow_effect")) },
-                description = { Text(Localization.get(language, "lyrics_glow_effect_desc")) },
-                trailing = {
-                    Switch(
-                        checked = options.glowEffect,
-                        onCheckedChange = { onOptionsChange(options.copy(glowEffect = it)) },
-                    )
-                },
-                onClick = { onOptionsChange(options.copy(glowEffect = !options.glowEffect)) },
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.BlurOn,
-                title = { Text(Localization.get(language, "lyrics_standard_blur")) },
-                description = { Text(Localization.get(language, "lyrics_standard_blur_desc")) },
-                trailing = {
-                    Switch(
-                        checked = options.standardBlur,
-                        onCheckedChange = { onOptionsChange(options.copy(standardBlur = it)) },
-                    )
-                },
-                onClick = { onOptionsChange(options.copy(standardBlur = !options.standardBlur)) },
-            ),
-            M3SettingsItem(
-                icon = Icons.Filled.BlurOn,
-                title = { Text(Localization.get(language, "lyrics_apple_blur")) },
-                description = { Text(Localization.get(language, "lyrics_apple_blur_desc")) },
-                trailing = {
-                    Switch(
-                        checked = options.appleMusicBlur,
-                        onCheckedChange = { onOptionsChange(options.copy(appleMusicBlur = it)) },
-                    )
-                },
-                onClick = { onOptionsChange(options.copy(appleMusicBlur = !options.appleMusicBlur)) },
-            ),
             M3SettingsItem(
                 icon = Icons.Filled.TouchApp,
                 title = { Text(Localization.get(language, "lyrics_click_to_seek")) },
@@ -1353,39 +1406,6 @@ fun LyricsSection(
                 onClick = { onOptionsChange(options.copy(autoScroll = !options.autoScroll)) },
             ),
         ),
-    )
-
-    // --- Text position ---------------------------------------------------
-    M3SettingsDropdownItem(
-        icon = Icons.Filled.VerticalAlignCenter,
-        title = Localization.get(language, "lyrics_text_position"),
-        value = lyricsPositionLabel(language, options.position),
-        options = LyricsPosition.entries.map { it.name to lyricsPositionLabel(language, it) },
-        onSelect = { name -> onOptionsChange(options.copy(position = LyricsPosition.from(name))) },
-    )
-
-    Text(
-        "${Localization.get(language, "lyrics_text_size")}: ${lyricsTextSize.toInt()} sp",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 16.dp),
-    )
-    androidx.compose.material3.Slider(
-        value = lyricsTextSize,
-        onValueChange = onLyricsTextSizeChange,
-        valueRange = 12f..32f,
-        modifier = Modifier.fillMaxWidth(),
-    )
-
-    Text(
-        "${Localization.get(language, "lyrics_line_spacing")}: ${String.format("%.2f", lyricsLineSpacing)}",
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(top = 16.dp),
-    )
-    androidx.compose.material3.Slider(
-        value = lyricsLineSpacing,
-        onValueChange = onLyricsLineSpacingChange,
-        valueRange = 1.0f..2.0f,
-        modifier = Modifier.fillMaxWidth(),
     )
 
     // --- Romanization (master switch + per-script children) ---------------
@@ -1476,6 +1496,8 @@ private fun lyricsStyleLabel(language: String, style: LyricsAnimationStyle): Str
         LyricsAnimationStyle.APPLE -> "lyrics_style_apple"
         LyricsAnimationStyle.APPLE_V2 -> "lyrics_style_apple_v2"
         LyricsAnimationStyle.VIVIMUSIC_1 -> "lyrics_style_vivimusic"
+        LyricsAnimationStyle.LYRICS_V2 -> "lyrics_style_lyrics_v2"
+        LyricsAnimationStyle.METRO_LYRICS -> "lyrics_style_metro"
     }
     return Localization.get(language, key)
 }

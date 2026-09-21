@@ -11,6 +11,18 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.0-alpha] - 2026-09-21
+
+### Added
+- [DE] **Two more lyrics styles, so the picker matches the mobile one.** `Lyrics V2 (Fluid)` lays the sung word out as its own composable, floats it up (a sine over its own progress) and reveals its bright copy behind an edge that travels across the word instead of just recolouring it; `MetroLyrics` also animates lines whose source carries no word timings — it estimates them the way the mobile style does (180 ms per word, 30 ms apart) — and fades the rest of the list by distance from the sung line (20 / 15 / 10 / 8 %).
+
+### Changed
+- [DE] **Every lyrics style is now a style of its own.** `Glow` is a *line* effect (a light sweeps the whole line over its own duration while a halo breathes around it) instead of a slightly larger shadow on the per-word fill; `Apple Music V2` reveals the line *character by character* (the mobile granularity) instead of being the same word-level effect as `Apple Music`; `Slide` (tight leading edge, breathing halo, glow on the words already sung), `Karaoke` (wider seven-stop fill whose halo grows with the square of the progress) and `Metro` (flat, bold karaoke fill) each follow their own mobile recipe. `Animation speed` now scales all of them, including the sweep of `Glow` and the character split of `Apple Music V2`, which were the two that ignored it.
+- [DE] **Settings are grouped and ordered like the mobile app's.** The root screen went from seven groups to the mobile app's four — account and updates, media & player experience, features & data, system & support — with the mobile row order inside each (`Updates` and `Account` first, `AI translation` → `Privacy` → `Storage` → `Data saver`, `Backup & restore` → `About`); the desktop-only rows keep their place next to the mobile row they belong to (the `Lyrics` screen sits beside `Appearance`, which is where the mobile app keeps those options, and `Language` beside `Content`). `Player & audio` follows the mobile grouping too: `Audio quality` first, then a `Crossfade` group with its duration, then history duration and the playback group, then the misc group with the volume/media-key rows, and only then the desktop-only slider style and stream cache. The lyrics sub-screen uses the mobile order (position, style, glow, blur, size, spacing, tap-to-seek, auto-scroll).
+
+### Fixed
+- [DE] **`Apple Music blur` is offered only where it does anything.** The mobile app shows that option just for the VIVI Music style, and the renderer only applies it there; the desktop offered it for every style (where it silently dimmed the lines) — the row now appears for VIVI Music only and the renderer ignores a leftover value on any other style. `Animation speed` is likewise hidden while the master `Animations` switch is off, since it is a derivative of it.
+
 ## [6.0.6.5_DE-1.52.9-alpha] - 2026-09-21
 
 ### Added
