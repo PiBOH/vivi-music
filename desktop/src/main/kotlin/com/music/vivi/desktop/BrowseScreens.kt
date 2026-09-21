@@ -746,8 +746,40 @@ fun BrowseScreen(
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(browseId, params) {
-        YouTube.browse(browseId, params).fold(
-            onSuccess = { result = it; error = null },
+        // A library page ("FEmusic_library_*") has a different shape from a
+        // browse page: YouTube.browse only maps the two-row cards of a browse
+        // page, while a library page carries the grid / musicShelf renderers
+        // that YouTube.library reads. The Artists screen — and the "See all"
+        // link that opens it — asked for the library page and got an empty
+        // result, so it is routed through the same parser the Library screen
+        // uses instead.
+        val fetched = if (browseId.startsWith("FEmusic_library")) {
+            YouTube.library(browseId).map { page ->
+                BrowseResult(
+                    title = null,
+                    items = listOf(BrowseResult.Item(title = null, items = page.items)),
+                )
+            }
+        } else {
+            YouTube.browse(browseId, params)
+        }
+        fetched.fold(
+            onSuccess = { page ->
+                result = page
+                error = null
+                // A browse that succeeds with nothing to show is exactly what
+                // "the screen is empty" looks like in a support zip: record
+                // what came back, so the next report says whether the page was
+                // empty or the parser dropped it.
+                runCatching {
+                    AppLog.log(
+                        "browse",
+                        "browse ok $browseId → ${page.items.size} section(s), " +
+                            "${page.items.sumOf { it.items.size }} item(s)" +
+                            if (page.items.all { it.items.isEmpty() }) " (empty page)" else "",
+                    )
+                }
+            },
             onFailure = { t ->
                 val raw = t.message.orEmpty()
                 // The status is what the error code means: a 401 really is a

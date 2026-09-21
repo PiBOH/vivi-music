@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.2-alpha] - 2026-09-21
+
+### Fixed
+- [DE] **The Artists screen is no longer empty.** It opens a *library* page (`FEmusic_library_corpus_artists`), which carries the `gridRenderer` / `musicShelfRenderer` shape that `YouTube.library` maps; the screen was going through `YouTube.browse`, which only reads the two-row cards of a browse page, so the request succeeded and returned nothing — no error, no log line, blank screen (the same for the "See all" link in the Library feed). It now uses the library parser, the one the Library screen already uses, and every browse outcome is recorded in `browse.log` (`browse ok … → N section(s), M item(s)` / `(empty page)`), so an exported log tells an empty server page apart from a parse miss.
+
 ## [6.0.6.5_DE-1.53.1-alpha] - 2026-09-21
 
 ### Added
