@@ -1498,6 +1498,7 @@ private fun lyricsStyleLabel(language: String, style: LyricsAnimationStyle): Str
         LyricsAnimationStyle.VIVIMUSIC_1 -> "lyrics_style_vivimusic"
         LyricsAnimationStyle.LYRICS_V2 -> "lyrics_style_lyrics_v2"
         LyricsAnimationStyle.METRO_LYRICS -> "lyrics_style_metro"
+        LyricsAnimationStyle.ALPHA -> "lyrics_style_alpha"
     }
     return Localization.get(language, key)
 }

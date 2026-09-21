@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.1-alpha] - 2026-09-21
+
+### Added
+- [DE] **A new lyrics style, `Alpha`.** It draws the lyrics the way the desktop did before the mobile look was ported (one plain line per lyric, the sung one in the accent colour), so the old behaviour is still one click away in the picker. Its label is translated in all 49 languages (`desktop_extra_translations_71.py`).
+
+### Fixed
+- [DE] **Every animation style now follows the mobile recipe of the same name.** `Simple`, `Fade`, `Glow`, `Slide`, `Karaoke` and `Apple Music` reuse the exact alphas, weights and halo strengths of the mobile renderer (mobile's `Glow` is a word-level halo that grows with the square of the fill — 1.53.0 had turned it into a sweep across the line, which is not what the mobile style does), `Apple Music V2` lays the line out word by word and reveals it character by character (estimating the word timings from the character counts when the source carries none), `VIVI Music` runs one global wave over the sentence with the per-word halo, the 0.75/0.50/0.30/0.20 alpha falloff, the progressive blur and the 1.05 active-line scale of the mobile style, `Lyrics V2 (Fluid)` floats each word by up to 4 dp while its bright copy is revealed behind a travelling edge, and `MetroLyrics` draws the per-word flat fill with a landing wobble and the mobile distance falloff. The whole renderer is driven by one speed-scaled timeline, so the `Animation speed` option reaches every style uniformly.
+- [DE] **The expressive player's lyrics ignored the lyrics options.** They were handed only the display object while the size and line spacing parameters defaulted to 18 sp / 1.35 and then *overrode* it, so the user's size and spacing never reached that player; it also always requested synced lyrics even with the option off. It now keeps the values the display object carries and honours the `Synced lyrics` setting.
+
 ## [6.0.6.5_DE-1.53.0-alpha] - 2026-09-21
 
 ### Added

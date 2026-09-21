@@ -691,15 +691,20 @@ private fun M3EPlayerContent(
                         .padding(16.dp)
                 ) {
                     if (activeTab == M3ETab.LYRICS) {
+                        val lyricsSettings = DesktopSettings.load()
                         LyricsScreen(
                             nowPlaying = np,
                             positionMs = positionMs,
                             isPlaying = isPlaying,
                             language = language,
-                            display = lyricsDisplayOptionsFrom(DesktopSettings.load()),
+                            // The expressive player used to pass only `display`,
+                            // so the nullable size/spacing fell back to 18sp / 1.35
+                            // and the options the user set never reached it.
+                            synced = lyricsSettings.syncedLyrics,
+                            display = lyricsDisplayOptionsFrom(lyricsSettings),
                             translate = lyricsTranslationConfig(
-                                DesktopSettings.load(),
-                                DesktopSettings.load().translateLyrics,
+                                lyricsSettings,
+                                lyricsSettings.translateLyrics,
                             ),
                             onSeek = onSeek,
                             onTogglePlay = onTogglePlay,
@@ -1960,10 +1965,10 @@ fun LyricsScreen(
     isPlaying: Boolean,
     language: String,
     synced: Boolean = true,
-    textSizeSp: Float = 18f,
-    lineSpacing: Float = 1.35f,
-    /** Full animation/display configuration (mobile port); built from the
-     * single size/spacing arguments when the caller does not pass one. */
+    /** Null keeps whatever size/spacing the display options carry. */
+    textSizeSp: Float? = null,
+    lineSpacing: Float? = null,
+    /** Full animation/display configuration (mobile port). */
     display: LyricsDisplayOptions? = null,
     /** AI translation settings, or null when translation is off. */
     translate: LyricsTranslator.Config? = null,
@@ -1971,10 +1976,15 @@ fun LyricsScreen(
     onTogglePlay: () -> Unit = {},
     onBack: () -> Unit,
 ) {
-    // The explicit size/spacing arguments always win over whatever the display
-    // object carries: they are the ones the settings sliders write, and reading
-    // the stale copy out of `display` was why dragging them did nothing.
-    val options = (display ?: LyricsDisplayOptions()).copy(textSizeSp = textSizeSp, lineSpacing = lineSpacing)
+    // A caller that passes its own size/spacing (the lyrics screens do, from the
+    // live settings sliders) wins over the display object; a caller that only
+    // passes `display` — the expressive player — keeps the values it carries
+    // instead of falling back to the defaults.
+    val base = display ?: LyricsDisplayOptions()
+    val options = base.copy(
+        textSizeSp = textSizeSp ?: base.textSizeSp,
+        lineSpacing = lineSpacing ?: base.lineSpacing,
+    )
     var lyrics by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }

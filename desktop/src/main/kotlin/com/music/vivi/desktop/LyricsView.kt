@@ -1,11 +1,7 @@
 package com.music.vivi.desktop
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -39,9 +36,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -58,11 +57,11 @@ import kotlin.math.sin
 /**
  * Animated lyrics view — the desktop port of the mobile app's lyrics renderer.
  *
- * The desktop used to draw a plain list of lines with the active one in bold.
- * This adds what the APK's advanced lyrics have: the word-by-word animation
- * styles (which need the per-word timings the shared [LyricsParser] now keeps),
- * the glow/blur options, click-to-seek, text alignment, and the optional
- * romanized / translated subtitle under each line.
+ * Every entry of [LyricsAnimationStyle] reproduces the mobile recipe of the same
+ * name (the word fills, the halo strengths, the alpha falloff of the line styled
+ * with separate word composables). [LyricsAnimationStyle.ALPHA] is the only
+ * desktop-only entry: it is the plain line list the desktop drew before the
+ * mobile look was ported.
  *
  * Every style reads the playback position through a `State` inside the item
  * lambda, so the ~40 position updates per second recompose only the visible
@@ -79,6 +78,9 @@ enum class LyricsAnimationStyle(val id: String) {
     VIVIMUSIC_1("VIVIMUSIC_1"),
     LYRICS_V2("LYRICS_V2"),
     METRO_LYRICS("METRO_LYRICS"),
+
+    /** Desktop-only: the pre-port look (one plain text per line). */
+    ALPHA("ALPHA"),
     ;
 
     companion object {
@@ -99,14 +101,12 @@ enum class LyricsPosition {
 }
 
 /**
- * How much faster/slower than real time a word animation settles, from the
- * global "Animation speed" preference (Appearance → Animation speed).
+ * How much faster/slower than real time the lyrics run, from the global
+ * "Animation speed" preference (Appearance → Animation speed).
  *
- * The lyrics animation is driven by the playback clock, so without this the
- * setting changed every other transition in the app but left the lyrics
- * filling at exactly the same rate (the reported "the animation ignores the
- * speed I set"). "Fast" reaches full colour before the word ends, "Slow"
- * lags behind it; "Normal" is 1:1 with the word's own duration.
+ * One scale factor for the whole renderer: every style positions its words on
+ * the timeline, so stretching the timeline there makes the setting apply to all
+ * of them without a second copy of the maths in each one.
  */
 private val LYRICS_SPEED: Float
     get() = when (Animations.speed) {
@@ -115,9 +115,17 @@ private val LYRICS_SPEED: Float
         else -> 1f
     }
 
-/** Smoothstep easing of a word's fill, scaled by the animation-speed setting. */
-private fun lyricProgress(linear: Float): Float {
-    val t = (linear * LYRICS_SPEED).coerceIn(0f, 1f)
+/** Playback position on the (possibly stretched) lyric timeline of one line. */
+private fun lyricPosition(position: Long, lineStartMs: Long): Long =
+    if (LYRICS_SPEED == 1f) {
+        position
+    } else {
+        lineStartMs + ((position - lineStartMs) * LYRICS_SPEED).toLong()
+    }
+
+/** Smoothstep of a linear 0..1 progress (the mobile renderer's easing). */
+private fun smoothstep(linear: Float): Float {
+    val t = linear.coerceIn(0f, 1f)
     return t * t * (3f - 2f * t)
 }
 
@@ -226,6 +234,79 @@ fun lyricsTranslationConfig(state: DesktopSyncState, enabled: Boolean): LyricsTr
     ).takeIf { it.usable }
 }
 
+/** How a lyric line sits in the list at a given distance from the sung one. */
+private data class LineAppearance(val alpha: Float, val blurDp: Float)
+
+/**
+ * The line-level alpha and blur, per style.
+ *
+ * The mobile renderer carries these inside each line composable (its alpha
+ * falloff, its progressive blur); the desktop draws them on the line wrapper,
+ * so the same numbers live here — one place instead of one per style.
+ */
+private fun lineAppearance(
+    options: LyricsDisplayOptions,
+    style: LyricsAnimationStyle,
+    isActive: Boolean,
+    isBackground: Boolean,
+    distance: Int,
+): LineAppearance {
+    val appleBlur = options.appleMusicBlur && style == LyricsAnimationStyle.VIVIMUSIC_1
+    return when (style) {
+        // VIVI Music: soft falloff 0.75 → 0.20 and the progressive blur the
+        // style exposes as "Apple Music blur".
+        LyricsAnimationStyle.VIVIMUSIC_1 -> LineAppearance(
+            alpha = when {
+                isActive -> 1f
+                distance == 1 -> 0.75f
+                distance == 2 -> 0.50f
+                distance == 3 -> 0.30f
+                else -> 0.20f
+            },
+            blurDp = when {
+                !appleBlur || isActive -> 0f
+                distance <= 2 -> 0f
+                distance == 3 -> 2f
+                distance == 4 -> 4f
+                else -> 6f
+            },
+        )
+
+        // Metro: a foreground line sits at 0.30, the others fall away fast, and
+        // a background line keeps 0.50.
+        LyricsAnimationStyle.METRO_LYRICS -> LineAppearance(
+            alpha = when {
+                isBackground -> 0.5f
+                isActive -> 1f
+                distance == 0 -> 0.3f
+                distance <= 2 -> 0.2f
+                distance == 3 -> 0.15f
+                distance == 4 -> 0.1f
+                else -> 0.08f
+            },
+            blurDp = if (!isActive && options.standardBlur) 1.2f else 0f,
+        )
+
+        // Pre-port look: the list did not fade or blur anything.
+        LyricsAnimationStyle.ALPHA -> LineAppearance(alpha = 1f, blurDp = 0f)
+
+        else -> LineAppearance(
+            alpha = when {
+                isActive -> 1f
+                appleBlur -> 0.35f
+                options.standardBlur -> 0.45f
+                else -> 0.65f - (distance.coerceAtMost(6) * 0.05f)
+            },
+            blurDp = when {
+                isActive -> 0f
+                appleBlur -> 2.4f
+                options.standardBlur -> 1.2f
+                else -> 0f
+            },
+        )
+    }
+}
+
 @Composable
 fun LyricsList(
     lines: List<LyricLine>,
@@ -302,20 +383,10 @@ fun LyricsList(
             }
             // A word animation needs the words of the text it is drawing: with
             // the romanized form promoted to the main line there are none.
-            val lineWords = if (options.romanizeAsMain && hasRomanized) null else line.words
-            // METRO_LYRICS animates even without word timings: the mobile style
-            // estimates them (180 ms per word, 30 ms apart), which is what makes
-            // that entry useful on plain LRC files.
-            val words = lineWords ?: if (options.style == LyricsAnimationStyle.METRO_LYRICS) {
-                estimateMetroWords(mainText, line.timeMs)
-            } else {
-                null
-            }
-            // GLOW sweeps a line over its own duration: the renderer has to know
-            // how long the line lasts (the next line's start, 4 s otherwise).
-            val lineDurationMs = (
-                (lines.getOrNull(index + 1)?.timeMs ?: (line.timeMs + 4_000)) - line.timeMs
-                ).coerceAtLeast(300)
+            val words = if (options.romanizeAsMain && hasRomanized) null else line.words
+            // GLOW-style line effects need to know how long the line lasts (the
+            // next line's start, 4 s otherwise).
+            val lineEndMs = lines.getOrNull(index + 1)?.timeMs ?: (line.timeMs + 4_000)
 
             val baseSize = options.textSizeSp * (if (isBackground) 0.85f else 1f)
             val lineStyle = TextStyle(
@@ -323,6 +394,7 @@ fun LyricsList(
                 fontSize = (baseSize * if (isActive) 1.12f else 1f).sp,
                 lineHeight = (baseSize * options.lineSpacing).sp,
             )
+            val appearance = lineAppearance(options, options.style, isActive, isBackground, distance)
 
             Box(
                 modifier = Modifier
@@ -338,48 +410,19 @@ fun LyricsList(
                 contentAlignment = lineAlignment,
             ) {
                 Column(horizontalAlignment = columnAlignment) {
-                    // Mobile shows the Apple Music blur only for the VIVI Music
-                    // style, and the option is hidden in the settings for every
-                    // other one — mirroring that here keeps a leftover value
-                    // from blurring a style the user cannot configure it for.
-                    val appleBlur = options.appleMusicBlur &&
-                        options.style == LyricsAnimationStyle.VIVIMUSIC_1
-                    val blurred = when {
-                        !isActive && appleBlur -> true
-                        !isActive && options.standardBlur -> true
-                        else -> false
-                    }
-                    val blurRadius = when {
-                        !blurred -> 0f
-                        appleBlur -> 2.4f
-                        else -> 1.2f
-                    }
-                    val dimmed = when {
-                        // METRO_LYRICS fades the whole list by distance from the
-                        // sung line (20 / 15 / 10 / 8 %), the look of the mobile
-                        // style; the active line stays fully opaque.
-                        options.style == LyricsAnimationStyle.METRO_LYRICS && !isActive -> when (distance) {
-                            1, 2 -> 0.2f
-                            3 -> 0.15f
-                            4 -> 0.1f
-                            else -> 0.08f
-                        }
-                        isActive -> 1f
-                        appleBlur -> 0.35f
-                        options.standardBlur -> 0.45f
-                        else -> 0.65f - (distance.coerceAtMost(6) * 0.05f)
-                    }
-
                     Box(
                         modifier = Modifier
-                            .then(if (blurRadius > 0f) Modifier.blur(blurRadius.dp) else Modifier)
-                            .graphicsLayer { alpha = dimmed },
+                            .then(if (appearance.blurDp > 0f) Modifier.blur(appearance.blurDp.dp) else Modifier)
+                            .graphicsLayer { alpha = appearance.alpha },
                     ) {
                         AnimatedLyricLine(
                             text = mainText,
                             words = words,
                             isActive = isActive,
-                            lineDurationMs = lineDurationMs,
+                            isPast = !isActive && index < currentIndex,
+                            isBackground = isBackground,
+                            lineStartMs = line.timeMs,
+                            lineEndMs = lineEndMs,
                             positionProvider = { positionState.value },
                             style = options.style,
                             glowEffect = options.glowEffect,
@@ -408,35 +451,22 @@ fun LyricsList(
 }
 
 /**
- * Mobile's METRO_LYRICS estimates word timings when the source only carries
- * line timings: 180 ms per word, each starting 30 ms after the previous one.
- * It is the only style that animates un-synced lines, so the estimation is
- * what the picker promises.
- */
-private fun estimateMetroWords(text: String, lineStartMs: Long): List<WordTimestamp> {
-    val parts = text.split(Regex("\\s+")).filter { it.isNotBlank() }
-    if (parts.isEmpty()) return emptyList()
-    val start = lineStartMs / 1000.0
-    return parts.mapIndexed { index, word ->
-        val from = start + index * 0.03
-        WordTimestamp(text = word, startTime = from, endTime = from + 0.18)
-    }
-}
-
-/**
  * One lyric line, animated with the selected style.
  *
- * Styles that only need per-word colours/weights/shadows are drawn as a single
- * `Text` with an [androidx.compose.ui.text.AnnotatedString]; the two that move
- * each word on its own (APPLE_V2, VIVIMUSIC_1) lay the words out as separate
- * composables so they can scale and blur individually.
+ * The styles that only recolour the words are drawn as a single `Text` with an
+ * [androidx.compose.ui.text.AnnotatedString]; the ones the mobile renderer
+ * animates word by word lay the words out as separate composables so each one
+ * can move, scale and blur on its own.
  */
 @Composable
 private fun AnimatedLyricLine(
     text: String,
     words: List<WordTimestamp>?,
     isActive: Boolean,
-    lineDurationMs: Long,
+    isPast: Boolean,
+    isBackground: Boolean,
+    lineStartMs: Long,
+    lineEndMs: Long,
     positionProvider: () -> Long,
     style: LyricsAnimationStyle,
     glowEffect: Boolean,
@@ -447,52 +477,93 @@ private fun AnimatedLyricLine(
 ) {
     val wordTimings = words?.takeIf { it.isNotEmpty() }
 
-    // GLOW is a *line* effect in the mobile renderer: a light travels across
-    // the whole line while a halo breathes around it. Drawn per word it only
-    // differed from FADE by a slightly larger shadow, which is exactly the
-    // "the styles all look the same" report.
-    if (style == LyricsAnimationStyle.GLOW) {
-        GlowSweepLine(
-            text = text,
-            isActive = isActive,
-            lineDurationMs = lineDurationMs,
-            glowEffect = glowEffect,
-            accent = accent,
-            inactive = inactive,
-            textStyle = textStyle,
-            textAlign = textAlign,
-        )
-        return
-    }
+    when (style) {
+        LyricsAnimationStyle.ALPHA -> {
+            PlainLyricLine(text, isActive, glowEffect, accent, inactive, textStyle, textAlign)
+            return
+        }
 
-    // The two styles that move *each word* on its own are laid out as separate
-    // composables (they scale, float and blur individually); APPLE_V2 left this
-    // layout for the character-by-character reveal of the mobile style.
-    val useWordLayout = style == LyricsAnimationStyle.VIVIMUSIC_1 ||
-        style == LyricsAnimationStyle.LYRICS_V2
+        LyricsAnimationStyle.VIVIMUSIC_1 -> {
+            ViviWaveLine(
+                text = text,
+                words = wordTimings,
+                isActive = isActive,
+                position = lyricPosition(positionProvider(), lineStartMs),
+                lineStartMs = lineStartMs,
+                accent = accent,
+                textStyle = textStyle,
+                textAlign = textAlign,
+            )
+            return
+        }
 
-    if (wordTimings != null && useWordLayout) {
-        WordFlowLine(
-            words = wordTimings,
-            positionProvider = positionProvider,
-            isActive = isActive,
-            style = style,
-            glowEffect = glowEffect,
-            accent = accent,
-            inactive = inactive,
-            textStyle = textStyle,
-            textAlign = textAlign,
-        )
-        return
+        LyricsAnimationStyle.LYRICS_V2 -> {
+            LyricsV2Line(
+                text = text,
+                words = wordTimings,
+                isActive = isActive,
+                isPast = isPast,
+                isBackground = isBackground,
+                position = positionProvider(),
+                accent = accent,
+                inactive = inactive,
+                textStyle = textStyle,
+                textAlign = textAlign,
+            )
+            return
+        }
+
+        LyricsAnimationStyle.METRO_LYRICS -> {
+            MetroWordLine(
+                text = text,
+                words = wordTimings,
+                isActive = isActive,
+                isPast = isPast,
+                isBackground = isBackground,
+                position = lyricPosition(positionProvider(), lineStartMs),
+                lineStartMs = lineStartMs,
+                accent = accent,
+                inactive = inactive,
+                textStyle = textStyle,
+                textAlign = textAlign,
+            )
+            return
+        }
+
+        LyricsAnimationStyle.APPLE_V2 -> {
+            AppleV2Line(
+                text = text,
+                words = wordTimings,
+                isActive = isActive,
+                isPast = isPast,
+                lineStartMs = lineStartMs,
+                lineEndMs = lineEndMs,
+                position = lyricPosition(positionProvider(), lineStartMs),
+                accent = accent,
+                textStyle = textStyle,
+                textAlign = textAlign,
+            )
+            return
+        }
+
+        else -> Unit
     }
 
     if (wordTimings != null) {
-        // The style only changes colours inside the line, but the position has
-        // to be read here so this line recomposes (and only this one) as the
-        // words advance.
-        val position = positionProvider()
-        val annotated = remember(style, isActive, position, accent, glowEffect) {
-            buildWordSpans(wordTimings, position, isActive, style, glowEffect, accent, inactive)
+        // NONE / FADE / GLOW / SLIDE / KARAOKE / APPLE: per-word colours and
+        // shadows inside one text run. The position is read here so this line —
+        // and only this one — recomposes as the words advance.
+        val position = lyricPosition(positionProvider(), lineStartMs)
+        val annotated = remember(style, isActive, isPast, position, accent, inactive) {
+            mobileWordSpans(
+                words = wordTimings,
+                position = position,
+                isActive = isActive,
+                isPast = isPast,
+                style = style,
+                accent = accent,
+                inactive = inactive,
+            )
         }
         Text(
             text = annotated,
@@ -503,8 +574,32 @@ private fun AnimatedLyricLine(
         return
     }
 
-    // No per-word timings: a line-level highlight (what the old renderer did,
-    // plus the active line's glow when the option is on).
+    // No per-word timings: the line is highlighted as a whole.
+    PlainLyricLine(
+        text = text,
+        isActive = isActive,
+        glowEffect = glowEffect,
+        accent = accent,
+        inactive = inactive,
+        textStyle = textStyle,
+        textAlign = textAlign,
+    )
+}
+
+/**
+ * The pre-port look (and the fallback of every word style on a line without
+ * word timings): one plain text, the sung line in the accent colour and bold.
+ */
+@Composable
+private fun PlainLyricLine(
+    text: String,
+    isActive: Boolean,
+    glowEffect: Boolean,
+    accent: Color,
+    inactive: Color,
+    textStyle: TextStyle,
+    textAlign: TextAlign,
+) {
     val glow = if (isActive && glowEffect) {
         Shadow(color = accent.copy(alpha = 0.45f), offset = Offset.Zero, blurRadius = 14f)
     } else {
@@ -525,83 +620,59 @@ private fun AnimatedLyricLine(
 /**
  * Per-word `AnnotatedString` for the text-based animation styles.
  *
- * Each branch is the mobile renderer's own recipe for that style, which is what
- * makes the entries in the picker actually look different from one another:
- * SLIDE draws a tight leading edge with a breathing halo, KARAOKE a wider and
- * softer fill with a stronger glow, APPLE_V2 reveals the line character by
- * character, METRO fills it flat and bold (its look is completed by the
- * per-line distance fade in [LyricsList]).
+ * Every branch is the mobile renderer's own recipe for that style, values
+ * included (alphas, weights, halo radius): that is what makes the entries of
+ * the picker actually look like their mobile counterpart instead of six
+ * variations of the same fill.
  */
-private fun buildWordSpans(
+private fun mobileWordSpans(
     words: List<WordTimestamp>,
     position: Long,
     isActive: Boolean,
+    isPast: Boolean,
     style: LyricsAnimationStyle,
-    glowEffect: Boolean,
     accent: Color,
     inactive: Color,
 ) = buildAnnotatedString {
     words.forEachIndexed { index, word ->
         val startMs = (word.startTime * 1000).toLong()
         val endMs = (word.endTime * 1000).toLong()
-        val duration = (endMs - startMs).coerceAtLeast(1L)
-        val hasPassed = isActive && position > endMs
+        val duration = endMs - startMs
         val isWordActive = isActive && position in startMs..endMs
-        val linear = if (isWordActive) ((position - startMs).toFloat() / duration).coerceIn(0f, 1f) else 0f
-        // Smoothstep easing, shared by every style (as on mobile) and scaled by
-        // the "Animation speed" preference (see [LYRICS_SPEED]).
+        val linear = if (isWordActive && duration > 0) {
+            ((position - startMs).toFloat() / duration).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        val passed = when (style) {
+            // NONE / FADE / GLOW advance on the current line only; SLIDE,
+            // KARAOKE and APPLE also treat an already-sung line as completed.
+            LyricsAnimationStyle.SLIDE, LyricsAnimationStyle.KARAOKE, LyricsAnimationStyle.APPLE ->
+                (isActive && position >= endMs) || isPast
+            else -> isActive && position > endMs
+        }
+        // Smoothstep is the mobile easing for this family; SLIDE and KARAOKE
+        // each apply their own curve on top of it.
         val progress = when {
-            hasPassed -> 1f
-            isWordActive -> lyricProgress(linear)
+            passed -> 1f
+            isWordActive -> smoothstep(linear)
             else -> 0f
         }
-
-        // APPLE_V2 is the mobile style that reveals a line *character by
-        // character* inside every word (the word's own duration is split over
-        // its characters). Same colours as APPLE, different granularity — the
-        // two used to be the same effect at word level here.
-        if (style == LyricsAnimationStyle.APPLE_V2) {
-            val chars = word.text
-            val perChar = duration.toDouble() / chars.length.coerceAtLeast(1)
-            // The reveal is split over the characters, but the playhead that
-            // walks them is still stretched by the "Animation speed" setting:
-            // without this the character style was the one entry in the picker
-            // that ignored the option (it stepped at 1:1 with the word).
-            val elapsed = ((position - startMs) * LYRICS_SPEED).toLong()
-            chars.forEachIndexed { charIndex, char ->
-                val charStart = (perChar * charIndex).toLong()
-                val charEnd = charStart + perChar.toLong().coerceAtLeast(1L)
-                val charProgress = when {
-                    !isActive -> 1f
-                    elapsed >= charEnd -> 1f
-                    elapsed < charStart -> 0f
-                    else -> ((elapsed - charStart).toFloat() /
-                        (charEnd - charStart).toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
-                }
-                withStyle(
-                    SpanStyle(
-                        color = accent.copy(alpha = 0.3f + 0.7f * charProgress),
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.5).sp,
-                    ),
-                ) { append(char) }
-            }
-            if (index < words.lastIndex) append(" ")
-            return@forEachIndexed
-        }
+        val lineColor = if (isActive) accent else inactive
 
         val wordStyle = when (style) {
+            // Mobile NONE: the plainest fill of the family.
             LyricsAnimationStyle.NONE -> SpanStyle(
                 color = accent.copy(
                     alpha = when {
                         !isActive -> 0.7f
-                        hasPassed -> 1f
+                        passed -> 1f
                         isWordActive -> 0.5f + 0.5f * progress
                         else -> 0.35f
                     },
                 ),
                 fontWeight = when {
-                    !isActive || hasPassed -> FontWeight.Bold
+                    !isActive || passed -> FontWeight.Bold
                     isWordActive -> FontWeight.ExtraBold
                     else -> FontWeight.Medium
                 },
@@ -611,43 +682,66 @@ private fun buildWordSpans(
                 color = accent.copy(
                     alpha = when {
                         !isActive -> 0.55f
-                        hasPassed -> 1f
+                        passed -> 1f
                         isWordActive -> 0.4f + 0.6f * progress
                         else -> 0.4f
                     },
                 ),
                 fontWeight = if (isWordActive) FontWeight.ExtraBold else FontWeight.Bold,
                 shadow = when {
-                    !glowEffect -> null
                     isWordActive && progress > 0.2f -> Shadow(
                         color = accent.copy(alpha = 0.35f * progress),
                         offset = Offset.Zero,
                         blurRadius = 10f * progress,
                     )
-                    hasPassed -> Shadow(accent.copy(alpha = 0.15f), Offset.Zero, 6f)
+                    passed -> Shadow(accent.copy(alpha = 0.15f), Offset.Zero, 6f)
                     else -> null
                 },
             )
 
-            // Only a fallback: GLOW is drawn by [GlowSweepLine] above.
-            LyricsAnimationStyle.GLOW -> SpanStyle(
-                color = if (hasPassed) accent else accent.copy(alpha = 0.4f),
-                fontWeight = FontWeight.Bold,
-            )
+            // Mobile GLOW: a bright fill whose halo grows with the square of
+            // the progress — a word-level effect, not a sweep across the line.
+            LyricsAnimationStyle.GLOW -> {
+                val glowIntensity = progress * progress
+                SpanStyle(
+                    color = accent.copy(
+                        alpha = when {
+                            !isActive -> 0.5f
+                            isWordActive || passed -> 0.45f + 0.55f * progress
+                            else -> 0.35f
+                        },
+                    ),
+                    fontWeight = when {
+                        !isActive -> FontWeight.Bold
+                        isWordActive -> FontWeight.ExtraBold
+                        passed -> FontWeight.Bold
+                        else -> FontWeight.Medium
+                    },
+                    shadow = when {
+                        isWordActive && glowIntensity > 0.05f -> Shadow(
+                            color = accent.copy(alpha = 0.5f + 0.3f * glowIntensity),
+                            offset = Offset.Zero,
+                            blurRadius = 16f + 12f * glowIntensity,
+                        )
+                        passed -> Shadow(accent.copy(alpha = 0.25f), Offset.Zero, 8f)
+                        else -> null
+                    },
+                )
+            }
 
-            // Mobile SLIDE: the fill has a tight leading edge, the halo
-            // "breathes" while the word is sung (a slow sine), and completed
-            // words keep a glow behind them.
+            // Mobile SLIDE: a tight leading edge plus a halo that "breathes"
+            // while the word is sung (a slow sine).
             LyricsAnimationStyle.SLIDE -> {
                 val elapsed = if (isWordActive) position - startMs else 0L
                 val breathe = if (isWordActive) {
-                    (sin(elapsed / 3000.0 * 2.0 * PI) * 0.03).coerceIn(0.0, 0.03).toFloat()
+                    ((elapsed % 3000) / 3000f * 2f * PI.toFloat()).let { sin(it) * 0.03f }
+                        .coerceIn(0f, 0.03f)
                 } else {
                     0f
                 }
                 val glowIntensity = (0.3f + progress * 0.7f + breathe).coerceIn(0f, 1.1f)
                 when {
-                    isWordActive -> SpanStyle(
+                    isWordActive && duration > 0 -> SpanStyle(
                         brush = Brush.horizontalGradient(
                             0f to accent,
                             (progress * 0.95f).coerceIn(0f, 1f) to accent,
@@ -657,35 +751,30 @@ private fun buildWordSpans(
                             1f to accent.copy(alpha = 0.35f),
                         ),
                         fontWeight = FontWeight.ExtraBold,
-                        shadow = if (glowEffect) {
-                            Shadow(
-                                color = accent.copy(alpha = 0.4f * glowIntensity),
-                                offset = Offset.Zero,
-                                blurRadius = 14f + 4f * progress,
-                            )
-                        } else {
-                            null
-                        },
+                        shadow = Shadow(
+                            color = accent.copy(alpha = 0.4f * glowIntensity),
+                            offset = Offset.Zero,
+                            blurRadius = 14f + 4f * progress,
+                        ),
                     )
-                    hasPassed -> SpanStyle(
+                    passed && isActive -> SpanStyle(
                         color = accent,
                         fontWeight = FontWeight.Bold,
-                        shadow = if (glowEffect) Shadow(accent.copy(alpha = 0.4f), Offset.Zero, 12f) else null,
+                        shadow = Shadow(accent.copy(alpha = 0.4f), Offset.Zero, 12f),
                     )
                     else -> SpanStyle(
-                        color = if (!isActive) inactive else accent.copy(alpha = 0.35f),
+                        color = if (!isActive) lineColor else accent.copy(alpha = 0.35f),
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
 
-            // Mobile KARAOKE: a softer, wider fill (seven stops) whose glow
-            // builds with the square of the progress, plus a light halo on the
-            // words already sung.
+            // Mobile KARAOKE: a softer, wider fill (seven stops) whose halo
+            // builds with the square of the progress.
             LyricsAnimationStyle.KARAOKE -> {
                 val glowIntensity = progress * progress
                 when {
-                    isWordActive -> SpanStyle(
+                    isWordActive && duration > 0 -> SpanStyle(
                         brush = Brush.horizontalGradient(
                             0f to accent.copy(alpha = 0.4f),
                             (progress * 0.6f).coerceIn(0f, 1f) to accent.copy(alpha = 0.75f),
@@ -696,71 +785,58 @@ private fun buildWordSpans(
                             1f to accent.copy(alpha = if (progress >= 0.9f) 0.95f else 0.4f),
                         ),
                         fontWeight = FontWeight.ExtraBold,
-                        shadow = if (glowEffect) {
-                            Shadow(
-                                color = accent.copy(alpha = 0.5f + 0.3f * glowIntensity),
-                                offset = Offset.Zero,
-                                blurRadius = 16f + 12f * glowIntensity,
-                            )
-                        } else {
-                            null
-                        },
+                        shadow = Shadow(
+                            color = accent.copy(alpha = 0.5f + 0.3f * glowIntensity),
+                            offset = Offset.Zero,
+                            blurRadius = 16f + 12f * glowIntensity,
+                        ),
                     )
-                    hasPassed -> SpanStyle(
+                    passed && isActive -> SpanStyle(
                         color = accent,
                         fontWeight = FontWeight.Bold,
-                        shadow = if (glowEffect) Shadow(accent.copy(alpha = 0.25f), Offset.Zero, 8f) else null,
+                        shadow = Shadow(accent.copy(alpha = 0.25f), Offset.Zero, 8f),
                     )
                     else -> SpanStyle(
-                        color = if (!isActive) inactive else accent.copy(alpha = 0.4f),
+                        color = if (!isActive) lineColor else accent.copy(alpha = 0.4f),
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
 
-            LyricsAnimationStyle.APPLE -> SpanStyle(
-                color = accent.copy(
-                    alpha = when {
-                        !isActive -> 0.55f
-                        hasPassed -> 1f
-                        isWordActive -> 0.55f + 0.45f * progress
-                        else -> 0.4f
+            LyricsAnimationStyle.APPLE -> {
+                val glowIntensity = progress * progress
+                SpanStyle(
+                    color = accent.copy(
+                        alpha = when {
+                            !isActive -> 0.55f
+                            passed -> 1f
+                            isWordActive -> 0.55f + 0.45f * progress
+                            else -> 0.4f
+                        },
+                    ),
+                    fontWeight = when {
+                        !isActive -> FontWeight.SemiBold
+                        passed -> FontWeight.Bold
+                        isWordActive -> FontWeight.ExtraBold
+                        else -> FontWeight.Normal
                     },
-                ),
-                fontWeight = when {
-                    !isActive -> FontWeight.SemiBold
-                    hasPassed -> FontWeight.Bold
-                    isWordActive -> FontWeight.ExtraBold
-                    else -> FontWeight.Normal
-                },
-                shadow = when {
-                    !glowEffect -> null
-                    isWordActive -> Shadow(
-                        color = accent.copy(alpha = 0.2f + 0.4f * progress * progress),
-                        offset = Offset.Zero,
-                        blurRadius = 10f + 12f * progress * progress,
-                    )
-                    hasPassed -> Shadow(accent.copy(alpha = 0.2f), Offset.Zero, 8f)
-                    else -> null
-                },
-            )
+                    shadow = when {
+                        isWordActive -> Shadow(
+                            color = accent.copy(alpha = 0.2f + 0.4f * glowIntensity),
+                            offset = Offset.Zero,
+                            blurRadius = 10f + 12f * glowIntensity,
+                        )
+                        passed && isActive -> Shadow(accent.copy(alpha = 0.2f), Offset.Zero, 8f)
+                        else -> null
+                    },
+                )
+            }
 
-            // METRO_LYRICS is flat on purpose: the mobile style animates a
-            // canvas with per-character timings, and what identifies it on a
-            // desktop is the flat, bold karaoke fill without gradient or halo
-            // (the per-line distance fade lives in [LyricsList]).
-            LyricsAnimationStyle.METRO_LYRICS -> SpanStyle(
-                color = accent.copy(alpha = if (!isActive) 0.55f else 0.3f + 0.7f * progress),
-                fontWeight = when {
-                    isWordActive -> FontWeight.ExtraBold
-                    hasPassed -> FontWeight.Bold
-                    else -> FontWeight.Medium
-                },
-            )
-
-            // Drawn by [WordFlowLine]; this is only a placeholder colour.
-            LyricsAnimationStyle.LYRICS_V2, LyricsAnimationStyle.VIVIMUSIC_1 ->
-                SpanStyle(color = accent.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+            // Drawn by their own renderer; these are placeholders.
+            LyricsAnimationStyle.APPLE_V2, LyricsAnimationStyle.LYRICS_V2,
+            LyricsAnimationStyle.VIVIMUSIC_1, LyricsAnimationStyle.METRO_LYRICS,
+            LyricsAnimationStyle.ALPHA,
+            -> SpanStyle(color = accent.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
         }
 
         withStyle(wordStyle) { append(word.text) }
@@ -768,252 +844,524 @@ private fun buildWordSpans(
     }
 }
 
+/** The horizontal FlowRow arrangement matching a [TextAlign]. */
+private fun flowArrangement(textAlign: TextAlign): Arrangement.Horizontal = when (textAlign) {
+    TextAlign.Start -> Arrangement.Start
+    TextAlign.End -> Arrangement.End
+    else -> Arrangement.Center
+}
+
 /**
- * Mobile's GLOW style: a light travels across the whole line over its own
- * duration and a halo breathes around it for as long as the line is sung.
- *
- * This is the one style that is a *line* effect rather than a per-word colour,
- * which is what separates it from FADE in the picker.
+ * The gap between two wrapped word rows: mobile caps the line spacing at 1.3
+ * here, so a tall spacing does not push the wrapped rows apart.
  */
 @Composable
-private fun GlowSweepLine(
+private fun wrapSpacing(textStyle: TextStyle) = with(LocalDensity.current) {
+    val ratio = (textStyle.lineHeight.value / textStyle.fontSize.value)
+        .takeIf { it.isFinite() && it > 0f } ?: 1.35f
+    (textStyle.fontSize.value * (ratio.coerceAtMost(1.3f) - 1f)).sp.toDp()
+}
+
+/**
+ * Mobile APPLE_V2: the line is revealed character by character, each word laid
+ * out on its own; without word timings the mobile renderer splits the line's
+ * own duration over its characters by count.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AppleV2Line(
     text: String,
+    words: List<WordTimestamp>?,
     isActive: Boolean,
-    lineDurationMs: Long,
-    glowEffect: Boolean,
+    isPast: Boolean,
+    lineStartMs: Long,
+    lineEndMs: Long,
+    position: Long,
+    accent: Color,
+    textStyle: TextStyle,
+    textAlign: TextAlign,
+) {
+    val activeDuration = (((lineEndMs - lineStartMs).takeIf { it > 0 } ?: 4_000L) * 0.95)
+        .toLong().coerceAtLeast(300L)
+
+    // (word text, start, end) relative to the line start.
+    val wordData = remember(text, words, activeDuration) {
+        if (!words.isNullOrEmpty()) {
+            words.map { word ->
+                val start = ((word.startTime * 1000).toLong() - lineStartMs).coerceAtLeast(0L)
+                val end = ((word.endTime * 1000).toLong() - lineStartMs).coerceAtLeast(start + 50L)
+                Triple(word.text, start, end)
+            }
+        } else {
+            val parts = text.split(" ").filter { it.isNotEmpty() }
+            if (parts.isEmpty()) {
+                listOf(Triple(text, 0L, activeDuration))
+            } else {
+                val totalChars = text.length
+                var accumulated = 0L
+                parts.mapIndexed { index, part ->
+                    val chars = if (index < parts.lastIndex) part.length + 1 else part.length
+                    val duration = if (totalChars > 0) {
+                        (activeDuration * chars.toFloat() / totalChars).toLong()
+                    } else {
+                        activeDuration
+                    }
+                    val start = accumulated
+                    accumulated += duration
+                    Triple(part, start, start + duration)
+                }
+            }
+        }
+    }
+
+    val lineRel = (position - lineStartMs).coerceAtLeast(0L)
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = flowArrangement(textAlign),
+        verticalArrangement = Arrangement.spacedBy(wrapSpacing(textStyle)),
+    ) {
+        wordData.forEachIndexed { wordIndex, (wordText, startRelative, endRelative) ->
+            val wordDuration = endRelative - startRelative
+            Row {
+                wordText.forEachIndexed { charIndex, char ->
+                    val charDuration = if (wordText.isNotEmpty()) wordDuration / wordText.length else 0L
+                    val charStart = startRelative + (charIndex * charDuration)
+                    val charEnd = charStart + charDuration
+                    val charProgress = when {
+                        !isActive -> 0f
+                        lineRel >= charEnd -> 1f
+                        lineRel < charStart -> 0f
+                        charDuration <= 0L -> 1f
+                        else -> ((lineRel - charStart).toFloat() / charDuration).coerceIn(0f, 1f)
+                    }
+                    Text(
+                        text = char.toString(),
+                        fontSize = textStyle.fontSize,
+                        lineHeight = textStyle.lineHeight,
+                        color = accent.copy(
+                            alpha = when {
+                                !isActive -> 1f
+                                charProgress >= 1f -> 1f
+                                else -> 0.3f + 0.7f * charProgress
+                            },
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp,
+                    )
+                }
+                if (wordIndex < wordData.lastIndex) {
+                    Text(
+                        text = " ",
+                        fontSize = textStyle.fontSize,
+                        lineHeight = textStyle.lineHeight,
+                        letterSpacing = (-0.5).sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Mobile LYRICS_V2: each word floats and bounces (a sine over its own progress)
+ * while its bright copy is revealed behind an edge that travels across the word.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LyricsV2Line(
+    text: String,
+    words: List<WordTimestamp>?,
+    isActive: Boolean,
+    isPast: Boolean,
+    isBackground: Boolean,
+    position: Long,
     accent: Color,
     inactive: Color,
     textStyle: TextStyle,
     textAlign: TextAlign,
 ) {
-    if (!isActive) {
+    val inactiveAlpha = 0.35f
+    if (words.isNullOrEmpty()) {
+        // Mobile falls back to a plain line (italic for a background line).
         Text(
             text = text,
-            style = textStyle.copy(color = inactive, fontWeight = FontWeight.Medium),
+            style = textStyle.copy(
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                fontStyle = if (isBackground) FontStyle.Italic else FontStyle.Normal,
+            ),
+            color = accent.copy(alpha = if (isActive) 1f else inactiveAlpha),
             textAlign = textAlign,
             modifier = Modifier.fillMaxWidth(),
         )
         return
     }
-    // The sweep runs over the line's own duration, shortened/lengthened by the
-    // "Animation speed" option like every other style.
-    val sweep = remember { Animatable(0f) }
-    LaunchedEffect(text, lineDurationMs) {
-        sweep.snapTo(0f)
-        sweep.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = (lineDurationMs / LYRICS_SPEED).toInt().coerceIn(250, 15_000),
-                easing = LinearEasing,
-            ),
-        )
-    }
-    val pulse by rememberInfiniteTransition().animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Reverse),
-    )
-    val head = sweep.value
-    Text(
-        text = text,
-        style = textStyle.copy(
-            brush = Brush.horizontalGradient(
-                (head * 0.9f).coerceIn(0f, 1f) to accent,
-                head.coerceIn(0f, 1f) to accent,
-                (head + 0.05f).coerceIn(0f, 1f) to accent.copy(alpha = 0.7f),
-                (head + 0.15f).coerceIn(0f, 1f) to accent.copy(alpha = 0.45f),
-                1f to accent.copy(alpha = 0.3f),
-            ),
-            fontWeight = FontWeight.ExtraBold,
-            shadow = if (glowEffect) {
-                Shadow(
-                    color = accent.copy(alpha = 0.3f + 0.25f * pulse),
-                    offset = Offset.Zero,
-                    blurRadius = 16f + 10f * pulse,
-                )
-            } else {
-                null
-            },
-        ),
-        textAlign = textAlign,
+
+    FlowRow(
         modifier = Modifier.fillMaxWidth(),
-    )
+        horizontalArrangement = flowArrangement(textAlign),
+        verticalArrangement = Arrangement.spacedBy(wrapSpacing(textStyle)),
+    ) {
+        words.forEachIndexed { index, word ->
+            LyricsV2Word(
+                word = word,
+                isLineActive = isActive,
+                isLinePast = isPast,
+                position = position,
+                accent = accent,
+                inactiveAlpha = inactiveAlpha,
+                isBackground = isBackground,
+                textStyle = textStyle,
+            )
+            if (index < words.lastIndex) {
+                Text(
+                    text = " ",
+                    fontSize = textStyle.fontSize,
+                    lineHeight = textStyle.lineHeight,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LyricsV2Word(
+    word: WordTimestamp,
+    isLineActive: Boolean,
+    isLinePast: Boolean,
+    position: Long,
+    accent: Color,
+    inactiveAlpha: Float,
+    isBackground: Boolean,
+    textStyle: TextStyle,
+) {
+    val startMs = (word.startTime * 1000).toLong()
+    val endMs = (word.endTime * 1000).toLong()
+    val duration = (endMs - startMs).coerceAtLeast(1L)
+    val isWordComplete = isLinePast || position >= endMs
+    val isWordActive = isLineActive && position in startMs until endMs
+    val progress = when {
+        isWordComplete -> 1f
+        !isLineActive || position <= startMs -> 0f
+        else -> ((position - startMs).toFloat() / duration).coerceIn(0f, 1f)
+    }
+
+    val sinProgress = sin(progress * PI).toFloat()
+    val wordScale = 1f + (0.015f * sinProgress)
+    // The float is animated on mobile (50 ms in, 350 ms back); the desktop draws
+    // it straight from the position, which updates every frame anyway.
+    val floatOffset = if (isWordActive) -4f * sinProgress else 0f
+    val glowProgress = (progress * 2f).coerceAtMost(1f)
+    val glowAlpha = if (isWordActive) glowProgress * 0.45f else 0f
+    val glowRadius = if (isWordActive) glowProgress * 12f else 0f
+
+    Box(
+        modifier = Modifier.graphicsLayer {
+            translationY = floatOffset * density
+            scaleX = wordScale
+            scaleY = wordScale
+        },
+    ) {
+        Text(
+            text = word.text,
+            style = textStyle.copy(
+                fontWeight = if (isLineActive) FontWeight.Bold else FontWeight.SemiBold,
+                fontStyle = if (isBackground) FontStyle.Italic else FontStyle.Normal,
+            ),
+            color = accent.copy(alpha = if (isBackground) inactiveAlpha * 0.7f else inactiveAlpha),
+        )
+        if (isWordComplete || isWordActive) {
+            Text(
+                text = word.text,
+                style = textStyle.copy(
+                    fontWeight = if (isLineActive) FontWeight.Bold else FontWeight.SemiBold,
+                    fontStyle = if (isBackground) FontStyle.Italic else FontStyle.Normal,
+                    shadow = if (glowAlpha > 0f) {
+                        Shadow(
+                            color = accent.copy(alpha = glowAlpha),
+                            offset = Offset.Zero,
+                            blurRadius = glowRadius.coerceAtLeast(1f),
+                        )
+                    } else {
+                        null
+                    },
+                ),
+                color = accent.copy(alpha = if (isBackground) 0.75f else 1f),
+                modifier = if (isWordActive) {
+                    Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            val edge = 8.dp.toPx()
+                            val center = (size.width + edge * 2f) * progress - edge
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(Color.Black, Color.Transparent),
+                                    startX = center - edge,
+                                    endX = center + edge,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        }
+                } else {
+                    Modifier
+                },
+            )
+        }
+    }
 }
 
 /**
- * Word-per-composable layout for APPLE_V2 and VIVIMUSIC_1: each word can then
- * scale, glow and blur on its own instead of sharing one text run.
+ * Mobile VIVI Music: one global wave sweeps the whole sentence, each word just
+ * reads where the wave front sits inside its own bounds, and the halo grows
+ * with that local progress. Without word timings the mobile style highlights
+ * the sentence as a whole.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WordFlowLine(
-    words: List<WordTimestamp>,
-    positionProvider: () -> Long,
+private fun ViviWaveLine(
+    text: String,
+    words: List<WordTimestamp>?,
     isActive: Boolean,
-    style: LyricsAnimationStyle,
-    glowEffect: Boolean,
+    position: Long,
+    lineStartMs: Long,
+    accent: Color,
+    textStyle: TextStyle,
+    textAlign: TextAlign,
+) {
+    val scale = if (isActive) 1.05f else 1f
+    if (words.isNullOrEmpty()) {
+        val factor = if (isActive) 1f else 0f
+        Text(
+            text = text,
+            style = textStyle.copy(
+                fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Bold,
+                shadow = if (isActive) {
+                    Shadow(accent.copy(alpha = 0.5f), Offset.Zero, 10f)
+                } else {
+                    null
+                },
+            ),
+            color = accent.copy(alpha = 0.45f + 0.55f * factor),
+            textAlign = textAlign,
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { scaleX = scale; scaleY = scale },
+        )
+        return
+    }
+
+    // Wave span: from the line start to the end of its last word.
+    val globalEnd = ((words.last().endTime * 1000).toLong() - lineStartMs).coerceAtLeast(1L)
+    val lineRel = (position - lineStartMs).coerceAtLeast(0L)
+    val wave = (lineRel.toFloat() / globalEnd.toFloat()).coerceIn(0f, 1f)
+    val feather = 0.12f
+
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale },
+        horizontalArrangement = flowArrangement(textAlign),
+        verticalArrangement = Arrangement.spacedBy(wrapSpacing(textStyle)),
+    ) {
+        words.forEachIndexed { index, word ->
+            val startRelative = ((word.startTime * 1000).toLong() - lineStartMs).coerceAtLeast(0L)
+            val endRelative = ((word.endTime * 1000).toLong() - lineStartMs).coerceAtLeast(startRelative + 1L)
+            val startFrac = startRelative.toFloat() / globalEnd
+            val endFrac = endRelative.toFloat() / globalEnd
+            val span = (endFrac - startFrac).coerceAtLeast(0.001f)
+            val localProgress = ((wave - startFrac) / span).coerceIn(0f, 1f)
+
+            val glowAlpha = 0.6f * localProgress
+            val glowRadius = (12f * localProgress).coerceAtLeast(0.1f)
+            val tail = (localProgress + feather).coerceAtMost(1f)
+            val brush = when {
+                localProgress <= 0f -> Brush.horizontalGradient(
+                    listOf(accent.copy(alpha = 0.45f), accent.copy(alpha = 0.45f)),
+                )
+                localProgress >= 1f -> Brush.horizontalGradient(listOf(accent, accent))
+                else -> Brush.horizontalGradient(
+                    0f to accent,
+                    localProgress to accent,
+                    tail to accent.copy(alpha = 0.45f),
+                    1f to accent.copy(alpha = 0.45f),
+                )
+            }
+
+            Text(
+                text = word.text,
+                style = textStyle.copy(
+                    brush = brush,
+                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Bold,
+                    shadow = Shadow(
+                        color = accent.copy(alpha = glowAlpha),
+                        offset = Offset.Zero,
+                        blurRadius = glowRadius,
+                    ),
+                ),
+            )
+
+            if (index < words.lastIndex) {
+                Text(
+                    text = " ",
+                    fontSize = textStyle.fontSize,
+                    lineHeight = textStyle.lineHeight,
+                    color = accent.copy(alpha = (0.45f + 0.55f * localProgress).coerceIn(0.45f, 1f)),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Mobile MetroLyrics: a flat, bold fill per word with a halo while the word is
+ * being sung and a short "wobble" when it lands (0–750 ms).
+ *
+ * ponytail: the mobile original runs per grapheme (hyphen crescendo, per-char
+ * nudge and line push) on an Android canvas; here the same look is drawn per
+ * word, which is what the style reads as at lyric size. Add the grapheme pass
+ * only if someone asks for it.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MetroWordLine(
+    text: String,
+    words: List<WordTimestamp>?,
+    isActive: Boolean,
+    isPast: Boolean,
+    isBackground: Boolean,
+    position: Long,
+    lineStartMs: Long,
     accent: Color,
     inactive: Color,
     textStyle: TextStyle,
     textAlign: TextAlign,
 ) {
-    val position = positionProvider()
-
-    // The words are separate composables, so the line alignment cannot come
-    // from `textAlign` alone: without this the default style (VIVIMUSIC_1)
-    // always drew its words flush left and the "Text position" option looked
-    // broken on every style that uses this layout.
-    val horizontalArrangement = when (textAlign) {
-        TextAlign.Start -> Arrangement.Start
-        TextAlign.End -> Arrangement.End
-        else -> Arrangement.Center
+    // Metro is the style that animates a line with no word timings: it estimates
+    // them (180 ms per word, 30 ms apart), like the mobile renderer.
+    val effectiveWords = words ?: estimateMetroWords(text, lineStartMs)
+    if (effectiveWords.isEmpty()) {
+        Text(
+            text = text,
+            style = textStyle.copy(
+                fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Bold,
+                fontStyle = if (isBackground) FontStyle.Italic else FontStyle.Normal,
+            ),
+            color = if (isActive) accent else inactive,
+            textAlign = textAlign,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        return
     }
-    // The row gap between two wrapped word rows follows the line-spacing
-    // option, which this layout used to ignore in favour of a fixed 0.25em.
-    val lineSpacingRatio = (textStyle.lineHeight.value / textStyle.fontSize.value)
-        .takeIf { it.isFinite() && it > 0f } ?: 1.35f
 
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = horizontalArrangement,
-        verticalArrangement = Arrangement.spacedBy(
-            (textStyle.fontSize.value * 0.25f * lineSpacingRatio).dp,
-        ),
+        horizontalArrangement = flowArrangement(textAlign),
+        verticalArrangement = Arrangement.spacedBy(wrapSpacing(textStyle)),
     ) {
-        words.forEach { word ->
+        effectiveWords.forEachIndexed { index, word ->
             val startMs = (word.startTime * 1000).toLong()
             val endMs = (word.endTime * 1000).toLong()
             val duration = (endMs - startMs).coerceAtLeast(1L)
-            val hasPassed = isActive && position > endMs
-            val isWordActive = isActive && position in startMs..endMs
-            val linear = if (isWordActive) ((position - startMs).toFloat() / duration).coerceIn(0f, 1f) else 0f
-            // Scaled by the "Animation speed" preference exactly like the
-            // text-based styles: this layout is the DEFAULT one, so leaving it
-            // out is why the setting changed nothing at all on a fresh install.
-            val progress = when {
-                hasPassed -> 1f
-                // A line that is already over counts as fully sung in
-                // LYRICS_V2 (it has no other way to show it was completed).
-                style == LyricsAnimationStyle.LYRICS_V2 && !isActive && position >= endMs -> 1f
-                isWordActive -> lyricProgress(linear)
+            val sung = isPast || position > endMs
+            val wordActive = isActive && position in startMs..endMs
+            val fill = when {
+                sung -> 1f
+                wordActive -> ((position - startMs).toFloat() / duration).coerceIn(0f, 1f)
                 else -> 0f
             }
-
-            val isVivi = style == LyricsAnimationStyle.VIVIMUSIC_1
-            // LYRICS_V2 is the mobile "bounce" style: the sung word lifts and
-            // floats (a sine over its own progress) and its fill sweeps in
-            // behind a moving edge instead of just changing colour.
-            val isV2 = style == LyricsAnimationStyle.LYRICS_V2
-            val sinProgress = if (isV2) sin(progress * PI).toFloat() else 0f
-            // VIVIMUSIC_1 is the "premium" style: the sung word blooms in place
-            // (scale + glow) while the ones around it sit back.
-            val scale = when {
-                isVivi -> 1f + 0.16f * progress
-                isV2 -> 1f + 0.015f * sinProgress
-                else -> 0.94f + 0.06f * progress
+            // Landing wobble: a 125 ms rise and a 625 ms fall after the word starts.
+            val sinceStart = (position - startMs).toFloat()
+            val wobble = if (sinceStart in 0f..750f) {
+                if (sinceStart < 125f) sinceStart / 125f else (1f - (sinceStart - 125f) / 625f).coerceAtLeast(0f)
+            } else {
+                0f
             }
-            val blurRadius = when {
-                !isVivi || isWordActive || hasPassed -> 0f
-                isActive -> 0.9f
-                else -> 2.0f
+            val glowFade = if (wordActive) {
+                (fill * 5f).coerceIn(0f, 1f) * ((1f - fill) * 8f).coerceIn(0f, 1f)
+            } else {
+                0f
             }
-            // APPLE_V2 used to be drawn with no motion whatsoever (scale fixed
-            // at 1, no offset, no blur), so it was indistinguishable from plain
-            // text: it is now a real style — un-sung words sit slightly smaller
-            // and lower, and the sung word fades and lifts into place word by
-            // word, the way the mobile renderer animates this one.
-            val risePx = when {
-                isVivi -> 0f
-                // LYRICS_V2 floats the sung word up by up to 4 dp (scaled with
-                // the text size, so the motion keeps its proportion).
-                isV2 -> -4f * sinProgress * (textStyle.fontSize.value / 18f)
-                else -> (1f - progress) * textStyle.fontSize.value * 0.55f
-            }
-            val wordAlpha = when {
-                isWordActive -> if (isVivi) 1f else 0.45f + 0.55f * progress
-                hasPassed -> 1f
-                isActive -> 0.5f
-                else -> 0.4f
-            }
-            val wordShadow = when {
-                !glowEffect -> null
-                isVivi && isWordActive -> Shadow(
-                    color = accent.copy(alpha = 0.35f + 0.45f * progress),
-                    offset = Offset.Zero,
-                    blurRadius = 12f + 18f * progress,
-                )
-                isVivi && hasPassed -> Shadow(accent.copy(alpha = 0.2f), Offset.Zero, 10f)
-                isV2 && isWordActive -> Shadow(
-                    color = accent.copy(alpha = 0.45f * progress),
-                    offset = Offset.Zero,
-                    blurRadius = 12f * progress,
-                )
-                !isVivi && isWordActive -> Shadow(
-                    color = accent.copy(alpha = 0.25f + 0.35f * progress),
-                    offset = Offset.Zero,
-                    blurRadius = 8f + 10f * progress,
-                )
-                else -> null
-            }
+            val baseAlpha = 0.3f + (1f - 0.3f) * fill
 
             Box(
-                modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationY = risePx
-                        alpha = wordAlpha
-                    }
-                    .then(if (blurRadius > 0f) Modifier.blur(blurRadius.dp) else Modifier)
-                    .padding(horizontal = 1.dp),
+                modifier = Modifier.graphicsLayer {
+                    scaleX = 1f + wobble * 0.025f
+                    scaleY = 1f + wobble * 0.015f
+                },
             ) {
-                if (isV2) {
-                    // The dimmed base word...
+                Text(
+                    text = word.text,
+                    style = textStyle.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontStyle = if (isBackground) FontStyle.Italic else FontStyle.Normal,
+                        letterSpacing = (-0.5).sp,
+                    ),
+                    color = accent.copy(alpha = 0.3f),
+                )
+                if (sung || wordActive) {
                     Text(
                         text = word.text,
                         style = textStyle.copy(
-                            color = if (isWordActive || hasPassed) accent.copy(alpha = 0.35f) else inactive,
                             fontWeight = FontWeight.Bold,
+                            fontStyle = if (isBackground) FontStyle.Italic else FontStyle.Normal,
+                            letterSpacing = (-0.5).sp,
+                            shadow = if (glowFade > 0.01f) {
+                                Shadow(
+                                    color = accent.copy(alpha = (0.35f * glowFade).coerceAtMost(0.4f)),
+                                    offset = Offset.Zero,
+                                    blurRadius = 12f * glowFade,
+                                )
+                            } else {
+                                null
+                            },
                         ),
-                    )
-                    // ...and the bright copy, revealed behind an edge that
-                    // travels across the word (the mobile style's liquid fill).
-                    if (isWordActive || hasPassed) {
-                        Text(
-                            text = word.text,
-                            style = textStyle.copy(
-                                color = accent,
-                                fontWeight = FontWeight.Bold,
-                                shadow = wordShadow,
-                            ),
-                            modifier = Modifier
+                        color = accent.copy(alpha = if (sung) 1f else baseAlpha),
+                        modifier = if (wordActive && !sung) {
+                            Modifier
                                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
-                                    val edge = 8.dp.toPx()
-                                    val center = (size.width + edge * 2f) * progress - edge
+                                    val edge = (size.width * 0.45f).coerceAtLeast(1f)
+                                    val front = size.width * fill
                                     drawRect(
                                         brush = Brush.horizontalGradient(
                                             colors = listOf(Color.Black, Color.Transparent),
-                                            startX = center - edge,
-                                            endX = center + edge,
+                                            startX = front - edge,
+                                            endX = front,
                                         ),
                                         blendMode = BlendMode.DstIn,
                                     )
-                                },
-                        )
-                    }
-                } else {
-                    Text(
-                        text = word.text,
-                        style = textStyle.copy(
-                            color = if (isWordActive || hasPassed) accent else inactive,
-                            fontWeight = if (isWordActive) FontWeight.ExtraBold else FontWeight.Bold,
-                            shadow = wordShadow,
-                        ),
+                                }
+                        } else {
+                            Modifier
+                        },
                     )
                 }
             }
+            if (index < effectiveWords.lastIndex) {
+                Text(
+                    text = " ",
+                    fontSize = textStyle.fontSize,
+                    lineHeight = textStyle.lineHeight,
+                )
+            }
         }
+    }
+}
+
+/**
+ * Mobile's METRO_LYRICS estimates word timings when the source only carries
+ * line timings: 180 ms per word, each starting 30 ms after the previous one.
+ * It is the only style that animates un-synced lines, so the estimation is
+ * what the picker promises.
+ */
+private fun estimateMetroWords(text: String, lineStartMs: Long): List<WordTimestamp> {
+    val parts = text.split(Regex("\\s+")).filter { it.isNotBlank() }
+    if (parts.isEmpty()) return emptyList()
+    val start = lineStartMs / 1000.0
+    return parts.mapIndexed { index, word ->
+        val from = start + index * 0.03
+        WordTimestamp(text = word, startTime = from, endTime = from + 0.18)
     }
 }

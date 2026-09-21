@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+"""Batch 71: the label of the desktop-only "Alpha" lyrics style (1.53.1).
+
+Alpha is the style that draws the lyrics the way the desktop did before the
+mobile look was ported, so it is a name rather than a description; every
+language gets its own transliteration of it instead of the English fallback.
+"""
+
+EXTRA_TRANSLATIONS = {
+    "lyrics_style_alpha": {
+        "ar": "ألفا",
+        "as": "আলফা",
+        "az": "Alpha",
+        "be": "Альфа",
+        "bg": "Алфа",
+        "bn": "আলফা",
+        "bs": "Alpha",
+        "ca": "Alfa",
+        "cs": "Alfa",
+        "de": "Alpha",
+        "el": "Άλφα",
+        "es": "Alfa",
+        "et": "Alpha",
+        "eu": "Alfa",
+        "fa": "آلفا",
+        "fi": "Alpha",
+        "fil": "Alpha",
+        "fr": "Alpha",
+        "hi": "अल्फा",
+        "hr": "Alfa",
+        "hu": "Alfa",
+        "id": "Alpha",
+        "it": "Alpha",
+        "iw": "אלפא",
+        "ja": "アルファ",
+        "km": "អាល់ហ្វា",
+        "ko": "알파",
+        "lt": "Alfa",
+        "ml": "ആൽഫ",
+        "ms": "Alpha",
+        "nb": "Alfa",
+        "nl": "Alpha",
+        "pa": "ਅਲਫ਼ਾ",
+        "pl": "Alfa",
+        "pt": "Alfa",
+        "ro": "Alfa",
+        "ru": "Альфа",
+        "sk": "Alfa",
+        "sl": "Alfa",
+        "sr": "Алфа",
+        "sv": "Alfa",
+        "ta": "ஆல்பா",
+        "te": "ఆల్ఫా",
+        "th": "อัลฟา",
+        "tr": "Alfa",
+        "uk": "Альфа",
+        "vi": "Alpha",
+        "zh-rCN": "阿尔法",
+        "zh-rTW": "阿爾法",
+    },
+}
