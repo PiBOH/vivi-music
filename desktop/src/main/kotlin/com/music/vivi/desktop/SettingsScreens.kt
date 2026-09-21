@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -31,19 +32,25 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.EnergySavingsLeaf
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SmartDisplay
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VerticalAlignCenter
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -1142,9 +1149,39 @@ fun SettingsContentScreen(
     contentCountry: String,
     onContentLanguageChange: (String) -> Unit,
     onContentCountryChange: (String) -> Unit,
+    hideExplicit: Boolean = false,
+    hideVideoSongs: Boolean = false,
+    hideYoutubeShorts: Boolean = false,
+    onHideExplicitChange: (Boolean) -> Unit = {},
+    onHideVideoSongsChange: (Boolean) -> Unit = {},
+    onHideYoutubeShortsChange: (Boolean) -> Unit = {},
+    showArtistDescription: Boolean = true,
+    showArtistSubscriberCount: Boolean = true,
+    onShowArtistDescriptionChange: (Boolean) -> Unit = {},
+    onShowArtistSubscriberCountChange: (Boolean) -> Unit = {},
+    lyricsProviders: List<String> = emptyList(),
+    onLyricsProvidersChange: (List<String>) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
-        ContentSection(language, contentLanguage, contentCountry, onContentLanguageChange, onContentCountryChange)
+        ContentSection(
+            language = language,
+            contentLanguage = contentLanguage,
+            contentCountry = contentCountry,
+            onContentLanguageChange = onContentLanguageChange,
+            onContentCountryChange = onContentCountryChange,
+            hideExplicit = hideExplicit,
+            hideVideoSongs = hideVideoSongs,
+            hideYoutubeShorts = hideYoutubeShorts,
+            onHideExplicitChange = onHideExplicitChange,
+            onHideVideoSongsChange = onHideVideoSongsChange,
+            onHideYoutubeShortsChange = onHideYoutubeShortsChange,
+            showArtistDescription = showArtistDescription,
+            showArtistSubscriberCount = showArtistSubscriberCount,
+            onShowArtistDescriptionChange = onShowArtistDescriptionChange,
+            onShowArtistSubscriberCountChange = onShowArtistSubscriberCountChange,
+            lyricsProviders = lyricsProviders,
+            onLyricsProvidersChange = onLyricsProvidersChange,
+        )
     }
 }
 
@@ -1194,9 +1231,29 @@ fun ContentSection(
     contentCountry: String,
     onContentLanguageChange: (String) -> Unit,
     onContentCountryChange: (String) -> Unit,
+    hideExplicit: Boolean = false,
+    hideVideoSongs: Boolean = false,
+    hideYoutubeShorts: Boolean = false,
+    onHideExplicitChange: (Boolean) -> Unit = {},
+    onHideVideoSongsChange: (Boolean) -> Unit = {},
+    onHideYoutubeShortsChange: (Boolean) -> Unit = {},
+    showArtistDescription: Boolean = true,
+    showArtistSubscriberCount: Boolean = true,
+    onShowArtistDescriptionChange: (Boolean) -> Unit = {},
+    onShowArtistSubscriberCountChange: (Boolean) -> Unit = {},
+    lyricsProviders: List<String> = emptyList(),
+    onLyricsProvidersChange: (List<String>) -> Unit = {},
 ) {
     var languageExpanded by remember { mutableStateOf(false) }
     var countryExpanded by remember { mutableStateOf(false) }
+    // The effective order: what the user saved, then whatever the resolver knows
+    // that the saved list does not mention (a provider added by an update shows
+    // up instead of disappearing).
+    val providerOrder = remember(lyricsProviders) {
+        lyricsProviders + DesktopLyrics.PROVIDER_ORDER.filterNot { it in lyricsProviders }
+    }
+    val enabledProviders = lyricsProviders.ifEmpty { DesktopLyrics.PROVIDER_ORDER }.toSet()
+    val saveProviders: (List<String>) -> Unit = { onLyricsProvidersChange(it) }
 
     Text(Localization.get(language, "content"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
 
@@ -1237,6 +1294,125 @@ fun ContentSection(
             }
         }
     }
+
+    // --- Filters (the mobile Content screen's own rows) --------------------
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.VisibilityOff,
+                title = { Text(Localization.get(language, "hide_explicit")) },
+                trailing = { Switch(checked = hideExplicit, onCheckedChange = onHideExplicitChange) },
+                onClick = { onHideExplicitChange(!hideExplicit) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.MusicNote,
+                title = { Text(Localization.get(language, "hide_video_songs")) },
+                trailing = { Switch(checked = hideVideoSongs, onCheckedChange = onHideVideoSongsChange) },
+                onClick = { onHideVideoSongsChange(!hideVideoSongs) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.SmartDisplay,
+                title = { Text(Localization.get(language, "hide_youtube_shorts")) },
+                trailing = { Switch(checked = hideYoutubeShorts, onCheckedChange = onHideYoutubeShortsChange) },
+                onClick = { onHideYoutubeShortsChange(!hideYoutubeShorts) },
+            ),
+        ),
+    )
+
+    // --- Artist page -------------------------------------------------------
+    M3SettingsGroup(
+        items = listOf(
+            M3SettingsItem(
+                icon = Icons.Filled.Info,
+                title = { Text(Localization.get(language, "show_artist_description")) },
+                trailing = {
+                    Switch(checked = showArtistDescription, onCheckedChange = onShowArtistDescriptionChange)
+                },
+                onClick = { onShowArtistDescriptionChange(!showArtistDescription) },
+            ),
+            M3SettingsItem(
+                icon = Icons.Filled.Groups,
+                title = { Text(Localization.get(language, "show_artist_subscriber_count")) },
+                trailing = {
+                    Switch(checked = showArtistSubscriberCount, onCheckedChange = onShowArtistSubscriberCountChange)
+                },
+                onClick = { onShowArtistSubscriberCountChange(!showArtistSubscriberCount) },
+            ),
+        ),
+    )
+
+    // --- Lyrics providers (order + on/off) ---------------------------------
+    Text(
+        Localization.get(language, "lyrics_provider_priority"),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(top = 16.dp),
+    )
+    M3SettingsGroup(
+        items = providerOrder.mapIndexed { index, name ->
+            val enabled = name in enabledProviders
+            M3SettingsItem(
+                icon = Icons.Filled.Lyrics,
+                title = { Text(name) },
+                trailing = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Tooltip("Move up") {
+                            IconButton(
+                                onClick = {
+                                    if (index > 0) {
+                                        val next = providerOrder.toMutableList()
+                                        next[index - 1] = name
+                                        next[index] = providerOrder[index - 1]
+                                        saveProviders(next)
+                                    }
+                                },
+                                enabled = index > 0,
+                            ) {
+                                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Tooltip("Move down") {
+                            IconButton(
+                                onClick = {
+                                    if (index < providerOrder.lastIndex) {
+                                        val next = providerOrder.toMutableList()
+                                        next[index] = providerOrder[index + 1]
+                                        next[index + 1] = name
+                                        saveProviders(next)
+                                    }
+                                },
+                                enabled = index < providerOrder.lastIndex,
+                            ) {
+                                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                        Switch(
+                            checked = enabled,
+                            // An empty saved list means "the built-in order, all
+                            // of them on", so the last enabled provider cannot be
+                            // switched off (it would turn everything back on).
+                            enabled = !(enabled && enabledProviders.size <= 1),
+                            onCheckedChange = { on ->
+                                saveProviders(
+                                    if (on) {
+                                        providerOrder.filterNot { it == name }
+                                            .toMutableList()
+                                            .apply { add(index.coerceAtMost(size), name) }
+                                    } else {
+                                        providerOrder.filterNot { it == name }
+                                    },
+                                )
+                            },
+                        )
+                    }
+                },
+                onClick = {
+                    saveProviders(
+                        if (enabled) providerOrder.filterNot { it == name } else providerOrder,
+                    )
+                },
+            )
+        },
+    )
 }
 
 /**

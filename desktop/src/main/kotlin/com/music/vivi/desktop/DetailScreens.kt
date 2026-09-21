@@ -59,7 +59,7 @@ fun AlbumScreen(
 
     LaunchedEffect(browseId) {
         YouTube.album(browseId).fold(
-            onSuccess = { page = it },
+            onSuccess = { page = it.filteredContent() },
             onFailure = { error = it.message },
         )
     }
@@ -131,13 +131,17 @@ fun ArtistScreen(
     var page by remember { mutableStateOf<ArtistPage?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(0) } // 0 = Songs, 1 = Albums, 2 = Items
+    // Content screen options: both rows are mobile ones (the artist page shows
+    // the description and the subscriber count unless they are switched off).
+    val showDescription = remember(settingsFileRevision()) { DesktopSettings.load().showArtistDescription }
+    val showSubscribers = remember(settingsFileRevision()) { DesktopSettings.load().showArtistSubscriberCount }
     var itemsPage by remember { mutableStateOf<ArtistItemsPage?>(null) }
     var itemsEndpoint by remember { mutableStateOf<BrowseEndpoint?>(null) }
 
     LaunchedEffect(browseId) {
         YouTube.artist(browseId).fold(
             onSuccess = { p ->
-                page = p
+                page = p.filteredContent()
                 // Prefer the first section with a "See all" endpoint for the Items tab.
                 itemsEndpoint = p.sections.firstNotNullOfOrNull { it.moreEndpoint }
             },
@@ -148,7 +152,7 @@ fun ArtistScreen(
     LaunchedEffect(tab, itemsEndpoint) {
         if (tab == 2 && itemsEndpoint != null) {
             YouTube.artistItems(itemsEndpoint!!).fold(
-                onSuccess = { itemsPage = it },
+                onSuccess = { itemsPage = it.filteredContent() },
                 onFailure = { itemsPage = null },
             )
         }
@@ -171,15 +175,29 @@ fun ArtistScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        page!!.subscriberCountText?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                        if (showSubscribers) {
+                            page!!.subscriberCountText?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
+                    }
+                }
+                if (showDescription) {
+                    page!!.description?.takeIf { it.isNotBlank() }?.let { description ->
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 4,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -276,7 +294,7 @@ fun PlaylistScreen(
 
     LaunchedEffect(playlistId) {
         YouTube.playlist(playlistId).fold(
-            onSuccess = { page = it },
+            onSuccess = { page = it.filteredContent() },
             onFailure = { error = it.message },
         )
     }

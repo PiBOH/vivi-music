@@ -281,7 +281,7 @@ fun AutoPlaylistScreen(
 
     LaunchedEffect(browseId) {
         YouTube.library(browseId).fold(
-            onSuccess = { page = it },
+            onSuccess = { page = it.copy(items = it.items.filteredContent()) },
             onFailure = { error = it.message },
         )
     }

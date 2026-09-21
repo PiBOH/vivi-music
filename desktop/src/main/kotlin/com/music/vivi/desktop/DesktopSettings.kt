@@ -87,6 +87,21 @@ data class DesktopSyncState(
     val introBackground: String = "gradient",
     val pauseSearchHistory: Boolean = false,
     val pauseListenHistory: Boolean = false,
+    /** Content screen (port of the mobile one): hide the items flagged explicit. */
+    val hideExplicit: Boolean = false,
+    /** Hide the songs that only exist as a music video. */
+    val hideVideoSongs: Boolean = false,
+    /** Hide YouTube Shorts from the shelves. */
+    val hideYoutubeShorts: Boolean = false,
+    /** Artist page: show the artist description. */
+    val showArtistDescription: Boolean = true,
+    /** Artist page: show the subscriber count. */
+    val showArtistSubscriberCount: Boolean = true,
+    /**
+     * Lyrics providers in the order they are asked; a provider that is not in
+     * the list is skipped. Empty = the built-in order with all of them on.
+     */
+    val lyricsProviderPriority: List<String> = emptyList(),
     val searchHistory: List<String> = emptyList(),
     val lyricsLineSpacing: Float = 1.35f,
     /** Stream-URL cache lifetime in minutes (1–60); 0 = never expire. */

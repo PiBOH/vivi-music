@@ -355,6 +355,7 @@ fun main(args: Array<String>) {
         if (settingsRevision <= 0L) return@LaunchedEffect
         runCatching { AudioOutput.load() }
         runCatching { Animations.load() }
+        runCatching { ContentFilters.load() }
         runCatching { DeveloperOptions.load() }
         val current = DesktopSettings.load()
         YouTube.locale = resolveYouTubeLocale(current.contentLanguage, current.contentCountry)
@@ -367,6 +368,8 @@ fun main(args: Array<String>) {
     AudioOutput.load()
     // Restore the global UI animation speed.
     Animations.load()
+    // Restore the content filters (explicit/video/Shorts).
+    ContentFilters.load()
     // Dev tools are non-critical: never let their initialization crash the app
     // at startup (which the jpackage launcher reports as "Failed to launch JVM").
     runCatching { DeveloperOptions.load() }
@@ -1034,6 +1037,12 @@ fun WindowScope.App(
     var showIntroSplash by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showIntroSplash) }
     var introStyle by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().introStyle) }
     var introBackground by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().introBackground) }
+    var hideExplicit by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().hideExplicit) }
+    var hideVideoSongs by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().hideVideoSongs) }
+    var hideYoutubeShorts by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().hideYoutubeShorts) }
+    var showArtistDescription by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showArtistDescription) }
+    var showArtistSubscriberCount by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showArtistSubscriberCount) }
+    var lyricsProviders by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsProviderPriority) }
     var pauseSearchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
     var pauseListenHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
     var searchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().searchHistory) }
@@ -2731,6 +2740,39 @@ fun WindowScope.App(
                             contentCountry = code
                             DesktopSettings.update { it.copy(contentCountry = code) }
                             YouTube.locale = resolveYouTubeLocale(contentLanguage, contentCountry)
+                        },
+                        hideExplicit = hideExplicit,
+                        hideVideoSongs = hideVideoSongs,
+                        hideYoutubeShorts = hideYoutubeShorts,
+                        onHideExplicitChange = { on ->
+                            hideExplicit = on
+                            DesktopSettings.update { it.copy(hideExplicit = on) }
+                            ContentFilters.load()
+                        },
+                        onHideVideoSongsChange = { on ->
+                            hideVideoSongs = on
+                            DesktopSettings.update { it.copy(hideVideoSongs = on) }
+                            ContentFilters.load()
+                        },
+                        onHideYoutubeShortsChange = { on ->
+                            hideYoutubeShorts = on
+                            DesktopSettings.update { it.copy(hideYoutubeShorts = on) }
+                            ContentFilters.load()
+                        },
+                        showArtistDescription = showArtistDescription,
+                        showArtistSubscriberCount = showArtistSubscriberCount,
+                        onShowArtistDescriptionChange = { on ->
+                            showArtistDescription = on
+                            DesktopSettings.update { it.copy(showArtistDescription = on) }
+                        },
+                        onShowArtistSubscriberCountChange = { on ->
+                            showArtistSubscriberCount = on
+                            DesktopSettings.update { it.copy(showArtistSubscriberCount = on) }
+                        },
+                        lyricsProviders = lyricsProviders,
+                        onLyricsProvidersChange = { order ->
+                            lyricsProviders = order
+                            DesktopSettings.update { it.copy(lyricsProviderPriority = order) }
                         },
                     )
                     is Screen.SettingsLyrics -> SettingsLyricsScreen(

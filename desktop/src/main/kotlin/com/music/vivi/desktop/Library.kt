@@ -96,7 +96,7 @@ fun LibraryScreen(
             error = null
             page = null
             YouTube.library(browseIds[selectedTab]).fold(
-                onSuccess = { page = it; loading = false },
+                onSuccess = { page = it.copy(items = it.items.filteredContent()); loading = false },
                 onFailure = { error = it.message; loading = false },
             )
         }

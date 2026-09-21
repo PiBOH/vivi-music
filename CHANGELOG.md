@@ -11,6 +11,14 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.3-alpha] - 2026-09-21
+
+### Added
+- [DE] **The Content screen is the mobile one.** The rows the mobile app keeps there are ported and each one actually does something: `Hide explicit` (removes the items flagged explicit from home shelves, browse, search, album, playlist, artist and library results), `Hide video songs`, `Hide YouTube Shorts`, `Show artist description` (the artist page shows the description now, in four lines) and `Show artist subscriber count`. Beneath them, the **lyrics provider list** is editable — every provider the resolver knows is a row with a switch and up/down buttons, and the saved order is the order they are asked in (`DesktopLyrics.fetch` skips the providers that are off). The wording reuses Android's own translations wherever they exist and is translated in all 49 languages otherwise (`desktop_extra_translations_72.py`, `_73.py`). **Constraint:** the filters are applied where the items enter the UI (`ContentFilters`), never per row, and an empty provider list means the built-in order with everything on — which is why the last enabled provider cannot be switched off.
+
+### Fixed
+- [DE] **The artist page gets its content rows and the description.** `ArtistPage.description` was parsed but never drawn, so a language of artist information that the mobile app shows simply did not exist here.
+
 ## [6.0.6.5_DE-1.53.2-alpha] - 2026-09-21
 
 ### Fixed

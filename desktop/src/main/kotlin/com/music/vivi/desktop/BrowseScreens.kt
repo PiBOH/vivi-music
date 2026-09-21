@@ -147,7 +147,7 @@ fun HomeScreen(
         error = null
         home = null
         YouTube.home(params = params).fold(
-            onSuccess = { home = it; error = null },
+            onSuccess = { home = it.filteredContent(); error = null },
             onFailure = { error = it.message },
         )
     }
@@ -757,11 +757,11 @@ fun BrowseScreen(
             YouTube.library(browseId).map { page ->
                 BrowseResult(
                     title = null,
-                    items = listOf(BrowseResult.Item(title = null, items = page.items)),
+                    items = listOf(BrowseResult.Item(title = null, items = page.items.filteredContent())),
                 )
             }
         } else {
-            YouTube.browse(browseId, params)
+            YouTube.browse(browseId, params).map { it.filteredContent() }
         }
         fetched.fold(
             onSuccess = { page ->
@@ -897,12 +897,12 @@ fun SearchScreen(
         val filter = selectedFilter
         if (filter == null) {
             YouTube.searchSummary(q).fold(
-                onSuccess = { page = it; filterItems = null; error = null },
+                onSuccess = { page = it.filteredContent(); filterItems = null; error = null },
                 onFailure = { error = it.message },
             )
         } else {
             YouTube.search(q, filter).fold(
-                onSuccess = { page = null; filterItems = it.items.distinctBy { item -> item.id }; error = null },
+                onSuccess = { page = null; filterItems = it.items.filteredContent().distinctBy { item -> item.id }; error = null },
                 onFailure = { error = it.message },
             )
         }

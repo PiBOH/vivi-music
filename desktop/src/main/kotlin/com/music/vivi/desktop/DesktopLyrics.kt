@@ -40,6 +40,16 @@ object DesktopLyrics {
     private const val PROVIDER_TIMEOUT_MS = 6_000L
 
     /**
+     * Every provider the resolver knows, in the built-in order. The Content
+     * screen shows this list so the user can reorder it or turn entries off;
+     * the names are the providers' own (brand) names, so they are not
+     * translated.
+     */
+    val PROVIDER_ORDER: List<String> = listOf(
+        "LrcLib", "BetterLyrics", "YouLyPlus", "KuGou", "Musixmatch", "Paxsenix", "Unison",
+    )
+
+    /**
      * How far a synced lyric file may legitimately run past the track's own
      * duration: intros/outros and radio edits differ by seconds, not minutes.
      */
@@ -119,7 +129,11 @@ object DesktopLyrics {
         val queryArtist = TextFolding.fold(artist)
         val queryAlbum = album?.let { TextFolding.fold(it) }
 
-        val providers: List<Pair<String, suspend () -> Result<String>>> = listOf(
+        // The Content screen can reorder these and turn some of them off
+        // (port of the mobile "Lyrics provider priority" list): the stored
+        // order is the order they are asked in, and a provider that is not in
+        // it is skipped. An empty list keeps the built-in order with all on.
+        val chain: List<Pair<String, suspend () -> Result<String>>> = listOf(
             "LrcLib" to { LrcLib.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
             "BetterLyrics" to { BetterLyrics.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum) },
             "YouLyPlus" to { YouLyPlus.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum, id = videoId) },
@@ -129,9 +143,16 @@ object DesktopLyrics {
             "Unison" to { Unison.getLyrics(queryTitle, queryArtist, durationSec, queryAlbum, videoId = videoId) },
         )
 
+        val priority = DesktopSettings.load().lyricsProviderPriority
+        val providers = if (priority.isEmpty()) {
+            chain
+        } else {
+            priority.mapNotNull { name -> chain.firstOrNull { it.first == name } }
+        }
+
         AppLog.log(
             "lyrics",
-            "fetch lyrics for '$title' [$videoId] (duration=${if (durationSec > 0) "${durationSec}s" else "unknown"}, preferSynced=$preferSynced)",
+            "fetch lyrics for '$title' [$videoId] (duration=${if (durationSec > 0) "${durationSec}s" else "unknown"}, preferSynced=$preferSynced, providers=${providers.joinToString("/") { it.first }})",
         )
         var plainFallback: String? = null
         for ((name, call) in providers) {
