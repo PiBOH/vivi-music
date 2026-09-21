@@ -39,7 +39,8 @@ object AppLog {
 
     /** Every category that must always have a file in the session folder, even when empty. */
     private val KNOWN_CATEGORIES = listOf(
-        "actions", "browse", "cache", "lyrics", "nav", "playback", "queue", "settings", "volume", "window"
+        "actions", "browse", "cache", "gc", "lyrics", "nav", "playback", "queue", "settings",
+        "volume", "window"
     )
 
     private val vivimusicDir: File

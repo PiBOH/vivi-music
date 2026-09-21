@@ -319,6 +319,17 @@ fun main(args: Array<String>) {
     // offers "Copy error", so crash details are easy to report.
     installGlobalErrorDialog()
 
+    // Playback scheduling protection (issue #3): on Windows, ask the OS once
+    // (1 ms timer, above-normal process, power throttling off) so the audio
+    // threads are not the first thing the scheduler drops while the window is
+    // in the background; [AudioPlayer] then registers each audio thread with
+    // MMCSS through the same helper.
+    runCatching { AudioThreadBoost.start() }
+    // GC pauses are the other mechanism a stall can come from: record them
+    // (`gc.log`) so an exported session can tell "the JVM was stopped" apart
+    // from "the process was not scheduled".
+    runCatching { GcMonitor.start() }
+
     application {
     // The user-editable settings file (~/.vivimusic/settings.json): adopt what it
     // holds (a value edited while the app was closed must win over the last one

@@ -1,7 +1,9 @@
 package com.music.vivi.desktop.player
 
 import com.music.vivi.desktop.AppLog
+import com.music.vivi.desktop.AudioThreadBoost
 import com.music.vivi.desktop.EqualizerProcessor
+import com.music.vivi.desktop.GcMonitor
 import net.sourceforge.jaad.aac.Decoder
 import net.sourceforge.jaad.aac.SampleBuffer
 import org.jcodec.common.io.NIOUtils
@@ -477,6 +479,11 @@ class AudioPlayer {
 
         thread = Thread {
             var failed = false
+            // The decode thread is the one that can be late without being
+            // audible (the 8 s queue absorbs it), but a Windows process that
+            // the scheduler deprioritises stays late for *seconds*: join the
+            // OS's "Audio" class like a browser's audio thread does (#3).
+            AudioThreadBoost.boost("audio-decode")
             try {
                 val safe = cacheKey.replace(Regex("[^A-Za-z0-9._-]"), "_")
                 val cached = File(cacheDir, "$safe.m4a")
@@ -495,6 +502,7 @@ class AudioPlayer {
                     onError?.invoke(e.message ?: e::class.simpleName ?: "Unknown playback error")
                 }
             } finally {
+                AudioThreadBoost.release()
                 // `onComplete` means the track *finished normally*: it must NOT
                 // fire after an error, otherwise a failed track (e.g. a 403) is
                 // treated as "ended" and auto-advances to the next one, looping
@@ -1299,6 +1307,9 @@ class AudioPlayer {
              */
             var lastStarveLogMs = 0L
             var lastCushionLogMs = 0L
+            var lastLateLogMs = 0L
+            /** Time the writer spent inside `out.write()` (device backpressure). */
+            var writeBlockedMs = 0L
             // One write per ~WRITE_CHUNK_SECONDS of audio instead of one per
             // decoded frame (~23 ms): ~43 wakeups per second each have to be
             // scheduled in time to keep the device fed, ~8 are far easier to
@@ -1367,11 +1378,17 @@ class AudioPlayer {
                     )
                 }
                 var done = 0
+                // Time spent blocked in the device write is measured per pass:
+                // it is the whole difference between "the ring is full and the
+                // sound card paces us" (normal) and "the thread was not
+                // scheduled" (issue #3).
+                val writeStartMs = System.currentTimeMillis()
                 while (done < pendingBytes) {
                     val n = out.write(data, done, pendingBytes - done)
                     if (n <= 0) break
                     done += n
                 }
+                writeBlockedMs += System.currentTimeMillis() - writeStartMs
                 handedOverBytes += done.toLong()
                 pendingBytes = 0
                 lastWriteWallMs = System.currentTimeMillis()
@@ -1463,7 +1480,41 @@ class AudioPlayer {
                 reportPosition()
             }
 
+            /**
+             * Splits the time the writer took for the pass that just ended
+             * (issue #3). Two very different situations look identical in the
+             * device check, and only one of them is ours:
+             *
+             *  - almost all of it *inside* `out.write()` — the ring is full
+             *    and the sound card paces us: normal and inaudible;
+             *  - long *outside* the write, with PCM already queued — the thread
+             *    was not scheduled at all. That is the pattern measured on
+             *    Windows (one pass took 1161 ms with 4-6 % CPU and frozen GC
+             *    counters), and it is what [AudioThreadBoost] exists for: the
+             *    log has to name it instead of blaming the sound card.
+             */
+            fun notePassLatency(passStartMs: Long, blockedBefore: Long) {
+                val now = System.currentTimeMillis()
+                val bodyMs = now - passStartMs
+                val inWriteMs = writeBlockedMs - blockedBefore
+                if (bodyMs < 300L || bodyMs - inWriteMs < 150L) return
+                if (now - lastLateLogMs < 2_000L) return
+                lastLateLogMs = now
+                AppLog.log(
+                    "playback",
+                    "audio writer stalled: ${bodyMs}ms for one pass with only " +
+                        "${inWriteMs}ms of it inside the device write (queue " +
+                        "${queuedPcmMs()}ms, cushion ${cushionMs().toInt()}ms) — the thread was " +
+                        "not scheduled, the output itself is fine",
+                )
+            }
+
             val writer = Thread {
+                // The thread that owns the sound card gets the OS's strongest
+                // scheduling guarantee available to a normal application
+                // (Windows MMCSS "Audio" class, the same one a browser's audio
+                // thread uses) — MMCSS is per-thread, so it is called here.
+                AudioThreadBoost.boost("audio-writer", critical = true)
                 try {
                     while (!stopped && gen == generation) {
                         // Honour pause without writing a byte: the line is
@@ -1489,6 +1540,8 @@ class AudioPlayer {
                             lastDeviceCheckMs = 0L
                         }
 
+                        val passStartMs = System.currentTimeMillis()
+                        val blockedBefore = writeBlockedMs
                         val chunk = pcmQueue.poll(50L, TimeUnit.MILLISECONDS)
                         if (chunk == null) {
                             // Producer behind. Usually harmless (the line buffer
@@ -1527,6 +1580,7 @@ class AudioPlayer {
                                         "${cushion.toInt()}ms)$dryNote",
                                 )
                             }
+                            notePassLatency(passStartMs, blockedBefore)
                             continue
                         }
                         // Bigger blocks: accumulate until the target size (or
@@ -1535,10 +1589,12 @@ class AudioPlayer {
                         System.arraycopy(chunk, 0, writeBuffer, pendingBytes, chunk.size)
                         pendingBytes += chunk.size
                         if (pendingBytes >= writeChunkBytes) flushPending()
+                        notePassLatency(passStartMs, blockedBefore)
                     }
                 } catch (_: Throwable) {
                     // stop()/seek closes the line under a blocked write: exit.
                 } finally {
+                    AudioThreadBoost.release()
                     // Normal end of track: play out what is still held locally
                     // (a few dozen ms) before draining the device ring. On a
                     // stop/seek/pause the audio is dropped instead.
@@ -1951,6 +2007,11 @@ class AudioPlayer {
         fun ensureRunning() {
             if (!started.compareAndSet(false, true)) return
             Thread {
+                // What this measures has to be representative of the writer, so
+                // it asks for the same OS scheduling class as the writer (see
+                // [AudioThreadBoost]): otherwise a stall reported here could be
+                // an artefact of this probe's own priority.
+                AudioThreadBoost.boost("audio-watchdog", critical = true)
                 val gcBeans = runCatching {
                     java.lang.management.ManagementFactory.getGarbageCollectorMXBeans()
                 }.getOrDefault(emptyList())
@@ -2014,7 +2075,7 @@ class AudioPlayer {
                             "playback",
                             "audio priority stall: 50ms sleep returned ${late + 50}ms late " +
                                 "(= ${late}ms held up at the writer's priority; heap " +
-                                "${used}/${max}MB, gc $gc$cpu)",
+                                "${used}/${max}MB, gc $gc$cpu; ${GcMonitor.context()})",
                         )
                     }
                 }
