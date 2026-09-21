@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.5-alpha] - 2026-09-21
+
+### Fixed
+- [DE] **Every expansion now animates, and all of them follow the settings.** The sidebar's three groups, the mini player bar and the right Now Playing panel used to appear and disappear with no transition at all (a plain `if`), the sidebar's own expand/shrink used a bare default spec, the right panel had no animation, and the group chevrons and the 72 dp rail kept moving their fixed spring even with the master switch off. They all go through the shared `Animations.panelEnter/panelExit` (sidebar, right panel), `barEnter/barExit` (bottom bar) and `sectionEnter/sectionExit` (sidebar groups) — an expressive spring with a light overshoot and no bounce on the way out — so `Animation speed` scales them and turning **Animations** off makes them instant. Opening or closing the full player is now a vertical expansion of the bar rather than one more horizontal screen slide (the screen-to-screen slide/fade stays for every other navigation). **Constraint:** a new panel must take its enter/exit from `Animations`, never a bare `expandHorizontally()` — that is exactly how the right panel ended up with no transition and with an animation the master switch could not turn off.
+
 ## [6.0.6.5_DE-1.53.4-alpha] - 2026-09-21
 
 ### Fixed

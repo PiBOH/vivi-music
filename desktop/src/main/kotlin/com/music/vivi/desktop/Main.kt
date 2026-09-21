@@ -39,6 +39,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
@@ -2029,8 +2030,8 @@ fun WindowScope.App(
                 // (72dp) instead of hiding it; it is fully hidden only on the
                 // full-screen player.
                 visible = current != Screen.Player,
-                enter = expandHorizontally() + fadeIn(),
-                exit = shrinkHorizontally() + fadeOut(),
+                enter = Animations.panelEnter(),
+                exit = Animations.panelExit(),
             ) {
                 Surface(
                     modifier = Modifier.fillMaxHeight().padding(start = 6.dp, top = 6.dp, end = 4.dp, bottom = 6.dp),
@@ -2060,8 +2061,8 @@ fun WindowScope.App(
         } else {
             AnimatedVisibility(
                 visible = current != Screen.Player,
-                enter = expandHorizontally() + fadeIn(),
-                exit = shrinkHorizontally() + fadeOut(),
+                enter = Animations.panelEnter(),
+                exit = Animations.panelExit(),
             ) {
                 Sidebar(
                     hideHistory = pauseListenHistory,
@@ -2129,6 +2130,12 @@ fun WindowScope.App(
                             transitionSpec = {
                                 if (!animationsEnabled) {
                                     fadeIn(animationSpec = tween(0)) togetherWith fadeOut(animationSpec = tween(0))
+                                } else if (targetState == Screen.Player || initialState == Screen.Player) {
+                                    // Opening and closing the full player reads as
+                                    // the bar expanding upwards (the bottom bar's
+                                    // own exit goes the other way), instead of
+                                    // being one more horizontal screen slide.
+                                    Animations.playerEnter() togetherWith Animations.playerExit()
                                 } else {
                                     when (screenTransition) {
                                         "slide" -> (slideInHorizontally(animationSpec = tween(Animations.ms(220))) { it / 4 } + fadeIn(animationSpec = tween(Animations.ms(220)))) togetherWith
@@ -2276,6 +2283,10 @@ fun WindowScope.App(
                         animationsEnabled = animationsEnabled,
                         onAnimationsEnabledChange = { v ->
                             animationsEnabled = v
+                            // The transition helpers read this directly, so the
+                            // change is visible on the next frame instead of
+                            // waiting for the settings file reload.
+                            Animations.enabled = v
                             DesktopSettings.update { it.copy(animationsEnabled = v) }
                         },
                         animationSpeed = animationSpeed,
@@ -3158,7 +3169,14 @@ fun WindowScope.App(
         // Hide the right Now Playing panel while the full player screen is
         // open (it would duplicate what the player already shows); it comes
         // back automatically when leaving the player.
-        if (showRightSidebar && spotifyLayout && current != Screen.Player) {
+        // The right Now Playing panel used to appear and disappear with no
+        // transition at all: it is a panel like the sidebar, so it takes the
+        // same expand/shrink (which the master switch can turn off).
+        AnimatedVisibility(
+            visible = showRightSidebar && spotifyLayout && current != Screen.Player,
+            enter = Animations.panelEnter(),
+            exit = Animations.panelExit(),
+        ) {
             SpotifyRightNowPlayingPanel(
                 nowPlaying = nowPlaying,
                 isPlaying = isPlaying,
@@ -3174,7 +3192,13 @@ fun WindowScope.App(
             )
         }
     }
-    if (current != Screen.Player) {
+    // The bottom bar rises into place and drops away when the full player
+    // takes over, both through the shared transition (master switch aware).
+    AnimatedVisibility(
+        visible = current != Screen.Player,
+        enter = Animations.barEnter(),
+        exit = Animations.barExit(),
+    ) {
         // Spotify style: a thin top border separates the bottom bar from the
         // content above (like the desktop app).
         Column {
@@ -3368,19 +3392,22 @@ fun Sidebar(
         }
     }
 
+    // The three group chevrons follow the same switch as the sections they
+    // open (they used a fixed spring, so the arrow kept moving with animations
+    // turned off).
     val mainChevronRotation by animateFloatAsState(
         targetValue = if (mainExpanded) 90f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(Animations.ms(200), easing = FastOutSlowInEasing),
         label = "mainChevronRotation",
     )
     val libraryChevronRotation by animateFloatAsState(
         targetValue = if (libraryExpanded) 90f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(Animations.ms(200), easing = FastOutSlowInEasing),
         label = "libraryChevronRotation",
     )
     val playlistsChevronRotation by animateFloatAsState(
         targetValue = if (playlistsExpanded) 90f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        animationSpec = tween(Animations.ms(200), easing = FastOutSlowInEasing),
         label = "playlistsChevronRotation",
     )
 
@@ -3402,7 +3429,13 @@ fun Sidebar(
         ),
     )
 
-    val width by animateDpAsState(if (collapsed) 72.dp else 230.dp, label = "sidebarWidth")
+    // The rail collapse is a panel resize: it follows "Animation speed" and
+    // becomes instant when the master "Animations" switch is off.
+    val width by animateDpAsState(
+        targetValue = if (collapsed) 72.dp else 230.dp,
+        animationSpec = tween(Animations.sizeMs(), easing = FastOutSlowInEasing),
+        label = "sidebarWidth",
+    )
 
     Surface(
         color = if (spotify) {
@@ -3492,7 +3525,15 @@ fun Sidebar(
                     }
                 }
 
-                if (mainExpanded || collapsed) {
+                // The three groups used to appear and disappear with no
+                // transition at all (a plain `if`); they now expand and
+                // collapse like the mobile app's, through the shared spec that
+                // the master "Animations" switch and speed control.
+                AnimatedVisibility(
+                    visible = mainExpanded || collapsed,
+                    enter = Animations.sectionEnter(),
+                    exit = Animations.sectionExit(),
+                ) {
                     mainEntries.forEach { entry ->
                         val selected = current == entry.screen
                         val interaction = remember(entry.screen) { MutableInteractionSource() }
@@ -3568,7 +3609,11 @@ fun Sidebar(
                     }
                 }
 
-                if (libraryExpanded || collapsed) {
+                AnimatedVisibility(
+                    visible = libraryExpanded || collapsed,
+                    enter = Animations.sectionEnter(),
+                    exit = Animations.sectionExit(),
+                ) {
                     librarySubEntries.forEach { entry ->
                         val selected = current == entry.screen
                         val interaction = remember(entry.screen) { MutableInteractionSource() }
@@ -3658,7 +3703,11 @@ fun Sidebar(
                     }
                 }
 
-                if (playlistsExpanded || collapsed) {
+                AnimatedVisibility(
+                    visible = playlistsExpanded || collapsed,
+                    enter = Animations.sectionEnter(),
+                    exit = Animations.sectionExit(),
+                ) {
                     // Create New Playlist
                     Row(
                         Modifier
