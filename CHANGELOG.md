@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.52.7-alpha] - 2026-09-21
+
+### Added
+- [DE] **Native Fedora/RPM package.** Every desktop release now ships a `VIVIMusic-<version>.rpm` alongside the `.deb` and the AppImage. It is not built by jpackage: RPM keeps its scriptlets in the package header, so the uninstall cleanup can be inlined in `%postun` (the `.deb` needs a helper file copied to `/usr/share`, because dpkg removes the payload before `postrm` runs) — `dnf remove vivi-music-de` therefore keeps only the newest `~/.vivimusic/backups/*.vivide.backup` plus `device-sync.json` and wipes all the caches, exactly like the Windows, `.deb` and AUR uninstallers. The spec is generated from the jpackage app image by `scripts/generate_rpm_spec.py`, which reads the cleanup body from the shared `scripts/uninstall-cleanup.sh` instead of duplicating it, and installs the same layout as the AUR package (`/opt/vivi-music-de`, `/usr/bin/vivi-music-de`, `vivi-music-de.desktop`, hicolor icon) with `Vendor: PiBOH` and `License: GPL-3.0-or-later`. Dependencies are left to `rpmbuild`'s automatic soname detection, so nothing hard-codes Fedora-only package names.
+
 ## [6.0.6.5_DE-1.52.6-alpha] - 2026-09-20
 
 ### Fixed

@@ -107,6 +107,14 @@ dependencies there, or you break the desktop build.
       keep the two copies in sync. `Release Manifest` refreshes the two data
       files in place, on `gh-pages`, every hour.
     - `apk-latest`: the APK binaries only (`.releases/apk/latest`, one commit).
+  - **No scratch/test branches — ever (mandatory)**: never create a branch to
+    try a change out. Do the work on the branch that owns it, per the branch map
+    above, and verify through the normal pipeline: a `v` commit on
+    `vivi-music-de` exercises `Auto Release` (a job that is still settling stays
+    `continue-on-error` until it is green), a push on `gh-pages` deploys the
+    site. If a branch was created anyway, it must be deleted (locally and on
+    `origin`) with its work integrated into the base branch — the official
+    repository keeps **only** the mapped branches.
   - **Release notes never show the website bookkeeping commit**:
     `chore(website): refresh the static release manifest` is filtered out of the
     `Auto Release` notes (commit list and changelog section alike), and since

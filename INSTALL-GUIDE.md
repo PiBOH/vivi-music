@@ -83,7 +83,7 @@ caches, logs, imported fonts, playlists.json and every older backup.
 
 ## Linux
 
-Three ways to install, depending on your distribution.
+Four ways to install, depending on your distribution.
 
 ### Option A — Debian / Ubuntu (.deb)
 
@@ -101,7 +101,21 @@ sudo dpkg -i VIVIMusic-….deb && sudo apt-get install -f
 
 Launch **VIVI Music DE** from your application menu.
 
-### Option B — AppImage (any distro, portable)
+### Option B — Fedora / RHEL / openSUSE (.rpm)
+
+Works on Fedora and any other RPM-based distribution (RHEL, openSUSE). The
+package is self-contained: it bundles its own runtime, so no system Java is
+needed.
+
+```bash
+sudo dnf install ./VIVIMusic-….rpm
+```
+
+On openSUSE use `sudo zypper install ./VIVIMusic-….rpm` instead. Everything is
+installed under `/opt/vivi-music-de`, with a `vivi-music-de` launcher, a desktop
+entry in the applications menu and an icon in the hicolor theme.
+
+### Option C — AppImage (any distro, portable)
 
 Works on most distributions, including Arch and Fedora.
 
@@ -128,10 +142,14 @@ If your system blocks AppImages (no FUSE), extract and run it instead:
 - **AppImage**: delete the file. To clean your user data the same way, run:
   `sh scripts/uninstall-cleanup.sh` from this repo (or the script shipped in
   the release).
+- **.rpm**: uninstall with `sudo dnf remove vivi-music-de` (`sudo zypper remove
+  vivi-music-de` on openSUSE). The package's `%postun` scriptlet runs the same
+  cleanup as the `.deb` one — newest backup plus `device-sync.json` kept, every
+  cache removed.
 - **AUR**: `pacman -R vivi-music-de` runs the same cleanup automatically via
   the package's `post_remove` hook.
 
-### Option C — Arch Linux (AUR-style PKGBUILD)
+### Option D — Arch Linux (AUR-style PKGBUILD)
 
 Every release also ships a **`PKGBUILD`** (plus `SRCINFO` and an uninstall
 hook `vivi-music-de.install`) as release assets.

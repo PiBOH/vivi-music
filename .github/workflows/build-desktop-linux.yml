@@ -81,6 +81,86 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  rpm:
+    name: Linux RPM package (Fedora)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Best-effort: a failure here must not block the DEB (or the release).
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install rpmbuild
+        shell: bash
+        run: |
+          # jpackage cannot target RPM here (the uninstall cleanup has to be
+          # inlined in the %postun scriptlet), so the package is built from the
+          # jpackage app image with rpmbuild.
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends rpm
+
+      - name: Grant execute permission for gradlew
+        shell: bash
+        run: chmod +x gradlew
+
+      - name: Create app image
+        shell: bash
+        run: ./gradlew :desktop:createDistributable --no-daemon
+
+      - name: Build RPM
+        shell: bash
+        run: |
+          set -euo pipefail
+          MOBILE="$(sed -n '1p' version.txt | tr -d '\r\n' | xargs)"
+          DE="$(sed -n '4p' version.txt | tr -d '\r\n' | xargs)"
+          VERSION="${MOBILE}_DE-${DE}"
+          APPDIR="$(find desktop/build/compose/binaries/main/app -maxdepth 1 -mindepth 1 -type d | head -n 1)"
+          if [ -z "$APPDIR" ]; then
+            echo "jpackage app-image directory not found" >&2
+            exit 1
+          fi
+          echo "AppDir: $APPDIR"
+
+          TOPDIR="$PWD/build/rpm"
+          rm -rf "$TOPDIR"
+          mkdir -p "$TOPDIR/BUILD" "$TOPDIR/RPMS" "$TOPDIR/SOURCES" "$TOPDIR/SPECS" "$TOPDIR/SRPMS"
+
+          # The app image IS the payload: its contents sit at the tarball root,
+          # and the generated spec copies them to /opt/vivi-music-de (the same
+          # location the AUR package uses).
+          tar -czf "$TOPDIR/SOURCES/vivi-music-app-${DE}.tar.gz" -C "$APPDIR" .
+          python3 scripts/generate_rpm_spec.py --out "$TOPDIR/SPECS" --version "$DE"
+          cp "$TOPDIR/SPECS/vivi-music-de.desktop" "$TOPDIR/SOURCES/vivi-music-de.desktop"
+          cp desktop/icons/logo_vmde.png "$TOPDIR/SOURCES/vivi-music-de.png"
+
+          rpmbuild --define "_topdir $TOPDIR" -bb "$TOPDIR/SPECS/vivi-music-de.spec"
+
+          mkdir -p dist
+          RPM="$(find "$TOPDIR/RPMS" -name 'vivi-music-de-*.rpm' -print -quit)"
+          if [ -z "$RPM" ]; then
+            echo "No RPM produced" >&2
+            exit 1
+          fi
+          cp "$RPM" "dist/VIVIMusic-${VERSION}.rpm"
+          ls -la dist
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-rpm
+          path: dist/*
+          if-no-files-found: error
+
   appimage:
     name: Linux AppImage
     runs-on: ubuntu-latest
