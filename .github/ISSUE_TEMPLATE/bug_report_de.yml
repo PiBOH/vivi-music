@@ -91,7 +91,7 @@ body:
     attributes:
       label: 🖥️ Operating System
       options:
-        - Windows 10
+        - Windows 10 (1507 or newer)
         - Windows 11
         - Linux (Debian / Ubuntu)
         - Linux (Arch / Manjaro)
