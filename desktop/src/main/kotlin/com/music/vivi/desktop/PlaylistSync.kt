@@ -29,9 +29,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * and bumping it for free would make an untouched playlist win against a
  * genuine edit made on the paired phone.
  *
- * Reads only: creating, renaming or deleting a playlist still happens locally
- * (and reaches the account's copy through its own actions when the user makes
- * them from the online screens).
+ * Two directions, and the user asks for the second one explicitly: [sync] pulls
+ * the account's playlists down, while [pushPlaylist] / [uploadMissing] create a
+ * local playlist's copy **on the account** and upload its songs (the mobile
+ * create dialog's *Sync playlist* switch, and the Account screen's
+ * *Create on YouTube Music* action). A playlist that lives on both sides keeps
+ * them together: a song added here is pushed ([songsAdded]) and a rename is
+ * propagated ([renamed]). Deleting is deliberately **not** propagated — it would
+ * remove a playlist from the user's YouTube account, and that is not reversible.
  */
 object PlaylistSync {
     enum class Phase { IDLE, RUNNING, DONE, FAILED }
@@ -42,6 +47,8 @@ object PlaylistSync {
         val playlists: Int = 0,
         val songs: Int = 0,
         val message: String = "",
+        /** How many playlists were CREATED on the account by this run. */
+        val created: Int = 0,
     )
 
     private val _status = MutableStateFlow(Status())
@@ -63,44 +70,122 @@ object PlaylistSync {
     fun isEnabled(): Boolean = DesktopSettings.load().syncPlaylistsWithYoutube && LoginManager.isLoggedIn()
 
     /**
-     * Runs one sync. Concurrent calls are ignored (the sidebar opens, the
-     * login lands and the account screen opens within the same second).
+     * The account's playlist id behind a local playlist, whichever of the two
+     * forms it is stored in (see `SyncedPlaylist.remoteId`): a playlist mirrored
+     * from the account has it in its id (`yt-…`), one created here and pushed up
+     * has it in the field.
+     */
+    fun SyncedPlaylist.accountPlaylistId(): String? = remoteId ?: remoteId(id)
+
+    /**
+     * A song was added to a playlist that also lives on the account: push it,
+     * the way the mobile app does for a playlist with a browse id.
+     *
+     * Fire-and-forget on purpose — the local write has already succeeded and the
+     * user must not wait on a network round trip — but every push is logged, so
+     * a failure is visible in `playlists.log` rather than silent.
+     */
+    fun songsAdded(playlist: SyncedPlaylist, added: List<SyncedSong>) {
+        val remote = playlist.accountPlaylistId() ?: return
+        if (added.isEmpty()) return
+        if (!LoginManager.isLoggedIn()) return
+        scope.launch {
+            val pushed = added.count { song ->
+                val ok = YouTube.addToPlaylist(remote, song.id).isSuccess
+                if (!ok) AppLog.log("playlists", "  '${playlist.name}': '${song.title}' was not added to the account copy")
+                ok
+            }
+            AppLog.log("playlists", "'${playlist.name}': $pushed of ${added.size} song(s) pushed to the account copy")
+        }
+    }
+
+    /** The account's copy of a renamed local playlist is renamed with it. */
+    fun renamed(playlist: SyncedPlaylist) {
+        val remote = playlist.accountPlaylistId() ?: return
+        if (!LoginManager.isLoggedIn()) return
+        if (playlist.name.isBlank()) return
+        scope.launch {
+            val ok = YouTube.renamePlaylist(remote, playlist.name).isSuccess
+            AppLog.log(
+                "playlists",
+                "'${playlist.name}': account copy ${if (ok) "renamed" else "NOT renamed (the name there stays as it was)"}",
+            )
+        }
+    }
+
+    /**
+     * Runs one pull: the account's playlists are mirrored into the local store.
+     * Concurrent calls are ignored (the sidebar opens, the login lands and the
+     * account screen opens within the same second).
      */
     fun sync(trigger: String = "manual") {
         if (!isEnabled()) {
             _status.value = Status(Phase.IDLE, message = "sync disabled or not signed in")
             return
         }
-        if (!inFlight.compareAndSet(false, true)) return
+        run(trigger) { pull(trigger) }
+    }
+
+    /**
+     * Creates the account's copy of one local playlist (when it does not have
+     * one yet) and uploads its songs — what the create dialog's *Sync playlist*
+     * switch asks for. Reads the playlist inside the coroutine, so songs added
+     * in the same turn are uploaded too.
+     */
+    fun pushPlaylist(localId: String, trigger: String = "create") {
+        if (!LoginManager.isLoggedIn()) {
+            AppLog.log("playlists", "upload ($trigger): not signed in — the playlist stays local")
+            return
+        }
+        // Deliberately NOT behind [run]'s in-flight guard: a user creating two
+        // playlists one after the other must not have the second one dropped
+        // because the first is still uploading. Each of these touches its own
+        // playlist, so they cannot race on the same one.
+        scope.launch {
+            try {
+                val created = if (pushOne(localId, trigger)) 1 else 0
+                _status.value = Status(Phase.DONE, created = created)
+            } catch (t: Throwable) {
+                AppLog.log("playlists", "upload ($trigger) failed: ${t.message}")
+                _status.value = Status(Phase.FAILED, message = t.message ?: "failed")
+            }
+        }
+    }
+
+    /**
+     * The explicit *create them on YouTube Music* action: every local playlist
+     * that is not on the account yet is created there and its songs uploaded;
+     * the account's playlists are then pulled down in the same run, so both
+     * sides end up mirroring each other. An explicit request, so it also runs
+     * with *Auto sync with account* switched off — but never without a session.
+     */
+    fun uploadMissing(trigger: String = "upload") {
+        if (!LoginManager.isLoggedIn()) {
+            _status.value = Status(Phase.FAILED, message = "not signed in")
+            return
+        }
+        val pending = PlaylistStore.active.filter { it.accountPlaylistId() == null }
+        if (pending.isEmpty()) {
+            AppLog.log("playlists", "upload ($trigger): every local playlist is already on the account")
+            run(trigger) { pull(trigger) }
+            return
+        }
+        run(trigger) {
+            val created = pending.count { playlist -> pushOne(playlist.id, trigger) }
+            pull(trigger).copy(created = created)
+        }
+    }
+
+    /** One serialized run, with the shared in-flight guard and status bookkeeping. */
+    private fun run(trigger: String, block: suspend () -> Status) {
+        if (!inFlight.compareAndSet(false, true)) {
+            AppLog.log("playlists", "$trigger: another sync is already running — skipped")
+            return
+        }
         _status.value = Status(Phase.RUNNING)
         scope.launch {
             try {
-                val page = YouTube.library("FEmusic_liked_playlists").getOrElse { error ->
-                    val why = error.message ?: error.javaClass.simpleName
-                    AppLog.log("playlists", "youtube sync ($trigger): playlist list failed — $why")
-                    _status.value = Status(Phase.FAILED, message = why)
-                    return@launch
-                }
-                val remoteItems = page.items.filterIsInstance<PlaylistItem>()
-                AppLog.log("playlists", "youtube sync ($trigger): ${remoteItems.size} playlist(s) in the account")
-
-                // Songs are fetched with a small concurrency cap: a large
-                // library is dozens of requests, and firing them all at once
-                // is what gets a client rate-limited.
-                val gate = Semaphore(4)
-                val mirrored = remoteItems.map { item ->
-                    scope.async {
-                        gate.withPermit { mirrorOne(item) }
-                    }
-                }.awaitAll().filterNotNull()
-
-                if (mirrored.isNotEmpty()) PlaylistStore.applyRemote(mirrored)
-                val songs = mirrored.sumOf { it.songs.size }
-                AppLog.log(
-                    "playlists",
-                    "youtube sync ($trigger): ${mirrored.size} of ${remoteItems.size} playlist(s) updated, $songs song(s)",
-                )
-                _status.value = Status(Phase.DONE, playlists = mirrored.size, songs = songs)
+                _status.value = block()
             } catch (t: Throwable) {
                 AppLog.log("playlists", "youtube sync ($trigger) failed: ${t.message}")
                 _status.value = Status(Phase.FAILED, message = t.message ?: "failed")
@@ -108,6 +193,78 @@ object PlaylistSync {
                 inFlight.set(false)
             }
         }
+    }
+
+    /**
+     * Creates [localId]'s account copy and uploads the songs it holds right now.
+     * Returns whether the copy was created.
+     *
+     * Sequential on purpose: one request per playlist, and the bulk action is
+     * dozens of them — firing them together is what gets a client rate-limited.
+     */
+    private suspend fun pushOne(localId: String, trigger: String): Boolean {
+        val playlist = PlaylistStore.get(localId) ?: return false
+        if (playlist.accountPlaylistId() != null) return false
+        val remote = runCatching { YouTube.createPlaylist(playlist.name) }.getOrNull()
+        if (remote.isNullOrBlank()) {
+            AppLog.log("playlists", "upload ($trigger): '${playlist.name}' was NOT created on the account")
+            return false
+        }
+        // Linked first: a song added from now on is pushed by [songsAdded].
+        PlaylistStore.link(playlist.id, remote)
+        val pushed = playlist.songs.count { song ->
+            val ok = YouTube.addToPlaylist(remote, song.id).isSuccess
+            if (!ok) AppLog.log("playlists", "  '${playlist.name}': '${song.title}' was not uploaded")
+            ok
+        }
+        AppLog.log(
+            "playlists",
+            "upload ($trigger): '${playlist.name}' created on the account ($remote), $pushed of " +
+                "${playlist.songs.size} song(s) uploaded",
+        )
+        return true
+    }
+
+    /** One pull: the account's playlists into the local store. */
+    private suspend fun pull(trigger: String): Status {
+        val page = YouTube.library("FEmusic_liked_playlists").getOrElse { error ->
+            val why = error.message ?: error.javaClass.simpleName
+            AppLog.log("playlists", "youtube sync ($trigger): playlist list failed — $why")
+            return Status(Phase.FAILED, message = why)
+        }
+        // A playlist that is already a local one — mirrored as `yt-<id>`, or
+        // created here and pushed to the account ([SyncedPlaylist.remoteId]) —
+        // is NOT mirrored a second time: the account's copy of such a playlist
+        // was filled BY this app, so the local playlist is its source of truth
+        // (mirroring it would create the duplicate the sync exists to avoid,
+        // and would overwrite local edits with the order the account holds).
+        val linkedRemoteIds = PlaylistStore.active.mapNotNull { it.remoteId }.toSet()
+        val remoteItems = page.items.filterIsInstance<PlaylistItem>().filterNot { item ->
+            val linked = item.id in linkedRemoteIds
+            if (linked) {
+                AppLog.log("playlists", "  '${item.title}': already a local playlist — not mirrored again")
+            }
+            linked
+        }
+        AppLog.log("playlists", "youtube sync ($trigger): ${remoteItems.size} playlist(s) in the account")
+
+        // Songs are fetched with a small concurrency cap: a large library is
+        // dozens of requests, and firing them all at once is what gets a client
+        // rate-limited.
+        val gate = Semaphore(4)
+        val mirrored = remoteItems.map { item ->
+            scope.async {
+                gate.withPermit { mirrorOne(item) }
+            }
+        }.awaitAll().filterNotNull()
+
+        if (mirrored.isNotEmpty()) PlaylistStore.applyRemote(mirrored)
+        val songs = mirrored.sumOf { it.songs.size }
+        AppLog.log(
+            "playlists",
+            "youtube sync ($trigger): ${mirrored.size} of ${remoteItems.size} playlist(s) updated, $songs song(s)",
+        )
+        return Status(Phase.DONE, playlists = mirrored.size, songs = songs)
     }
 
     /**

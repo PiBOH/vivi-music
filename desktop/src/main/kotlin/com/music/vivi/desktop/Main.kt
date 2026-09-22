@@ -124,6 +124,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.CompareArrows
@@ -148,6 +149,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -3818,14 +3820,15 @@ fun Sidebar(
 
                     // Logged-in YouTube Playlists
                     if (isLoggedIn) {
-                        // With "Auto sync with account" on, the account's
-                        // playlists are mirrored into the local list above
-                        // (`yt-<id>`): showing them again here would list every
-                        // playlist twice, which is exactly what the sync is
-                        // there to remove.
+                        // The account's playlists that are already a local
+                        // playlist — mirrored into the local list above
+                        // (`yt-<id>`), or created here and pushed to the account
+                        // (`remoteId`) — are not listed again here: doing so
+                        // listed every synced playlist twice, which is exactly
+                        // what the sync is there to remove.
                         val mirroredRemoteIds = remember(activeLocalPlaylists) {
                             activeLocalPlaylists
-                                .mapNotNull { PlaylistSync.remoteId(it.id) }
+                                .mapNotNull { PlaylistSync.run { it.accountPlaylistId() } }
                                 .toSet()
                         }
                         onlinePlaylists.filterNot { it.id in mirroredRemoteIds }.forEach { op ->
@@ -3931,20 +3934,22 @@ fun Sidebar(
                     confirmLabel = Localization.get(language, "create").let { if (it == "create" || it.isBlank()) "Create" else it },
                     onConfirm = { name ->
                         val newPlaylist = PlaylistStore.create(name)
-                        if (isLoggedIn) {
-                            scope.launch {
-                                try {
-                                    com.music.innertube.YouTube.createPlaylist(name)
-                                    com.music.innertube.YouTube.library("FEmusic_liked_playlists").getOrNull()?.let { page ->
-                                        onlinePlaylists = page.items.filterIsInstance<com.music.innertube.models.PlaylistItem>()
-                                    }
-                                } catch (_: Exception) {}
-                            }
-                        }
                         showCreateDialog = false
                         onSelect(Screen.LocalPlaylist(newPlaylist.id))
                     },
                     onDismiss = { showCreateDialog = false },
+                    allowSyncing = isLoggedIn,
+                    // Created on the account by [PlaylistSync] now, which also
+                    // records the account's id on the local playlist: the old
+                    // inline call created a copy over there and then lost it,
+                    // leaving a stray playlist on the account and an unlinked one
+                    // here.
+                    onConfirmSynced = { name ->
+                        val newPlaylist = PlaylistStore.create(name)
+                        PlaylistSync.pushPlaylist(newPlaylist.id)
+                        showCreateDialog = false
+                        onSelect(Screen.LocalPlaylist(newPlaylist.id))
+                    },
                 )
             }
 
@@ -5530,16 +5535,69 @@ fun AccountSection(
             Text(
                 when (syncStatus.phase) {
                     PlaylistSync.Phase.RUNNING -> Localization.get(language, "sync_in_progress")
-                    PlaylistSync.Phase.DONE -> if (syncStatus.playlists == 0) {
+                    PlaylistSync.Phase.DONE -> if (syncStatus.playlists == 0 && syncStatus.created == 0) {
                         Localization.get(language, "sync_finished")
                     } else {
-                        "${Localization.get(language, "sync_finished")} (${syncStatus.playlists})"
+                        "${Localization.get(language, "sync_finished")} (${syncStatus.playlists + syncStatus.created})"
                     }
                     PlaylistSync.Phase.FAILED -> Localization.get(language, "update_failed")
                     PlaylistSync.Phase.IDLE -> ""
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // The other direction, and the one the user asks for explicitly: the
+        // local playlists that are NOT on the account yet are created there and
+        // their songs uploaded (the mobile app only offers this at creation time,
+        // from its create dialog's switch — this is the same for the playlists
+        // that already exist). The account's playlists are pulled down in the
+        // same run, so the two sides end up mirroring each other.
+        val localPlaylists by PlaylistStore.all.collectAsState()
+        val pendingUpload = localPlaylists.count { p ->
+            !p.deleted && p.remoteId == null && !PlaylistSync.isMirrored(p.id)
+        }
+        var confirmUpload by remember { mutableStateOf(false) }
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.CloudUpload,
+                    title = { Text(Localization.get(language, "playlists_upload")) },
+                    description = {
+                        Text(
+                            if (pendingUpload > 0) {
+                                Localization.get(language, "playlists_upload_desc")
+                            } else {
+                                Localization.get(language, "playlists_upload_none")
+                            },
+                        )
+                    },
+                    enabled = pendingUpload > 0 && syncStatus.phase != PlaylistSync.Phase.RUNNING,
+                    onClick = { confirmUpload = true },
+                ),
+            ),
+        )
+        if (confirmUpload) {
+            AlertDialog(
+                onDismissRequest = { confirmUpload = false },
+                title = { Text(Localization.get(language, "playlists_upload")) },
+                text = {
+                    Text(
+                        Localization.get(language, "playlists_upload_confirm")
+                            .replace("%d", pendingUpload.toString()),
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmUpload = false
+                        PlaylistSync.uploadMissing("manual")
+                    }) { Text(Localization.get(language, "ok")) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmUpload = false }) {
+                        Text(Localization.get(language, "cancel"))
+                    }
+                },
             )
         }
         Button(onClick = onLogout, modifier = Modifier.padding(top = 8.dp)) {

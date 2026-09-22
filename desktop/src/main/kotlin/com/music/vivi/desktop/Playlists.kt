@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
@@ -75,22 +76,53 @@ object PlaylistStore {
 
     fun get(id: String): SyncedPlaylist? = _all.value.firstOrNull { it.id == id && !it.deleted }
 
-    fun create(name: String): SyncedPlaylist {
+    /**
+     * A new local playlist. [remoteId] links it to the account's copy when the
+     * user asked for it at creation time (the mobile create dialog's
+     * "Sync playlist" switch); otherwise it is local-only and
+     * [PlaylistSync.uploadMissing] is what can create the account copy later.
+     */
+    fun create(name: String, remoteId: String? = null): SyncedPlaylist {
         val p = SyncedPlaylist(
             id = newId(),
             name = name.trim(),
             updatedAt = System.currentTimeMillis(),
+            remoteId = remoteId,
         )
         _all.value = _all.value + p
         persist()
         return p
     }
 
-    fun rename(id: String, name: String) {
+    /**
+     * Records the account's playlist id on an existing local playlist, so its
+     * later edits can reach the account (see [PlaylistSync.songAdded]).
+     */
+    fun link(id: String, remoteId: String) {
         _all.value = _all.value.map { p ->
-            if (p.id == id && !p.deleted) p.copy(name = name.trim(), updatedAt = System.currentTimeMillis()) else p
+            if (p.id == id && !p.deleted && p.remoteId != remoteId) {
+                p.copy(remoteId = remoteId, updatedAt = System.currentTimeMillis())
+            } else {
+                p
+            }
         }
         persist()
+    }
+
+    fun rename(id: String, name: String) {
+        var renamed: SyncedPlaylist? = null
+        _all.value = _all.value.map { p ->
+            if (p.id == id && !p.deleted) {
+                p.copy(name = name.trim(), updatedAt = System.currentTimeMillis()).also { renamed = it }
+            } else {
+                p
+            }
+        }
+        persist()
+        // The account's copy is renamed with it, so the two do not drift apart
+        // (deleting it there is deliberately NOT propagated: it would remove a
+        // playlist from the user's YouTube account, which is not reversible).
+        renamed?.let { PlaylistSync.renamed(it) }
     }
 
     fun delete(id: String) {
@@ -101,14 +133,23 @@ object PlaylistStore {
     }
 
     fun addSongs(id: String, songs: List<SyncedSong>) {
+        var addedTo: SyncedPlaylist? = null
+        var added: List<SyncedSong> = emptyList()
         _all.value = _all.value.map { p ->
             if (p.id == id && !p.deleted) {
                 val existing = p.songs.map { it.id }.toSet()
-                val added = songs.filter { it.id !in existing }
-                p.copy(songs = p.songs + added, updatedAt = System.currentTimeMillis())
+                added = songs.filter { it.id !in existing }
+                if (added.isEmpty()) p
+                else p.copy(songs = p.songs + added, updatedAt = System.currentTimeMillis())
+                    .also { addedTo = it }
             } else p
         }
         persist()
+        // A playlist that lives on the account too: the song was written here, so
+        // it has to reach YouTube as well, exactly like the mobile app does when
+        // a song is added to a playlist that carries a browse id.
+        val updated = addedTo ?: return
+        PlaylistSync.songsAdded(updated, added)
     }
 
     fun removeSong(id: String, songId: String) {
@@ -265,6 +306,13 @@ fun LocalPlaylistsScreen(
             confirmLabel = Localization.get(language, "create"),
             onConfirm = { name -> PlaylistStore.create(name) },
             onDismiss = { showCreate = false },
+            allowSyncing = true,
+            onConfirmSynced = { name ->
+                // Created here first, so the playlist is on screen at once; the
+                // account's copy is created in the background (and the songs
+                // added to it are pushed as they come).
+                PlaylistSync.pushPlaylist(PlaylistStore.create(name).id)
+            },
         )
     }
     renameTarget?.let { target ->
@@ -473,10 +521,31 @@ fun AddToPlaylistDialog(
                 onDismiss()
             },
             onDismiss = { showCreate = false },
+            allowSyncing = true,
+            onConfirmSynced = { name ->
+                // The song goes to the local playlist first, and the account copy
+                // is created straight after: [PlaylistSync.pushPlaylist] reads
+                // the playlist when it runs, so this song is uploaded with it
+                // instead of waiting for the next one.
+                val created = PlaylistStore.create(name)
+                PlaylistStore.addSongs(created.id, listOf(song))
+                PlaylistSync.pushPlaylist(created.id)
+                showCreate = false
+                onDismiss()
+            },
         )
     }
 }
 
+/**
+ * Names a new (or renamed) playlist.
+ *
+ * When [allowSyncing] is set — creating, never renaming — it carries the mobile
+ * create dialog's *Sync playlist* switch: with it on, the playlist is created on
+ * YouTube Music as well, and the songs land in the account copy as they are
+ * added ([PlaylistSync.songsAdded]). The account copy is created in the
+ * background, so the screen never waits on the network.
+ */
 @Composable
 fun PlaylistNameDialog(
     language: String,
@@ -484,25 +553,62 @@ fun PlaylistNameDialog(
     confirmLabel: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
+    allowSyncing: Boolean = false,
+    /** Used instead of [onConfirm] when the sync switch is on. */
+    onConfirmSynced: ((String) -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf(initialName) }
+    var wantsSync by remember { mutableStateOf(false) }
+    val signedIn = LoginManager.isLoggedIn()
+    val showSyncRow = allowSyncing && onConfirmSynced != null
+    val syncing = showSyncRow && wantsSync && signedIn
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(Localization.get(language, "playlist_name")) },
         text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                label = { Text(Localization.get(language, "playlist_name")) },
-            )
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    label = { Text(Localization.get(language, "playlist_name")) },
+                )
+                if (showSyncRow) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                Localization.get(language, "sync_playlist"),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                Localization.get(language, "sync_playlist_desc"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Switch(checked = wantsSync, onCheckedChange = { wantsSync = it })
+                    }
+                    if (wantsSync && !signedIn) {
+                        Text(
+                            Localization.get(language, "not_logged_in_youtube"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(
                 enabled = name.isNotBlank(),
                 onClick = {
                     if (name.isNotBlank()) {
-                        onConfirm(name)
+                        if (syncing) onConfirmSynced!!(name) else onConfirm(name)
                         onDismiss()
                     }
                 },

@@ -162,4 +162,15 @@ data class SyncedPlaylist(
     val songs: List<SyncedSong> = emptyList(),
     val updatedAt: Long = 0L,
     val deleted: Boolean = false,
+    /**
+     * The playlist's id on the account, when this playlist is the account's (or
+     * was pushed to it).
+     *
+     * A playlist mirrored **from** the account also encodes it in [id] as
+     * `yt-<playlistId>` — the form the desktop has always used, and the one an
+     * older client still reads — while a playlist created here and pushed up
+     * only has it in this field: whoever acts on the account's copy (adding a
+     * song, renaming) must accept both.
+     */
+    val remoteId: String? = null,
 )

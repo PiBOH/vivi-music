@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.14-alpha] - 2026-09-22
+
+### Added
+- [DE] **Creating a playlist offers to sync it with YouTube Music, like the mobile app.** The name dialog carries the mobile create dialog's *Sync playlist* switch (its title and description are the app's own, translated, strings; without a session it shows *Not logged in to YouTube* under the switch and the playlist stays local). With it on, the playlist is created here first — the screen never waits on the network — and its copy is created on the account in the background, with the account's id recorded on the local playlist. Two consequences the mobile app has too: a song added to such a playlist is uploaded as it is added, and renaming it renames the account's copy. **Note:** deleting is deliberately not propagated — that would remove a playlist from the user's YouTube account, and it is not reversible.
+- [DE] **Account → *Create on YouTube Music*: the playlists that already exist locally can be created on the account in one confirmed action.** Mobile only offers the account copy at creation time (the dialog's switch), so the playlists made before it — or made with the switch off — had no way over. The Account screen now lists that action, disabled with *Every playlist is already on YouTube Music* when there is nothing to create, and it asks first (*This creates N playlist(s) on your YouTube Music account and uploads their songs. Continue?*): each local playlist without an account copy is created there sequentially (one request each, so a large library does not get rate-limited) and its songs uploaded, and the account's playlists are pulled down in the same run so both sides mirror each other. It runs even with *Auto sync with account* switched off — it is an explicit request — but never without a session. Every step is in `playlists.log`. **Constraint:** a playlist that already exists on both sides is never mirrored a second time (the pull skips it and the sidebar hides its online copy), otherwise every upload would come back as a duplicate local playlist. `SyncedPlaylist` gained the `remoteId` field for this; a playlist mirrored from the account still carries it in its id (`yt-…`), and `PlaylistSync.accountPlaylistId()` answers for both forms.
+
 ## [6.0.6.5_DE-1.53.13-alpha] - 2026-09-22
 
 ### Fixed
