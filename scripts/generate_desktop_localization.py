@@ -750,7 +750,12 @@ ENGLISH = {
     "notification_history_desc": "View recent notifications (in-app and native).",
     "save_notification_history": "Save notification history",
     "clear_history": "Clear history",
-    "history_empty": "No notifications yet",
+    # The notification list's empty state, NOT the listening history's: the two
+    # shared a key until 1.53.13, so the History screen said "No notifications
+    # yet" in every language (which is exactly how it was reported: clicking
+    # Cronologia looked like it had opened the notifications list).
+    # "history_empty" is further down, with the listening-history strings.
+    "notification_history_empty": "No notifications yet",
     "notification_duration": "In-app notification duration",
     "notification_duration_desc": "How long an in-app notification stays on screen before disappearing.",
     "test_notification": "Send test notification",

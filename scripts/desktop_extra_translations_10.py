@@ -69,16 +69,23 @@ EXTRA_TRANSLATIONS = {
         "te": "చరిత్రను తొలగించు", "th": "ล้างประวัติ", "tr": "Geçmişi temizle", "uk": "Очистити історію",
         "vi": "Xóa lịch sử", "zh-rCN": "清除历史", "zh-rTW": "清除記錄",
     },
-    "history_empty": {
+    # The notification list's own empty state. It used to share the
+    # "history_empty" key with the listening-history screen, so every language
+    # said "No notifications yet" there too (the desktop's History screen and
+    # the notification list are different screens — see the generator's
+    # ENGLISH table).
+    "notification_history_empty": {
         "ar": "لا توجد إشعارات بعد", "as": "এতিয়াও কোনো জাননী নাই", "az": "Hələ bildiriş yoxdur", "be": "Пакуль няма апавяшчэнняў",
         "bg": "Все още няма известия", "bn": "এখনও কোনো বিজ্ঞপ্তি নেই", "bs": "Još nema obavještenja", "ca": "Encara no hi ha notificacions",
         "cs": "Zatím žádná oznámení", "de": "Noch keine Benachrichtigungen", "el": "Δεν υπάρχουν ακόμη ειδοποιήσεις", "es": "Aún no hay notificaciones",
-        "et": "Teavitusi veel pole", "eu": "Oraindik ez dago jakinarazpenik", "fi": "Ei vielä ilmoituksia", "fil": "Wala pang mga notification",
+        "et": "Teavitusi veel pole", "eu": "Oraindik ez dago jakinarazpenik", "fa": "هنوز اعلانی وجود ندارد", "fi": "Ei vielä ilmoituksia",
+        "fil": "Wala pang mga notification",
         "fr": "Aucune notification pour l'instant", "hi": "अभी कोई सूचना नहीं", "hr": "Još nema obavijesti", "hu": "Még nincsenek értesítések",
-        "id": "Belum ada notifikasi", "it": "Ancora nessuna notifica", "ja": "まだ通知はありません", "km": "មិនទាន់មានការជូនដំណឹងនៅឡើយ",
+        "id": "Belum ada notifikasi", "it": "Ancora nessuna notifica", "iw": "אין התראות עדיין", "ja": "まだ通知はありません",
+        "km": "មិនទាន់មានការជូនដំណឹងនៅឡើយ",
         "ko": "아직 알림이 없습니다", "lt": "Dar nėra pranešimų", "ml": "ഇതുവരെ അറിയിപ്പുകളൊന്നുമില്ല", "ms": "Belum ada pemberitahuan",
         "nb": "Ingen varsler ennå", "nl": "Nog geen meldingen", "pa": "ਹਾਲੇ ਕੋਈ ਸੂਚਨਾ ਨਹੀਂ", "pl": "Brak powiadomień",
-        "pt": "Ainda sem notificações", "ro": "Nicio notificare încă", "ru": "Пока нет уведомлений", "sk": "Zatiaľ žiadne upozornenia",
+        "pt": "Ainda sem notificações", "pt-rBR": "Ainda sem notificações", "ro": "Nicio notificare încă", "ru": "Пока нет уведомлений", "sk": "Zatiaľ žiadne upozornenia",
         "sl": "Še ni obvestil", "sr": "Još nema obaveštenja", "sv": "Inga aviseringar ännu", "ta": "இன்னும் அறிவிப்புகள் இல்லை",
         "te": "ఇంకా నోటిఫికేషన్లు లేవు", "th": "ยังไม่มีการแจ้งเตือน", "tr": "Henüz bildirim yok", "uk": "Сповіщень поки немає",
         "vi": "Chưa có thông báo nào", "zh-rCN": "还没有通知", "zh-rTW": "尚無通知",

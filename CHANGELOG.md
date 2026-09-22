@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.13-alpha] - 2026-09-22
+
+### Fixed
+- [DE] **The History screen is the listening history, not the notifications list.** The two screens shared one empty-state string (`history_empty`), and the value that key carried in **every** language was the *notifications* wording — Italian had "Ancora nessuna notifica", German "Noch keine Benachrichtigungen" — so an empty History screen announced itself as the notification list: opening `Cronologia` from the sidebar genuinely looked like it had opened the notifications, exactly as reported. The notification list has its own key (`notification_history_empty`) in all 52 languages now (the batch that supplied the wording was renamed, with `fa`, `iw` and `pt-rBR` filled in), and `history_empty` keeps the listening-history wording (`Nessuna cronologia ancora`, `Noch keine Historie`, …). The screen also records what it is actually made of (`history.log`: local tracks, remembered searches, account sections), so a support zip can tell "the history is empty" apart from "the history was not read". **Verification:** `scripts/check_localization.py` reports neither key as falling back to English. **Constraint:** the two screens never share a string again — one key, one screen.
+
 ## [6.0.6.5_DE-1.53.12-alpha] - 2026-09-22
 
 ### Fixed

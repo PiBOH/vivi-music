@@ -2260,8 +2260,11 @@ fun NotificationHistoryScreen(
         }
         Spacer(Modifier.height(8.dp))
         if (history.isEmpty()) {
+            // Its own key: "history_empty" belongs to the listening-history
+            // screen, and sharing it made this list and that screen print each
+            // other's wording (the History screen said "No notifications yet").
             Text(
-                Localization.get(language, "history_empty"),
+                Localization.get(language, "notification_history_empty"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 24.dp),

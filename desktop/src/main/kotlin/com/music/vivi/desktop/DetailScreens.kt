@@ -397,6 +397,20 @@ fun HistoryScreen(
         )
     }
 
+    // This screen and the notifications list are two different screens with two
+    // different empty states (they shared one key until 1.53.13, which is how
+    // opening the history could look like opening the notifications). What the
+    // history is actually made of is recorded, so a support zip can tell "the
+    // history was empty" apart from "the history was not read".
+    LaunchedEffect(localTracks.size, localSearches.size, page, error) {
+        AppLog.log(
+            "history",
+            "listening history: ${localTracks.size} track(s), ${localSearches.size} search(es); " +
+                "account sections=${page?.sections?.size ?: -1}" +
+                (error?.let { " — $it" } ?: ""),
+        )
+    }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         BackButton(language, onBack)
         Text(Localization.get(language, "history"), style = MaterialTheme.typography.headlineMedium)
