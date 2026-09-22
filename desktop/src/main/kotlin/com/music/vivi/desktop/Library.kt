@@ -35,8 +35,195 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.OutlinedButton
 import com.music.innertube.YouTube
+import com.music.innertube.models.ArtistItem
 import com.music.innertube.models.SongItem
+import com.music.innertube.models.YTItem
 import com.music.innertube.pages.LibraryPage
+import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+
+/** The account's saved-artists page (a library corpus, not a normal browse). */
+const val ARTISTS_BROWSE_ID = "FEmusic_library_corpus_artists"
+
+/**
+ * The desktop's artist list, cached on disk.
+ *
+ * This is the desktop counterpart of the artists table of the mobile database:
+ * mobile's Artists screen does **not** read a server list, it reads the artists
+ * its database collected from the songs it has seen (the *Library* filter) or
+ * the account's followed ones (the *Liked* filter). The desktop has no such
+ * table, so the list it builds is kept here: it survives a restart, it is there
+ * before the first network answer and it is what is shown when the account has
+ * nothing saved.
+ */
+object ArtistsStore {
+    private val json = sharedJsonPretty
+
+    private val file = File(System.getProperty("user.home"), ".vivimusic/artists.json").apply {
+        parentFile?.mkdirs()
+    }
+
+    private val _all = MutableStateFlow(load())
+
+    val all: StateFlow<List<ArtistItem>> = _all.asStateFlow()
+
+    /** Merges [artists] into the cache (one entry per channel id) and persists. */
+    fun cache(artists: List<ArtistItem>) {
+        if (artists.isEmpty()) return
+        _all.value = (_all.value + artists)
+            .associateBy { it.id }
+            .values
+            .sortedBy { it.title.lowercase() }
+        persist()
+    }
+
+    private fun load(): List<ArtistItem> = try {
+        if (file.exists()) {
+            json.decodeFromString<List<CachedArtist>>(file.readText()).map { it.toItem() }
+        } else {
+            emptyList()
+        }
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    private fun persist() {
+        try {
+            file.writeText(json.encodeToString(_all.value.map { CachedArtist(it.id, it.title, it.thumbnail) }))
+        } catch (_: Exception) {
+            // best-effort
+        }
+    }
+
+    /** One cached artist: id, name and picture are all the grid needs to draw. */
+    @Serializable
+    private data class CachedArtist(
+        val id: String,
+        val title: String,
+        val thumbnail: String? = null,
+    ) {
+        fun toItem(): ArtistItem = ArtistItem(
+            id = id,
+            title = title,
+            thumbnail = thumbnail,
+            shuffleEndpoint = null,
+            radioEndpoint = null,
+        )
+    }
+}
+
+/**
+ * One library page, ready to render.
+ *
+ * The saved-artists corpus is the one page YouTube Music does not always fill:
+ * an account that has saved songs but has never followed an artist gets an
+ * **empty** page back — the request succeeds, the response carries no items, and
+ * the screen has nothing to draw (which is exactly how the Artists screen
+ * stayed empty, while `browse.log` only ever said "1 section(s), 0 item(s)").
+ * The artists page is then answered by [libraryArtists] instead.
+ *
+ * The shape of every response is logged, so a support zip can tell "the account
+ * has nothing saved" from "the parser did not understand the page".
+ */
+suspend fun loadLibraryPage(browseId: String): Result<LibraryPage> {
+    val result = YouTube.library(browseId)
+    val page = result.getOrNull()
+    AppLog.log(
+        "browse",
+        "library $browseId → ${page?.items?.size ?: 0} item(s), shape=${page?.shape ?: "-"}" +
+            (result.exceptionOrNull()?.let { " — ${it.message}" } ?: ""),
+    )
+    // Every other library page is what the server returned, filtered.
+    if (browseId != ARTISTS_BROWSE_ID) return result.map { it.copy(items = it.items.filteredContent()) }
+
+    val artists = libraryArtists(page?.items.orEmpty())
+    if (artists.isEmpty()) return result.map { it.copy(items = it.items.filteredContent()) }
+    return Result.success(
+        LibraryPage(items = artists, continuation = null, shape = "artists:${artists.size}"),
+    )
+}
+
+/**
+ * The artists to draw, in the mobile app's *Library* sense: the ones the account
+ * follows, or — when it follows none — the ones heard in its songs.
+ *
+ * The corpus page is the *Liked* filter of mobile's Artists screen and it is
+ * genuinely empty for an account that has saved songs but never followed an
+ * artist. Mobile still has a list in that case because its screen reads the
+ * artists table of its database, which is filled from its songs; the desktop
+ * has no such table, so the equivalent is derived from the account's saved
+ * songs and cached by [ArtistsStore] — which is also what is shown offline.
+ */
+private suspend fun libraryArtists(corpusItems: List<YTItem>): List<ArtistItem> {
+    val corpus = corpusItems.filterIsInstance<ArtistItem>()
+    if (corpus.isNotEmpty()) {
+        ArtistsStore.cache(corpus)
+        return corpus
+    }
+    val derived = artistsFromSavedSongs()
+    if (derived.isNotEmpty()) {
+        ArtistsStore.cache(derived)
+        AppLog.log("browse", "artists corpus empty — derived ${derived.size} artist(s) from the saved songs")
+        return derived
+    }
+    val cached = ArtistsStore.all.value
+    if (cached.isNotEmpty()) {
+        AppLog.log("browse", "artists corpus empty and no saved songs — ${cached.size} artist(s) from the cache")
+    }
+    return cached
+}
+
+/**
+ * The artists of the account's saved songs, one entry each, alphabetically.
+ *
+ * A few pages are walked (an account can have thousands of saved songs and each
+ * page is another request): the point is to fill the screen with the artists the
+ * user actually listens to, not to mirror the whole library in one go — every
+ * visit extends the cache with what it saw.
+ *
+ * The picture is the one of the artist's first song: YouTube Music does not send
+ * artist artwork with a song, and a card with no image at all reads as a broken
+ * entry rather than as one of the user's artists.
+ */
+private suspend fun artistsFromSavedSongs(maxPages: Int = 4): List<ArtistItem> {
+    val byId = LinkedHashMap<String, ArtistItem>()
+
+    fun collect(items: List<YTItem>) {
+        items.filterIsInstance<SongItem>().forEach { song ->
+            song.artists.forEach artistLoop@{ artist ->
+                val id = artist.id?.takeIf { it.isNotBlank() } ?: return@artistLoop
+                byId.putIfAbsent(
+                    id,
+                    ArtistItem(
+                        id = id,
+                        title = artist.name,
+                        thumbnail = song.thumbnail,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null,
+                    ),
+                )
+            }
+        }
+    }
+
+    val first = YouTube.library("FEmusic_liked_videos").getOrNull() ?: return emptyList()
+    collect(first.items)
+    var token = first.continuation
+    var pages = 0
+    while (!token.isNullOrBlank() && pages < maxPages) {
+        val next = YouTube.libraryContinuation(token).getOrNull() ?: break
+        collect(next.items)
+        token = next.continuation
+        pages++
+    }
+    AppLog.log("browse", "derived artists: ${pages + 1} page(s) → ${byId.size} artist(s)")
+    return byId.values.sortedBy { it.title.lowercase() }
+}
 
 /**
  * Library with tabs for the signed-in user's liked songs, albums, artists and
@@ -77,7 +264,7 @@ fun LibraryScreen(
         val browseIds = listOf(
             "FEmusic_liked_videos",
             "FEmusic_liked_albums",
-            "FEmusic_library_corpus_artists",
+            ARTISTS_BROWSE_ID,
             "FEmusic_liked_playlists",
         )
         var selectedTab by remember { mutableStateOf(0) }
@@ -95,8 +282,10 @@ fun LibraryScreen(
             loading = true
             error = null
             page = null
-            YouTube.library(browseIds[selectedTab]).fold(
-                onSuccess = { page = it.copy(items = it.items.filteredContent()); loading = false },
+            // Through the shared loader: the artists tab has the derived-artists
+            // fallback (see [loadLibraryPage]).
+            loadLibraryPage(browseIds[selectedTab]).fold(
+                onSuccess = { page = it; loading = false },
                 onFailure = { error = it.message; loading = false },
             )
         }

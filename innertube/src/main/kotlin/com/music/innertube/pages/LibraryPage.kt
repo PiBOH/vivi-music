@@ -16,6 +16,16 @@ import com.music.innertube.utils.parseTime
 data class LibraryPage(
     val items: List<YTItem>,
     val continuation: String?,
+    /**
+     * What the response actually carried (`grid:12`, `shelf:8`, `none (…)`).
+     *
+     * A library page that comes back in a shape the parser does not know used
+     * to be reported as "0 items" with no error at all, which is
+     * indistinguishable from an account that has nothing saved — the Artists
+     * screen was empty for exactly that reason. The desktop writes this into
+     * `browse.log`, so a support zip can tell the two apart.
+     */
+    val shape: String? = null,
 ) {
     companion object {
         fun fromMusicTwoRowItemRenderer(renderer: MusicTwoRowItemRenderer): YTItem? {
@@ -155,12 +165,20 @@ data class LibraryPage(
                     )
                 }
 
+                // The artist rows of the library: the channel id can sit on the
+                // row itself or on the first text run (the row is a link), and a
+                // missing picture must not drop the artist — a dropped card is
+                // indistinguishable from an artist that is not saved at all.
                 renderer.isArtist -> ArtistItem(
-                    id = renderer.navigationEndpoint?.browseEndpoint?.browseId ?: return null,
+                    id = renderer.navigationEndpoint?.browseEndpoint?.browseId
+                        ?: renderer.flexColumns.firstOrNull()
+                            ?.musicResponsiveListItemFlexColumnRenderer?.text?.runs
+                            ?.firstOrNull { it.navigationEndpoint?.browseEndpoint?.browseId != null }
+                            ?.navigationEndpoint?.browseEndpoint?.browseId
+                        ?: return null,
                     title = renderer.flexColumns.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text?.runs?.firstOrNull()?.text
                         ?: return null,
-                    thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
-                        ?: return null,
+                    thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl(),
                     shuffleEndpoint = renderer.menu?.menuRenderer?.items
                         ?.find { it.menuNavigationItemRenderer?.icon?.iconType == "MUSIC_SHUFFLE" }
                         ?.menuNavigationItemRenderer?.navigationEndpoint?.watchPlaylistEndpoint,

@@ -744,20 +744,24 @@ fun BrowseScreen(
 ) {
     var result by remember { mutableStateOf<BrowseResult?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Manual retry: a page that loads with nothing in it (or a transient
+    // failure) used to leave a blank screen with no way to reload it.
+    var reloadKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(browseId, params) {
+    LaunchedEffect(browseId, params, reloadKey) {
         // A library page ("FEmusic_library_*") has a different shape from a
         // browse page: YouTube.browse only maps the two-row cards of a browse
         // page, while a library page carries the grid / musicShelf renderers
         // that YouTube.library reads. The Artists screen — and the "See all"
         // link that opens it — asked for the library page and got an empty
-        // result, so it is routed through the same parser the Library screen
-        // uses instead.
+        // result, so it is routed through the same loader the Library screen
+        // uses ([loadLibraryPage], which also logs the page shape and falls
+        // back to the artists of the account's songs).
         val fetched = if (browseId.startsWith("FEmusic_library")) {
-            YouTube.library(browseId).map { page ->
+            loadLibraryPage(browseId).map { page ->
                 BrowseResult(
                     title = null,
-                    items = listOf(BrowseResult.Item(title = null, items = page.items.filteredContent())),
+                    items = listOf(BrowseResult.Item(title = null, items = page.items)),
                 )
             }
         } else {
@@ -811,6 +815,11 @@ fun BrowseScreen(
         when {
             error != null -> ErrorBox(language, error)
             result == null -> LoadingBox(language)
+            // A page that loaded but carries nothing gets a message and a
+            // retry instead of a blank screen (the Artists page did exactly
+            // that: the request succeeded, the account had no saved artists,
+            // and the screen showed nothing at all).
+            result!!.items.all { it.items.isEmpty() } -> EmptyBox(language) { reloadKey++ }
             else -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(gridItemSize.dp),
                 contentPadding = PaddingValues(16.dp),

@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.12-alpha] - 2026-09-22
+
+### Fixed
+- [DE] **The Artists screen has content — the page was understood, and the list is no longer a server page that can be empty.** Three things were wrong. (1) The saved-artists corpus (`FEmusic_library_corpus_artists`) answers with its `gridRenderer` **straight in the tab content**, a field the tab model did not have: the response deserialized to "no content", `YouTube.library` fell into its shelf branch, found no shelf and returned an **empty page with no error at all** — the screen was blank while `browse.log` only said `1 section(s), 0 item(s)`. The tab content models the grid now, and the library parser looks for a grid/shelf in *every* shape a library page can arrive in (the tab content, a top-level section list, the two-column secondary contents, every tab) and takes the first one that actually holds items, instead of the first renderer of the first tab. (2) Even a correctly parsed grid dropped every card: the corpus artist cards are marked `MUSIC_PAGE_TYPE_LIBRARY_ARTIST` and `MusicTwoRowItemRenderer.isArtist` accepted only `MUSIC_PAGE_TYPE_ARTIST` (the responsive-list parser next to it already accepted both). (3) The corpus is genuinely empty for an account that has saved songs but has never followed an artist, and mobile still lists artists there because its Artists screen reads the **artists table of its database**, not a server page. The desktop has no such table, so the list is derived from the account's saved songs (a few pages, one entry per channel id, the artist's song artwork as its picture) and cached in `~/.vivimusic/artists.json` by `ArtistsStore` — the desktop counterpart of that table, which also gives the screen something to draw offline. The artist page itself now also parses the several shapes its sections and title can come in (single-column tabs, two-column tabs, a top-level section list), which is the shape that used to fail the request outright. Every library response logs what it carried (`shape=grid:12`, `shelf:8`, `none (…)`) and a page that loads with nothing in it gets a message and a **retry** instead of a blank grid that looks like a broken screen.
+
 ## [6.0.6.5_DE-1.53.11-alpha] - 2026-09-22
 
 ### Fixed

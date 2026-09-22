@@ -412,8 +412,38 @@ object YouTube {
             )
         }
 
-        val descriptionRuns = response.contents?.sectionListRenderer?.contents
-            ?.firstOrNull { it.musicDescriptionShelfRenderer != null }
+        // An artist (channel) page comes in more than one shape: the sections sit
+        // in the tabs of a single-column page, in a two-column one, or in a
+        // top-level `sectionListRenderer` — the last of which the desktop page
+        // used to ignore completely (and whose `!!` turned any other shape into a
+        // failed request instead of a page).
+        val sectionLists = listOfNotNull(
+            response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
+                ?.tabRenderer?.content?.sectionListRenderer?.contents,
+            response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()
+                ?.tabRenderer?.content?.sectionListRenderer?.contents,
+            response.contents?.sectionListRenderer?.contents,
+        )
+        val sections = sectionLists.flatMap { it }
+            .mapNotNull(ArtistPage::fromSectionListRendererContent)
+        val title = response.header?.musicImmersiveHeaderRenderer?.title?.runs?.firstOrNull()?.text
+            ?: response.header?.musicVisualHeaderRenderer?.title?.runs?.firstOrNull()?.text
+            ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text
+            ?: sectionLists.flatMap { it }
+                .firstNotNullOfOrNull { it.musicResponsiveHeaderRenderer?.title?.runs?.firstOrNull()?.text }
+        // Neither a name nor a single section: this is not the artist's page, it
+        // is a shape we do not know. Fail loudly (the screen shows the error and
+        // the log carries the code) instead of rendering an empty screen.
+        if (title == null && sections.isEmpty()) {
+            throw IllegalStateException(
+                "E1032 artist page in an unknown shape for $browseId " +
+                    "(tabs=${response.contents?.singleColumnBrowseResultsRenderer?.tabs?.size ?: 0}, " +
+                    "topSectionList=${response.contents?.sectionListRenderer != null})",
+            )
+        }
+
+        val descriptionRuns = sectionLists.flatten()
+            .firstOrNull { it.musicDescriptionShelfRenderer != null }
             ?.musicDescriptionShelfRenderer?.description?.runs
             ?.let(::mapRuns)
             ?: response.header?.musicImmersiveHeaderRenderer?.description?.runs?.let(::mapRuns)
@@ -421,9 +451,7 @@ object YouTube {
         ArtistPage(
             artist = ArtistItem(
                 id = browseId,
-                title = response.header?.musicImmersiveHeaderRenderer?.title?.runs?.firstOrNull()?.text
-                    ?: response.header?.musicVisualHeaderRenderer?.title?.runs?.firstOrNull()?.text
-                    ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text!!,
+                title = title ?: browseId,
                 thumbnail = response.header?.musicImmersiveHeaderRenderer?.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
                     ?: response.header?.musicVisualHeaderRenderer?.foregroundThumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
                     ?: response.header?.musicDetailHeaderRenderer?.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl(),
@@ -437,9 +465,7 @@ object YouTube {
                         ?.contents?.firstOrNull()?.musicShelfRenderer?.contents?.firstOrNull()?.musicResponsiveListItemRenderer?.navigationEndpoint?.watchPlaylistEndpoint,
                 radioEndpoint = response.header?.musicImmersiveHeaderRenderer?.startRadioButton?.buttonRenderer?.navigationEndpoint?.watchEndpoint
             ),
-            sections = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
-                ?.tabRenderer?.content?.sectionListRenderer?.contents
-                ?.mapNotNull(ArtistPage::fromSectionListRendererContent)!!,
+            sections = sections,
             description = descriptionRuns?.joinToString(separator = "") { it.text },
                 subscriberCountText = response.header?.musicImmersiveHeaderRenderer?.subscriptionButton2
                     ?.subscribeButtonRenderer?.subscriberCountWithSubscribeText?.runs?.firstOrNull()?.text
@@ -837,41 +863,66 @@ object YouTube {
                 }
             }
 
-            val contents = if (tabs != null && tabs.size >= tabIndex) {
-                tabs[tabIndex].tabRenderer.content?.sectionListRenderer?.contents?.firstOrNull()
+            // A library page does not have ONE shape. The landing page nests its
+            // grid/shelf under the tab's `sectionListRenderer`; a sub-page (the
+            // artists corpus, for one) carries a `gridRenderer` straight in the
+            // tab content; and some responses hand back a top-level
+            // `sectionListRenderer` with no tabs at all. This used to look at the
+            // first of those only, so a page in any other shape parsed to an
+            // empty list *with no error at all* — which is exactly why the
+            // Artists screen stayed empty. Every shape is a candidate now, and
+            // the first one that actually holds items wins.
+            val tabContents = tabs?.getOrNull(tabIndex)?.tabRenderer?.content
+            val sectionLists = buildList {
+                tabContents?.sectionListRenderer?.contents?.let { add(it) }
+                response.contents?.sectionListRenderer?.contents?.let { add(it) }
+                response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer?.contents
+                    ?.let { add(it) }
+                tabs?.forEach { tab ->
+                    tab.tabRenderer.content?.sectionListRenderer?.contents?.let { add(it) }
+                }
             }
-            else {
-                println("[UPLOAD_DEBUG] No tabs or tabIndex out of range")
-                null
+            val grids = buildList {
+                tabContents?.gridRenderer?.let { add(it) }
+                sectionLists.forEach { list -> list.forEach { content -> content.gridRenderer?.let { add(it) } } }
             }
-
-            println("[UPLOAD_DEBUG] contents null? ${contents == null}")
-            println("[UPLOAD_DEBUG] gridRenderer null? ${contents?.gridRenderer == null}")
-            println("[UPLOAD_DEBUG] musicShelfRenderer null? ${contents?.musicShelfRenderer == null}")
+            val shelves = buildList {
+                sectionLists.forEach { list -> list.forEach { content -> content.musicShelfRenderer?.let { add(it) } } }
+            }
+            val grid = grids.firstOrNull { it.items.isNotEmpty() } ?: grids.firstOrNull()
+            val shelf = shelves.firstOrNull { !it.contents.isNullOrEmpty() } ?: shelves.firstOrNull()
+            println("[UPLOAD_DEBUG] library($browseId): tabs=${tabs?.size ?: 0} grids=${grids.size} shelves=${shelves.size}")
 
             when {
-                contents?.gridRenderer != null -> {
-                    val gridItems = contents.gridRenderer.items
-                    println("[UPLOAD_DEBUG] gridRenderer items count: ${gridItems.size}")
-                    val twoRowItems = gridItems.mapNotNull(GridRenderer.Item::musicTwoRowItemRenderer)
-                    println("[UPLOAD_DEBUG] musicTwoRowItemRenderer count: ${twoRowItems.size}")
-                    val parsedItems = twoRowItems.mapNotNull { LibraryPage.fromMusicTwoRowItemRenderer(it) }
-                    println("[UPLOAD_DEBUG] Successfully parsed items: ${parsedItems.size}")
+                grid != null && (shelf == null || grid.items.isNotEmpty()) -> {
+                    val parsedItems = grid.items
+                        .mapNotNull(GridRenderer.Item::musicTwoRowItemRenderer)
+                        .mapNotNull { LibraryPage.fromMusicTwoRowItemRenderer(it) }
+                    println("[UPLOAD_DEBUG] grid: ${grid.items.size} item(s), ${parsedItems.size} parsed")
                     LibraryPage(
                         items = parsedItems,
-                        continuation = contents.gridRenderer.continuations?.getContinuation()
+                        continuation = grid.continuations?.getContinuation(),
+                        shape = "grid:${grid.items.size}",
                     )
                 }
 
-                else -> { // contents?.musicShelfRenderer != null
-                    val shelfContents = contents?.musicShelfRenderer?.contents
+                else -> { // shelf
+                    val shelfContents = shelf?.contents
                     println("[UPLOAD_DEBUG] musicShelfRenderer contents count: ${shelfContents?.size ?: 0}")
                     if (shelfContents == null) {
                         // API response format may have changed (e.g. Google updated response structure).
                         // Return an empty page gracefully instead of crashing the entire library fetch,
                         // which would keep accountPlaylists null and hide the homescreen playlists section.
-                        println("[UPLOAD_DEBUG] WARNING: No gridRenderer or musicShelfRenderer found for browseId=$browseId. API format may have changed. contents=$contents")
-                        return@runCatching LibraryPage(items = emptyList(), continuation = null)
+                        println("[UPLOAD_DEBUG] WARNING: No gridRenderer or musicShelfRenderer found for browseId=$browseId. API format may have changed.")
+                        return@runCatching LibraryPage(
+                            items = emptyList(),
+                            continuation = null,
+                            shape = "none (singleColumn=" +
+                                "${response.contents?.singleColumnBrowseResultsRenderer != null}, " +
+                                "twoColumn=${response.contents?.twoColumnBrowseResultsRenderer != null}, " +
+                                "topSectionList=${response.contents?.sectionListRenderer != null}, " +
+                                "tabContent=${tabContents != null})",
+                        )
                     }
                     val listItemRenderers = shelfContents.mapNotNull(MusicShelfRenderer.Content::musicResponsiveListItemRenderer)
                     println("[UPLOAD_DEBUG] musicResponsiveListItemRenderer count: ${listItemRenderers.size}")
@@ -899,7 +950,8 @@ object YouTube {
                     }
                     LibraryPage(
                         items = parsedItems,
-                        continuation = contents.musicShelfRenderer.continuations?.getContinuation()
+                        continuation = shelf?.continuations?.getContinuation(),
+                        shape = "shelf:${shelfContents.size}",
                     )
                 }
             }

@@ -19,6 +19,14 @@ data class Tabs(
             @Serializable
             data class Content(
                 val sectionListRenderer: SectionListRenderer?,
+                /**
+                 * A library sub-page (the artists corpus, for one) puts its grid
+                 * straight in the tab content instead of wrapping it in a
+                 * `sectionListRenderer`, and the container was not modelled, so
+                 * those pages deserialised to "no content" and parsed to an
+                 * empty list.
+                 */
+                val gridRenderer: GridRenderer? = null,
                 val musicQueueRenderer: MusicQueueRenderer?,
             )
         }

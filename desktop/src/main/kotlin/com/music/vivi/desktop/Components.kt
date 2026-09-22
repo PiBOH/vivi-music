@@ -415,6 +415,30 @@ fun ErrorBox(language: String, message: String?) {
     }
 }
 
+/**
+ * "Nothing here yet", with an optional retry, for a page that loaded fine but
+ * has no items to draw. A page that loads empty used to render an empty grid —
+ * indistinguishable from a broken screen.
+ */
+@Composable
+fun EmptyBox(language: String, onRetry: (() -> Unit)? = null) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            Localization.get(language, "library_empty"),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (onRetry != null) {
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onRetry) { Text(Localization.get(language, "refresh")) }
+        }
+    }
+}
+
 @Composable
 fun BackButton(language: String, onClick: () -> Unit) {
     Text(

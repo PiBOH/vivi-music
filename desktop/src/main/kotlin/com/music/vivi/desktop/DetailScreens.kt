@@ -217,7 +217,11 @@ fun ArtistScreen(
 
                 if (tab == 2) {
                     val items = itemsPage?.items.orEmpty()
-                    if (items.isEmpty()) {
+                    if (itemsEndpoint == null) {
+                        // This artist page has no "see all" section at all: it is
+                        // not loading, there is nothing to load.
+                        EmptyBox(language)
+                    } else if (items.isEmpty()) {
                         LoadingBox(language)
                     } else if (items.all { it is SongItem }) {
                         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
@@ -232,6 +236,18 @@ fun ArtistScreen(
                             }
                         }
                     }
+                } else if (page!!.sections.none { section ->
+                        when (tab) {
+                            0 -> section.items.any { it is SongItem }
+                            else -> section.items.isNotEmpty()
+                        }
+                    }
+                ) {
+                    // The artist loaded, but this tab has nothing to show (a
+                    // page that came back in a shape the parser does not know
+                    // has no sections at all): say so instead of drawing a
+                    // blank area that looks like a broken screen.
+                    EmptyBox(language)
                 } else {
                     LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
                         page!!.sections.forEach { section ->
