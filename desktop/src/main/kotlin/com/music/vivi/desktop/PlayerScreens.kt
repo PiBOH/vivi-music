@@ -2224,6 +2224,7 @@ fun LyricsScreen(
                         lines = lines,
                         positionMs = positionMs,
                         options = effective,
+                        isPlaying = isPlaying,
                         onSeek = onSeek,
                         modifier = Modifier.padding(top = 8.dp),
                     )
