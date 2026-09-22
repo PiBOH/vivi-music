@@ -620,6 +620,11 @@ MAPPING = {
     "swipe_sensitivity_desc": "swipe_sensitivity_desc",
     "lyrics_thumbnail_play_pause": "lyrics_thumbnail_play_pause",
     "lyrics_thumbnail_play_pause_desc": "lyrics_thumbnail_play_pause_desc",
+    # Mobile "Auto sync with account" (1.53.7): the account's playlists are
+    # mirrored into the local store. The button reuses the mobile label.
+    "yt_sync": "yt_sync",
+    "ytm_sync": "ytm_sync",
+    "sync_playlist": "sync_playlist",
     "lyrics_romanize": "lyrics_romanization",
     "lyrics_romanize_as_main": "lyrics_romanize_as_main",
     "romanize_japanese": "lyrics_romanize_japanese",
@@ -838,6 +843,8 @@ ENGLISH = {
     # the Android resources only cover for the switch itself.
     "lyrics_options": "Lyrics options",
     "enable_swipe_thumbnail_desc": "Drag the artwork of the mini player sideways to change song",
+    "sync_in_progress": "Syncing your playlists…",
+    "sync_finished": "Playlists are up to date",
     "lyrics_apple_blur": "Apple Music blur",
     "lyrics_apple_blur_desc": "Blur the lines around the current one, like the Apple Music player",
     "lyrics_standard_blur": "Blur lyrics",

@@ -92,6 +92,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -1049,6 +1050,7 @@ fun WindowScope.App(
     var swipeSensitivity by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeSensitivity) }
     var lyricsThumbnailPlayPause by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsThumbnailPlayPause) }
     var pauseSearchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
+    var syncPlaylistsWithYoutube by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().syncPlaylistsWithYoutube) }
     var pauseListenHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
     var searchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().searchHistory) }
     val recordSearch: (String) -> Unit = { term ->
@@ -1139,6 +1141,14 @@ fun WindowScope.App(
                 }
             }
         }
+    }
+
+    // Mobile "Auto sync with account": on sign-in (and whenever the option is
+    // switched back on) the account's playlists are mirrored into the local
+    // store, so they can be played, queued and edited like a local playlist
+    // instead of only being listed by the sidebar.
+    LaunchedEffect(isLoggedIn, syncPlaylistsWithYoutube) {
+        if (isLoggedIn && syncPlaylistsWithYoutube) PlaylistSync.sync("startup")
     }
 
     val displayUserName = if (isLoggedIn && accountName.isNotBlank()) accountName else "Guest"
@@ -3797,7 +3807,17 @@ fun Sidebar(
 
                     // Logged-in YouTube Playlists
                     if (isLoggedIn) {
-                        onlinePlaylists.forEach { op ->
+                        // With "Auto sync with account" on, the account's
+                        // playlists are mirrored into the local list above
+                        // (`yt-<id>`): showing them again here would list every
+                        // playlist twice, which is exactly what the sync is
+                        // there to remove.
+                        val mirroredRemoteIds = remember(activeLocalPlaylists) {
+                            activeLocalPlaylists
+                                .mapNotNull { PlaylistSync.remoteId(it.id) }
+                                .toSet()
+                        }
+                        onlinePlaylists.filterNot { it.id in mirroredRemoteIds }.forEach { op ->
                             val selected = current == Screen.Playlist(op.id)
                             val interaction = remember(op.id) { MutableInteractionSource() }
                             val hovered by interaction.collectIsHoveredAsState()
@@ -5459,6 +5479,57 @@ fun AccountSection(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 8.dp),
         )
+        // Mobile's "Auto sync with account": the account's playlists are
+        // mirrored into the local store, so they can be played, queued and
+        // edited offline instead of only being listed by the sidebar.
+        var syncPlaylists by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().syncPlaylistsWithYoutube) }
+        val syncStatus by PlaylistSync.status.collectAsState()
+        M3SettingsGroup(
+            items = listOf(
+                M3SettingsItem(
+                    icon = Icons.Filled.Sync,
+                    title = { Text(Localization.get(language, "yt_sync")) },
+                    description = { Text(Localization.get(language, "ytm_sync")) },
+                    trailing = { Switch(checked = syncPlaylists, onCheckedChange = null) },
+                    onClick = {
+                        val next = !syncPlaylists
+                        syncPlaylists = next
+                        DesktopSettings.update { it.copy(syncPlaylistsWithYoutube = next) }
+                        if (next) PlaylistSync.sync("switched on")
+                    },
+                ),
+            ),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(top = 8.dp),
+        ) {
+            OutlinedButton(
+                onClick = { PlaylistSync.sync("manual") },
+                enabled = syncPlaylists && syncStatus.phase != PlaylistSync.Phase.RUNNING,
+            ) {
+                Text(Localization.get(language, "sync_playlist"))
+            }
+            if (syncStatus.phase == PlaylistSync.Phase.RUNNING) {
+                Spacer(Modifier.width(12.dp))
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(
+                when (syncStatus.phase) {
+                    PlaylistSync.Phase.RUNNING -> Localization.get(language, "sync_in_progress")
+                    PlaylistSync.Phase.DONE -> if (syncStatus.playlists == 0) {
+                        Localization.get(language, "sync_finished")
+                    } else {
+                        "${Localization.get(language, "sync_finished")} (${syncStatus.playlists})"
+                    }
+                    PlaylistSync.Phase.FAILED -> Localization.get(language, "update_failed")
+                    PlaylistSync.Phase.IDLE -> ""
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Button(onClick = onLogout, modifier = Modifier.padding(top = 8.dp)) {
             Text(Localization.get(language, "logout"))
         }

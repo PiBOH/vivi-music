@@ -112,6 +112,7 @@ object LogExporter {
             appendLine("canvas enabled: ${s.canvasEnabled}")
             appendLine("save notification history: ${s.saveNotificationHistory}")
             appendLine("pause search history: ${s.pauseSearchHistory}")
+            appendLine("auto sync with account: ${s.syncPlaylistsWithYoutube}")
             appendLine("pause listen history: ${s.pauseListenHistory}")
             appendLine("lyrics animation style: ${s.lyricsAnimationStyle}")
             appendLine("lyrics thumbnail play/pause: ${s.lyricsThumbnailPlayPause}")

@@ -86,6 +86,11 @@ data class DesktopSyncState(
     /** Intro backdrop variant: gradient / glow / dark. */
     val introBackground: String = "gradient",
     val pauseSearchHistory: Boolean = false,
+    /**
+     * Mobile "Auto sync with account": mirror the signed-in YouTube Music
+     * playlists into the local playlist store. On by default there too.
+     */
+    val syncPlaylistsWithYoutube: Boolean = true,
     val pauseListenHistory: Boolean = false,
     /** Mobile "Enable swipe to change song": drag the mini-player artwork to skip. */
     val swipeThumbnail: Boolean = true,

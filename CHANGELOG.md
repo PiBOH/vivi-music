@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.7-alpha] - 2026-09-22
+
+### Added
+- [DE] **`Auto sync with account`, the mobile app's playlist sync.** With a signed-in account the app's playlists are mirrored into the local playlist store (`PlaylistSync`, ids `yt-<playlistId>`), so they can be played, queued, reordered and edited like a local playlist instead of only being listed by the sidebar. It runs on sign-in and whenever the option is switched on, and the Account settings offer a `Sync playlist` button with the result of the last run; every run is recorded in `playlists.log`. **Constraint:** a mirrored playlist is written only when its name or song list actually changed — `updatedAt` is the last-write-wins key of the device sync, so bumping it on every sync would make an untouched playlist win against a real edit made on the paired phone. With the sync on, the sidebar no longer lists the same playlist twice (once mirrored, once online).
+
 ## [6.0.6.5_DE-1.53.6-alpha] - 2026-09-22
 
 ### Fixed
