@@ -105,6 +105,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -1530,11 +1532,28 @@ private fun GlassCircleButton(
     background: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
     borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
 ) {
+    // Expressive press feedback: the button presses in while held, so a tap on
+    // the glass feels physical instead of only changing colour. The spring is
+    // the expressive "spatial" curve (a light overshoot on release), scaled by
+    // the same Animation speed / master switch as every other transition.
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val pressScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pressed) 0.88f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
+        ),
+        label = "glassPress",
+    )
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = Color.Transparent,
-        modifier = Modifier.size(size),
+        interactionSource = interaction,
+        modifier = Modifier
+            .size(size)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale },
     ) {
         Box(
             Modifier

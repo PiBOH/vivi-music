@@ -11,6 +11,13 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.10-alpha] - 2026-09-22
+
+### Fixed
+- [DE] **The sidebar groups stack again.** The three collapsible groups (Home/New/Charts, the Library entries and the playlist list) were put inside `AnimatedVisibility` in 1.53.5 — and `AnimatedVisibility` lays multiple children out **on top of each other**, so every entry of a group was drawn over the same spot: the sidebar looked like one squeezed row. Each group is now a single `Column` inside its `AnimatedVisibility`, which is what the transition expects. **Constraint:** `AnimatedVisibility` is not a `Column`; a group of rows must be wrapped before it.
+- [DE] **The embedded sign-in no longer hands over a session without `LOGIN_INFO`.** The reported logs show the exact mechanism: the window captured 25 cookies (`SID`, `SAPISID`, `__Secure-1PSID`, …) and `missing critical: [LOGIN_INFO]`, delivered them, and the account validation answered `401 UNAUTHENTICATED` (`account/account_menu`) — while the same cookies pasted by hand authenticate, because the manual header carries `LOGIN_INFO`. YouTube issues that cookie for **its own** domain, and the window is opened on `accounts.google.com` with `music.youtube.com` as the post-login target, so the store can come back complete for Google and incomplete for YouTube. The window now visits `www.youtube.com` once after the session appears (that is where the cookie is issued), waits for the store, goes back to `music.youtube.com` for the `DATASYNC_ID`/`VISITOR_DATA` ids and only then hands over; `hasFullSession` requires the critical set, and if `LOGIN_INFO` still does not appear the session is handed over anyway (logged as `delivering PARTIAL session, missing critical: […]`) so nobody can get stuck. A 401 on a header with no `LOGIN_INFO` is now tagged `E1033` instead of being reported as a stale session (see ERRORS.md).
+- [DE] **The player's transport buttons answer to a press.** The glass circles now press in while held (an expressive spring, the same 0.88 scale on release), so a tap is visible feedback instead of only the action.
+
 ## [6.0.6.5_DE-1.53.9-alpha] - 2026-09-22
 
 ### Fixed

@@ -199,6 +199,9 @@ object LoginWebView {
 
             Thread {
                 val deadline = System.currentTimeMillis() + 120_000
+                // The www.youtube.com pass runs once: it is what issues
+                // LOGIN_INFO, and without it the hand-over cannot complete.
+                var loginInfoPass = false
                 while (windowOpen && !delivered) {
                     val cap = capture()
                     if (cap.hasFullSession) {
@@ -223,17 +226,53 @@ object LoginWebView {
                         FxPlatform.runLater { stage.close() }
                         break
                     }
-                    if (cap.hasSession && System.currentTimeMillis() > deadline - 60_000) {
-                        // A session cookie appeared but the critical set never
-                        // completed: hand over what we have (validation will
-                        // fail; the captured header is kept in the manual field
-                        // for a one-click retry) and log the missing names.
+                    // Signed in, but the critical set is incomplete — which, in
+                    // every report so far, means exactly one cookie: LOGIN_INFO.
+                    // YouTube issues it for its OWN domain, and the window was
+                    // opened on accounts.google.com with music.youtube.com as
+                    // `continue`, so the store can end up with the whole Google
+                    // session and no LOGIN_INFO. Validating with such a header
+                    // answers 401 (E1003/E1031) and looks like a dead session,
+                    // while the very same cookies pasted by hand include
+                    // LOGIN_INFO and work. Visit www.youtube.com once, let the
+                    // cookie store catch up, then go back to the music property
+                    // for the ids.
+                    if (cap.hasSession && "LOGIN_INFO" in cap.missing && !loginInfoPass) {
+                        loginInfoPass = true
+                        logDebug("LOGIN_INFO missing — visiting www.youtube.com to complete the session")
+                        FxPlatform.runLater { browser.engine.load("https://www.youtube.com/") }
+                        Thread.sleep(7_000)
+                        val after = capture()
+                        logDebug("after www.youtube.com: ${after.names.size} cookies, missing=${after.missing}")
+                        if ("LOGIN_INFO" !in after.missing) {
+                            FxPlatform.runLater { browser.engine.load("https://music.youtube.com/") }
+                            Thread.sleep(4_000)
+                            val ids = extractPageIds(browser)
+                            val finalCap = capture()
+                            logDebug(
+                                "delivering completed session: ${finalCap.names.size} cookies, " +
+                                    "dataSyncId=${if (ids.first != null) "ok" else "MISSING"}, " +
+                                    "visitorData=${if (ids.second != null) "ok" else "MISSING"}"
+                            )
+                            deliver(finalCap.header ?: after.header, ids.first, ids.second, callback)
+                            FxPlatform.runLater { stage.close() }
+                            break
+                        }
+                        logDebug("LOGIN_INFO still absent after www.youtube.com — handing over what we have")
+                    }
+                    // Fallback: a session existed but the critical set never
+                    // completed (either the pass above ran, or the 60 s mark was
+                    // reached). Hand over what we have — the header stays in the
+                    // manual field for a one-click retry — and name the missing
+                    // cookies in the log.
+                    if (cap.hasSession && (loginInfoPass || System.currentTimeMillis() > deadline - 60_000)) {
                         logDebug("delivering PARTIAL session, missing critical: ${cap.missing}")
                         FxPlatform.runLater {
                             spinner.isVisible = false
                             status.text = Localization.get(language, "login_saving")
                         }
-                        deliver(cap.header, null, null, callback)
+                        val ids = extractPageIds(browser)
+                        deliver(cap.header, ids.first, ids.second, callback)
                         FxPlatform.runLater { stage.close() }
                         break
                     }
@@ -331,9 +370,15 @@ object LoginWebView {
         // often never issue the legacy SID — requiring it blocked the
         // full-session hand-over and made the WebView fail while the manual
         // paste of the very same session succeeded.
+        // A complete session is a session cookie, an id cookie AND the whole
+        // critical set: LOGIN_INFO belongs to it (YouTube issues it for its own
+        // domain) and a header without it is answered with 401 — delivering such
+        // a session is what made the embedded sign-in look broken while the
+        // manual paste of the same cookies worked.
         val sessionIds = listOf("SID", "__Secure-1PSID", "__Secure-3PSID")
         val hasFullSession = hasSession &&
-            (sessionIds.any { it in scopedNames } || sessionIds.any { byName.containsKey(it) })
+            (sessionIds.any { it in scopedNames } || sessionIds.any { byName.containsKey(it) }) &&
+            missing.isEmpty()
         if (hasSession) {
             logDebug("captured ${cookies.size} cookies: $names | missing critical: $missing | scoped=${scopedNames.size}")
         }

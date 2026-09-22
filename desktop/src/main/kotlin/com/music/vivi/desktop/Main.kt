@@ -3555,6 +3555,9 @@ fun Sidebar(
                     enter = Animations.sectionEnter(),
                     exit = Animations.sectionExit(),
                 ) {
+                    // One Column: AnimatedVisibility lays multiple children out ON
+                    // TOP of each other, so the group has to be a single child.
+                    Column {
                     mainEntries.forEach { entry ->
                         val selected = current == entry.screen
                         val interaction = remember(entry.screen) { MutableInteractionSource() }
@@ -3600,6 +3603,7 @@ fun Sidebar(
                         }
                         Spacer(Modifier.height(2.dp))
                     }
+                    }
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -3635,6 +3639,9 @@ fun Sidebar(
                     enter = Animations.sectionEnter(),
                     exit = Animations.sectionExit(),
                 ) {
+                    // One Column: AnimatedVisibility lays multiple children out ON
+                    // TOP of each other, so the group has to be a single child.
+                    Column {
                     librarySubEntries.forEach { entry ->
                         val selected = current == entry.screen
                         val interaction = remember(entry.screen) { MutableInteractionSource() }
@@ -3680,6 +3687,7 @@ fun Sidebar(
                             }
                         }
                         Spacer(Modifier.height(2.dp))
+                    }
                     }
                 }
 
@@ -3729,6 +3737,9 @@ fun Sidebar(
                     enter = Animations.sectionEnter(),
                     exit = Animations.sectionExit(),
                 ) {
+                    // One Column: AnimatedVisibility lays multiple children out ON
+                    // TOP of each other, so the group has to be a single child.
+                    Column {
                     // Create New Playlist
                     Row(
                         Modifier
@@ -3908,6 +3919,7 @@ fun Sidebar(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }

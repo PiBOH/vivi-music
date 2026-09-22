@@ -124,10 +124,19 @@ object LoginManager {
         // That is a Google backend error, not a credential problem — tag it with
         // its own code (E1029, see ERRORS.md) so the user can look it up instead
         // of assuming their cookie/session is broken.
-        val detail = if (rawDetail.startsWith("Server error") && Regex("\\b5\\d\\d\\b").containsMatchIn(rawDetail)) {
-            "E1029 $rawDetail"
-        } else {
-            rawDetail
+        val detail = when {
+            // A 401 with a header that has no LOGIN_INFO: the session cookies
+            // are there, the one cookie that authenticates them on the YouTube
+            // domain is not. The embedded capture can lose it (the sign-in
+            // window lands on the Google property; see LoginWebView), while the
+            // same cookies pasted by hand include it — so this is a capture
+            // problem, not a stale session, and the code says so instead of
+            // sending the user to "sign in again" for the tenth time.
+            Regex("\\b401\\b").containsMatchIn(rawDetail) && "LOGIN_INFO=" !in trimmed ->
+                "E1033 the captured session has no LOGIN_INFO cookie ($rawDetail)"
+            rawDetail.startsWith("Server error") && Regex("\\b5\\d\\d\\b").containsMatchIn(rawDetail) ->
+                "E1029 $rawDetail"
+            else -> rawDetail
         }
         // Append the failure to the same debug file used by the WebView capture,
         // so the next user report tells us exactly what went wrong.
