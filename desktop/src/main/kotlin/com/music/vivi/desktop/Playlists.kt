@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
@@ -125,11 +127,21 @@ object PlaylistStore {
         renamed?.let { PlaylistSync.renamed(it) }
     }
 
+    /**
+     * Deletes a playlist here, and — when it also lives on the account — there
+     * too, exactly like the mobile app does for a playlist with a browse id.
+     */
     fun delete(id: String) {
+        var removed: SyncedPlaylist? = null
         _all.value = _all.value.map { p ->
-            if (p.id == id) p.copy(deleted = true, updatedAt = System.currentTimeMillis()) else p
+            if (p.id == id) {
+                p.copy(deleted = true, updatedAt = System.currentTimeMillis()).also { removed = it }
+            } else {
+                p
+            }
         }
         persist()
+        removed?.let { PlaylistSync.deleted(it) }
     }
 
     fun addSongs(id: String, songs: List<SyncedSong>) {
@@ -254,6 +266,54 @@ fun LocalPlaylistsScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(Localization.get(language, "playlists"), style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.weight(1f))
+            // The same action as the one in the Account screen: the playlist
+            // list is where a user looks for it, so it lives in both places.
+            if (LoginManager.isLoggedIn()) {
+                val pendingUpload = active.count { it.remoteId == null && !PlaylistSync.isMirrored(it.id) }
+                val syncStatus by PlaylistSync.status.collectAsState()
+                var confirmUpload by remember { mutableStateOf(false) }
+                Tooltip(
+                    if (pendingUpload > 0) Localization.get(language, "playlists_upload")
+                    else Localization.get(language, "playlists_upload_none"),
+                ) {
+                    OutlinedButton(
+                        onClick = { confirmUpload = true },
+                        enabled = pendingUpload > 0 && syncStatus.phase != PlaylistSync.Phase.RUNNING,
+                    ) {
+                        Icon(Icons.Filled.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(Localization.get(language, "playlists_upload"))
+                    }
+                }
+                if (syncStatus.phase == PlaylistSync.Phase.RUNNING) {
+                    Spacer(Modifier.width(8.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                }
+                Spacer(Modifier.width(8.dp))
+                if (confirmUpload) {
+                    AlertDialog(
+                        onDismissRequest = { confirmUpload = false },
+                        title = { Text(Localization.get(language, "playlists_upload")) },
+                        text = {
+                            Text(
+                                Localization.get(language, "playlists_upload_confirm")
+                                    .replace("%d", pendingUpload.toString()),
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                confirmUpload = false
+                                PlaylistSync.uploadMissing("manual")
+                            }) { Text(Localization.get(language, "ok")) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { confirmUpload = false }) {
+                                Text(Localization.get(language, "cancel"))
+                            }
+                        },
+                    )
+                }
+            }
             Button(onClick = { showCreate = true }) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))

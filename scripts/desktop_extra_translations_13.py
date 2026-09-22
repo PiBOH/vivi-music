@@ -90,7 +90,6 @@ EXTRA_TRANSLATIONS = {
         "vi": "Kiểu hoạt hình phía sau trình phát.", "zh-rCN": "播放器后方的动画样式。", "zh-rTW": "播放器後方的動畫樣式。",
     },
     "player_background_gradient": _all("Gradient"),
-    "player_background_blur": _all("Blur"),
     "player_background_glow": _all("Glow"),
     "player_background_apple": _all("Apple Music"),
     "player_background_mesh": {

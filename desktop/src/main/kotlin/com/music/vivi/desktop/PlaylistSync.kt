@@ -34,9 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * local playlist's copy **on the account** and upload its songs (the mobile
  * create dialog's *Sync playlist* switch, and the Account screen's
  * *Create on YouTube Music* action). A playlist that lives on both sides keeps
- * them together: a song added here is pushed ([songsAdded]) and a rename is
- * propagated ([renamed]). Deleting is deliberately **not** propagated — it would
- * remove a playlist from the user's YouTube account, and that is not reversible.
+ * them together: a song added here is pushed ([songsAdded]), a rename is
+ * propagated ([renamed]) and a deletion too ([deleted]) — the last one is
+ * irreversible on the account, so it happens only from the delete the user
+ * performs here, never from a tombstone that arrived over the device sync.
  */
 object PlaylistSync {
     enum class Phase { IDLE, RUNNING, DONE, FAILED }
@@ -96,6 +97,28 @@ object PlaylistSync {
                 ok
             }
             AppLog.log("playlists", "'${playlist.name}': $pushed of ${added.size} song(s) pushed to the account copy")
+        }
+    }
+
+    /**
+     * The account's copy of a playlist the user deleted here is deleted with it,
+     * as it is in the mobile app (a playlist with a browse id is removed from
+     * both). Only this path propagates a deletion: a tombstone arriving over the
+     * device sync removes the playlist here, but it never reaches into the
+     * account from there.
+     *
+     * YouTube keeps no trash for a playlist, so this is irreversible — which is
+     * why an unsigned session or an unlinked playlist simply does nothing.
+     */
+    fun deleted(playlist: SyncedPlaylist) {
+        val remote = playlist.accountPlaylistId() ?: return
+        if (!LoginManager.isLoggedIn()) return
+        scope.launch {
+            val ok = YouTube.deletePlaylist(remote).isSuccess
+            AppLog.log(
+                "playlists",
+                "'${playlist.name}': account copy ${if (ok) "deleted" else "NOT deleted (it is still on YouTube Music)"}",
+            )
         }
     }
 

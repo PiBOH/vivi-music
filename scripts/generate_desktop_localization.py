@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RES = os.path.join(REPO, "app", "src", "main", "res")
-OUT = os.path.join(
+OUT_DIR = os.path.join(
     REPO,
     "desktop",
     "src",
@@ -28,8 +28,15 @@ OUT = os.path.join(
     "music",
     "vivi",
     "desktop",
-    "Localization.kt",
 )
+OUT = os.path.join(OUT_DIR, "Localization.kt")
+# The per-language maps do not fit in one class: every string literal lands in
+# the file facade class's constant pool, and the JVM caps a class file at 64KB
+# ("ClassTooLargeException: Class too large: LocalizationKt" once the lyrics
+# keys were completed for all 52 languages). They are emitted in numbered
+# files, each holding LANGS_PER_TABLE languages.
+TABLES_PREFIX = "LocalizationTables"
+LANGS_PER_TABLE = 6
 
 # Android resource directory suffix -> desktop language code (the ones the
 # desktop edition actually supports; regional variants are skipped).
@@ -194,7 +201,13 @@ MAPPING = {
     "player_background_desc": "Animated style behind the player.",
     "canvas": "Canvas",
     "player_background_gradient": "Gradient",
-    "player_background_blur": "Blur",
+    # These seven keys name an Android resource that is already translated in
+    # most languages, but they used to be mapped to the inline English literal
+    # ("Blur", "Close", ...) so the desktop showed English everywhere while the
+    # mobile app had the word translated. Mapping the resource (value == the
+    # key) makes every language pick up its own translation; the English column
+    # is the resource's own wording. See _AUDIT notes in scripts/audit_desktop_localization.py.
+    "player_background_blur": "player_background_blur",
     "player_background_glow": "Glow",
     "player_background_apple": "Apple Music",
     "player_background_mesh": "Live mesh",
@@ -206,7 +219,7 @@ MAPPING = {
     "sort_za": "Z–A",
     "sort_artist": "By artist",
     "last_listen": "Last listen",
-    "randomize_home_order": "Randomize home order",
+    "randomize_home_order": "randomize_home_order",
     "randomize": "Randomize",
     "wrapped_title": "VIVI Wrapped · This session",
     "wrapped_desc": "Your listening stats for the current session — restart to reset.",
@@ -268,11 +281,13 @@ MAPPING = {
     "pause_listen_history_desc": "Hides the History screen from the sidebar.",
     "pause_search_history_desc": "Keeps new searches out of the recent-searches list.",
     "quick_settings": "Quick settings",
-    "lyrics_line_spacing": "Line spacing",
+    "lyrics_line_spacing": "lyrics_line_spacing",
+    # Translated (the same English text) but with no source entry of its own.
+    "lyrics_line_spacing_desc": "Adjust the vertical spacing of the lyric lines.",
     "stream_cache_minutes": "Stream cache (minutes)",
     "stream_cache_minutes_desc": "How long a resolved stream URL is reused before it is resolved again.",
     "stream_cache_forever": "Forever",
-    "integrations": "Integrations",
+    "integrations": "integrations",
     "integrations_active": "Active",
     "integrations_inactive": "Off",
     "discord_presence": "Discord Rich Presence",
@@ -285,9 +300,9 @@ MAPPING = {
     "lastfm_enable_desc": "Scrobbles the tracks you listen to on Last.fm.",
     "lastfm_session": "Session key",
     "lastfm_session_hint": "Paste your Last.fm session key (from the mobile app or last.fm/api).",
-    "lastfm_now_playing": "Update now playing",
+    "lastfm_now_playing": "lastfm_now_playing",
     "lastfm_now_playing_desc": "Also report the track currently playing.",
-    "mini_player": "Mini player",
+    "mini_player": "mini_player",
     "mini_player_desc": "Style of the mini player above the sidebar.",
     "mini_player_standard": "Standard",
     "mini_player_apple": "Apple",
@@ -343,6 +358,11 @@ MAPPING = {
     "listen_together_desc": "listen_together_desc",
     "listen_together_description": "listen_together_description",
     "listen_together_title": "Listen Together",
+    # The two buttons of the Listen Together screen. Their translations existed
+    # (desktop_extra_translations_67.py) but the English source did not, so an
+    # English build fell into the fallback and printed another language.
+    "create_room": "Create room",
+    "join_room": "Join room",
     "lt_connecting": "Connecting…",
     "lt_reconnecting": "Reconnecting…",
     "lt_kicked": "You were kicked from the room",
@@ -363,7 +383,7 @@ MAPPING = {
     "lt_suggestion_rejected": "Suggestion rejected",
     "search_hint": "What do you want to play?",
     "up_next": "Up next",
-    "close": "Close",
+    "close": "close",
     "room_code": "room_code",
     "leave_room": "leave_room",
     "connected_users": "connected_users",
@@ -845,6 +865,13 @@ ENGLISH = {
     # fully covered by desktop_extra_translations_70.py.
     "lyrics_style_lyrics_v2": "Lyrics V2 (Fluid)",
     "lyrics_style_metro": "MetroLyrics",
+    # The desktop-only style that draws the pre-port plain list, and the only
+    # key of this group that was defined by a batch WITHOUT an English value:
+    # an English build fell into Localization.get's last-resort fallback and
+    # printed the first language that had it (Arabic letters for "Alpha"). The
+    # generator now refuses a translation with no English source (see the guard
+    # in main()), and this is the value that was missing.
+    "lyrics_style_alpha": "Alpha",
     "lyrics_glow_effect": "Word glow",
     "lyrics_glow_effect_desc": "Add a halo of light around the word being sung",
     # The menu opened from the player repeats the lyrics options (mobile has the
@@ -1724,12 +1751,15 @@ from desktop_extra_translations_74 import EXTRA_TRANSLATIONS as _EXTRA_74
 from desktop_extra_translations_75 import EXTRA_TRANSLATIONS as _EXTRA_75
 from desktop_extra_translations_76 import EXTRA_TRANSLATIONS as _EXTRA_76
 from desktop_extra_translations_77 import EXTRA_TRANSLATIONS as _EXTRA_77
+from desktop_extra_translations_78 import EXTRA_TRANSLATIONS as _EXTRA_78
+from desktop_extra_translations_79 import EXTRA_TRANSLATIONS as _EXTRA_79
+from desktop_extra_translations_80 import EXTRA_TRANSLATIONS as _EXTRA_80
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69, _EXTRA_70, _EXTRA_71, _EXTRA_72, _EXTRA_73, _EXTRA_74, _EXTRA_75, _EXTRA_76, _EXTRA_77):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69, _EXTRA_70, _EXTRA_71, _EXTRA_72, _EXTRA_73, _EXTRA_74, _EXTRA_75, _EXTRA_76, _EXTRA_77, _EXTRA_78, _EXTRA_79, _EXTRA_80):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
@@ -1907,6 +1937,18 @@ def main():
             # "Screen transitions"). Without this, the key shows up raw in UI.
             ENGLISH[key] = android_name
 
+    # A key that has translations but no English value is a bug, not a gap: the
+    # lookup tries English before its last-resort fallback ("the first
+    # dictionary that has the key"), so an English build printed whatever
+    # language happened to define it — the Alpha lyrics style showed Arabic
+    # letters until 1.53.15. The English source is part of adding a string.
+    missing_english = sorted(k for k in TRANSLATIONS if k not in ENGLISH)
+    if missing_english:
+        raise SystemExit(
+            "These keys have translations but no English value (an English build "
+            "would print another language): %s" % missing_english
+        )
+
     def emit_map(entries, indent):
         pad = " " * indent
         lines = [pad + 'mapOf(']
@@ -1924,6 +1966,38 @@ def main():
         (lang, languages[lang]) for lang in sorted(languages)
     ]
 
+    def table_file(chunk):
+        """One `LocalizationTablesN.kt` with the maps of a slice of languages."""
+        parts = ["package com.music.vivi.desktop\n"]
+        parts.append("/**")
+        parts.append(" * A slice of the desktop string table (see `Localization.kt`). Split into")
+        parts.append(" * slices because one class cannot hold every literal: the JVM caps a class")
+        parts.append(" * file at 64KB. This file is GENERATED by")
+        parts.append(" * `scripts/generate_desktop_localization.py` — do not edit by hand.")
+        parts.append(" */")
+        for i, (_lang, entries) in chunk:
+            parts.append("internal fun strings_%d(): Map<String, String> =" % i)
+            parts.append("    " + emit_map(entries, 4).lstrip() + "\n")
+        return "\n".join(parts)
+
+    # Drop the slices of a previous run (a regenerated table must not leave an
+    # old file behind with a stale language count).
+    for name in os.listdir(OUT_DIR):
+        if name.startswith(TABLES_PREFIX) and name.endswith(".kt"):
+            os.remove(os.path.join(OUT_DIR, name))
+
+    indexed = list(enumerate(ordered))
+    chunks = [
+        indexed[i:i + LANGS_PER_TABLE]
+        for i in range(0, len(indexed), LANGS_PER_TABLE)
+    ]
+    written = []
+    for n, chunk in enumerate(chunks, start=1):
+        path = os.path.join(OUT_DIR, "%s%d.kt" % (TABLES_PREFIX, n))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(table_file(chunk))
+        written.append(path)
+
     parts = []
     parts.append("package com.music.vivi.desktop\n")
     parts.append("/**")
@@ -1931,12 +2005,11 @@ def main():
     parts.append(" * languages fall back to English until their translations are added under")
     parts.append(" * the matching locale tag (e.g. `\"it\" to mapOf(\"search\" to \"Cerca\", ...)`).")
     parts.append(" *")
-    parts.append(" * This file is GENERATED by `scripts/generate_desktop_localization.py` from")
-    parts.append(" * the Android app's `strings.xml` resources — do not edit by hand.")
+    parts.append(" * The maps themselves live in `LocalizationTablesN.kt` (one class cannot hold")
+    parts.append(" * every literal). This file is GENERATED by")
+    parts.append(" * `scripts/generate_desktop_localization.py` from the Android app's")
+    parts.append(" * `strings.xml` resources — do not edit by hand.")
     parts.append(" */")
-    for i, (lang, entries) in enumerate(ordered):
-        parts.append("private fun strings_%d(): Map<String, String> =" % i)
-        parts.append("    " + emit_map(entries, 4).lstrip() + "\n")
     parts.append("object Localization {")
     parts.append("    private val strings: Map<String, Map<String, String>> = mapOf(")
     for i, (lang, _entries) in enumerate(ordered):
@@ -1960,7 +2033,10 @@ def main():
     with open(OUT, "w", encoding="utf-8") as f:
         f.write("\n".join(parts))
 
-    print("Wrote %s (%d languages + English)" % (OUT, len(languages)))
+    print(
+        "Wrote %s (%d languages + English) and %d table file(s)"
+        % (OUT, len(languages), len(written))
+    )
 
 
 if __name__ == "__main__":
