@@ -613,6 +613,13 @@ MAPPING = {
     "lyrics_style_metro": "lyrics_animation_metro",
     "lyrics_apple_blur": "apple_music_lyrics_blur",
     "lyrics_apple_blur_desc": "apple_music_lyrics_blur_desc",
+    # Mobile player options ported in 1.53.6 (the swipe settings had been added
+    # to the UI with raw keys: the settings screen showed `enable_swipe_thumbnail`).
+    "enable_swipe_thumbnail": "enable_swipe_thumbnail",
+    "swipe_sensitivity": "swipe_sensitivity",
+    "swipe_sensitivity_desc": "swipe_sensitivity_desc",
+    "lyrics_thumbnail_play_pause": "lyrics_thumbnail_play_pause",
+    "lyrics_thumbnail_play_pause_desc": "lyrics_thumbnail_play_pause_desc",
     "lyrics_romanize": "lyrics_romanization",
     "lyrics_romanize_as_main": "lyrics_romanize_as_main",
     "romanize_japanese": "lyrics_romanize_japanese",
@@ -826,6 +833,11 @@ ENGLISH = {
     "lyrics_style_metro": "MetroLyrics",
     "lyrics_glow_effect": "Word glow",
     "lyrics_glow_effect_desc": "Add a halo of light around the word being sung",
+    # The menu opened from the player repeats the lyrics options (mobile has the
+    # same menu inside the player), plus the swipe-to-change-song descriptions
+    # the Android resources only cover for the switch itself.
+    "lyrics_options": "Lyrics options",
+    "enable_swipe_thumbnail_desc": "Drag the artwork of the mini player sideways to change song",
     "lyrics_apple_blur": "Apple Music blur",
     "lyrics_apple_blur_desc": "Blur the lines around the current one, like the Apple Music player",
     "lyrics_standard_blur": "Blur lyrics",

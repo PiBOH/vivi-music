@@ -87,6 +87,10 @@ data class DesktopSyncState(
     val introBackground: String = "gradient",
     val pauseSearchHistory: Boolean = false,
     val pauseListenHistory: Boolean = false,
+    /** Mobile "Enable swipe to change song": drag the mini-player artwork to skip. */
+    val swipeThumbnail: Boolean = true,
+    /** Swipe sensitivity 0..1: higher means a shorter drag changes the track. */
+    val swipeSensitivity: Float = 0.73f,
     /** Content screen (port of the mobile one): hide the items flagged explicit. */
     val hideExplicit: Boolean = false,
     /** Hide the songs that only exist as a music video. */
@@ -178,6 +182,12 @@ data class DesktopSyncState(
     val lyricsClickToSeek: Boolean = true,
     /** Follow the sung line automatically as the track progresses. */
     val lyricsAutoScroll: Boolean = true,
+    /**
+     * Mobile "Show play/pause on thumbnail": clicking the artwork in the player
+     * toggles playback. Off by default there too (it makes the artwork
+     * clickable, which can get in the way of the drag gestures).
+     */
+    val lyricsThumbnailPlayPause: Boolean = false,
     /** Alignment of lyric lines: LEFT / CENTER / RIGHT. */
     val lyricsTextPosition: String = "CENTER",
     // Romanization — per-script toggles + how the result is displayed. The

@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.MotionPhotosOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.material.icons.filled.Swipe
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -1059,6 +1060,10 @@ fun PlayerDesignScreen(
     onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
     pureBlackMiniPlayer: Boolean = false,
     onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
+    swipeThumbnail: Boolean = true,
+    onSwipeThumbnailChange: (Boolean) -> Unit = {},
+    swipeSensitivity: Float = 0.73f,
+    onSwipeSensitivityChange: (Float) -> Unit = {},
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(Localization.get(language, "player_design"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -1166,7 +1171,43 @@ fun PlayerDesignScreen(
                     trailing = { Switch(checked = pureBlackMiniPlayer, onCheckedChange = onPureBlackMiniPlayerChange) },
                     onClick = { onPureBlackMiniPlayerChange(!pureBlackMiniPlayer) },
                 ),
+                // Mobile "Enable swipe to change song": the artwork of the mini
+                // player changes track when dragged sideways.
+                M3SettingsItem(
+                    icon = Icons.Filled.Swipe,
+                    title = { Text(Localization.get(language, "enable_swipe_thumbnail")) },
+                    description = { Text(Localization.get(language, "enable_swipe_thumbnail_desc")) },
+                    trailing = { Switch(checked = swipeThumbnail, onCheckedChange = onSwipeThumbnailChange) },
+                    onClick = { onSwipeThumbnailChange(!swipeThumbnail) },
+                ),
             ),
         )
+        // The sensitivity slider is a derivative of the switch above: it is only
+        // shown while the swipe itself is on (same rule as the other derived
+        // rows, e.g. the skip-silence sub-options).
+        if (swipeThumbnail) {
+            Spacer(Modifier.height(8.dp))
+            M3SettingsGroup(
+                items = listOf(
+                    M3SettingsItem(
+                        icon = Icons.Filled.Swipe,
+                        title = {
+                            Text(
+                                "${Localization.get(language, "swipe_sensitivity")}: " +
+                                    "${(swipeSensitivity * 100).roundToInt()}%",
+                            )
+                        },
+                        description = { Text(Localization.get(language, "swipe_sensitivity_desc")) },
+                    ),
+                ),
+            )
+            Slider(
+                value = swipeSensitivity,
+                onValueChange = onSwipeSensitivityChange,
+                valueRange = 0f..1f,
+                steps = 9,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+        }
     }
 }

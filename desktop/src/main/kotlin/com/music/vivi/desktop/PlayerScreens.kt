@@ -173,6 +173,7 @@ fun PlayerScreen(
     language: String,
     onOpenLyrics: () -> Unit,
     onOpenLyricsFocus: (() -> Unit)? = null,
+    onOpenLyricsSettings: (() -> Unit)? = null,
     onOpenQueue: () -> Unit,
     onAddToPlaylist: (NowPlaying) -> Unit,
     onSkipTo: (Int) -> Unit = {},
@@ -279,6 +280,7 @@ fun PlayerScreen(
                     onCycleRepeat = onCycleRepeat,
                     language = language,
                     onOpenLyrics = onOpenLyrics,
+                    onOpenLyricsSettings = onOpenLyricsSettings,
                     onOpenQueue = onOpenQueue,
                     onAddToPlaylist = { onAddToPlaylist(track) },
                     onSkipTo = onSkipTo,
@@ -314,6 +316,7 @@ fun PlayerScreen(
                     language = language,
                     onOpenLyrics = onOpenLyrics,
                     onOpenLyricsFocus = onOpenLyricsFocus,
+                    onOpenLyricsSettings = onOpenLyricsSettings,
                     onOpenQueue = onOpenQueue,
                     onAddToPlaylist = { onAddToPlaylist(track) },
                     sliderStyle = sliderStyle,
@@ -351,6 +354,7 @@ private fun M3EPlayerContent(
     onCycleRepeat: () -> Unit,
     language: String,
     onOpenLyrics: () -> Unit,
+    onOpenLyricsSettings: (() -> Unit)? = null,
     onOpenQueue: () -> Unit,
     onAddToPlaylist: (() -> Unit)? = null,
     onSkipTo: (Int) -> Unit = {},
@@ -363,6 +367,7 @@ private fun M3EPlayerContent(
     onBack: (() -> Unit)? = null,
 ) {
     var activeTab by remember { mutableStateOf(M3ETab.QUEUE) }
+    var lyricsMenuOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 24.dp)) {
         Row(
@@ -692,24 +697,45 @@ private fun M3EPlayerContent(
                 ) {
                     if (activeTab == M3ETab.LYRICS) {
                         val lyricsSettings = DesktopSettings.load()
-                        LyricsScreen(
-                            nowPlaying = np,
-                            positionMs = positionMs,
-                            isPlaying = isPlaying,
-                            language = language,
-                            // The expressive player used to pass only `display`,
-                            // so the nullable size/spacing fell back to 18sp / 1.35
-                            // and the options the user set never reached it.
-                            synced = lyricsSettings.syncedLyrics,
-                            display = lyricsDisplayOptionsFrom(lyricsSettings),
-                            translate = lyricsTranslationConfig(
-                                lyricsSettings,
-                                lyricsSettings.translateLyrics,
-                            ),
-                            onSeek = onSeek,
-                            onTogglePlay = onTogglePlay,
-                            onBack = { activeTab = M3ETab.NONE },
-                        )
+                        Box(Modifier.fillMaxSize()) {
+                            LyricsScreen(
+                                nowPlaying = np,
+                                positionMs = positionMs,
+                                isPlaying = isPlaying,
+                                language = language,
+                                // The expressive player used to pass only `display`,
+                                // so the nullable size/spacing fell back to 18sp / 1.35
+                                // and the options the user set never reached it.
+                                synced = lyricsSettings.syncedLyrics,
+                                display = lyricsDisplayOptionsFrom(lyricsSettings),
+                                translate = lyricsTranslationConfig(
+                                    lyricsSettings,
+                                    lyricsSettings.translateLyrics,
+                                ),
+                                onSeek = onSeek,
+                                onTogglePlay = onTogglePlay,
+                                onBack = { activeTab = M3ETab.NONE },
+                            )
+                            // The lyrics options, reachable from the lyrics panel
+                            // itself (the expressive player has no lyric buttons).
+                            Box(Modifier.align(Alignment.TopEnd)) {
+                                IconButton(onClick = { lyricsMenuOpen = true }) {
+                                    Icon(
+                                        Icons.Filled.Tune,
+                                        contentDescription = Localization.get(language, "lyrics_options"),
+                                    )
+                                }
+                                if (lyricsMenuOpen) {
+                                    LyricsQuickMenu(
+                                        language = language,
+                                        onDismiss = { lyricsMenuOpen = false },
+                                        onOpenLyrics = onOpenLyrics,
+                                        onOpenLyricsFocus = null,
+                                        onOpenLyricsSettings = onOpenLyricsSettings,
+                                    )
+                                }
+                            }
+                        }
                     } else if (activeTab == M3ETab.QUEUE) {
                         AppleUpNextQueueScreen(
                             queue = queue,
@@ -849,6 +875,7 @@ private fun PlayerContent(
     language: String,
     onOpenLyrics: () -> Unit,
     onOpenLyricsFocus: (() -> Unit)? = null,
+    onOpenLyricsSettings: (() -> Unit)? = null,
     onOpenQueue: () -> Unit,
     onAddToPlaylist: (() -> Unit)? = null,
     sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
@@ -918,6 +945,9 @@ private fun PlayerContent(
                 durationMs = durationMs,
                 onSeek = onSeek,
                 progressiveSeek = progressiveSeek,
+                onTogglePlay = onTogglePlay,
+                onNext = onNext,
+                onPrevious = onPrevious,
             )
             Spacer(Modifier.height(24.dp))
             Column(
@@ -943,6 +973,7 @@ private fun PlayerContent(
                     language = language,
                     onOpenLyrics = onOpenLyrics,
                     onOpenLyricsFocus = onOpenLyricsFocus,
+                    onOpenLyricsSettings = onOpenLyricsSettings,
                     sliderStyle = sliderStyle,
                     pillPlay = pillPlay,
                 )
@@ -971,6 +1002,9 @@ private fun PlayerContent(
                         durationMs = durationMs,
                         onSeek = onSeek,
                         progressiveSeek = progressiveSeek,
+                        onTogglePlay = onTogglePlay,
+                        onNext = onNext,
+                        onPrevious = onPrevious,
                     )
                 }
                 Column(Modifier.weight(1f)) {
@@ -993,6 +1027,7 @@ private fun PlayerContent(
                         language = language,
                         onOpenLyrics = onOpenLyrics,
                         onOpenLyricsFocus = onOpenLyricsFocus,
+                        onOpenLyricsSettings = onOpenLyricsSettings,
                         sliderStyle = sliderStyle,
                         pillPlay = pillPlay,
                     )
@@ -1038,7 +1073,15 @@ private fun PlayerArtworkBlock(
     durationMs: Long = 0L,
     onSeek: ((Long) -> Unit)? = null,
     progressiveSeek: Boolean = false,
+    /** Mobile "Show play/pause on thumbnail": a click on the art toggles the song. */
+    onTogglePlay: (() -> Unit)? = null,
+    onNext: (() -> Unit)? = null,
+    onPrevious: (() -> Unit)? = null,
 ) {
+    // The gesture options are read here instead of being threaded down from the
+    // root: they only matter on the artwork, and reading the revision makes a
+    // change in the settings (or in the player's lyrics menu) apply at once.
+    val gestureSettings = remember(settingsFileRevision()) { DesktopSettings.load() }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // Artwork with Apple-style ambience: a colored glow (blurred artwork)
         // behind it and a soft specular reflection below.
@@ -1056,30 +1099,58 @@ private fun PlayerArtworkBlock(
             }
             // "Progressive seek": double-click the left/right half of the
             // artwork to skip ±5 seconds (mobile behavior); when the option is
-            // on, each rapid repeat (<1 s) adds 5 extra seconds (5 → 10 → 15…).
+            // on, each rapid repeat (< 1 s) adds 5 extra seconds (5 → 10 → 15…).
+            // A single click toggles playback when the mobile "show play/pause
+            // on thumbnail" option is on.
             val currentPos by rememberUpdatedState(positionMs)
-            val blockModifier = if (onSeek != null && durationMs > 0L) {
-                Modifier
-                    .shadow(24.dp, RoundedCornerShape(metrics.artCorner))
-                    .pointerInput(np.videoId) {
-                        var skipMultiplier = 1
-                        var lastTapAt = 0L
-                        detectTapGestures(onDoubleTap = { offset ->
-                            val now = System.currentTimeMillis()
-                            if (progressiveSeek && now - lastTapAt < 1_000L) skipMultiplier++ else skipMultiplier = 1
-                            lastTapAt = now
-                            val amount = 5_000L * skipMultiplier
-                            val target = if (offset.x < size.width / 2f) {
-                                (currentPos - amount).coerceAtLeast(0L)
-                            } else {
-                                (currentPos + amount).coerceAtMost(durationMs)
-                            }
-                            onSeek(target)
-                        })
-                    }
+            val canSeek = onSeek != null && durationMs > 0L
+            val canToggle = gestureSettings.lyricsThumbnailPlayPause && onTogglePlay != null
+            // Swipe to change song (mobile): the same gesture the mini players
+            // have, on the artwork of the full player.
+            val swipeModifier = if (
+                gestureSettings.swipeThumbnail && onNext != null && onPrevious != null
+            ) {
+                Modifier.swipeToChangeTrack(
+                    enabled = true,
+                    sensitivity = gestureSettings.swipeSensitivity,
+                    key = np.videoId,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                )
             } else {
-                Modifier.shadow(24.dp, RoundedCornerShape(metrics.artCorner))
+                Modifier
             }
+            val blockModifier = Modifier
+                .shadow(24.dp, RoundedCornerShape(metrics.artCorner))
+                .then(swipeModifier)
+                .pointerInput(np.videoId, canSeek, canToggle) {
+                    if (!canSeek && !canToggle) return@pointerInput
+                    var skipMultiplier = 1
+                    var lastTapAt = 0L
+                    detectTapGestures(
+                        onTap = if (canToggle) {
+                            { onTogglePlay?.invoke() }
+                        } else {
+                            null
+                        },
+                        onDoubleTap = if (canSeek) {
+                            { offset ->
+                                val now = System.currentTimeMillis()
+                                if (progressiveSeek && now - lastTapAt < 1_000L) skipMultiplier++ else skipMultiplier = 1
+                                lastTapAt = now
+                                val amount = 5_000L * skipMultiplier
+                                val target = if (offset.x < size.width / 2f) {
+                                    (currentPos - amount).coerceAtLeast(0L)
+                                } else {
+                                    (currentPos + amount).coerceAtMost(durationMs)
+                                }
+                                onSeek?.invoke(target)
+                            }
+                        } else {
+                            null
+                        },
+                    )
+                }
             Box(blockModifier) {
                 Box {
                     PlayerThumbnail(np.thumbnail, metrics.artSize, metrics.artCorner, rotatingThumbnail)
@@ -1216,9 +1287,11 @@ private fun PlayerControlPanel(
     language: String,
     onOpenLyrics: () -> Unit,
     onOpenLyricsFocus: (() -> Unit)? = null,
+    onOpenLyricsSettings: (() -> Unit)? = null,
     sliderStyle: ViviSliderStyle,
     pillPlay: Boolean,
 ) {
+    var lyricsMenuOpen by remember { mutableStateOf(false) }
     // Seek slider (position / duration). Disabled until the duration
     // is known so the slider can never degenerate into a 0..1 range
     // (which made the thumb snap to the start or the end). While the
@@ -1412,6 +1485,24 @@ private fun PlayerControlPanel(
                 Icon(Icons.Filled.Lyrics, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(Localization.get(language, "lyrics_focus"))
+            }
+        }
+        // The mobile lyrics menu, right where the lyrics are: style, position,
+        // glow/blur, tap-to-seek, auto-scroll, size and spacing, applied live.
+        Box {
+            OutlinedButton(onClick = { lyricsMenuOpen = true }) {
+                Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(Localization.get(language, "lyrics_options"))
+            }
+            if (lyricsMenuOpen) {
+                LyricsQuickMenu(
+                    language = language,
+                    onDismiss = { lyricsMenuOpen = false },
+                    onOpenLyrics = onOpenLyrics,
+                    onOpenLyricsFocus = onOpenLyricsFocus,
+                    onOpenLyricsSettings = onOpenLyricsSettings,
+                )
             }
         }
     }
@@ -2536,6 +2627,9 @@ fun ClassicDesktopMiniPlayer(
     repeatMode: RepeatMode,
     backgroundStyle: MiniPlayerBackgroundStyle,
     pureBlack: Boolean,
+    /** Mobile "Enable swipe to change song": drag the artwork to skip. */
+    swipeThumbnail: Boolean = false,
+    swipeSensitivity: Float = 0.73f,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -2594,6 +2688,7 @@ fun ClassicDesktopMiniPlayer(
                             Modifier
                                 .size(52.dp)
                                 .clip(RoundedCornerShape(8.dp))
+                                .swipeToChangeTrack(swipeThumbnail, swipeSensitivity, nowPlaying.videoId, onNext, onPrevious)
                                 .clickable(onClick = onOpenPlayer),
                         ) {
                             Thumbnail(nowPlaying.thumbnail, Modifier.fillMaxSize())
@@ -2838,8 +2933,12 @@ fun NewDesktopMiniPlayer(
     repeatMode: RepeatMode,
     backgroundStyle: MiniPlayerBackgroundStyle,
     pureBlack: Boolean,
+    /** Mobile "Enable swipe to change song": drag the artwork to skip. */
+    swipeThumbnail: Boolean = false,
+    swipeSensitivity: Float = 0.73f,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
+    onPrevious: () -> Unit = {},
     onVolume: (Float) -> Unit,
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
@@ -2910,7 +3009,12 @@ fun NewDesktopMiniPlayer(
                         style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                     )
                 }
-                Box(Modifier.size(38.dp).clip(CircleShape)) {
+                Box(
+                    Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .swipeToChangeTrack(swipeThumbnail, swipeSensitivity, nowPlaying.videoId, onNext, onPrevious),
+                ) {
                     Thumbnail(nowPlaying.thumbnail, Modifier.fillMaxSize())
                     Box(
                         Modifier
@@ -3067,8 +3171,12 @@ fun AppleDesktopMiniPlayer(
     repeatMode: RepeatMode,
     backgroundStyle: MiniPlayerBackgroundStyle,
     pureBlack: Boolean,
+    /** Mobile "Enable swipe to change song": drag the artwork to skip. */
+    swipeThumbnail: Boolean = false,
+    swipeSensitivity: Float = 0.73f,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
+    onPrevious: () -> Unit = {},
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
     onOpenPlayer: () -> Unit,
@@ -3123,6 +3231,7 @@ fun AppleDesktopMiniPlayer(
                 Modifier
                     .size(42.dp)
                     .clip(RoundedCornerShape(10.dp))
+                    .swipeToChangeTrack(swipeThumbnail, swipeSensitivity, nowPlaying.videoId, onNext, onPrevious)
                     .clickable(onClick = onTogglePlay),
                 contentAlignment = Alignment.Center,
             ) {
@@ -3242,6 +3351,51 @@ fun AppleDesktopMiniPlayer(
     }
 }
 
+/**
+ * Mobile "Enable swipe to change song" applied to a mini-player artwork.
+ *
+ * The mobile app drags the artwork and compares the accumulated drag with a
+ * pixel threshold derived from the sensitivity preference. That curve is a
+ * function of a phone's pixels, so on the desktop the same preference maps onto
+ * a dp threshold instead: 1.0 asks for a short flick, 0.0 for a long drag
+ * ([SWIPE_SENSITIVITY_MIN_DP] at the minimum, [SWIPE_SENSITIVITY_MAX_DP] at the
+ * maximum). The drag is read in the same `pointerInput` as the gesture is, and
+ * the tap (play/pause, open the player) stays on `clickable` outside it, so a
+ * drag never turns into a click.
+ */
+private fun Modifier.swipeToChangeTrack(
+    enabled: Boolean,
+    sensitivity: Float,
+    key: Any?,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+): Modifier {
+    if (!enabled) return this
+    val clamped = sensitivity.coerceIn(0f, 1f)
+    val thresholdDp = SWIPE_SENSITIVITY_MAX_DP - (SWIPE_SENSITIVITY_MAX_DP - SWIPE_SENSITIVITY_MIN_DP) * clamped
+    return this.pointerInput(key) {
+        val thresholdPx = thresholdDp.dp.toPx()
+        var dragged = 0f
+        detectHorizontalDragGestures(
+            onHorizontalDrag = { _, amount -> dragged += amount },
+            onDragEnd = {
+                when {
+                    dragged <= -thresholdPx -> onNext()
+                    dragged >= thresholdPx -> onPrevious()
+                }
+                dragged = 0f
+            },
+            onDragCancel = { dragged = 0f },
+        )
+    }
+}
+
+/** Longest drag still accepted at sensitivity 0 (a slow, deliberate swipe). */
+private const val SWIPE_SENSITIVITY_MAX_DP = 90f
+
+/** Shortest drag accepted at sensitivity 1 (a flick). */
+private const val SWIPE_SENSITIVITY_MIN_DP = 18f
+
 @Composable
 fun DesktopMiniPlayer(
     nowPlaying: NowPlaying?,
@@ -3253,6 +3407,9 @@ fun DesktopMiniPlayer(
     isShuffle: Boolean,
     repeatMode: RepeatMode,
     design: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
+    /** Mobile "Enable swipe to change song": drag the artwork to skip. */
+    swipeThumbnail: Boolean = false,
+    swipeSensitivity: Float = 0.73f,
     backgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
     pureBlack: Boolean = false,
     onTogglePlay: () -> Unit,
@@ -3288,8 +3445,11 @@ fun DesktopMiniPlayer(
                 repeatMode = repeatMode,
                 backgroundStyle = backgroundStyle,
                 pureBlack = pureBlack,
+                swipeThumbnail = swipeThumbnail,
+                swipeSensitivity = swipeSensitivity,
                 onTogglePlay = onTogglePlay,
                 onNext = onNext,
+                onPrevious = onPrevious,
                 onVolume = onVolume,
                 onToggleShuffle = onToggleShuffle,
                 onCycleRepeat = onCycleRepeat,
@@ -3310,8 +3470,11 @@ fun DesktopMiniPlayer(
                 repeatMode = repeatMode,
                 backgroundStyle = backgroundStyle,
                 pureBlack = pureBlack,
+                swipeThumbnail = swipeThumbnail,
+                swipeSensitivity = swipeSensitivity,
                 onTogglePlay = onTogglePlay,
                 onNext = onNext,
+                onPrevious = onPrevious,
                 onToggleShuffle = onToggleShuffle,
                 onCycleRepeat = onCycleRepeat,
                 onOpenPlayer = onOpenPlayer,
@@ -3333,6 +3496,8 @@ fun DesktopMiniPlayer(
                 repeatMode = repeatMode,
                 backgroundStyle = backgroundStyle,
                 pureBlack = pureBlack,
+                swipeThumbnail = swipeThumbnail,
+                swipeSensitivity = swipeSensitivity,
                 onTogglePlay = onTogglePlay,
                 onNext = onNext,
                 onPrevious = onPrevious,
@@ -3369,6 +3534,8 @@ fun SpotifyPlayerBar(
     miniPlayerDesign: MiniPlayerDesign = MiniPlayerDesign.CLASSIC,
     miniPlayerBackgroundStyle: MiniPlayerBackgroundStyle = MiniPlayerBackgroundStyle.FOLLOW_THEME,
     pureBlackMiniPlayer: Boolean = false,
+    swipeThumbnail: Boolean = true,
+    swipeSensitivity: Float = 0.73f,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -3397,6 +3564,8 @@ fun SpotifyPlayerBar(
         isShuffle = isShuffle,
         repeatMode = repeatMode,
         design = miniPlayerDesign,
+        swipeThumbnail = swipeThumbnail,
+        swipeSensitivity = swipeSensitivity,
         backgroundStyle = miniPlayerBackgroundStyle,
         pureBlack = pureBlackMiniPlayer,
         onTogglePlay = onTogglePlay,

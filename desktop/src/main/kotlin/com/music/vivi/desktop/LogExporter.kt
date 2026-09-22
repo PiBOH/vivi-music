@@ -113,6 +113,9 @@ object LogExporter {
             appendLine("save notification history: ${s.saveNotificationHistory}")
             appendLine("pause search history: ${s.pauseSearchHistory}")
             appendLine("pause listen history: ${s.pauseListenHistory}")
+            appendLine("lyrics animation style: ${s.lyricsAnimationStyle}")
+            appendLine("lyrics thumbnail play/pause: ${s.lyricsThumbnailPlayPause}")
+            appendLine("swipe to change song: ${s.swipeThumbnail} (sensitivity ${s.swipeSensitivity})")
             appendLine("ai provider: ${s.aiProvider}")
             appendLine("data saver: ${s.dataSaver}")
             appendLine("(cookie, dataSyncId, visitorData, account email and other"

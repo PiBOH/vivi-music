@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.6-alpha] - 2026-09-22
+
+### Fixed
+- [DE] **The player has the mobile lyrics controls.** A **Lyrics options** button next to the lyrics buttons opens the mobile app's lyrics menu — style, position, word glow, Apple Music blur (only under the VIVI Music style), blur, tap-a-line-to-seek, auto-scroll, the new thumbnail play/pause, text size and line spacing — and every change is applied to the running player immediately (and kept in the settings file). The expressive player reaches the same menu from the lyrics panel it shows. The swipe-to-change-song gesture the mini players gained is now on the full player's artwork too, and the new **Show play/pause on thumbnail** option makes a click on the artwork start or stop the song.
+- [DE] **Four settings rows were showing their raw key** (`enable_swipe_thumbnail`, `enable_swipe_thumbnail_desc`, `swipe_sensitivity`, `swipe_sensitivity_desc`): the swipe options added with the mini-player gesture were never added to the localization table, so the Appearance screen printed the key itself in every language. They are mapped now (the mobile app ships the wording for the switch and the slider, the description is the desktop one).
+
 ## [6.0.6.5_DE-1.53.5-alpha] - 2026-09-21
 
 ### Fixed

@@ -1200,6 +1200,8 @@ fun SettingsLyricsScreen(
     onOptionsChange: (LyricsDisplayOptions) -> Unit = {},
     translateLyrics: Boolean = false,
     onToggleTranslateLyrics: (Boolean) -> Unit = {},
+    lyricsThumbnailPlayPause: Boolean = false,
+    onToggleLyricsThumbnailPlayPause: (Boolean) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         LyricsSection(
@@ -1214,6 +1216,8 @@ fun SettingsLyricsScreen(
             onOptionsChange,
             translateLyrics,
             onToggleTranslateLyrics,
+            lyricsThumbnailPlayPause,
+            onToggleLyricsThumbnailPlayPause,
         )
     }
 }
@@ -1436,6 +1440,8 @@ fun LyricsSection(
     onOptionsChange: (LyricsDisplayOptions) -> Unit = {},
     translateLyrics: Boolean = false,
     onToggleTranslateLyrics: (Boolean) -> Unit = {},
+    lyricsThumbnailPlayPause: Boolean = false,
+    onToggleLyricsThumbnailPlayPause: (Boolean) -> Unit = {},
 ) {
     val romanize = options.romanize
 
@@ -1581,6 +1587,20 @@ fun LyricsSection(
                 },
                 onClick = { onOptionsChange(options.copy(autoScroll = !options.autoScroll)) },
             ),
+            // Mobile "Show play/pause on thumbnail": clicking the artwork in the
+            // player starts/stops the song instead of doing nothing.
+            M3SettingsItem(
+                icon = Icons.Filled.TouchApp,
+                title = { Text(Localization.get(language, "lyrics_thumbnail_play_pause")) },
+                description = { Text(Localization.get(language, "lyrics_thumbnail_play_pause_desc")) },
+                trailing = {
+                    Switch(
+                        checked = lyricsThumbnailPlayPause,
+                        onCheckedChange = onToggleLyricsThumbnailPlayPause,
+                    )
+                },
+                onClick = { onToggleLyricsThumbnailPlayPause(!lyricsThumbnailPlayPause) },
+            ),
         ),
     )
 
@@ -1661,8 +1681,8 @@ fun LyricsSection(
     )
 }
 
-/** Localized label of an animation style. */
-private fun lyricsStyleLabel(language: String, style: LyricsAnimationStyle): String {
+/** Localized label of an animation style. Shared with the player's lyrics menu. */
+internal fun lyricsStyleLabel(language: String, style: LyricsAnimationStyle): String {
     val key = when (style) {
         LyricsAnimationStyle.NONE -> "lyrics_style_none"
         LyricsAnimationStyle.FADE -> "lyrics_style_fade"
@@ -1679,8 +1699,8 @@ private fun lyricsStyleLabel(language: String, style: LyricsAnimationStyle): Str
     return Localization.get(language, key)
 }
 
-/** Localized label of the text position. */
-private fun lyricsPositionLabel(language: String, position: LyricsPosition): String = when (position) {
+/** Localized label of the text position. Shared with the player's lyrics menu. */
+internal fun lyricsPositionLabel(language: String, position: LyricsPosition): String = when (position) {
     LyricsPosition.LEFT -> Localization.get(language, "lyrics_position_left")
     LyricsPosition.CENTER -> Localization.get(language, "lyrics_position_center")
     LyricsPosition.RIGHT -> Localization.get(language, "lyrics_position_right")

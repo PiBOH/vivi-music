@@ -1045,6 +1045,9 @@ fun WindowScope.App(
     var showArtistDescription by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showArtistDescription) }
     var showArtistSubscriberCount by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().showArtistSubscriberCount) }
     var lyricsProviders by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsProviderPriority) }
+    var swipeThumbnail by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeThumbnail) }
+    var swipeSensitivity by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeSensitivity) }
+    var lyricsThumbnailPlayPause by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsThumbnailPlayPause) }
     var pauseSearchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
     var pauseListenHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseListenHistory) }
     var searchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().searchHistory) }
@@ -2834,6 +2837,11 @@ fun WindowScope.App(
                             translateLyrics = on
                             DesktopSettings.update { it.copy(translateLyrics = on) }
                         },
+                        lyricsThumbnailPlayPause = lyricsThumbnailPlayPause,
+                        onToggleLyricsThumbnailPlayPause = { on ->
+                            lyricsThumbnailPlayPause = on
+                            DesktopSettings.update { it.copy(lyricsThumbnailPlayPause = on) }
+                        },
                     )
                     is Screen.SettingsStorage -> SettingsStorageScreen(
                         language = language,
@@ -3021,6 +3029,7 @@ fun WindowScope.App(
                         language = language,
                         onOpenLyrics = { navigate(Screen.Lyrics) },
                         onOpenLyricsFocus = { navigate(Screen.LyricsFocus) },
+                        onOpenLyricsSettings = { navigate(Screen.SettingsLyrics) },
                         onOpenQueue = { navigate(Screen.Queue) },
                         onAddToPlaylist = addNowPlayingToPlaylist,
                         onSkipTo = { player.skipTo(it) },
@@ -3249,6 +3258,8 @@ fun WindowScope.App(
         miniPlayerDesign = miniPlayerDesign,
         miniPlayerBackgroundStyle = miniPlayerBackgroundStyle,
         pureBlackMiniPlayer = pureBlackMiniPlayer,
+        swipeThumbnail = swipeThumbnail,
+        swipeSensitivity = swipeSensitivity,
         sliderStyle = ViviSliderStyle.from(sliderStyle),
     )
         }
