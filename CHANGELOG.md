@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.9-alpha] - 2026-09-22
+
+### Fixed
+- [DE] **The strings added with the player and sync work are translated in every language.** `lyrics_options`, `Show play/pause on thumbnail` and its description, the swipe description and the two playlist-sync status lines have no mobile counterpart, so they are hand-written for all 50 translations (`desktop_extra_translations_76.py`); the wording that comes from the mobile app (`Enable swipe to change song`, the swipe sensitivity and its description, `Auto sync with account`, `Automatically sync with your Music account`, `Sync playlist`) is mapped to the Android resources and the 7-21 languages that app leaves untranslated are filled in there too. **Verification:** the batch is checked against the languages list (a missing value aborts the generator) and `scripts/check_localization.py` reports none of the twelve keys as falling back to English.
+
 ## [6.0.6.5_DE-1.53.8-alpha] - 2026-09-22
 
 ### Changed
