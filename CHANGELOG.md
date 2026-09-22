@@ -11,6 +11,11 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.5_DE-1.53.8-alpha] - 2026-09-22
+
+### Changed
+- [DE] **The app stops redrawing while nothing is playing.** The mini player sits on screen almost all the time, and its background layer created its glow/live-mesh loops **unconditionally** — every style, playing or not — so the window kept redrawing 60 times a second from launch to exit: the equalizer bars wobbled while paused, the player background pulsing/mesh/visualizer loops ran with the track stopped, and the canvas backdrop kept its Ken Burns zoom running on a paused player. Each of those loops now only exists while it has something to show (the moving styles, while playing), and the paused frame is a fixed, sensible value instead of a second animation. The player's canvas backdrop also stopped re-blurring a window-sized bitmap on every frame: the blur is rasterized on a fixed 384 dp layer and only *scaled* to cover (the same rule the blurred artwork backdrop follows since 1.52.5 — size-dependent effects must not sit on a `fillMaxSize` node). **Evidence from the reported logs:** the audio path is not the load — `audio device check: played 10020ms of 10020ms wall (100%)` with `0 device stalls` all session and `gc.log` peaking at 33 ms, i.e. the cost was the UI never going idle.
+
 ## [6.0.6.5_DE-1.53.7-alpha] - 2026-09-22
 
 ### Added

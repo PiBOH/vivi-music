@@ -2487,6 +2487,13 @@ fun BoxScope.DesktopMiniPlayerBackgroundLayer(
     style: MiniPlayerBackgroundStyle,
     pureBlack: Boolean,
     thumbnailUrl: String?,
+    /**
+     * The two moving styles below stop while the track is paused: the mini
+     * player is on screen almost all the time, so an endless animation here
+     * keeps the whole window redrawing at 60 fps from launch to exit — even
+     * with nothing playing and the rest of the UI perfectly still.
+     */
+    isPlaying: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val dark = isAppInDarkTheme()
@@ -2523,21 +2530,12 @@ fun BoxScope.DesktopMiniPlayerBackgroundLayer(
         }
     }
 
-    val glowTransition = rememberInfiniteTransition(label = "glowMotion")
-    val glowShift by glowTransition.animateFloat(
-        initialValue = -0.25f,
-        targetValue = 0.25f,
-        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), androidx.compose.animation.core.RepeatMode.Reverse),
-        label = "shift",
-    )
-
-    val meshTransition = rememberInfiniteTransition(label = "liveMesh")
-    val meshDx by meshTransition.animateFloat(
-        initialValue = -0.2f,
-        targetValue = 0.2f,
-        animationSpec = infiniteRepeatable(tween(5500, easing = LinearEasing), androidx.compose.animation.core.RepeatMode.Reverse),
-        label = "dx",
-    )
+    // Only the two styles that actually move get an animation, and only while
+    // the music is playing (the other styles draw static gradients).
+    val moves = isPlaying &&
+        (style == MiniPlayerBackgroundStyle.GLOW_MOTION || style == MiniPlayerBackgroundStyle.LIVE_MESH)
+    val glowShift = rememberLoopedFloat(moves, "glowMotion", -0.25f, 0.25f, 4000)
+    val meshDx = rememberLoopedFloat(moves, "liveMesh", -0.2f, 0.2f, 5500)
 
     Box(modifier = modifier.matchParentSize().clipToBounds()) {
         when (style) {
@@ -2661,6 +2659,7 @@ fun ClassicDesktopMiniPlayer(
                 style = backgroundStyle,
                 pureBlack = pureBlack,
                 thumbnailUrl = nowPlaying.thumbnail,
+                isPlaying = isPlaying,
             )
 
             Column {
@@ -2966,6 +2965,7 @@ fun NewDesktopMiniPlayer(
             style = backgroundStyle,
             pureBlack = pureBlack,
             thumbnailUrl = nowPlaying.thumbnail,
+            isPlaying = isPlaying,
         )
 
         Row(
@@ -3201,6 +3201,7 @@ fun AppleDesktopMiniPlayer(
             style = backgroundStyle,
             pureBlack = pureBlack,
             thumbnailUrl = nowPlaying.thumbnail,
+            isPlaying = isPlaying,
         )
 
         // Bottom 3dp Progress Bar (with a fainter buffered portion while streaming)
@@ -3388,6 +3389,33 @@ private fun Modifier.swipeToChangeTrack(
             onDragCancel = { dragged = 0f },
         )
     }
+}
+
+/**
+ * A value looping [from]..[to] forever, or a fixed [from] when [animate] is
+ * false. Written as a function so the `rememberInfiniteTransition` call sits
+ * behind a stable branch instead of inside a safe call.
+ */
+@Composable
+private fun rememberLoopedFloat(
+    animate: Boolean,
+    label: String,
+    from: Float,
+    to: Float,
+    durationMs: Int,
+): Float {
+    if (!animate) return from
+    val transition = rememberInfiniteTransition(label = label)
+    val value by transition.animateFloat(
+        initialValue = from,
+        targetValue = to,
+        animationSpec = infiniteRepeatable(
+            tween(durationMs, easing = LinearEasing),
+            androidx.compose.animation.core.RepeatMode.Reverse,
+        ),
+        label = "$label.value",
+    )
+    return value
 }
 
 /** Longest drag still accepted at sensitivity 0 (a slow, deliberate swipe). */

@@ -201,7 +201,12 @@ fun PlayerBackground(
 ) {
     Box(modifier.fillMaxSize().clipToBounds()) {
         when (style) {
-            PlayerBackgroundStyle.CANVAS -> CanvasBackground(bgUrl, Modifier.fillMaxSize())
+            // Every animated background below stops moving while the track is
+            // paused: an endless loop keeps the window redrawing at 60 fps for
+            // the whole time the player is open, which is exactly the kind of
+            // idle load the app should not have (and nothing moves on screen
+            // anyway, since the music is not moving either).
+            PlayerBackgroundStyle.CANVAS -> CanvasBackground(bgUrl, Modifier.fillMaxSize(), animate = isPlaying)
             PlayerBackgroundStyle.GRADIENT -> {
                 Box(
                     Modifier
@@ -229,13 +234,18 @@ fun PlayerBackground(
                 )
             }
             PlayerBackgroundStyle.GLOW -> {
-                val transition = rememberInfiniteTransition(label = "glow")
-                val pulse by transition.animateFloat(
-                    initialValue = 0.25f,
-                    targetValue = 0.6f,
-                    animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse),
-                    label = "glowPulse",
-                )
+                val pulse = if (isPlaying) {
+                    val transition = rememberInfiniteTransition(label = "glow")
+                    val animated by transition.animateFloat(
+                        initialValue = 0.25f,
+                        targetValue = 0.6f,
+                        animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse),
+                        label = "glowPulse",
+                    )
+                    animated
+                } else {
+                    0.42f
+                }
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -272,12 +282,13 @@ fun PlayerBackground(
                     )
                 }
             }
-            PlayerBackgroundStyle.LIVE_MESH -> LiveMeshBackground(accent)
+            PlayerBackgroundStyle.LIVE_MESH -> LiveMeshBackground(accent, animate = isPlaying)
             PlayerBackgroundStyle.VISUALIZER -> {
                 val level by (audioLevel ?: remember { MutableStateFlow(0f) }).collectAsState()
                 VisualizerBackground(
                     level = if (isPlaying) level else 0f,
                     accent = accent,
+                    animate = isPlaying,
                 )
             }
         }
@@ -291,19 +302,24 @@ fun PlayerBackground(
  * to silence when paused.
  */
 @Composable
-private fun VisualizerBackground(level: Float, accent: Color) {
+private fun VisualizerBackground(level: Float, accent: Color, animate: Boolean) {
     val smooth by animateFloatAsState(
         targetValue = level,
         animationSpec = tween(durationMillis = 120, easing = LinearEasing),
         label = "vizLevel",
     )
-    val transition = rememberInfiniteTransition(label = "vizWobble")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
-        label = "vizPhase",
-    )
+    val phase = if (animate) {
+        val transition = rememberInfiniteTransition(label = "vizWobble")
+        val animated by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
+            label = "vizPhase",
+        )
+        animated
+    } else {
+        0f
+    }
     val barCount = 56
     Canvas(Modifier.fillMaxSize()) {
         val barWidth = size.width / barCount
@@ -327,28 +343,43 @@ private fun VisualizerBackground(level: Float, accent: Color) {
     }
 }
 
-/** Animated multi-blob gradient (live mesh). */
+/**
+ * Animated multi-blob gradient (live mesh).
+ *
+ * [animate] false parks the blobs at a fixed offset: the three loops would
+ * otherwise keep the window redrawing 60 times a second while the track is
+ * paused, for a picture that is not moving either way.
+ */
 @Composable
-private fun BoxScope.LiveMeshBackground(accent: Color) {
-    val transition = rememberInfiniteTransition(label = "mesh")
-    val dx by transition.animateFloat(
-        initialValue = -0.4f,
-        targetValue = 0.4f,
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "meshDx",
-    )
-    val dy by transition.animateFloat(
-        initialValue = -0.3f,
-        targetValue = 0.3f,
-        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "meshDy",
-    )
-    val dz by transition.animateFloat(
-        initialValue = 0.1f,
-        targetValue = 0.5f,
-        animationSpec = infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "meshDz",
-    )
+private fun BoxScope.LiveMeshBackground(accent: Color, animate: Boolean = true) {
+    if (animate) {
+        val transition = rememberInfiniteTransition(label = "mesh")
+        val dx by transition.animateFloat(
+            initialValue = -0.4f,
+            targetValue = 0.4f,
+            animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Reverse),
+            label = "meshDx",
+        )
+        val dy by transition.animateFloat(
+            initialValue = -0.3f,
+            targetValue = 0.3f,
+            animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Reverse),
+            label = "meshDy",
+        )
+        val dz by transition.animateFloat(
+            initialValue = 0.1f,
+            targetValue = 0.5f,
+            animationSpec = infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Reverse),
+            label = "meshDz",
+        )
+        MeshBlobs(accent, dx, dy, dz)
+    } else {
+        MeshBlobs(accent, 0f, 0f, 0.3f)
+    }
+}
+
+@Composable
+private fun BoxScope.MeshBlobs(accent: Color, dx: Float, dy: Float, dz: Float) {
     Box(Modifier.fillMaxSize()) {
         Box(
             Modifier

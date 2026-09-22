@@ -368,13 +368,21 @@ private fun NowPlayingBars(
         animationSpec = tween(durationMillis = 140, easing = LinearEasing),
         label = "npBarsLevel",
     )
-    val transition = rememberInfiniteTransition(label = "npBars")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart),
-        label = "npBarsPhase",
-    )
+    // Paused: the bars stop wobbling. The row stays marked (the bars are still
+    // drawn at the idle height) but the endless 900 ms loop no longer keeps the
+    // whole window redrawing while nothing is playing.
+    val phase = if (isPlaying) {
+        val transition = rememberInfiniteTransition(label = "npBars")
+        val animated by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart),
+            label = "npBarsPhase",
+        )
+        animated
+    } else {
+        0f
+    }
     Canvas(Modifier.size(width = 16.dp, height = 14.dp)) {
         val barWidth = size.width / 5f
         val gap = barWidth * 0.8f
