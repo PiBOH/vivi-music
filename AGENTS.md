@@ -59,9 +59,13 @@ dependencies there, or you break the desktop build.
     build the APK for the DE release. **DE-only** changes are committed and
     pushed **only** here.
   - `vivi-music-de-apk` — mobile/APK counterpart of `vivi-music-de`. **Every
-    mobile/APK change** must be applied and committed on **both**
+    mobile/APK change** must be applied, committed **and pushed** on **both**
     `vivi-music-de` and `vivi-music-de-apk`; the two branches keep equivalent
-    mobile behavior (their commits may have different hashes). `vivi-music-de-apk`
+    mobile behavior (their commits may have different hashes). **This is an
+    obligation, not a best effort: a commit that touches `app/**`, the APK
+    version (`version.txt`, `app/build.gradle.kts`), an APK workflow or the APK
+    part of a doc is only done when it exists on both branches** — finishing one
+    of the two and leaving the other for later means the change is not done. `vivi-music-de-apk`
     also carries the pure-mobile history that used to live on `main` (kept
     reachable via the merge commit `16743769`).
   - `main` — **mirror of the upstream repository
@@ -142,6 +146,12 @@ dependencies there, or you break the desktop build.
   - `Auto Release (Desktop)` publishes the **desktop installers only**. It must
     never build, wait for or attach an APK (no `ignore_apk_failure`-style
     toggles either), and no other workflow may create an APK release.
+  - **Every APK workflow always publishes to `apk-latest`, replacing what is
+    there (mandatory)**: a run that builds an APK and does not put it on
+    `apk-latest` is broken, and a new APK workflow must do the same. The publish
+    step **recreates the branch from scratch** (single commit, everything that
+    was there is replaced) and **force-pushes** it, so the binaries never
+    accumulate in the history and the download URL always serves the last build.
   - `Build Android APK` is **manual-only** (`workflow_dispatch`). It builds GMS
     and FOSS in parallel and publishes them, with fixed file names
     (`vivi-gsm.apk`, `vivi-foss.apk`) plus a `version.json` (version, version
