@@ -88,6 +88,13 @@ dependencies there, or you break the desktop build.
     similar docs material) must be applied and pushed on **both**
     `vivi-music-de` and `vivi-music-de-apk`, with equivalent content (their
     hashes may differ). `main` stays excluded (upstream mirror).
+  - **`CHANGELOG.md` and `version.txt` are not "equivalent", they are the
+    same file on both branches** (same order, same versions, same dates, byte
+    for byte): the APK's changes are part of the DE's own release entry as
+    `[APK]` bullets, so the two are never written separately. A change to
+    either file is applied to one branch and then copied to the other
+    wholesale (`git checkout <other-branch> -- CHANGELOG.md version.txt`), not
+    re-typed — and `TODO.md` follows the same content.
   - **Official repository**: everything lives in **`PiBOH/vivi-music-de`** (the
     branch names above are unchanged). Every link in code, docs, the installer,
     the website and the CI points there — never at the old `PiBOH/vivi-music`
