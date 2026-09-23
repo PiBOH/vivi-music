@@ -229,6 +229,12 @@ data class DesktopSyncState(
     val queueIndex: Int = 0,
     val lyricsTextSize: Float = 18f,
     val library: LibrarySnapshot? = null,
+    /**
+     * The right-hand panel of the expressive player as the user left it:
+     * "queue", "lyrics", "history", or "none" when it was closed. Remembered so
+     * reopening the player does not always land on the queue.
+     */
+    val expressivePlayerTab: String = "queue",
     val firstLaunchDate: Long = 0L,
     val developerOptions: Boolean = false,
     val devToolsMode: String = "OVERLAY",

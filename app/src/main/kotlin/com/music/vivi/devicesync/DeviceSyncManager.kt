@@ -365,6 +365,13 @@ class DeviceSyncManager @Inject constructor(
                             )
                         },
                         updatedAt = p.playlist.lastUpdateTime?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L,
+                        // The account's playlist id, when this playlist lives on
+                        // YouTube Music. It is the only identity the two devices
+                        // share: the local row ids are generated per device
+                        // ("LP" + 8 characters), so without this the peer cannot
+                        // tell the arriving copy from the playlist it already has
+                        // and imports a second one (E1034).
+                        remoteId = p.playlist.browseId,
                     )
                 }
                 lastLibrary = LibrarySnapshot(
@@ -494,11 +501,21 @@ class DeviceSyncManager @Inject constructor(
     private suspend fun applyRemotePlaylists(remote: List<SyncedPlaylist>) {
         val now = LocalDateTime.now()
         for (r in remote) {
+            // The same playlist is recognised by its *account* id, not by the
+            // local row id: this app stores the account's playlists under its own
+            // generated id (see [PlaylistEntity.generatePlaylistId]) while the
+            // desktop has another one, so matching on the id alone imported a
+            // second copy of every account playlist at pairing (E1034).
+            val accountId = r.remoteId?.takeIf { it.isNotBlank() }
             val local = database.playlist(r.id).first()
+                ?: accountId?.let { database.playlistByBrowseId(it).first() }
             val localUpdatedAt = local?.playlist?.lastUpdateTime
                 ?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L
 
             if (r.deleted) {
+                // Only the local row is removed: a playlist is never deleted from
+                // YouTube Music from here, whichever way it arrived — only the
+                // delete the user performs does that.
                 if (local != null && r.updatedAt > localUpdatedAt) {
                     database.delete(local.playlist)
                 }
@@ -514,21 +531,33 @@ class DeviceSyncManager @Inject constructor(
                 LocalDateTime.ofInstant(Instant.ofEpochMilli(r.updatedAt), ZoneOffset.UTC)
             } else now
 
+            val playlistId = local?.playlist?.id ?: r.id.ifBlank { PlaylistEntity.generatePlaylistId() }
             if (local == null) {
                 database.insert(
                     PlaylistEntity(
-                        id = r.id,
+                        id = playlistId,
                         name = r.name,
+                        // Kept so this row is known to live on the account: the
+                        // playlist is not treated as a local-only one, and a later
+                        // rename/delete from the desktop lands on it.
+                        browseId = accountId,
                         bookmarkedAt = now,
                         lastUpdateTime = remoteUpdateTime,
                     )
                 )
             } else {
-                database.update(local.playlist.copy(name = r.name, lastUpdateTime = remoteUpdateTime))
+                database.update(
+                    local.playlist.copy(
+                        name = r.name,
+                        browseId = local.playlist.browseId ?: accountId,
+                        lastUpdateTime = remoteUpdateTime,
+                    )
+                )
             }
 
-            // Replace the playlist's songs with the remote order.
-            database.clearPlaylist(r.id)
+            // Replace the playlist's songs with the remote order (under the id the
+            // playlist is stored with here, which may be the local one).
+            database.clearPlaylist(playlistId)
             r.songs.forEachIndexed { index, s ->
                 // Ensure the song + artist rows exist so the playlist renders.
                 database.insert(
@@ -542,7 +571,7 @@ class DeviceSyncManager @Inject constructor(
                 )
                 database.insert(
                     PlaylistSongMap(
-                        playlistId = r.id,
+                        playlistId = playlistId,
                         songId = s.id,
                         position = index,
                     )

@@ -10,8 +10,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -693,25 +693,30 @@ fun ViviSlider(
         modifier
             .height(28.dp)
             .fillMaxWidth()
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    if (enabled) {
-                        val f = (offset.x / size.width).coerceIn(0f, 1f)
-                        onValueChange(valueRange.start + f * range)
-                        onValueChangeFinished?.invoke()
-                    }
-                }
-            }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragEnd = { if (enabled) onValueChangeFinished?.invoke() },
-                    onDragCancel = { if (enabled) onValueChangeFinished?.invoke() },
-                ) { change, _ ->
-                    if (enabled) {
-                        val f = (change.position.x / size.width).coerceIn(0f, 1f)
-                        onValueChange(valueRange.start + f * range)
+            // ONE gesture handler for press, drag and tap. Two `pointerInput`
+            // blocks (one `detectTapGestures`, one `detectDragGestures`) fight
+            // over the same pointer: the tap detector takes the down event, the
+            // drag detector needs unconsumed changes to pass touch slop, and the
+            // result is a thumb that only ever follows a tap — a drag looked like
+            // it moved and then snapped back to the position the player last
+            // reported, which is exactly "I cannot move the seek bar".
+            .pointerInput(enabled, valueRange) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (!enabled) return@awaitEachGesture
+                    fun fraction(x: Float) = (x / size.width.toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
+                    // The press itself already moves the thumb, so the user sees
+                    // where the seek is going before releasing (as on YouTube).
+                    onValueChange(valueRange.start + fraction(down.position.x) * range)
+                    down.consume()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!change.pressed) break
+                        onValueChange(valueRange.start + fraction(change.position.x) * range)
                         change.consume()
                     }
+                    onValueChangeFinished?.invoke()
                 }
             },
         contentAlignment = Alignment.CenterStart,

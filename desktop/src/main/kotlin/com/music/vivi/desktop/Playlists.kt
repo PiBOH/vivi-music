@@ -54,6 +54,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 
+private const val MIRROR_PREFIX = "yt-"
+
+/**
+ * The account's playlist id behind a local playlist, in whichever of the two
+ * forms it is stored: a playlist mirrored **from** the account carries it in its
+ * id (`yt-<id>`), one created here and pushed up carries it in
+ * [SyncedPlaylist.remoteId]. This — not the local id — is what identifies the
+ * same playlist on two devices.
+ */
+private fun SyncedPlaylist.accountIdentity(): String? =
+    remoteId?.takeIf { it.isNotBlank() }
+        ?: id.removePrefix(MIRROR_PREFIX).takeIf { id.startsWith(MIRROR_PREFIX) }
+
 /**
  * JSON-backed store for the desktop's local playlists.
  *
@@ -71,6 +84,14 @@ object PlaylistStore {
 
     private val _all = MutableStateFlow(load())
     val all: StateFlow<List<SyncedPlaylist>> = _all.asStateFlow()
+
+    init {
+        // The copies a pairing created before the account id travelled with the
+        // playlist (E1034) are collapsed on every start: it only ever merges
+        // entries that are the same account playlist, so it is a no-op once the
+        // store is clean.
+        repairDuplicates()
+    }
 
     /** Active (non-deleted) playlists, most recently updated first. */
     val active: List<SyncedPlaylist>
@@ -183,20 +204,109 @@ object PlaylistStore {
     }
 
     /**
-     * Merges a remote playlist list into the store with last-write-wins per
-     * playlist id: the copy with the newer [SyncedPlaylist.updatedAt] wins.
+     * Merges a remote playlist list into the store with last-write-wins.
+     *
+     * The identity of a playlist across two devices is its **account** playlist
+     * id, never the local row id: both apps generate their own (`LP` + 8
+     * characters), so the very same account playlist is `LPAAAA…` here and
+     * `LPBBBB…` on the phone. Matching on the local id (what this used to do) is
+     * what imported a second copy of every account playlist as soon as the two
+     * were paired (E1034). A remote playlist is therefore merged into the local
+     * playlist that already mirrors the same account playlist — or into the one
+     * whose own id *is* that account id, the form this app keeps for its own
+     * mirrors — and only added as a new local playlist when nothing matches.
+     *
      * Local playlists missing from [remote] are kept (they will be pushed back).
      */
     fun applyRemote(remote: List<SyncedPlaylist>) {
         if (remote.isEmpty()) return
         val merged = _all.value.associateBy { it.id }.toMutableMap()
         for (r in remote) {
-            val existing = merged[r.id]
-            if (existing == null || r.updatedAt > existing.updatedAt) {
+            val target = findTarget(merged.values, r)
+            if (target == null) {
                 merged[r.id] = r
+                continue
             }
+            val winner = if (r.updatedAt > target.updatedAt) r else target
+            // The local id survives (the sidebar, the routes and the peer all
+            // point at it) and the account id is adopted from whichever side
+            // carries it, so a playlist imported before this fix gains its link
+            // instead of being mirrored a second time later.
+            merged[target.id] = winner.copy(
+                id = target.id,
+                remoteId = target.remoteId ?: r.remoteId,
+            )
         }
         _all.value = merged.values.toList()
+        repairDuplicates()
+        persist()
+    }
+
+    /**
+     * The local playlist a remote [r] stands for, or null when it is new here.
+     *
+     * Three ways to recognise it, in order of certainty: the same row id (both
+     * sides have the same playlist under the same id), the account id it carries
+     * ([SyncedPlaylist.remoteId], what a patched peer sends), or a remote id that
+     * is an account playlist we already mirror.
+     */
+    private fun findTarget(local: Collection<SyncedPlaylist>, r: SyncedPlaylist): SyncedPlaylist? {
+        local.firstOrNull { it.id == r.id }?.let { return it }
+        r.remoteId?.takeIf { it.isNotBlank() }
+            ?.let { account -> local.firstOrNull { it.accountIdentity() == account } }
+            ?.let { return it }
+        return local.firstOrNull { it.accountIdentity() == r.id }
+    }
+
+    /**
+     * Collapses the copies of one playlist that a pairing created before the
+     * account id travelled with it (E1034): several local entries that are the
+     * same account playlist.
+     *
+     * The kept entry is the one that already knows the account id (so the link to
+     * YouTube Music survives), and the others are tombstoned **locally**. This
+     * path never touches the account: only the delete the user performs does, so
+     * the cleanup can never remove a playlist from YouTube Music. Runs at startup
+     * and after every merge; it merges nothing when there is nothing to merge.
+     */
+    fun repairDuplicates() {
+        val groups = _all.value
+            .filterNot { it.deleted }
+            .mapNotNull { p -> p.accountIdentity()?.let { account -> account to p } }
+            .groupBy({ it.first }, { it.second })
+            .filterValues { it.size > 1 }
+        if (groups.isEmpty()) return
+        val now = System.currentTimeMillis()
+        var all = _all.value
+        for ((account, group) in groups) {
+            val keep = group.firstOrNull { it.remoteId != null }
+                ?: group.firstOrNull { it.id.startsWith(MIRROR_PREFIX) }
+                ?: group.minByOrNull { it.updatedAt }
+                ?: continue
+            val dropped = group.filter { it.id != keep.id }
+            // Both copies may hold songs the other does not: the kept order comes
+            // first, the extras follow, and a song that is in both stays once.
+            val songs = LinkedHashMap<String, SyncedSong>()
+            (keep.songs + dropped.flatMap { it.songs }).forEach { song -> songs.putIfAbsent(song.id, song) }
+            all = all.map { p ->
+                when {
+                    p.id == keep.id -> p.copy(
+                        remoteId = keep.remoteId ?: account,
+                        songs = songs.values.toList(),
+                        updatedAt = maxOf(keep.updatedAt, dropped.maxOfOrNull { it.updatedAt } ?: 0L, now),
+                    )
+                    dropped.any { it.id == p.id } -> p.copy(deleted = true, updatedAt = now)
+                    else -> p
+                }
+            }
+            AppLog.log(
+                "playlists",
+                "repair: '${keep.name}' existed ${group.size} times (the same account playlist) — " +
+                    "kept ${keep.id}, removed ${dropped.joinToString { it.id }} LOCALLY ONLY, " +
+                    "nothing was deleted on YouTube Music",
+            )
+        }
+        _all.value = all
         persist()
     }
 
@@ -204,7 +314,19 @@ object PlaylistStore {
     fun toSynced(): List<SyncedPlaylist> {
         // Prune tombstones older than 30 days so the wire list stays bounded.
         val cutoff = System.currentTimeMillis() - 30L * 24 * 3600 * 1000
-        return _all.value.filterNot { it.deleted && it.updatedAt < cutoff }
+        return _all.value
+            .filterNot { it.deleted && it.updatedAt < cutoff }
+            // A playlist mirrored from the account carries its account id inside
+            // its own id (`yt-<id>`). It travels in [SyncedPlaylist.remoteId] too,
+            // so the peer recognises it as the account playlist instead of
+            // importing yet another copy of it (E1034).
+            .map { p ->
+                if (p.remoteId == null) {
+                    p.accountIdentity()?.let { account -> p.copy(remoteId = account) } ?: p
+                } else {
+                    p
+                }
+            }
     }
 
     /** Replaces the whole store (used when restoring a backup) and persists. */

@@ -150,7 +150,22 @@ import com.music.vivi.desktop.player.RepeatMode
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-private enum class M3ETab { NONE, QUEUE, LYRICS, HISTORY }
+/**
+ * The right-hand panel of the expressive player. The [key] is what is stored in
+ * the settings (`expressivePlayerTab`), so the player reopens on the tab the
+ * user left it on instead of always starting from the queue.
+ */
+private enum class M3ETab(val key: String) {
+    NONE("none"),
+    QUEUE("queue"),
+    LYRICS("lyrics"),
+    HISTORY("history"),
+    ;
+
+    companion object {
+        fun fromKey(key: String): M3ETab = entries.firstOrNull { it.key == key } ?: QUEUE
+    }
+}
 
 @Composable
 fun PlayerScreen(
@@ -192,6 +207,9 @@ fun PlayerScreen(
     audioLevel: kotlinx.coroutines.flow.StateFlow<Float>? = null,
     onBack: (() -> Unit)? = null,
     progressiveSeek: Boolean = false,
+    /** The window-level "Autoplay next track" setting, for the expressive player. */
+    autoPlayNext: Boolean = true,
+    onToggleAutoPlayNext: (Boolean) -> Unit = {},
 ) {
     val np = queue.getOrNull(index)
     var canvasArt by remember { mutableStateOf<CanvasArtwork?>(null) }
@@ -293,6 +311,8 @@ fun PlayerScreen(
                     rotatingThumbnail = rotatingThumbnail,
                     accent = accent,
                     onBack = onBack,
+                    autoPlayNext = autoPlayNext,
+                    onToggleAutoPlayNext = onToggleAutoPlayNext,
                 )
             } else {
                 PlayerContent(
@@ -367,8 +387,16 @@ private fun M3EPlayerContent(
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
     onBack: (() -> Unit)? = null,
+    autoPlayNext: Boolean = true,
+    onToggleAutoPlayNext: (Boolean) -> Unit = {},
 ) {
-    var activeTab by remember { mutableStateOf(M3ETab.QUEUE) }
+    var activeTab by remember { mutableStateOf(M3ETab.fromKey(DesktopSettings.load().expressivePlayerTab)) }
+    // Every tab change (including closing the panel) is stored, so reopening the
+    // player — or restarting VIVI — lands on the same tab.
+    fun selectTab(tab: M3ETab) {
+        activeTab = tab
+        DesktopSettings.update { it.copy(expressivePlayerTab = tab.key) }
+    }
     var lyricsMenuOpen by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     Box(Modifier.fillMaxSize().padding(horizontal = 36.dp, vertical = 24.dp)) {
@@ -467,6 +495,20 @@ private fun M3EPlayerContent(
                     // 4. Play Bar (Seekbar & Timestamps)
                     var isSeeking by remember(np.videoId) { mutableStateOf(false) }
                     var seekValue by remember(np.videoId) { mutableStateOf(0f) }
+                    // The seek stays on screen until the engine reports the new
+                    // position (a seek on a stream is a round trip): dropping
+                    // straight back to the live position made the thumb snap back
+                    // to where it was, as if the seek had not moved. 4 s is the
+                    // safety net.
+                    LaunchedEffect(positionMs, isSeeking) {
+                        if (isSeeking && kotlin.math.abs(positionMs - seekValue) < 1500f) isSeeking = false
+                    }
+                    LaunchedEffect(isSeeking) {
+                        if (isSeeking) {
+                            kotlinx.coroutines.delay(4000)
+                            isSeeking = false
+                        }
+                    }
                     val sliderMax = durationMs.coerceAtLeast(1L)
                     val unknownDuration = durationMs <= 0L
                     // Duration unknown (loaded but never played): keep the thumb
@@ -495,7 +537,6 @@ private fun M3EPlayerContent(
                                 // playback starts from it once the length is known.
                                 if (durationMs > 0) onSeek(seekValue.toLong())
                                 else onSeek((seekValue * 1000).toLong())
-                                isSeeking = false
                             },
                             enabled = true,
                             valueRange = 0f..sliderMax.toFloat(),
@@ -512,8 +553,12 @@ private fun M3EPlayerContent(
                             )
                             Spacer(Modifier.weight(1f))
                             if (!unknownDuration) {
+                                // The countdown only when something is really left:
+                                // at/after the end it read "-0:00" for as long as the
+                                // track stayed there, which looks like a broken timer.
+                                val left = durationMs - displayPosition.toLong()
                                 Text(
-                                    "-" + formatTime(maxOf(0L, durationMs - displayPosition.toLong())),
+                                    if (left > 0) "-" + formatTime(left) else formatTime(durationMs),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -716,7 +761,7 @@ private fun M3EPlayerContent(
                                 ),
                                 onSeek = onSeek,
                                 onTogglePlay = onTogglePlay,
-                                onBack = { activeTab = M3ETab.NONE },
+                                onBack = { selectTab(M3ETab.NONE) },
                             )
                             // The lyrics options, reachable from the lyrics panel
                             // itself (the expressive player has no lyric buttons).
@@ -749,6 +794,8 @@ private fun M3EPlayerContent(
                             onReorder = onReorderQueue,
                             onAddToPlaylist = { onAddToPlaylist?.invoke() },
                             accent = accent,
+                            autoPlayNext = autoPlayNext,
+                            onToggleAutoPlayNext = onToggleAutoPlayNext,
                         )
                     } else if (activeTab == M3ETab.HISTORY) {
                         QueueHistoryScreen(
@@ -781,7 +828,7 @@ private fun M3EPlayerContent(
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(if (activeTab == M3ETab.QUEUE) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .clickable { activeTab = if (activeTab == M3ETab.QUEUE) M3ETab.NONE else M3ETab.QUEUE },
+                                    .clickable { selectTab(if (activeTab == M3ETab.QUEUE) M3ETab.NONE else M3ETab.QUEUE) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -798,7 +845,7 @@ private fun M3EPlayerContent(
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(if (activeTab == M3ETab.LYRICS) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .clickable { activeTab = if (activeTab == M3ETab.LYRICS) M3ETab.NONE else M3ETab.LYRICS },
+                                    .clickable { selectTab(if (activeTab == M3ETab.LYRICS) M3ETab.NONE else M3ETab.LYRICS) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -815,7 +862,7 @@ private fun M3EPlayerContent(
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(if (activeTab == M3ETab.HISTORY) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                    .clickable { activeTab = if (activeTab == M3ETab.HISTORY) M3ETab.NONE else M3ETab.HISTORY },
+                                    .clickable { selectTab(if (activeTab == M3ETab.HISTORY) M3ETab.NONE else M3ETab.HISTORY) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
@@ -1304,6 +1351,19 @@ private fun PlayerControlPanel(
     // drag and yank the thumb back.
     var isSeeking by remember(np.videoId) { mutableStateOf(false) }
     var seekValue by remember(np.videoId) { mutableStateOf(0f) }
+    // The seek stays on screen until the engine reports the new position: a seek
+    // on a stream is a round trip, and dropping straight back to the live
+    // position made the thumb snap back to where it was (looked like the seek
+    // had not moved at all). 4 s is the safety net, so it can never get stuck.
+    LaunchedEffect(positionMs, isSeeking) {
+        if (isSeeking && kotlin.math.abs(positionMs - seekValue) < 1500f) isSeeking = false
+    }
+    LaunchedEffect(isSeeking) {
+        if (isSeeking) {
+            kotlinx.coroutines.delay(4000)
+            isSeeking = false
+        }
+    }
     val sliderMax = durationMs.coerceAtLeast(1L)
     val unknownDuration = durationMs <= 0L
     // Duration unknown (loaded but never played): keep the thumb at the
@@ -1326,7 +1386,6 @@ private fun PlayerControlPanel(
             // length is known.
             if (durationMs > 0) onSeek(seekValue.toLong())
             else onSeek((seekValue * 1000).toLong())
-            isSeeking = false
         },
         enabled = true,
         valueRange = 0f..sliderMax.toFloat(),
@@ -1599,6 +1658,9 @@ fun AppleUpNextQueueScreen(
     onReorder: (List<NowPlaying>) -> Unit,
     onAddToPlaylist: (NowPlaying) -> Unit,
     accent: Color = MaterialTheme.colorScheme.primary,
+    /** The window-level "Autoplay next track" setting (Settings → Player). */
+    autoPlayNext: Boolean = true,
+    onToggleAutoPlayNext: (Boolean) -> Unit = {},
 ) {
     val lazyListState = rememberLazyListState()
     val localQueue = remember { mutableStateListOf<NowPlaying>() }
@@ -1624,7 +1686,6 @@ fun AppleUpNextQueueScreen(
     }
 
     val currentVideoId = queue.getOrNull(index)?.videoId
-    var isAutoplayEnabled by remember { mutableStateOf(true) }
 
     Column(
         Modifier
@@ -1677,15 +1738,19 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
+                // Real autoplay toggle: it drives the window-level setting (which
+                // the player reads when a track ends), not a local flag that the
+                // next recomposition reset — which is why switching it off here
+                // used to leave autoplay on anyway.
                 Tooltip(Localization.get(language, "tooltip_autoplay")) {
                     IconButton(
-                        onClick = { isAutoplayEnabled = !isAutoplayEnabled },
+                        onClick = { onToggleAutoPlayNext(!autoPlayNext) },
                         modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
                             Icons.Filled.AllInclusive,
                             contentDescription = "Autoplay",
-                            tint = if (isAutoplayEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = if (autoPlayNext) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                             modifier = Modifier.size(18.dp),
                         )
                     }

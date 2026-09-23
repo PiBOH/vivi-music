@@ -78,7 +78,6 @@ import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.outlined.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
@@ -97,7 +96,6 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SpeakerGroup
-import androidx.compose.material.icons.filled.ViewColumn
 import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Devices
@@ -2176,11 +2174,6 @@ fun WindowScope.App(
         ) {
             if (spotifyLayout && current != Screen.Player) {
                 SpotifyTopHeader(
-                    sidebarCollapsed = sidebarCollapsed,
-                    onToggleSidebar = {
-                        sidebarCollapsed = !sidebarCollapsed
-                        DesktopSettings.update { it.copy(sidebarCollapsed = sidebarCollapsed) }
-                    },
                     language = language,
                     canGoBack = backStack.size > 1,
                     onBack = goBack,
@@ -3129,6 +3122,15 @@ fun WindowScope.App(
                         audioLevel = player.audioLevel,
                         onBack = goBack,
                         progressiveSeek = progressiveSeek,
+                        // The expressive player's queue panel offers the autoplay
+                        // toggle; it has to be the same setting the player obeys
+                        // when a track ends, not a flag of its own.
+                        autoPlayNext = autoPlayNext,
+                        onToggleAutoPlayNext = { checked ->
+                            autoPlayNext = checked
+                            player.autoPlayNext = checked
+                            DesktopSettings.update { it.copy(autoPlayNext = checked) }
+                        },
                     )
                     is Screen.LyricsFocus -> LyricsFocusScreen(
                         nowPlaying = nowPlaying,
@@ -3460,7 +3462,6 @@ fun Sidebar(
     else MaterialTheme.colorScheme.onPrimaryContainer
     val mainRadius = if (spotify) 8.dp else 14.dp
     val subRadius = if (spotify) 8.dp else 12.dp
-    var mainExpanded by remember { mutableStateOf(true) }
     var libraryExpanded by remember { mutableStateOf(true) }
     var playlistsExpanded by remember { mutableStateOf(true) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -3488,14 +3489,8 @@ fun Sidebar(
         }
     }
 
-    // The three group chevrons follow the same switch as the sections they
-    // open (they used a fixed spring, so the arrow kept moving with animations
-    // turned off).
-    val mainChevronRotation by animateFloatAsState(
-        targetValue = if (mainExpanded) 90f else 0f,
-        animationSpec = tween(Animations.ms(200), easing = FastOutSlowInEasing),
-        label = "mainChevronRotation",
-    )
+    // The group chevrons follow the same switch as the sections they open (they
+    // used a fixed spring, so the arrow kept moving with animations off).
     val libraryChevronRotation by animateFloatAsState(
         targetValue = if (libraryExpanded) 90f else 0f,
         animationSpec = tween(Animations.ms(200), easing = FastOutSlowInEasing),
@@ -3546,46 +3541,51 @@ fun Sidebar(
                 .fillMaxHeight()
                 .padding(horizontal = if (collapsed) 8.dp else 12.dp, vertical = 12.dp),
         ) {
-            // Collapsed: menu button to expand the rail (works in both the
-            // Spotify layout and the classic layout).
-            if (collapsed) {
-                Tooltip(Localization.get(language, "tooltip_expand_sidebar")) {
-                    IconButton(
-                        onClick = onToggleCollapsed,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.Menu,
-                            contentDescription = Localization.get(language, "tooltip_expand_sidebar"),
-                            tint = MaterialTheme.colorScheme.onSurface,
+            // The brand IS the rail's control: clicking "VIVI Music" (or the
+            // logo alone, when the rail is collapsed to the icon strip) opens and
+            // closes it. The dedicated buttons that did the same job are gone
+            // (the Menu button here, the MenuOpen one next to the title, and the
+            // one that sat in the top bar next to Back), and the label no longer
+            // collapses the group of entries under it: that group is always open.
+            Tooltip(Localization.get(language, if (collapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onToggleCollapsed() }
+                        .padding(vertical = 6.dp, horizontal = if (collapsed) 0.dp else 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+                ) {
+                    val brandLogo = remember { loadLogo() }
+                    if (brandLogo != null) {
+                        Image(
+                            bitmap = brandLogo,
+                            contentDescription = "VIVI Music",
+                            modifier = Modifier
+                                .size(if (collapsed) 30.dp else 26.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                        )
+                    }
+                    if (!collapsed) {
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = "VIVI Music",
+                            style = if (showTitleHeader) {
+                                MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                            } else {
+                                MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
-            } else if (showTitleHeader) {
-                // Expanded classic layout: app title with a collapse button so
-                // the sidebar can be compressed to the icon rail.
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "VIVI Music",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Tooltip(Localization.get(language, "tooltip_collapse_sidebar")) {
-                        IconButton(onClick = onToggleCollapsed) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.MenuOpen,
-                                contentDescription = "Collapse sidebar",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
-                }
             }
+            Spacer(Modifier.height(6.dp))
 
             // Scrollable Content Region
             val scrollState = rememberScrollState()
@@ -3595,44 +3595,10 @@ fun Sidebar(
                     .fillMaxWidth()
                     .verticalScroll(scrollState),
             ) {
-                // Top Main Group Header (Collapsible "VIVI Music")
-                if (!collapsed) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { mainExpanded = !mainExpanded }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = "VIVI Music",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = "Expand VIVI Music",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .rotate(mainChevronRotation),
-                        )
-                    }
-                }
-
-                // The three groups used to appear and disappear with no
-                // transition at all (a plain `if`); they now expand and
-                // collapse like the mobile app's, through the shared spec that
-                // the master "Animations" switch and speed control.
-                AnimatedVisibility(
-                    visible = mainExpanded || collapsed,
-                    enter = Animations.sectionEnter(),
-                    exit = Animations.sectionExit(),
-                ) {
-                    // One Column: AnimatedVisibility lays multiple children out ON
-                    // TOP of each other, so the group has to be a single child.
-                    Column {
+                // The home / new releases / radio entries are always visible: the
+                // "VIVI Music" label above them used to collapse this group and is
+                // now the rail's own open/close control.
+                Column {
                     mainEntries.forEach { entry ->
                         val selected = current == entry.screen
                         val interaction = remember(entry.screen) { MutableInteractionSource() }
@@ -3677,7 +3643,6 @@ fun Sidebar(
                             }
                         }
                         Spacer(Modifier.height(2.dp))
-                    }
                     }
                 }
 
@@ -3901,7 +3866,15 @@ fun Sidebar(
                         // what the sync is there to remove.
                         val mirroredRemoteIds = remember(activeLocalPlaylists) {
                             activeLocalPlaylists
-                                .mapNotNull { PlaylistSync.run { it.accountPlaylistId() } }
+                                .flatMap { p ->
+                                    // The account id when the playlist knows it, plus
+                                    // its own id: a copy that arrived from the paired
+                                    // device before the account id travelled with the
+                                    // playlist is stored under the account's browse id
+                                    // itself, and listing that *and* the online one is
+                                    // the duplication E1034 is about.
+                                    listOfNotNull(PlaylistSync.run { p.accountPlaylistId() }, p.id)
+                                }
                                 .toSet()
                         }
                         onlinePlaylists.filterNot { it.id in mirroredRemoteIds }.forEach { op ->
@@ -4098,8 +4071,6 @@ fun WindowScope.SpotifyTopHeader(
     onClose: () -> Unit,
     isMaximized: Boolean = false,
     showWindowControls: Boolean = true,
-    sidebarCollapsed: Boolean = false,
-    onToggleSidebar: () -> Unit = {},
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onSearchSubmit: (String) -> Unit = {},
@@ -4122,20 +4093,9 @@ fun WindowScope.SpotifyTopHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // Sidebar toggle, where the (no-op) overflow menu used to be.
-                Tooltip(Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar")) {
-                    IconButton(
-                        onClick = onToggleSidebar,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.ViewColumn,
-                            contentDescription = Localization.get(language, if (sidebarCollapsed) "tooltip_expand_sidebar" else "tooltip_collapse_sidebar"),
-                            tint = if (sidebarCollapsed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
+                // No sidebar toggle here any more: the rail is opened and
+                // collapsed by clicking the "VIVI Music" title (and, collapsed,
+                // the logo) at its top.
                 Tooltip(Localization.get(language, "tooltip_back")) {
                     IconButton(
                         onClick = onBack,
@@ -4146,20 +4106,6 @@ fun WindowScope.SpotifyTopHeader(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = Localization.get(language, "back"),
                             tint = if (canGoBack) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
-                Tooltip(Localization.get(language, "tooltip_forward")) {
-                    IconButton(
-                        onClick = { /* forward */ },
-                        enabled = false,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Forward",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                             modifier = Modifier.size(16.dp),
                         )
                     }
