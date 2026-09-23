@@ -33,17 +33,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** Player layout variant (ported from the mobile player-design toggles). */
+/**
+ * Player layout variant (ported from the mobile player-design toggles).
+ *
+ * The old `v2` entry is gone: it rendered the CLASSIC layout with a bigger
+ * artwork, so the picker offered two names for one player. A saved `"v2"`
+ * setting resolves to [CLASSIC] through [from].
+ */
 enum class PlayerDesign(val key: String) {
     CLASSIC("classic"),
     NEW("new"),
-    V2("v2"),
     EXPRESSIVE("expressive");
 
     companion object {
@@ -123,7 +129,6 @@ data class PlayerDesignMetrics(val artSize: Dp, val overlayTitle: Boolean, val a
 fun PlayerDesign.metrics(): PlayerDesignMetrics = when (this) {
     PlayerDesign.CLASSIC -> PlayerDesignMetrics(360.dp, false, 11.dp)
     PlayerDesign.NEW -> PlayerDesignMetrics(400.dp, false, 11.dp)
-    PlayerDesign.V2 -> PlayerDesignMetrics(440.dp, true, 11.dp)
     PlayerDesign.EXPRESSIVE -> PlayerDesignMetrics(521.dp, true, 11.dp)
 }
 
@@ -161,8 +166,11 @@ private fun BlurredBackdrop(
             maxWidth / BLURRED_BACKDROP_SIZE,
             maxHeight / BLURRED_BACKDROP_SIZE,
         )
+        // A blurred backdrop is rasterized at BLURRED_BACKDROP_SIZE, so a
+        // high-resolution cover would only be downscaled and blurred away: a
+        // 544 px variant is more than enough and much cheaper to fetch.
         AsyncImage(
-            model = url,
+            model = adjustedThumbnailUrl(url, 544, DesktopSettings.load().dataSaver),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -435,6 +443,10 @@ fun PlayerThumbnail(
     rotating: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Ask for the artwork at (roughly) the size it is drawn: the player's big
+    // covers then get a high-resolution variant while the 46 dp queue rows keep
+    // a small one.
+    val requestedPx = with(LocalDensity.current) { size.toPx().toInt() }.coerceAtLeast(544)
     if (!rotating) {
         Box(
             modifier
@@ -443,7 +455,7 @@ fun PlayerThumbnail(
                 .background(Color.Black.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center,
         ) {
-            Thumbnail(url, Modifier.fillMaxSize())
+            Thumbnail(url, Modifier.fillMaxSize(), sizePx = requestedPx)
         }
         return
     }
@@ -467,6 +479,6 @@ fun PlayerThumbnail(
             .background(Color.Black.copy(alpha = 0.15f)),
         contentAlignment = Alignment.Center,
     ) {
-        Thumbnail(url, Modifier.fillMaxSize())
+        Thumbnail(url, Modifier.fillMaxSize(), sizePx = requestedPx)
     }
 }

@@ -1218,7 +1218,10 @@ private fun PlayerArtworkBlock(
                     }
             ) {
                 AsyncImage(
-                    model = np.thumbnail,
+                    // High-resolution variant (Data saver caps it): the mirrored
+                    // artwork under the lyrics is a blurred reflection, but a
+                    // 120 px source still reads as a smear.
+                    model = adjustedThumbnailUrl(np.thumbnail, 544, DesktopSettings.load().dataSaver),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -2419,7 +2422,7 @@ fun SpotifyRightNowPlayingPanel(
                                 ) {
                                     if (!thumbUrl.isNullOrBlank()) {
                                         AsyncImage(
-                                            model = thumbUrl,
+                                            model = adjustedThumbnailUrl(thumbUrl, 544, DesktopSettings.load().dataSaver),
                                             contentDescription = artistName,
                                             modifier = Modifier.fillMaxSize().clip(CircleShape),
                                             contentScale = ContentScale.Crop,
@@ -2576,7 +2579,7 @@ fun BoxScope.DesktopMiniPlayerBackgroundLayer(
             MiniPlayerBackgroundStyle.BLUR -> {
                 if (!thumbnailUrl.isNullOrBlank()) {
                     AsyncImage(
-                        model = thumbnailUrl,
+                        model = adjustedThumbnailUrl(thumbnailUrl, 544, DesktopSettings.load().dataSaver),
                         contentDescription = null,
                         modifier = Modifier.matchParentSize().blur(24.dp).graphicsLayer { scaleX = 1.25f; scaleY = 1.25f },
                     )
@@ -3681,7 +3684,7 @@ fun LyricsFocusScreen(
         // Backdrop: blurred artwork (or accent wash when unavailable).
         if (resolvedBg != null) {
             AsyncImage(
-                model = resolvedBg,
+                model = adjustedThumbnailUrl(resolvedBg, 544, DesktopSettings.load().dataSaver),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()

@@ -30,6 +30,9 @@ class DeviceSyncViewModel @Inject constructor(
 
     fun joinPair(code: String) = manager.joinPair(code)
 
+    /** Joins with a code (and relay address) taken from a scanned desktop QR. */
+    fun joinPairFromScan(serverUrl: String?, code: String) = manager.joinPairFromScan(serverUrl, code)
+
     fun unpair() = manager.unpair()
 
     fun saveServerUrl(value: String) = manager.saveServerUrl(value)

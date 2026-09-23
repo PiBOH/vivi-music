@@ -86,13 +86,16 @@ fun DeviceSyncScreen(
             val trimmed = scanned.trim()
             val uri = android.net.Uri.parse(trimmed)
             // New desktop QR: vivimusic://pair?addr=<relay>&code=<6-digit>.
-            // Auto-fill both the relay URL and the pairing code; the user only
-            // has to verify the code and tap Pair. Plain ws:// URLs keep working.
+            // Both fields are filled AND the pairing starts right away: the QR
+            // carries everything, so requiring a separate confirmation tap made
+            // a good scan look like the code had not been recognized. Plain
+            // ws:// URLs keep working (they only set the relay address).
             if (uri.scheme == "vivimusic" && uri.host == "pair") {
-                uri.getQueryParameter("addr")?.let { persistServerUrl(it) }
-                uri.getQueryParameter("code")?.let { code ->
-                    joinCode = code.filter { it.isDigit() }.take(6)
-                }
+                val addr = uri.getQueryParameter("addr")
+                val code = uri.getQueryParameter("code")?.filter { it.isDigit() }?.take(6).orEmpty()
+                addr?.let { persistServerUrl(it) }
+                joinCode = code
+                if (code.length == 6) viewModel.joinPairFromScan(addr, code)
             } else {
                 persistServerUrl(trimmed)
             }
@@ -195,6 +198,14 @@ fun DeviceSyncScreen(
                                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
                                 .setPrompt(context.getString(R.string.device_sync_scan_qr))
                                 .setBeepEnabled(false)
+                                // Not locked to portrait: the code then decodes
+                                // whichever way the phone is held, and the
+                                // preview resolution stays at its best instead
+                                // of being rotated into a smaller buffer (which
+                                // is what made locking onto the desktop QR take
+                                // several attempts).
+                                .setOrientationLocked(false)
+                                .setBarcodeImageEnabled(false)
                         )
                     },
                 ) {

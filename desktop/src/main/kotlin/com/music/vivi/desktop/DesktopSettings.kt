@@ -60,7 +60,7 @@ data class DesktopSyncState(
     val outputDeviceName: String = "",
     /** Player slider style: slim / squiggly / wavy. */
     val sliderStyle: String = "slim",
-    /** Full-player layout variant: classic / new / v2 / expressive. */
+    /** Full-player layout variant: classic / new / expressive. */
     val playerDesign: String = "classic",
     /** Full-player background style: canvas / gradient / blur / glow / apple_music / live_mesh. */
     val playerBackground: String = "canvas",

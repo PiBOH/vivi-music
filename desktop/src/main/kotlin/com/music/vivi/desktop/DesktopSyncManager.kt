@@ -326,6 +326,16 @@ class DesktopSyncManager {
         val c = client ?: return false
         if (c.connectionState.value != SyncConnectionState.CONNECTED) return false
         if (!_paired.value) return false
+        // The queue is the part of the sync that silently went wrong before
+        // (a device kept its own list, so only one song ever matched): every
+        // push records how many tracks it carries and which one is current.
+        lastPlayback?.let { p ->
+            AppLog.log(
+                "sync",
+                "send: track='${p.trackTitle ?: p.trackId}' queue=${p.queue.size} index=${p.queueIndex} " +
+                    "playing=${p.isPlaying} resolving=${p.isResolving} queueAt=${p.queueUpdatedAt}",
+            )
+        }
         c.pushSnapshot(
             SyncSnapshot(
                 deviceId = c.deviceId,

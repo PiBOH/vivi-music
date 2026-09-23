@@ -1073,14 +1073,14 @@ fun PlayerDesignScreen(
             title = Localization.get(language, "player_design"),
             value = Localization.get(language, when (design) {
                 PlayerDesign.NEW -> "player_design_new"
-                PlayerDesign.V2 -> "player_design_v2"
                 PlayerDesign.EXPRESSIVE -> "player_design_expressive"
                 else -> "player_design_classic"
             }),
+            // The old "V2" entry was the CLASSIC layout with a bigger artwork
+            // (one player, two names) and has been removed.
             options = listOf(
                 PlayerDesign.CLASSIC to "player_design_classic",
                 PlayerDesign.NEW to "player_design_new",
-                PlayerDesign.V2 to "player_design_v2",
                 PlayerDesign.EXPRESSIVE to "player_design_expressive",
             ).map { (v, k) -> v.key to Localization.get(language, k) },
             onSelect = { key -> onDesignChange(PlayerDesign.from(key)) },

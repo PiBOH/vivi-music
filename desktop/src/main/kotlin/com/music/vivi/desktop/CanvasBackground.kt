@@ -67,7 +67,11 @@ fun CanvasBackground(url: String?, modifier: Modifier = Modifier, animate: Boole
                 contentAlignment = Alignment.Center,
             ) {
                 AsyncImage(
-                    model = url,
+                    // The canvas layer is blurred/rasterized at a fixed size: a
+                    // high-resolution variant is pointless here, but the
+                    // provider's tiny `w120-h120` crop is visibly soft. 544 px
+                    // is the tier the mobile app uses for it.
+                    model = adjustedThumbnailUrl(url, 544, DesktopSettings.load().dataSaver),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     // Order matters: the transform sits OUTSIDE the blur, so the

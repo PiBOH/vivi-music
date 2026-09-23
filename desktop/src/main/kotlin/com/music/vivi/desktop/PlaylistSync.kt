@@ -50,7 +50,38 @@ object PlaylistSync {
         val message: String = "",
         /** How many playlists were CREATED on the account by this run. */
         val created: Int = 0,
-    )
+        // ---- live progress of the run in flight ----------------------------
+        // A forced sync of a whole library is minutes of network work, so a
+        // spinner alone cannot tell the user whether it is moving or stuck.
+        // These four fields are updated as the run advances and describe what
+        // it is doing right now:
+        /** Playlists already processed by this run. */
+        val done: Int = 0,
+        /** Playlists this run has to process (0 = not known yet). */
+        val total: Int = 0,
+        /** Songs already moved (uploaded or downloaded) by this run. */
+        val songsDone: Int = 0,
+        /** Songs this run has to move (0 = not known yet). */
+        val songsTotal: Int = 0,
+        /** Name of the playlist being worked on right now (empty = none). */
+        val current: String = "",
+        /** Which half of the run is in flight. */
+        val uploading: Boolean = false,
+    ) {
+        /**
+         * One-line, language-neutral progress description (numbers + the
+         * already-translated labels, so no new string keys are needed):
+         * `Uploading 3/12 · 128/540 songs — 'Feste'`.
+         */
+        fun progressText(prefix: String): String {
+            if (phase != Phase.RUNNING) return prefix
+            val parts = mutableListOf(prefix)
+            if (total > 0) parts += "$done/$total"
+            if (songsTotal > 0) parts += "$songsDone/$songsTotal"
+            val head = parts.joinToString(" · ")
+            return if (current.isNotBlank()) "$head — '$current'" else head
+        }
+    }
 
     private val _status = MutableStateFlow(Status())
     val status: StateFlow<Status> = _status.asStateFlow()
@@ -194,8 +225,38 @@ object PlaylistSync {
             return
         }
         run(trigger) {
-            val created = pending.count { playlist -> pushOne(playlist.id, trigger) }
-            pull(trigger).copy(created = created)
+            // Total work known up front: the upload half creates one playlist
+            // per item and pushes every song it holds, the pull half then
+            // mirrors the account's list. Reporting both halves keeps the
+            // progress line honest for the whole run.
+            val pendingSongs = pending.sumOf { it.songs.size }
+            _status.value = Status(
+                Phase.RUNNING,
+                total = pending.size,
+                songsTotal = pendingSongs,
+                uploading = true,
+            )
+            var created = 0
+            var doneCount = 0
+            var songsUploaded = 0
+            for (playlist in pending) {
+                _status.value = _status.value.copy(current = playlist.name)
+                val songsInThisOne = playlist.songs.size
+                val ok = pushOne(playlist.id, trigger) { pushed, _ ->
+                    // Songs of THIS playlist reported live as they land on the
+                    // account, on top of the playlists already finished.
+                    _status.value = _status.value.copy(
+                        songsDone = songsUploaded + pushed,
+                        songsTotal = pendingSongs,
+                    )
+                }
+                if (ok) created++
+                songsUploaded += songsInThisOne
+                doneCount++
+                _status.value = _status.value.copy(done = doneCount, created = created, songsDone = songsUploaded)
+            }
+            _status.value = _status.value.copy(uploading = false, current = "")
+            pull(trigger).copy(created = created, done = pending.size, total = pending.size, songsDone = songsUploaded)
         }
     }
 
@@ -225,7 +286,20 @@ object PlaylistSync {
      * Sequential on purpose: one request per playlist, and the bulk action is
      * dozens of them — firing them together is what gets a client rate-limited.
      */
-    private suspend fun pushOne(localId: String, trigger: String): Boolean {
+    private suspend fun pushOne(localId: String, trigger: String): Boolean = pushOne(localId, trigger, null)
+
+    /**
+     * Creates [localId]'s account copy and uploads the songs it holds right now.
+     * Returns whether the copy was created.
+     *
+     * [onSong] is called after every song with `(uploaded, total)`, so the
+     * caller can report progress while the upload runs.
+     */
+    private suspend fun pushOne(
+        localId: String,
+        trigger: String,
+        onSong: ((Int, Int) -> Unit)?,
+    ): Boolean {
         val playlist = PlaylistStore.get(localId) ?: return false
         if (playlist.accountPlaylistId() != null) return false
         val remote = runCatching { YouTube.createPlaylist(playlist.name) }.getOrNull()
@@ -235,10 +309,15 @@ object PlaylistSync {
         }
         // Linked first: a song added from now on is pushed by [songsAdded].
         PlaylistStore.link(playlist.id, remote)
-        val pushed = playlist.songs.count { song ->
+        var pushed = 0
+        playlist.songs.forEach { song ->
             val ok = YouTube.addToPlaylist(remote, song.id).isSuccess
-            if (!ok) AppLog.log("playlists", "  '${playlist.name}': '${song.title}' was not uploaded")
-            ok
+            if (ok) {
+                pushed++
+            } else {
+                AppLog.log("playlists", "  '${playlist.name}': '${song.title}' was not uploaded")
+            }
+            onSong?.invoke(pushed, playlist.songs.size)
         }
         AppLog.log(
             "playlists",
@@ -250,6 +329,7 @@ object PlaylistSync {
 
     /** One pull: the account's playlists into the local store. */
     private suspend fun pull(trigger: String): Status {
+        _status.value = _status.value.copy(uploading = false, current = "")
         val page = YouTube.library("FEmusic_liked_playlists").getOrElse { error ->
             val why = error.message ?: error.javaClass.simpleName
             AppLog.log("playlists", "youtube sync ($trigger): playlist list failed — $why")
@@ -275,11 +355,39 @@ object PlaylistSync {
         // dozens of requests, and firing them all at once is what gets a client
         // rate-limited.
         val gate = Semaphore(4)
+        val started = _status.value
+        _status.value = started.copy(
+            Phase.RUNNING,
+            playlists = 0,
+            songs = 0,
+            created = started.created,
+            // A new phase: the totals now describe the account's list, not the
+            // upload half that just finished.
+            done = 0,
+            total = remoteItems.size,
+            songsDone = 0,
+            songsTotal = 0,
+            current = "",
+            uploading = false,
+        )
+        var pulledSongs = 0
         val mirrored = remoteItems.map { item ->
             scope.async {
                 gate.withPermit { mirrorOne(item) }
             }
-        }.awaitAll().filterNotNull()
+        }.mapIndexed { index, deferred ->
+            // Awaited in list order: the progress line then advances one
+            // playlist at a time even though four are in flight.
+            val result = deferred.await()
+            pulledSongs += result?.songs?.size ?: 0
+            _status.value = _status.value.copy(
+                done = index + 1,
+                current = remoteItems.getOrNull(index)?.title.orEmpty(),
+                songsDone = pulledSongs,
+                songsTotal = 0,
+            )
+            result
+        }.filterNotNull()
 
         if (mirrored.isNotEmpty()) PlaylistStore.applyRemote(mirrored)
         val songs = mirrored.sumOf { it.songs.size }

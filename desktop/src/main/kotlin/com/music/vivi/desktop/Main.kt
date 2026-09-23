@@ -405,30 +405,59 @@ fun main(args: Array<String>) {
         }
     }
 
-    // Import a user font (.ttf/.otf): native file dialog, copied into the app
-    // data dir so the setting survives moving/deleting the original file.
+    // Import a user font (.ttf/.otf): pick the file, copy it into the app data
+    // dir so the setting survives moving/deleting the original, and apply it.
+    //
+    // The picker is the Swing `JFileChooser`, NOT the native AWT `FileDialog`:
+    // on Windows the native dialog refuses to open `C:\Windows\Fonts` for a
+    // non-elevated process and answers "access is denied", which forced users to
+    // copy the font elsewhere and only then select it. The Swing chooser lists
+    // directories through the plain file APIs, so the system font folder can be
+    // browsed and its files only READ (which the OS allows). A failure to copy
+    // is reported (log + notification) instead of being swallowed.
     val importFont: () -> Unit = {
-        val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Import font", java.awt.FileDialog.LOAD)
-        dialog.setFilenameFilter { _, name ->
-            val n = name.lowercase()
-            n.endsWith(".ttf") || n.endsWith(".otf")
+        val chooser = javax.swing.JFileChooser().apply {
+            dialogTitle = Localization.get(language, "import_font")
+            isMultiSelectionEnabled = false
+            // System font files carry the hidden attribute; without this the
+            // font folder would look empty in the chooser.
+            isFileHidingEnabled = false
+            fileSelectionMode = javax.swing.JFileChooser.FILES_ONLY
+            fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Fonts (*.ttf, *.otf)", "ttf", "otf")
         }
-        dialog.isVisible = true
-        val dir = dialog.directory
-        val file = dialog.file
-        dialog.dispose()
-        if (file != null && dir != null) {
-            runCatching {
-                val src = java.io.File(dir, file)
+        if (chooser.showOpenDialog(null) == javax.swing.JFileChooser.APPROVE_OPTION) {
+            val src = chooser.selectedFile
+            if (src == null) {
+                AppLog.click("import font: nothing selected")
+            } else {
+                AppLog.click("import font '${src.absolutePath}'")
                 val fontsDir = java.io.File(System.getProperty("user.home"), ".vivimusic/fonts").apply { mkdirs() }
                 val ext = src.extension.ifBlank { "ttf" }
                 val dest = java.io.File(fontsDir, "custom_font.$ext")
-                src.copyTo(dest, overwrite = true)
-                AppFonts.customFontPath = dest.absolutePath
-                customFontPath = dest.absolutePath
-                selectedFont = AppFont.CUSTOM
-                DesktopSettings.update {
-                    it.copy(customFontPath = dest.absolutePath, selectedFont = AppFont.CUSTOM.value)
+                val failure = runCatching {
+                    java.nio.file.Files.copy(
+                        src.toPath(),
+                        dest.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    )
+                }.exceptionOrNull()
+                if (failure != null || !dest.exists()) {
+                    val why = failure?.let { "${it.javaClass.simpleName}: ${it.message}" }
+                        ?: "the copy did not produce a file"
+                    AppLog.log("app", "font import failed for '${src.absolutePath}': $why")
+                    DesktopNotifier.notify(
+                        Localization.get(language, "import_font"),
+                        Localization.get(language, "custom_font") + ": " + why,
+                        "appearance",
+                    )
+                } else {
+                    AppFonts.customFontPath = dest.absolutePath
+                    customFontPath = dest.absolutePath
+                    selectedFont = AppFont.CUSTOM
+                    DesktopSettings.update {
+                        it.copy(customFontPath = dest.absolutePath, selectedFont = AppFont.CUSTOM.value)
+                    }
+                    AppLog.log("app", "font imported: '${src.name}' → '${dest.absolutePath}'")
                 }
             }
         }
@@ -1847,7 +1876,46 @@ fun WindowScope.App(
             }
             pb.isShuffle?.let { player.setShuffle(it) }
             val currentId = player.state.value.current?.videoId
+            AppLog.log(
+                "sync",
+                "recv: track='${pb.trackTitle ?: pb.trackId}' queue=${pb.queue.size} index=${pb.queueIndex} " +
+                    "playing=${pb.isPlaying} resolving=${pb.isResolving} pos=${pb.positionMs}",
+            )
             if (currentId != null && pb.trackId != null && pb.trackId == currentId) {
+                // The queue travels with the current track too. Both devices
+                // sitting on the same song used to keep their OWN queues (the
+                // desktop's often a single track), so of a whole synced queue
+                // only the song that happened to match ever lined up. Adopt the
+                // peer's queue in place — the track does not restart, only the
+                // list around it is replaced.
+                val localIds = player.state.value.queue.map { it.videoId }
+                val remoteIds = pb.queue.map { it.id }
+                if (remoteIds.isNotEmpty() && remoteIds != localIds) {
+                    val newerQueue = pb.queueUpdatedAt <= 0L ||
+                        pb.queueUpdatedAt >= syncManager.queueUpdatedAt()
+                    if (newerQueue) {
+                        val tracks = pb.queue.map { ref ->
+                            NowPlaying(
+                                videoId = ref.id,
+                                title = ref.title,
+                                artist = ref.artist.orEmpty(),
+                                thumbnail = ref.thumbnail,
+                                durationMs = ref.durationMs,
+                            )
+                        }
+                        AppLog.log(
+                            "sync",
+                            "queue adopted from the peer: ${localIds.size} → ${tracks.size} track(s) " +
+                                "(current stays '${pb.trackTitle ?: currentId}')",
+                        )
+                        player.replaceQueuePreservingCurrent(
+                            tracks,
+                            player.state.value.positionMs,
+                            player.state.value.isPlaying,
+                        )
+                        syncManager.noteQueueApplied(pb)
+                    }
+                }
                 // Same track: lightweight seek (instant + precise), no restart.
                 // While WE are still resolving this track our own resolution
                 // decides when playback starts: ignore the peer's play/pause
@@ -1903,6 +1971,11 @@ fun WindowScope.App(
                         NowPlaying(videoId = ref.id, title = ref.title, artist = ref.artist.orEmpty(), thumbnail = ref.thumbnail, durationMs = ref.durationMs)
                     }
                     if (tracks.isNotEmpty()) {
+                        AppLog.log(
+                            "sync",
+                            "queue replaced by the peer's: ${tracks.size} track(s), starting at index " +
+                                "${pb.queueIndex.coerceAtLeast(0)} ('${pb.trackTitle ?: pb.trackId}')",
+                        )
                         player.applyRemotePlayback(tracks, pb.queueIndex, syncManager.effectivePosition(pb), pb.isPlaying, pb.isResolving)
                         syncManager.noteQueueApplied(pb)
                     }
@@ -5320,10 +5393,14 @@ fun DeviceSyncSection(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Column(
-                Modifier.widthIn(max = 200.dp),
+                Modifier.widthIn(max = 260.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                QrCode(qrContent, size = 180.dp)
+                // 220 dp, not 180: the payload is a full `vivimusic://pair` URL, so
+                // each module is only a few pixels at 180 dp and a phone camera
+                // needed several attempts to lock onto it. The extra size makes
+                // the code decode on the first frame.
+                QrCode(qrContent, size = 220.dp)
                 Text(
                     "${Localization.get(language, if (relayMode) "relay_server" else "lan_address")}: $qrAddr",
                     style = MaterialTheme.typography.bodySmall,
@@ -5534,7 +5611,15 @@ fun AccountSection(
             Spacer(Modifier.width(12.dp))
             Text(
                 when (syncStatus.phase) {
-                    PlaylistSync.Phase.RUNNING -> Localization.get(language, "sync_in_progress")
+                    // A whole-library sync is minutes of network work, so the
+                    // line reports where it actually is (playlists done / total,
+                    // songs moved, current playlist), not just "in progress".
+                    PlaylistSync.Phase.RUNNING -> syncStatus.progressText(
+                        Localization.get(
+                            language,
+                            if (syncStatus.uploading) "playlists_upload" else "sync_in_progress",
+                        ),
+                    )
                     PlaylistSync.Phase.DONE -> if (syncStatus.playlists == 0 && syncStatus.created == 0) {
                         Localization.get(language, "sync_finished")
                     } else {

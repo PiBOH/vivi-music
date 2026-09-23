@@ -197,14 +197,91 @@ fun playbackPendingSeekFraction(): Float? {
     return LocalPlayback.current.pendingSeekFraction?.collectAsState()?.value
 }
 
-/** Square-ish artwork with a neutral placeholder behind it while loading. */
+// ---------------------------------------------------------------------------
+// Artwork quality (port of the mobile `String.resize()`)
+// ---------------------------------------------------------------------------
+
+/** Google CDN size parameter, e.g. `=w120-h120` / `=s120`. */
+private val googleCdnParam = Regex("=[wshd]\\d+")
+
+/** Google CDN size path segment, e.g. `w120-h120`. */
+private val googleCdnSizeSegment = Regex("w\\d+-h\\d+")
+
+/** Video id inside a YouTube thumbnail URL (`/vi/<id>/...` or `/vi_webp/<id>/...`). */
+private val ytThumbVideoId = Regex("/vi(?:_webp)?/([^/]+)/")
+
+/**
+ * Rewrites a thumbnail URL to the resolution the app should actually load.
+ *
+ * The desktop used to feed the provider's own URL straight to the image loader,
+ * which for YouTube Music is a small `w120-h120` crop: covers looked soft even
+ * with *Data saver* OFF, while the mobile app always asks for a high-resolution
+ * variant and only caps it when the saver is on. This is the mobile rule:
+ *
+ * - Google CDN (`googleusercontent.com` / `ggpht.com` / `=wNN`): `wN-hN-p-l90-rj`,
+ *   at least 544 px per side, capped at 150 px with the saver on;
+ * - YouTube thumbnails (`i.ytimg.com`): `maxresdefault` for big artwork,
+ *   `hqdefault`/`mqdefault`/`default` for the smaller tiers — and the two low
+ *   tiers when the saver is on;
+ * - anything else is returned untouched.
+ */
+fun adjustedThumbnailUrl(url: String?, requestedPx: Int = 544, dataSaver: Boolean = false): String? {
+    if (url.isNullOrBlank()) return url
+    val isGoogleCdn = url.contains("googleusercontent.com") ||
+        url.contains("ggpht.com") ||
+        googleCdnParam.containsMatchIn(url)
+    val isYtimg = url.contains("ytimg") || url.contains("youtube.com") || url.contains("/vi/")
+    return when {
+        isGoogleCdn -> {
+            val w = if (dataSaver) requestedPx.coerceAtMost(150) else requestedPx.coerceAtLeast(544)
+            val h = if (dataSaver) requestedPx.coerceAtMost(150) else requestedPx.coerceAtLeast(544)
+            if (googleCdnSizeSegment.containsMatchIn(url)) {
+                url.replace(googleCdnSizeSegment, "w$w-h$h")
+            } else {
+                url.split(googleCdnParam, limit = 2)[0] + "=w$w-h$h-p-l90-rj"
+            }
+        }
+
+        isYtimg -> {
+            val id = ytThumbVideoId.find(url)?.groupValues?.get(1) ?: return url
+            if (dataSaver) {
+                if (requestedPx >= 800) {
+                    "https://i.ytimg.com/vi/$id/mqdefault.jpg"
+                } else {
+                    "https://i.ytimg.com/vi/$id/default.jpg"
+                }
+            } else {
+                when {
+                    requestedPx >= 800 -> "https://i.ytimg.com/vi/$id/maxresdefault.jpg"
+                    requestedPx >= 320 -> "https://i.ytimg.com/vi/$id/hqdefault.jpg"
+                    else -> "https://i.ytimg.com/vi/$id/mqdefault.jpg"
+                }
+            }
+        }
+
+        else -> url
+    }
+}
+
+/**
+ * Square-ish artwork with a neutral placeholder behind it while loading.
+ *
+ * [sizePx] is how big the image really is on screen (approximately): it decides
+ * which quality tier is requested, so a 48 dp row does not download a 1200 px
+ * cover and the full player does not show a blurry 120 px one.
+ */
 @Composable
-fun Thumbnail(url: String?, modifier: Modifier = Modifier) {
+fun Thumbnail(url: String?, modifier: Modifier = Modifier, sizePx: Int = 544) {
     val shape = RoundedCornerShape(8.dp)
+    // Data saver is part of the URL (it changes the requested tier), so the
+    // resolved URL is remembered against the settings revision too.
+    val revision = settingsFileRevision()
+    val dataSaver = remember(revision) { DesktopSettings.load().dataSaver }
+    val model = remember(url, sizePx, dataSaver) { adjustedThumbnailUrl(url, sizePx, dataSaver) }
     Box(modifier.clip(shape).background(MaterialTheme.colorScheme.surfaceVariant)) {
-        if (!url.isNullOrBlank()) {
+        if (!model.isNullOrBlank()) {
             AsyncImage(
-                model = url,
+                model = model,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.matchParentSize(),

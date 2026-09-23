@@ -51,12 +51,6 @@ EXTRA_TRANSLATIONS = {
         "pt": "Novo", "ro": "Nou", "ru": "Новый", "sk": "Nový", "sl": "Novo", "sr": "Ново", "sv": "Ny", "ta": "புதியது",
         "te": "కొత్తది", "th": "ใหม่", "tr": "Yeni", "uk": "Новий", "vi": "Mới", "zh-rCN": "新", "zh-rTW": "新",
     },
-    "player_design_v2": {"ar": "الإصدار 2", "as": "ভাৰ্চন ২", "az": "Versiya 2", "be": "Версія 2", "bg": "Версия 2", "bn": "ভার্সন ২", "bs": "Verzija 2", "ca": "Versió 2",
-        "cs": "Verze 2", "de": "Version 2", "el": "Έκδοση 2", "es": "Versión 2", "et": "Versioon 2", "eu": "2. bertsioa", "fi": "Versio 2", "fil": "Bersyon 2",
-        "fr": "Version 2", "hi": "संस्करण 2", "hr": "Verzija 2", "hu": "2. verzió", "id": "Versi 2", "it": "Versione 2", "ja": "バージョン2", "km": "កំណែ 2",
-        "ko": "버전 2", "lt": "2 versija", "ml": "പതിപ്പ് 2", "ms": "Versi 2", "nb": "Versjon 2", "nl": "Versie 2", "pa": "ਵਰਜ਼ਨ 2", "pl": "Wersja 2",
-        "pt": "Versão 2", "ro": "Versiunea 2", "ru": "Версия 2", "sk": "Verzia 2", "sl": "Različica 2", "sr": "Верзија 2", "sv": "Version 2", "ta": "பதிப்பு 2",
-        "te": "వెర్షన్ 2", "th": "เวอร์ชัน 2", "tr": "Sürüm 2", "uk": "Версія 2", "vi": "Phiên bản 2", "zh-rCN": "版本2", "zh-rTW": "版本2"},
     "player_design_expressive": {
         "ar": "تعبيري", "as": "প্ৰকাশমূলক", "az": "Ekspressiv", "be": "Экспрэсіўны", "bg": "Изразителен", "bn": "অভিব্যক্তিপূর্ণ", "bs": "Ekspresivno", "ca": "Expressiu",
         "cs": "Expresivní", "de": "Expressiv", "el": "Εκφραστικό", "es": "Expresivo", "et": "Ekspressiivne", "eu": "Adierazkorra", "fi": "Ilmeikäs", "fil": "Ekspresibo",

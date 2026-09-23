@@ -1,6 +1,7 @@
 package com.music.vivi.desktop
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,15 +39,19 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.SpanStyle
@@ -539,9 +545,18 @@ fun LyricsList(
         derivedStateOf { LyricsParser.currentLineIndex(lines, positionState.value) }
     }
 
-    LaunchedEffect(currentIndex, options.autoScroll) {
-        if (options.autoScroll && currentIndex >= 0) {
-            listState.animateScrollToItem(maxOf(0, currentIndex - 3))
+    // The list is NOT one row per line: a line whose words end more than 4 s
+    // before the next one starts gets a "no text" indicator row (the animated
+    // circle the mobile renderer draws there) and an empty line is not drawn at
+    // all — the desktop used to leave a blank gap there.
+    val rows = remember(lines) { buildLyricsRows(lines) }
+    val activeRow by remember(rows) {
+        derivedStateOf { rows.indexOfFirst { it.lineIndex == currentIndex }.coerceAtLeast(0) }
+    }
+
+    LaunchedEffect(activeRow, options.autoScroll) {
+        if (options.autoScroll && activeRow >= 0) {
+            listState.animateScrollToItem(maxOf(0, activeRow - 3))
         }
     }
 
@@ -553,12 +568,27 @@ fun LyricsList(
     val index = currentIndex
 
     LazyColumn(state = listState, modifier = modifier.fillMaxSize()) {
-        itemsIndexed(lines) { itemIndex, line ->
+        itemsIndexed(rows) { rowIndex, row ->
+            val rowLine = row.line
+            if (rowLine == null) {
+                // The hole in the lyrics (an instrumental break): the animated
+                // indicator, exactly where the mobile renderer puts it.
+                LyricsGapIndicator(
+                    startMs = row.gapStartMs,
+                    endMs = row.gapEndMs,
+                    position = positionState.value,
+                    accent = accent,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                )
+                return@itemsIndexed
+            }
+            val line = rowLine
+            val itemIndex = row.lineIndex
             val isActive = itemIndex == index
             val isPast = index >= 0 && itemIndex < index
             // Distance from the sung line: drives the blur / dimming of the
             // lines around it, like the mobile renderer.
-            val distance = if (index < 0) 10 else abs(itemIndex - index)
+            val distance = if (index < 0) 10 else abs(rowIndex - activeRow)
             val isBackground = line.isBackground
 
             val romanizedText = romanized?.getOrNull(itemIndex)
@@ -666,6 +696,18 @@ fun LyricsList(
                             if (options.style != LyricsAnimationStyle.METRO_LYRICS) this.alpha = alpha
                             scaleX = scale
                             scaleY = scale
+                            // The wrapper is full width while the text is not: a
+                            // scale around the layer's CENTRE pushes a left- or
+                            // right-aligned line out of the window (the glyphs
+                            // sit at the edge and grow past it). Anchoring the
+                            // origin to the alignment edge keeps that edge fixed
+                            // and grows the line inwards, so "Position: left/
+                            // right" never clips the words.
+                            transformOrigin = when (textAlign) {
+                                TextAlign.Start, TextAlign.Left -> TransformOrigin(0f, 0.5f)
+                                TextAlign.End, TextAlign.Right -> TransformOrigin(1f, 0.5f)
+                                else -> TransformOrigin.Center
+                            }
                         }
                         .then(if (blurDp >= 0.1f) Modifier.blur(blurDp.dp) else Modifier),
                 ) {
@@ -700,6 +742,119 @@ fun LyricsList(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The gaps (no text): rows and indicator
+// ---------------------------------------------------------------------------
+
+/** Shortest hole between two lines that gets an indicator, like the mobile app. */
+private const val GAP_INDICATOR_MIN_MS = 4_000L
+
+/**
+ * One row of the lyrics list: either a line, or the "no text" indicator that
+ * stands for a hole in the lyrics.
+ *
+ * [lineIndex] is the index in the original line list: for a line row it is the
+ * line itself, for an indicator row the line it follows. That is what makes the
+ * active row (and therefore auto-scroll) resolvable from the sung line index.
+ */
+private data class LyricsRow(
+    val lineIndex: Int,
+    val line: LyricLine?,
+    val gapStartMs: Long = 0L,
+    val gapEndMs: Long = 0L,
+)
+
+/**
+ * Builds the rows the list draws (mobile's `mergedLyricsList`).
+ *
+ * A hole is measured from the END of the line's own words — or from the line's
+ * own timestamp when the line has no text at all (an LRC file marks an
+ * instrumental break with a bare `[mm:ss.xx]`) — to the start of the next line.
+ * Only holes longer than [GAP_INDICATOR_MIN_MS] get the indicator: a short gap
+ * between two sung lines is just the singing.
+ */
+private fun buildLyricsRows(lines: List<LyricLine>): List<LyricsRow> {
+    val rows = ArrayList<LyricsRow>(lines.size + 4)
+    lines.forEachIndexed { i, line ->
+        if (line.text.isNotBlank()) rows += LyricsRow(i, line)
+        if (i < lines.size - 1) {
+            val nextStart = lines[i + 1].timeMs
+            val words = line.words
+            val currentEnd = when {
+                !words.isNullOrEmpty() -> (words.last().endTime * 1000).toLong()
+                line.text.isBlank() -> line.timeMs
+                else -> null
+            }
+            if (currentEnd != null && currentEnd < nextStart && nextStart - currentEnd > GAP_INDICATOR_MIN_MS) {
+                rows += LyricsRow(i, null, currentEnd, nextStart)
+            }
+        }
+    }
+    return rows
+}
+
+/**
+ * The animated indicator drawn where the lyrics have no text: a ring that fills
+ * with the hole's own progress, the desktop counterpart of the mobile
+ * `IntervalIndicator`.
+ *
+ * It is deliberately NOT gated behind "Animations": it is information ("this
+ * part has no lyrics"), not decoration.
+ */
+@Composable
+private fun LyricsGapIndicator(
+    startMs: Long,
+    endMs: Long,
+    position: Long,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    val span = (endMs - startMs).coerceAtLeast(1L)
+    val progress by animateFloatAsState(
+        targetValue = ((position - startMs).toFloat() / span).coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 100, easing = LinearEasing),
+        label = "lyricsGapProgress",
+    )
+    // The last 650 ms belong to the incoming line (mobile's window).
+    val visible = position >= startMs && position <= endMs - 650L
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(lyricTween(200)),
+        label = "lyricsGapAlpha",
+    )
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(
+            Modifier
+                .size(36.dp)
+                .graphicsLayer { this.alpha = alpha },
+        ) {
+            val stroke = 3.dp.toPx()
+            val diameter = (size.minDimension - stroke).coerceAtLeast(1f)
+            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+            drawArc(
+                color = accent.copy(alpha = 0.2f),
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = Size(diameter, diameter),
+                style = Stroke(width = stroke, cap = StrokeCap.Round),
+            )
+            if (progress > 0.001f) {
+                drawArc(
+                    color = accent,
+                    startAngle = -90f,
+                    sweepAngle = 359.9f * progress,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = Size(diameter, diameter),
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                )
             }
         }
     }
@@ -1723,10 +1878,15 @@ private fun MetroGraphemeLine(
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val maxWidthPx = constraints.maxWidth
-        val layout = remember(text, maxWidthPx, textStyle) {
+        val layout = remember(text, maxWidthPx, textStyle, textAlign) {
             measurer.measure(
                 text = text,
-                style = textStyle,
+                // The alignment is part of the measured layout, otherwise the
+                // glyphs always sit at the left edge and the line push (which
+                // moves the line by its own growth) drags a right-aligned line
+                // off the window; with the alignment in place the push exactly
+                // compensates the growth.
+                style = textStyle.copy(textAlign = textAlign),
                 constraints = Constraints(
                     minWidth = if (maxWidthPx > 0) maxWidthPx else 0,
                     maxWidth = if (maxWidthPx > 0) maxWidthPx else Constraints.Infinity,

@@ -60,7 +60,7 @@ TECHNICAL_KEYS = {
     "radix", "arch", "distribution",
     "density_55", "density_65", "density_75", "density_85", "density_100",
     "font_google_sans", "font_sans_flex", "font_outfit", "font_plus_jakarta_sans",
-    "sort_az", "sort_za", "ok", "preview_text_quote", "player_design_v2",
+    "sort_az", "sort_za", "ok", "preview_text_quote",
     "ai_api_key", "ai_base_url", "ai_deepl_formality_default",
 }
 

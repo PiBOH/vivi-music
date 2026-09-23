@@ -288,6 +288,18 @@ fun LocalPlaylistsScreen(
                 if (syncStatus.phase == PlaylistSync.Phase.RUNNING) {
                     Spacer(Modifier.width(8.dp))
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    // The run can take minutes: show where it actually is.
+                    Text(
+                        syncStatus.progressText(
+                            Localization.get(
+                                language,
+                                if (syncStatus.uploading) "playlists_upload" else "sync_in_progress",
+                            ),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
                 Spacer(Modifier.width(8.dp))
                 if (confirmUpload) {

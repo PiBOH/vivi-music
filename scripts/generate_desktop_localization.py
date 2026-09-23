@@ -194,7 +194,6 @@ MAPPING = {
     "player_design_desc": "Layout variant of the full player.",
     "player_design_classic": "Classic",
     "player_design_new": "New",
-    "player_design_v2": "V2",
     "player_design_expressive": "Expressive",
     "player_background": "Player background",
     "player_background_visualizer": "Visualizer",

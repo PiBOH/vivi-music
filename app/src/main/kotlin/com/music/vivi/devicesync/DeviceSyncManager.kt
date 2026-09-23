@@ -175,6 +175,29 @@ class DeviceSyncManager @Inject constructor(
         }
     }
 
+    /**
+     * A desktop QR was scanned: persist its relay address and join with its code
+     * in one ordered operation.
+     *
+     * The QR already carries both ("vivimusic://pair?addr=…&code=…"), so the
+     * user should not have to review the field and tap Pair afterwards — that
+     * extra step is what made a successful scan look like the code had not been
+     * recognized. The address is written first and [ensureClient] builds the
+     * client for THAT address before the code is sent, so the join cannot race
+     * against the URL change.
+     */
+    fun joinPairFromScan(serverUrl: String?, code: String) {
+        val trimmed = code.trim()
+        if (trimmed.isEmpty()) return
+        scope.launch {
+            if (!serverUrl.isNullOrBlank()) {
+                context.dataStore.edit { it[DeviceSyncServerUrlKey] = serverUrl }
+            }
+            ensureClient()
+            client?.joinPair(trimmed)
+        }
+    }
+
     fun unpair() {
         scope.launch {
             client?.unpair()

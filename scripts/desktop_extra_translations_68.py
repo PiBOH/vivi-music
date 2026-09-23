@@ -448,7 +448,6 @@ EXTRA_TRANSLATIONS = {
     "player_design_desc": {"fa": "گونه چیدمان پلیر کامل.", "iw": "וריאנט הפריסה של הנגן המלא."},
     "player_design_expressive": {"fa": "بیانی", "iw": "אקספרסיבי"},
     "player_design_new": {"fa": "جدید", "iw": "חדש"},
-    "player_design_v2": {"fa": "V2", "iw": "V2"},
     "playlist_not_found": {"fa": "فهرست پخش یافت نشد", "iw": "רשימת ההשמעה לא נמצאה"},
     "prevent_duplicate_tracks": {"fa": "جلوگیری از ترک‌های تکراری در صف", "iw": "מנע רצועות כפולות בתור"},
     "prevent_duplicate_tracks_desc": {"fa": "هنگام افزودن ترک به صف، اگر از قبل موجود است آن را از جای قبلی حذف کنید", "iw": "כשמוסיפים רצועה לתור, הסר אותה מהמיקום הקודם שלה אם היא כבר קיימת"},
