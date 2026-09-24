@@ -5,7 +5,9 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,6 +38,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -825,12 +828,19 @@ private fun estimatedSungEndMs(text: String, lineStartMs: Long, nextStartMs: Lon
 }
 
 /**
- * The animated indicator drawn where the lyrics have no text: a ring that fills
- * with the hole's own progress, the desktop counterpart of the mobile
- * `IntervalIndicator`.
+ * The indicator drawn where the lyrics have no text: **three horizontal dots**
+ * that light up with the hole's own progress.
  *
- * It is deliberately NOT gated behind "Animations": it is information ("this
- * part has no lyrics"), not decoration.
+ * It used to be a ring (a 36 dp arc that filled up), modelled on the mobile
+ * `IntervalIndicator` — which is a `CircularWavyProgressIndicator`, a *wavy*
+ * circle. What came out here was a plain grey ring that reads as a broken
+ * spinner rather than as "this part has no lyrics", and it is not what the
+ * mobile shows at a glance: a row of dots (dim, then one by one in the accent
+ * colour) says "the singing has not started again yet" without looking like a
+ * loading state.
+ *
+ * The dots are information, not decoration, so they are deliberately NOT gated
+ * behind the "Animations" switch.
  */
 @Composable
 private fun LyricsGapIndicator(
@@ -853,35 +863,22 @@ private fun LyricsGapIndicator(
         animationSpec = tween(lyricTween(200)),
         label = "lyricsGapAlpha",
     )
-    Box(modifier, contentAlignment = Alignment.Center) {
-        Canvas(
-            Modifier
-                .size(36.dp)
-                .graphicsLayer { this.alpha = alpha },
-        ) {
-            val stroke = 3.dp.toPx()
-            val diameter = (size.minDimension - stroke).coerceAtLeast(1f)
-            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
-            drawArc(
-                color = accent.copy(alpha = 0.2f),
-                startAngle = 0f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = Size(diameter, diameter),
-                style = Stroke(width = stroke, cap = StrokeCap.Round),
+    Row(
+        modifier = modifier.height(36.dp).graphicsLayer { this.alpha = alpha },
+        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(3) { index ->
+            // A quarter of the break lights the first dot, half the second, three
+            // quarters the third: the row is the progress of the instrumental
+            // part, so it can only ever look like the break advancing.
+            val lit = progress >= (index + 1) * 0.25f
+            Box(
+                Modifier
+                    .size(9.dp)
+                    .clip(CircleShape)
+                    .background(if (lit) accent else accent.copy(alpha = 0.25f)),
             )
-            if (progress > 0.001f) {
-                drawArc(
-                    color = accent,
-                    startAngle = -90f,
-                    sweepAngle = 359.9f * progress,
-                    useCenter = false,
-                    topLeft = topLeft,
-                    size = Size(diameter, diameter),
-                    style = Stroke(width = stroke, cap = StrokeCap.Round),
-                )
-            }
         }
     }
 }
