@@ -166,6 +166,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The published file names are FIXED (`vivi-gsm.apk`, `vivi-foss.apk`)
+          # while the Gradle flavour is `gms`: the build used to write
+          # `dist/vivi-gms.apk` and the publish job then looked for
+          # `vivi-gsm.apk`, which is why a green build ended in "is missing —
+          # not publishing a partial build" and no APK ever reached apk-latest.
+          NAME="${{ matrix.flavor == 'gms' && 'vivi-gsm.apk' || 'vivi-foss.apk' }}"
           mkdir -p dist
           APK_DIR="app/build/outputs/apk/universal${{ matrix.flavor == 'gms' && 'Gms' || 'Foss' }}/release"
           APK="$(find "$APK_DIR" -name '*.apk' -print -quit)"
@@ -173,14 +179,14 @@ jobs:
             echo "No APK produced in $APK_DIR" >&2
             exit 1
           fi
-          cp "$APK" "dist/vivi-${{ matrix.flavor }}.apk"
+          cp "$APK" "dist/$NAME"
           ls -la dist
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-${{ matrix.flavor }}
-          path: dist/vivi-${{ matrix.flavor }}.apk
+          path: dist/${{ matrix.flavor == 'gms' && 'vivi-gsm.apk' || 'vivi-foss.apk' }}
           if-no-files-found: error
 
   # Makes the two APKs reachable at a fixed URL, which is what every download
@@ -215,10 +221,19 @@ jobs:
           # wherever they landed and normalise the layout the rest of the job
           # expects, so the step cannot depend on that detail again.
           mkdir -p apk-flat
+          # What actually arrived, so a layout this step does not expect is
+          # visible in the log instead of only in the failure message.
+          echo "--- downloaded artifacts ---"
+          find apk -type f -print 2>/dev/null | sort || true
           for flavor in gsm foss; do
             file="$(find apk -type f -name "vivi-$flavor.apk" -print -quit)"
             if [ -z "$file" ]; then
-              echo "::error::apk/vivi-$flavor.apk is missing - not publishing a partial build" >&2
+              # Fallback: any APK whose path still carries the flavour, so a
+              # renamed artifact root cannot fail the publish on its own.
+              file="$(find apk -type f -name '*.apk' | grep -i -- "$flavor" | head -n 1 || true)"
+            fi
+            if [ -z "$file" ]; then
+              echo "::error::no $flavor APK in the downloaded artifacts - not publishing a partial build" >&2
               exit 1
             fi
             cp "$file" "apk-flat/vivi-$flavor.apk"
