@@ -14,11 +14,13 @@ import java.awt.image.BufferedImage
  * it is small: the sidebar shows it at 26-30 dp and the tray icon at 16-64 px.
  * Resampling 1024 px down to 26 px in **one** pass is what made both look cheap:
  * a single bilinear/box step drops most of the artwork's detail, which is
- * exactly the "the tray and sidebar icons are very low quality" report. There is
- * also nothing to gain from shipping a hand-traced SVG here — the mark's
- * gradients and soft edges survive a proper downscale, and a trace of it (the
- * `logo_vmde.svg` that was lying in `desktop/icons/`) comes out flat black and
- * white, which would be a downgrade.
+ * exactly the "the tray and sidebar icons are very low quality" report.
+ *
+ * No vector file is shipped, on purpose. The mark is drawn almost entirely with
+ * gradients, soft edges and alpha-blended white rings: those live in the pixels,
+ * and a contour trace of the PNG (what an autotrace of it produces) collapses
+ * them into a couple of flat colours, which is a downgrade rather than a fix.
+ * The detail is in the 1024 px source and a correct downscale is what keeps it.
  *
  * [highQualityScaled] therefore halves the image repeatedly (each pass averages
  * whole 2x2 blocks, so no detail is skipped and no ringing is introduced) until
