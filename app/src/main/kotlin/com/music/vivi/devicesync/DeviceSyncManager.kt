@@ -55,6 +55,7 @@ import com.music.vivi.db.MusicDatabase
 import com.music.vivi.db.entities.Playlist
 import com.music.vivi.db.entities.PlaylistEntity
 import com.music.vivi.db.entities.PlaylistSongMap
+import com.music.vivi.db.entities.Song
 import com.music.vivi.models.MediaMetadata
 import com.music.vivi.sync.LibrarySnapshot
 import com.music.vivi.sync.PlaybackSnapshot
@@ -125,6 +126,16 @@ class DeviceSyncManager @Inject constructor(
     /** While set, library pushes are suppressed (avoids echoing an applied snapshot). */
     @Volatile
     private var suppressLibraryPushUntil = 0L
+
+    /**
+     * Liked-song ledger of this session: the unlike **tombstones** (id -> the time
+     * of the unlike) that have to travel to the desktop, plus the liked ids of the
+     * last library read, which is how an unlike made here is noticed at all (a song
+     * that was in the library and is not any more). The like state itself lives in
+     * the database, so only the tombstones need this side memory.
+     */
+    private val likeTombstones = mutableMapOf<String, Long>()
+    private var lastLikedIds: Set<String> = emptySet()
 
     private var lastPlayback: PlaybackSnapshot? = null
 
@@ -341,7 +352,7 @@ class DeviceSyncManager @Inject constructor(
             database.playlistsByCreateDateAsc(),
         ) { songs, albums, artists, playlists ->
             PlaylistLibraryInput(
-                songIds = songs.map { it.song.id },
+                songs = songs,
                 albumIds = albums.map { it.album.id },
                 artistIds = artists.map { it.artist.id },
                 playlists = playlists,
@@ -374,12 +385,49 @@ class DeviceSyncManager @Inject constructor(
                         remoteId = p.playlist.browseId,
                     )
                 }
+                // ---- liked songs (the phone side of the liked-song ledger) ----
+                val now = System.currentTimeMillis()
+                val currentIds = input.songs.map { it.song.id }
+                // An unlike made here is a song that was in the library at the
+                // previous read and is not any more. It becomes a tombstone with
+                // its own time, because that time is the only thing that lets the
+                // desktop tell "the user unliked it here" from "the desktop's copy
+                // of a re-like is older". A tombstone that arrived *from* the
+                // desktop is already recorded with the desktop's own timestamp,
+                // so `putIfAbsent` never re-stamps it with this device's clock.
+                for (id in lastLikedIds - currentIds.toSet()) {
+                    likeTombstones.putIfAbsent(id, now)
+                }
+                // A song liked again after an unlike drops its tombstone: the new
+                // like must not be beaten by the older unlike on the desktop.
+                for (song in input.songs) {
+                    val tombstone = likeTombstones[song.song.id] ?: continue
+                    val likedAt = song.song.likedDate
+                        ?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L
+                    if (likedAt > tombstone) likeTombstones.remove(song.song.id)
+                }
+                lastLikedIds = currentIds.toSet()
+                val likedEntries = input.songs.map { song ->
+                    SyncedSong(
+                        id = song.song.id,
+                        // No title/artist/thumbnail: the desktop renders its own
+                        // songs and only needs "is this one liked" — the metadata
+                        // is what a *desktop* like carries, for the phone that
+                        // may have never seen the song (see applyRemoteLikedSongs).
+                        updatedAt = song.song.likedDate
+                            ?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L,
+                    )
+                } + likeTombstones.map { (id, at) ->
+                    SyncedSong(id = id, updatedAt = at, deleted = true)
+                }
+
                 lastLibrary = LibrarySnapshot(
-                    songIds = input.songIds,
+                    songIds = input.songs.map { it.song.id },
                     albumIds = input.albumIds,
                     artistIds = input.artistIds,
                     playlistIds = input.playlists.map { it.playlist.id },
                     playlists = syncedPlaylists,
+                    likedSongs = likedEntries,
                 )
                 if (!applyingRemote && _paired.value && System.currentTimeMillis() >= suppressLibraryPushUntil) {
                     pushCurrentSnapshot()
@@ -481,10 +529,9 @@ class DeviceSyncManager @Inject constructor(
             }
             snapshot.library?.let { lib ->
                 _syncedLibrary.value = lib
-                if (lib.playlists.isNotEmpty()) {
-                    applyRemotePlaylists(lib.playlists)
-                    suppressLibraryPushUntil = System.currentTimeMillis() + 2000L
-                }
+                if (lib.playlists.isNotEmpty()) applyRemotePlaylists(lib.playlists)
+                applyRemoteLikedSongs(lib)
+                suppressLibraryPushUntil = System.currentTimeMillis() + 2000L
             }
         } catch (e: Exception) {
             Timber.e(e, "DeviceSync: failed to apply snapshot")
@@ -507,8 +554,13 @@ class DeviceSyncManager @Inject constructor(
             // desktop has another one, so matching on the id alone imported a
             // second copy of every account playlist at pairing (E1034).
             val accountId = r.remoteId?.takeIf { it.isNotBlank() }
+            if (accountId != null && SPECIAL_ACCOUNT_PLAYLIST_IDS.contains(accountId)) {
+                dropSpecialPlaylist(accountId)
+                continue
+            }
             val local = database.playlist(r.id).first()
                 ?: accountId?.let { database.playlistByBrowseId(it).first() }
+                ?: sameContentPlaylist(r)
             val localUpdatedAt = local?.playlist?.lastUpdateTime
                 ?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L
 
@@ -576,6 +628,128 @@ class DeviceSyncManager @Inject constructor(
                         position = index,
                     )
                 )
+            }
+        }
+    }
+
+    /**
+     * A local playlist the arriving [r] stands for although neither id matches.
+     *
+     * What is left to recognise it by is the name and the songs: the peer imported
+     * this phone's **own** playlist (so the row here carries no account id at all), or
+     * the two devices each created the account copy of the same playlist (two account
+     * ids, same name, and the songs of one contained in those of the other). It is the
+     * same rule the desktop applies on its side (`PlaylistStore.samePlaylist`), and it
+     * is what stops the pairing from importing a second copy of a playlist this app
+     * already has (E1034).
+     */
+    private suspend fun sameContentPlaylist(r: SyncedPlaylist): Playlist? {
+        if (r.songs.isEmpty()) return null
+        val name = r.name.trim()
+        if (name.isEmpty()) return null
+        val songs = r.songs.map { it.id }.toSet()
+        return database.playlistsByNameAsc().first().firstOrNull { candidate ->
+            if (!candidate.playlist.name.trim().equals(name, ignoreCase = true)) return@firstOrNull false
+            val local = database.playlistSongs(candidate.playlist.id).first()
+                .map { it.song.song.id }.toSet()
+            if (local.isEmpty()) return@firstOrNull false
+            local == songs || local.containsAll(songs) || songs.containsAll(local)
+        }
+    }
+
+    /**
+     * Removes a local row this app holds for one of the account's **special**
+     * playlists (liked songs, saved for later). They are not playlists: the liked
+     * songs are this app's own Liked list and the saved-for-later ones its own row,
+     * so a mirror of them imported from the desktop showed up as a second entry. The
+     * playlists themselves are untouched on YouTube Music (nothing is deleted there).
+     */
+    private suspend fun dropSpecialPlaylist(accountId: String) {
+        val rows = database.playlistsByNameAsc().first()
+            .filter { it.playlist.browseId == accountId }
+        for (row in rows) {
+            Timber.d("DeviceSync: dropping the local copy of the account's '$accountId' list (${row.playlist.name})")
+            database.delete(row.playlist)
+        }
+    }
+
+    /**
+     * Applies the peer's liked songs to the local library, last-write-wins per
+     * song id by the entry's `updatedAt` (the same rule the playlists use).
+     *
+     * Two things this deliberately does **not** do:
+     *
+     *  - it never calls `YouTube.likeVideo`: the account belongs to the device
+     *    the user actually tapped on (that side already wrote to it), and a
+     *    snapshot must not like or unlike anything on YouTube Music;
+     *  - an entry with no edit time (an older peer, or a plain
+     *    [LibrarySnapshot.songIds] id) can only *add* a like — a removal is
+     *    destructive and is never invented from data that carries no time.
+     *
+     * A like that arrives for a song this app has never seen is stored with the
+     * metadata the desktop sent (title/artist/thumbnail), which is what makes it
+     * show up in the Liked list instead of being a dangling id.
+     */
+    private suspend fun applyRemoteLikedSongs(lib: LibrarySnapshot) {
+        // The entries are the authoritative form; the flat list is what an older
+        // peer sends, and it is merged in without any time at all.
+        val remote = LinkedHashMap<String, SyncedSong>()
+        for (entry in lib.likedSongs) {
+            if (entry.id.isNotBlank()) remote[entry.id] = entry
+        }
+        for (id in lib.songIds) {
+            if (id.isNotBlank()) remote.putIfAbsent(id, SyncedSong(id = id))
+        }
+        if (remote.isEmpty()) return
+
+        val now = LocalDateTime.now()
+        for ((id, entry) in remote) {
+            val local = database.getSongById(id)
+            val likedAt = local?.song?.likedDate
+                ?.toInstant(ZoneOffset.UTC)?.toEpochMilli() ?: 0L
+            val tombstoneAt = likeTombstones[id] ?: 0L
+
+            if (entry.deleted) {
+                // Only a tombstone that is newer than both the local like and the
+                // tombstone already held is a real removal.
+                if (entry.updatedAt <= 0L) continue
+                if (entry.updatedAt <= likedAt) continue
+                if (entry.updatedAt <= tombstoneAt) continue
+                likeTombstones[id] = entry.updatedAt
+                if (local?.song?.liked == true) {
+                    database.update(local.song.copy(liked = false, likedDate = null))
+                }
+                continue
+            }
+
+            val wins = if (entry.updatedAt > 0L) {
+                entry.updatedAt > maxOf(likedAt, tombstoneAt)
+            } else {
+                local?.song?.liked != true && tombstoneAt == 0L
+            }
+            if (!wins) continue
+            likeTombstones.remove(id)
+            val likedDate = if (entry.updatedAt > 0L) {
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(entry.updatedAt), ZoneOffset.UTC)
+            } else {
+                now
+            }
+            if (local == null) {
+                database.insert(
+                    MediaMetadata(
+                        id = id,
+                        title = entry.title.ifBlank { id },
+                        artists = entry.artist.takeIf { it.isNotBlank() }
+                            ?.let { listOf(MediaMetadata.Artist(null, it)) }
+                            .orEmpty(),
+                        duration = -1,
+                        thumbnailUrl = entry.thumbnail,
+                    )
+                ) { song ->
+                    song.copy(liked = true, likedDate = likedDate)
+                }
+            } else {
+                database.update(local.song.copy(liked = true, likedDate = likedDate))
             }
         }
     }
@@ -702,9 +876,18 @@ class DeviceSyncManager @Inject constructor(
     }
 }
 
+/**
+ * The account playlists that are not playlists: the liked songs and the ones saved
+ * for later. The mobile app already filters exactly these two out of its own account
+ * sync, and the desktop must not mirror them over as ordinary playlists either.
+ */
+private val SPECIAL_ACCOUNT_PLAYLIST_IDS = setOf("LM", "SE")
+
 /** Intermediate library state used to hand the flows over to the suspend collector. */
 private data class PlaylistLibraryInput(
-    val songIds: List<String>,
+    // The whole rows, not just the ids: the liked entries the desktop receives
+    // need each song's own `likedDate` as their edit time.
+    val songs: List<Song>,
     val albumIds: List<String>,
     val artistIds: List<String>,
     val playlists: List<Playlist>,

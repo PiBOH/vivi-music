@@ -68,6 +68,43 @@ private fun SyncedPlaylist.accountIdentity(): String? =
         ?: id.removePrefix(MIRROR_PREFIX).takeIf { id.startsWith(MIRROR_PREFIX) }
 
 /**
+ * The account's *special* playlists: the liked songs (`LM`) and the ones saved for
+ * later (`SE`). They are not playlists the paired device should import — the
+ * phone already has its own Liked list and its own saved-for-later row, and
+ * carrying the desktop's mirror of them over as an ordinary playlist is what gave
+ * it a second entry for each of them (the mobile app filters exactly these two out
+ * of its own account sync).
+ */
+private val SPECIAL_ACCOUNT_PLAYLISTS = setOf("LM", "SE")
+
+/**
+ * True when two entries are the same playlist even though their ids do not say so:
+ * the same name, and one song list contained in the other.
+ *
+ * This is what recognises the copies a pairing leaves behind when there is no id to
+ * match on — the peer's *own* row for a playlist that was later created on YouTube
+ * Music here (its copy carries no account id at all), and the fact that the two
+ * devices each created the account copy of the same playlist (two account ids, same
+ * name, and the same songs, or the ones of one contained in those of the other).
+ *
+ * **Constraint:** the merge is local and the songs are unioned, so nothing is lost
+ * from the app's point of view and nothing at all is deleted on YouTube Music — but
+ * two playlists of the same name whose songs are in a containment relation *are*
+ * treated as one. That is deliberately the price of the copies this pairing creates:
+ * they are indistinguishable by anything else, and a stale copy of a playlist (one
+ * song less, one song more) is exactly the shape they come in.
+ */
+internal fun samePlaylist(a: SyncedPlaylist, b: SyncedPlaylist): Boolean {
+    if (a.deleted || b.deleted) return false
+    val name = a.name.trim()
+    if (name.isEmpty() || !name.equals(b.name.trim(), ignoreCase = true)) return false
+    val x = a.songs.map { it.id }.toSet()
+    val y = b.songs.map { it.id }.toSet()
+    if (x.isEmpty() || y.isEmpty()) return false
+    return x == y || x.containsAll(y) || y.containsAll(x)
+}
+
+/**
  * JSON-backed store for the desktop's local playlists.
  *
  * Playlists are the same [SyncedPlaylist] objects that travel over the sync
@@ -129,6 +166,11 @@ object PlaylistStore {
                 p
             }
         }
+        // A playlist that has just learned its account id may now be the same
+        // playlist as an entry that already knew it (the mirror of the account's
+        // copy, or the peer's row for it) — the copies collapse here, at the very
+        // moment the link makes them recognisable.
+        repairDuplicates()
         persist()
     }
 
@@ -222,6 +264,9 @@ object PlaylistStore {
         if (remote.isEmpty()) return
         val merged = _all.value.associateBy { it.id }.toMutableMap()
         for (r in remote) {
+            // The account's special lists are not playlists either side should
+            // import (see SPECIAL_ACCOUNT_PLAYLISTS).
+            if (r.accountIdentity() in SPECIAL_ACCOUNT_PLAYLISTS) continue
             val target = findTarget(merged.values, r)
             if (target == null) {
                 merged[r.id] = r
@@ -259,50 +304,113 @@ object PlaylistStore {
     }
 
     /**
-     * Collapses the copies of one playlist that a pairing created before the
-     * account id travelled with it (E1034): several local entries that are the
-     * same account playlist.
+     * Collapses the copies of one playlist into a single entry.
      *
-     * The kept entry is the one that already knows the account id (so the link to
-     * YouTube Music survives), and the others are tombstoned **locally**. This
-     * path never touches the account: only the delete the user performs does, so
-     * the cleanup can never remove a playlist from YouTube Music. Runs at startup
-     * and after every merge; it merges nothing when there is nothing to merge.
+     * A pairing can leave the same playlist in the store more than once, in two
+     * different ways:
+     *
+     *  1. **The same account id under two rows** (E1034): the copy arriving from the
+     *     paired device for a playlist that is already here. Both apps generate
+     *     their own local row id (`LP` + 8 characters), so the copy can only be
+     *     recognised by the account id it carries.
+     *  2. **Nothing in common but the name and the songs**: the peer's *own* row for
+     *     a playlist that was afterwards created on YouTube Music **here** (its copy
+     *     carries no account id at all), and the fact that the two devices each
+     *     created the account copy of the same playlist (two account ids, same name,
+     *     same songs). See [samePlaylist].
+     *
+     * The kept entry is the one that already knows its account id — so the link to
+     * YouTube Music survives — and the others are tombstoned **locally**. Nothing
+     * here ever touches the account: only the delete the user performs does, so this
+     * cleanup can never remove a playlist from YouTube Music. Runs at startup and
+     * after every merge or link, and it does nothing when there is nothing to merge.
      */
     fun repairDuplicates() {
-        val groups = _all.value
-            .filterNot { it.deleted }
-            .mapNotNull { p -> p.accountIdentity()?.let { account -> account to p } }
-            .groupBy({ it.first }, { it.second })
-            .filterValues { it.size > 1 }
-        if (groups.isEmpty()) return
+        val active = _all.value.filterNot { it.deleted }
+        if (active.size < 2) return
         val now = System.currentTimeMillis()
+
+        // The entry that survives a group of copies, and the copies collapsing into it.
+        class Group(val keep: SyncedPlaylist, val members: MutableList<SyncedPlaylist>)
+
+        val groups = mutableListOf<Group>()
+        val grouped = mutableSetOf<String>()
+
+        // (1) One account playlist, several local rows.
+        active.filter { it.accountIdentity() != null }
+            .groupBy { it.accountIdentity()!! }
+            .filterValues { it.size > 1 }
+            .forEach { (_, share) ->
+                val keep = share.firstOrNull { it.remoteId != null }
+                    ?: share.firstOrNull { it.id.startsWith(MIRROR_PREFIX) }
+                    ?: share.minByOrNull { it.updatedAt }
+                    ?: return@forEach
+                val members = share.filter { it.id != keep.id }.toMutableList()
+                groups += Group(keep, members)
+                grouped += keep.id
+                grouped += members.map { it.id }
+            }
+
+        // (2) The same playlist by name and songs, with no id in common. The order
+        //     decides what is kept: a row that knows its account id first, then a
+        //     mirror, then a local row, oldest first — the entry whose id the user
+        //     is most likely already looking at survives.
+        val ranked = active
+            .filterNot { it.id in grouped }
+            .sortedWith(
+                compareBy(
+                    { when {
+                        it.remoteId != null -> 0
+                        it.id.startsWith(MIRROR_PREFIX) -> 1
+                        else -> 2
+                    } },
+                    { it.updatedAt },
+                ),
+            )
+        for (p in ranked) {
+            if (p.id in grouped) continue
+            val twin = groups.firstOrNull { samePlaylist(it.keep, p) }
+            if (twin != null) {
+                twin.members += p
+                grouped += p.id
+                continue
+            }
+            val later = ranked.filter { it.id !in grouped && it.id != p.id && samePlaylist(p, it) }
+            if (later.isEmpty()) continue
+            groups += Group(p, later.toMutableList())
+            grouped += p.id
+            grouped += later.map { it.id }
+        }
+        val merging = groups.filter { it.members.isNotEmpty() }
+        if (merging.isEmpty()) return
+
         var all = _all.value
-        for ((account, group) in groups) {
-            val keep = group.firstOrNull { it.remoteId != null }
-                ?: group.firstOrNull { it.id.startsWith(MIRROR_PREFIX) }
-                ?: group.minByOrNull { it.updatedAt }
-                ?: continue
-            val dropped = group.filter { it.id != keep.id }
-            // Both copies may hold songs the other does not: the kept order comes
-            // first, the extras follow, and a song that is in both stays once.
+        for (group in merging) {
+            val keep = group.keep
+            val members = group.members
+            val account = keep.accountIdentity() ?: members.firstNotNullOfOrNull { it.accountIdentity() }
+            // Every copy may hold songs the others do not: the kept order comes
+            // first, the extras follow, and a song that is in several stays once.
             val songs = LinkedHashMap<String, SyncedSong>()
-            (keep.songs + dropped.flatMap { it.songs }).forEach { song -> songs.putIfAbsent(song.id, song) }
+            (listOf(keep) + members).forEach { copy ->
+                copy.songs.forEach { song -> songs.putIfAbsent(song.id, song) }
+            }
             all = all.map { p ->
                 when {
                     p.id == keep.id -> p.copy(
-                        remoteId = keep.remoteId ?: account,
+                        remoteId = p.remoteId ?: account,
                         songs = songs.values.toList(),
-                        updatedAt = maxOf(keep.updatedAt, dropped.maxOfOrNull { it.updatedAt } ?: 0L, now),
+                        updatedAt = maxOf(keep.updatedAt, members.maxOfOrNull { it.updatedAt } ?: 0L, now),
                     )
-                    dropped.any { it.id == p.id } -> p.copy(deleted = true, updatedAt = now)
+                    members.any { it.id == p.id } -> p.copy(deleted = true, updatedAt = now)
                     else -> p
                 }
             }
             AppLog.log(
                 "playlists",
-                "repair: '${keep.name}' existed ${group.size} times (the same account playlist) — " +
-                    "kept ${keep.id}, removed ${dropped.joinToString { it.id }} LOCALLY ONLY, " +
+                "repair: '${keep.name}' existed ${members.size + 1} times (the same playlist, " +
+                    "account id ${account ?: "none"}) — kept ${keep.id}, " +
+                    "removed ${members.joinToString { it.id }} LOCALLY ONLY, " +
                     "nothing was deleted on YouTube Music",
             )
         }
@@ -315,6 +423,7 @@ object PlaylistStore {
         // Prune tombstones older than 30 days so the wire list stays bounded.
         val cutoff = System.currentTimeMillis() - 30L * 24 * 3600 * 1000
         return _all.value
+            .filterNot { it.accountIdentity() in SPECIAL_ACCOUNT_PLAYLISTS }
             .filterNot { it.deleted && it.updatedAt < cutoff }
             // A playlist mirrored from the account carries its account id inside
             // its own id (`yt-<id>`). It travels in [SyncedPlaylist.remoteId] too,

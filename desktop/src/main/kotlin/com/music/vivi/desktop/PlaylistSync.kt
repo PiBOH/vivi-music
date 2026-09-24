@@ -302,6 +302,32 @@ object PlaylistSync {
     ): Boolean {
         val playlist = PlaylistStore.get(localId) ?: return false
         if (playlist.accountPlaylistId() != null) return false
+        // The account may already hold this very playlist: the two devices each
+        // have their own row for it and the account copy was created from the other
+        // one (the phone's "Sync playlist", or *Create on YouTube Music* here).
+        // Creating a second copy is exactly the E1034 duplicate, so this row adopts
+        // the account id of the copy that exists and only the songs the account does
+        // not have are pushed.
+        val twin = PlaylistStore.active.firstOrNull { other ->
+            other.id != playlist.id && other.accountPlaylistId() != null && samePlaylist(other, playlist)
+        }
+        if (twin != null) {
+            val account = twin.accountPlaylistId()!!
+            PlaylistStore.link(playlist.id, account)
+            val alreadyThere = twin.songs.map { it.id }.toSet()
+            val missing = playlist.songs.filterNot { it.id in alreadyThere }
+            var pushed = 0
+            missing.forEach { song ->
+                if (YouTube.addToPlaylist(account, song.id).isSuccess) pushed++
+                onSong?.invoke(pushed, missing.size)
+            }
+            AppLog.log(
+                "playlists",
+                "upload ($trigger): '${playlist.name}' already lives on the account ($account) — " +
+                    "linked instead of creating a second copy, $pushed of ${missing.size} missing song(s) pushed",
+            )
+            return false
+        }
         val remote = runCatching { YouTube.createPlaylist(playlist.name) }.getOrNull()
         if (remote.isNullOrBlank()) {
             AppLog.log("playlists", "upload ($trigger): '${playlist.name}' was NOT created on the account")

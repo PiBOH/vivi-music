@@ -235,6 +235,7 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -2070,16 +2071,37 @@ fun WindowScope.App(
         syncManager.updateSettings(desktopSettingsMap(language, themeMode, accent, syncViviVolume))
     }
 
-    // Playlist sync: push the local playlists whenever they change and apply
-    // the peer's list (last-write-wins per playlist id).
+    // Library sync: push the local playlists and the liked songs whenever either
+    // changes, and apply the peer's (last-write-wins per playlist, and per liked
+    // song id through `updatedAt`).
+    //
+    // `SongActions.likedVersion` only moves when the USER likes or unlikes
+    // something here, so a like learned from the phone is never sent back.
     LaunchedEffect(syncManager) {
-        PlaylistStore.all.collect {
-            syncManager.updateLibrary(LibrarySnapshot(playlists = PlaylistStore.toSynced()))
+        combine(PlaylistStore.all, SongActions.likedVersion) { playlists, _ -> playlists }.collect {
+            syncManager.updateLibrary(
+                LibrarySnapshot(
+                    // The flat list is what an older peer reads; the entries carry
+                    // the edit times (and the metadata of a like made here) that
+                    // make an unlike or a re-like land correctly (issue #96).
+                    songIds = SongActions.likedIds(),
+                    likedSongs = SongActions.toSyncedLiked(),
+                    playlists = PlaylistStore.toSynced(),
+                )
+            )
         }
     }
     LaunchedEffect(syncManager) {
+        // The last library the peer sent us survives a restart (the sync manager
+        // keeps it in the settings), so the hearts are already right before the
+        // first snapshot of this session arrives.
+        DesktopSettings.load().library?.let { last ->
+            SongActions.applyRemoteLiked(last.likedSongs, last.songIds)
+        }
         syncManager.incomingLibrary.collect { lib ->
-            lib?.playlists?.let { PlaylistStore.applyRemote(it) }
+            lib ?: return@collect
+            PlaylistStore.applyRemote(lib.playlists)
+            SongActions.applyRemoteLiked(lib.likedSongs, lib.songIds)
         }
     }
 

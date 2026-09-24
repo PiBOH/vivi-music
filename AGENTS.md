@@ -95,6 +95,13 @@ dependencies there, or you break the desktop build.
     either file is applied to one branch and then copied to the other
     wholesale (`git checkout <other-branch> -- CHANGELOG.md version.txt`), not
     re-typed — and `TODO.md` follows the same content.
+  - **An APK change never gets a section, a file or a version of its own**: it
+    is added as an `[APK]` bullet to the entry being prepared — the one the
+    desktop's changes go into — and pushed to **both** branches as that same
+    entry. So the APK has no changelog of its own that could drift: a mobile
+    change whose `[APK]` bullet is missing from the shared file, or that lands
+    on `vivi-music-de-apk` without the file being copied over, is an unfinished
+    change, not a smaller one.
   - **Official repository**: everything lives in **`PiBOH/vivi-music-de`** (the
     branch names above are unchanged). Every link in code, docs, the installer,
     the website and the CI points there — never at the old `PiBOH/vivi-music`

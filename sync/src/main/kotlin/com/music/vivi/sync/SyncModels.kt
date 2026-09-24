@@ -133,21 +133,46 @@ data class TrackRef(
  */
 @Serializable
 data class LibrarySnapshot(
+    /**
+     * Flat list of the songs that are liked *right now*. It is what an older
+     * peer reads (and the only liked-song field there ever was); it carries no
+     * edit time, so the receiver can only add with it — see [likedSongs].
+     */
     val songIds: List<String> = emptyList(),
     val albumIds: List<String> = emptyList(),
     val artistIds: List<String> = emptyList(),
     val playlistIds: List<String> = emptyList(),
     /** Full local-playlist state (name + ordered songs), incl. deletion tombstones. */
     val playlists: List<SyncedPlaylist> = emptyList(),
+    /**
+     * The liked songs as *entries*: a like carries the song's metadata (so the
+     * peer can store a song it has never seen), an unlike a [SyncedSong.deleted]
+     * tombstone; [SyncedSong.updatedAt] is the last-write-wins key of the entry.
+     * [songIds] stays the flat "what is liked now" view for older peers.
+     */
+    val likedSongs: List<SyncedSong> = emptyList(),
 )
 
-/** A song as stored inside a synced playlist (enough metadata to render it). */
+/**
+ * A song on the wire (inside a synced playlist, or as a liked-song entry).
+ * [updatedAt] / [deleted] are only meaningful for a liked-song entry: they are
+ * its last-write-wins key and its unlike tombstone. Playlist entries leave them
+ * at their defaults (the playlist itself carries its own [SyncedPlaylist.updatedAt]).
+ */
 @Serializable
 data class SyncedSong(
     val id: String,
     val title: String = "",
     val artist: String = "",
     val thumbnail: String? = null,
+    /**
+     * Epoch millis of the last edit of this liked-song entry (like or unlike);
+     * `0` = unknown (an older peer, or a plain [LibrarySnapshot.songIds] id),
+     * in which case the entry can only add a like and never remove one.
+     */
+    val updatedAt: Long = 0L,
+    /** True when this entry is an *unlike* tombstone: the song is not liked any more. */
+    val deleted: Boolean = false,
 )
 
 /**

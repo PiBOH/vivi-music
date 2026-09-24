@@ -672,7 +672,13 @@ private fun M3EPlayerContent(
                             Surface(
                                 onClick = {
                                     val next = !liked
-                                    SongActions.setLiked(np.videoId, next, title = np.title)
+                                    SongActions.setLiked(
+                                        np.videoId,
+                                        next,
+                                        title = np.title,
+                                        artist = np.artist,
+                                        thumbnail = np.thumbnail,
+                                    )
                                     scope.launch { YouTube.likeVideo(np.videoId, next) }
                                 },
                                 shape = CircleShape,
@@ -1502,7 +1508,13 @@ private fun PlayerControlPanel(
         GlassCircleButton(
             onClick = {
                 val next = !liked
-                SongActions.setLiked(np.videoId, next, title = np.title)
+                SongActions.setLiked(
+                    np.videoId,
+                    next,
+                    title = np.title,
+                    artist = np.artist,
+                    thumbnail = np.thumbnail,
+                )
                 scope.launch { YouTube.likeVideo(np.videoId, next) }
             },
             icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
@@ -3182,7 +3194,13 @@ fun NewDesktopMiniPlayer(
                 Tooltip(Localization.get(language, "tooltip_favorite")) {
                     IconButton(onClick = {
                         val next = !liked
-                        SongActions.setLiked(nowPlaying.videoId, next, title = nowPlaying.title)
+                        SongActions.setLiked(
+                            nowPlaying.videoId,
+                            next,
+                            title = nowPlaying.title,
+                            artist = nowPlaying.artist,
+                            thumbnail = nowPlaying.thumbnail,
+                        )
                         scope.launch { YouTube.likeVideo(nowPlaying.videoId, next) }
                     }) {
                         Icon(
