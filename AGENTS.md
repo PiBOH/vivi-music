@@ -166,11 +166,21 @@ dependencies there, or you break the desktop build.
     step **recreates the branch from scratch** (single commit, everything that
     was there is replaced) and **force-pushes** it, so the binaries never
     accumulate in the history and the download URL always serves the last build.
-  - `Build Android APK` is **manual-only** (`workflow_dispatch`). It builds GMS
-    and FOSS in parallel and publishes them, with fixed file names
-    (`vivi-gsm.apk`, `vivi-foss.apk`) plus a `version.json` (version, version
-    code, channel, build time, sizes and URLs), to `.releases/apk/latest` on the
-    dedicated **`apk-latest`** branch. That branch is recreated from scratch and
+    The **only** files kept from the branch being replaced are `INSTALL-GUIDE.md`
+    and `README.md`, each only when it is actually there — they are documents,
+    not build output, and nothing else on that branch is meant to survive.
+  - `Build Android APK` runs **by hand (`workflow_dispatch`) or dispatched by
+    `Auto Release`**; it also declares `workflow_call` so it stays usable as an
+    awaited `uses:`. **`Auto Release` only starts it** — `gh workflow run`, never
+    a `uses:` of the same workflow and never a `download-artifact` of its run —
+    so a desktop release neither waits for the Android build nor receives its
+    APKs; a slow or failed APK run must never hold a release back, and a release
+    never carries an APK. Its input (`signing_key`) resolves the same way
+    whichever trigger started it. It builds GMS and FOSS in parallel and
+    publishes them, with fixed file names (`vivi-gsm.apk`, `vivi-foss.apk`) plus
+    a `version.json` (version, version code, channel, build time, sizes and
+    URLs), to `.releases/apk/latest` on the dedicated **`apk-latest`** branch —
+    the only place an APK ever lives. That branch is recreated from scratch and
     force-pushed on every run: it must always be **one commit**, so the APK
     binaries never accumulate in the repository history.
   - `.releases/apk/latest` is the **only** APK download path: the website

@@ -1,12 +1,18 @@
 name: Build Android APK
 
-# Manual-only by design: the APK is no longer published in any release (neither
-# in the desktop releases nor anywhere else). A run builds the GMS and FOSS APKs
-# in parallel and publishes them to `.releases/apk/latest` on the dedicated
-# `apk-latest` branch: a one-commit branch that is force-replaced on every run,
-# so it stays a stable download path without growing the repository history.
-# Those two files (plus `version.json`) are what the website, the desktop
-# Devices screen and the mobile updater download.
+# Started by hand, or *dispatched* by `Auto Release` on a release push (a
+# commit whose subject starts with "v"). The release only starts it: it never
+# waits for it and never takes its APKs — a desktop release carries the desktop
+# installers only, and a slow or broken Android build must not hold it back.
+#
+# Whatever started it, a run builds the GMS and FOSS release APKs in parallel
+# and publishes them to `.releases/apk/latest` on the dedicated `apk-latest`
+# branch: the branch is recreated from scratch and force-pushed on every run, so
+# it always holds exactly one commit and never grows the repository history.
+# Everything on that branch is replaced except the two human documents,
+# `INSTALL-GUIDE.md` and `README.md`, which are kept when they are there.
+# Those two APKs (plus `version.json`) are what the website, the desktop Devices
+# screen and the mobile updater download.
 
 on:
   workflow_dispatch:
@@ -20,6 +26,16 @@ on:
           - auto
           - release
           - debug
+  # Callable as a reusable workflow. The project's own caller does NOT use this
+  # (it dispatches the run instead, see `Auto Release`), but the trigger keeps
+  # the workflow reusable for anyone who prefers an awaited `uses:`.
+  workflow_call:
+    inputs:
+      signing_key:
+        description: "Keystore to sign with (auto = RELEASE_KEYSTORE if set, else DEBUG_KEYSTORE)"
+        required: false
+        type: string
+        default: auto
 
 permissions:
   contents: write
@@ -66,7 +82,9 @@ jobs:
         id: signing
         shell: bash
         run: |
-          REQUESTED="${{ github.event.inputs.signing_key }}"
+          # `inputs` works for both a manual dispatch and a reusable-workflow
+          # call (the definition is shared by the two triggers).
+          REQUESTED="${{ inputs.signing_key }}"
           if [ -z "$REQUESTED" ]; then REQUESTED="auto"; fi
           HAS_RELEASE="${{ secrets.RELEASE_KEYSTORE != '' }}"
           case "$REQUESTED" in
@@ -207,6 +225,32 @@ jobs:
           done
           ls -la apk-flat
 
+      # The publish step recreates `apk-latest` from scratch, so whatever is on
+      # it now is replaced: the install guide and the readme are the two files
+      # worth keeping (they are documents, not build output), and they are read
+      # off the branch being replaced here.
+      - name: Keep the branch's documents (INSTALL-GUIDE.md, README.md)
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p keep
+          REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth=1 "$REMOTE" apk-latest:refs/remotes/apk-latest-current/apk-latest 2>/dev/null; then
+            for doc in INSTALL-GUIDE.md README.md; do
+              if git show "refs/remotes/apk-latest-current/apk-latest:$doc" > "keep/$doc" 2>/dev/null; then
+                echo "kept $doc from apk-latest"
+              else
+                rm -f "keep/$doc"
+                echo "no $doc on apk-latest"
+              fi
+            done
+          else
+            echo "apk-latest does not exist yet — nothing to keep"
+          fi
+          ls -la keep
+
       - name: Publish to the apk-latest branch
         shell: bash
         env:
@@ -223,6 +267,9 @@ jobs:
           rm -rf assets && mkdir assets && cd assets
           git init -q -b apk-latest
           mkdir -p .releases/apk/latest
+          # The documents read off the branch being replaced (when they are there).
+          cp -f ../keep/INSTALL-GUIDE.md . 2>/dev/null || true
+          cp -f ../keep/README.md . 2>/dev/null || true
           # Verified (and flattened) by the previous step.
           cp ../apk-flat/vivi-gsm.apk .releases/apk/latest/vivi-gsm.apk
           cp ../apk-flat/vivi-foss.apk .releases/apk/latest/vivi-foss.apk
@@ -261,4 +308,6 @@ jobs:
           git push -q --force \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" apk-latest
           ls -la .releases/apk/latest
+          echo "--- branch root (the documents that were kept) ---"
+          ls -la
           echo "Published $VERSION to $BASE (apk-latest branch)"

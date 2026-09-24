@@ -39,10 +39,29 @@ jobs:
     uses: ./.github/workflows/build-desktop-macos.yml
     secrets: inherit
 
-  # The Android APKs are NOT built here and no longer ship with a desktop
-  # release: 'Build Android APK' is manual-only and publishes the GMS/FOSS
-  # APKs to .releases/apk/latest on the dedicated apk-latest branch (the
-  # stable download path the site, the Devices screen and the mobile app use).
+  # The Android APKs are not built here and never ship with this release: this
+  # job only *starts* `Build Android APK`, which publishes the GMS/FOSS APKs to
+  # `.releases/apk/latest` on the dedicated `apk-latest` branch — the one
+  # download path the site, the desktop Devices screen and the mobile updater
+  # use.
+  #
+  # A dispatch on purpose, not a `uses:`: a called workflow is awaited by its
+  # caller, so a slow runner or a broken Android build would hold the desktop
+  # release back, and the release must not depend on the APK at all. It also
+  # never reads the APKs back from that run (nothing here downloads its
+  # artifacts): the branch is the only place they live.
+  start-apk-build:
+    name: Start the Android APK build
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch Build Android APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build-android.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
 
   release:
     name: Publish GitHub Release
