@@ -180,6 +180,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.draw.clip
@@ -1878,7 +1879,9 @@ fun WindowScope.App(
             AppLog.log(
                 "sync",
                 "recv: track='${pb.trackTitle ?: pb.trackId}' queue=${pb.queue.size} index=${pb.queueIndex} " +
-                    "playing=${pb.isPlaying} resolving=${pb.isResolving} pos=${pb.positionMs}",
+                    "playing=${pb.isPlaying} resolving=${pb.isResolving} pos=${pb.positionMs} " +
+                    "seek=${pb.userSeek} queueAt=${pb.queueUpdatedAt} " +
+                    "localQueueAt=${syncManager.queueUpdatedAt()}",
             )
             if (currentId != null && pb.trackId != null && pb.trackId == currentId) {
                 // The queue travels with the current track too. Both devices
@@ -1907,12 +1910,20 @@ fun WindowScope.App(
                             "queue adopted from the peer: ${localIds.size} → ${tracks.size} track(s) " +
                                 "(current stays '${pb.trackTitle ?: currentId}')",
                         )
+                        // Recorded BEFORE the player state changes: the queue we
+                        // are about to adopt is the peer's, so the desktop's own
+                        // state handler must not read the change as a *local*
+                        // edit and stamp a fresher last-write-wins time — that
+                        // stamp then vetoed the peer's next skip (the "next does
+                        // not sync, previous does" report: it is the very next
+                        // queue change that gets rejected). The mobile notes the
+                        // applied snapshot first for the same reason.
+                        syncManager.noteQueueApplied(pb)
                         player.replaceQueuePreservingCurrent(
                             tracks,
                             player.state.value.positionMs,
                             player.state.value.isPlaying,
                         )
-                        syncManager.noteQueueApplied(pb)
                     }
                 }
                 // Same track: lightweight seek (instant + precise), no restart.
@@ -1975,8 +1986,11 @@ fun WindowScope.App(
                             "queue replaced by the peer's: ${tracks.size} track(s), starting at index " +
                                 "${pb.queueIndex.coerceAtLeast(0)} ('${pb.trackTitle ?: pb.trackId}')",
                         )
-                        player.applyRemotePlayback(tracks, pb.queueIndex, syncManager.effectivePosition(pb), pb.isPlaying, pb.isResolving)
+                        // Same ordering rule as above: the applied snapshot is
+                        // recorded first, so the queue change that follows is not
+                        // mistaken for a local edit of ours.
                         syncManager.noteQueueApplied(pb)
+                        player.applyRemotePlayback(tracks, pb.queueIndex, syncManager.effectivePosition(pb), pb.isPlaying, pb.isResolving)
                     }
                 }
             }
@@ -3582,13 +3596,20 @@ fun Sidebar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
                 ) {
-                    val brandLogo = remember { loadLogo() }
+                    // The mark is 26-30 dp here: it is resampled to that size (x
+                    // the density in use) instead of being left to Compose to
+                    // shrink from 1024 px in one bilinear step, which is what
+                    // made it look muddy.
+                    val brandDensity = LocalDensity.current.density
+                    val brandSize = if (collapsed) 30 else 26
+                    val brandLogo = remember(brandDensity, brandSize) { loadLogo(brandSize, brandDensity) }
                     if (brandLogo != null) {
                         Image(
                             bitmap = brandLogo,
                             contentDescription = "VIVI Music",
+                            filterQuality = FilterQuality.High,
                             modifier = Modifier
-                                .size(if (collapsed) 30.dp else 26.dp)
+                                .size(brandSize.dp)
                                 .clip(RoundedCornerShape(8.dp)),
                         )
                     }
@@ -3886,20 +3907,44 @@ fun Sidebar(
                         // (`remoteId`) — are not listed again here: doing so
                         // listed every synced playlist twice, which is exactly
                         // what the sync is there to remove.
-                        val mirroredRemoteIds = remember(activeLocalPlaylists) {
-                            activeLocalPlaylists
+                        // The account's playlists that already have a local entry
+                        // are not listed here. Two things are compared, because
+                        // one is not enough:
+                        //
+                        //  * the account ids of **every** local playlist —
+                        //    including the copies a merge retired (a tombstone
+                        //    still names the account playlist it was merged into,
+                        //    and that playlist is of course still on YouTube
+                        //    Music). Looking at the active ones only is why the
+                        //    duplicates kept coming back *here* after they were
+                        //    gone everywhere else: the retired copy was listed
+                        //    again from the online list.
+                        //  * the names of the active local playlists, for the
+                        //    copies the account holds under a *different* id —
+                        //    the pair of playlists a two-device sync used to
+                        //    create (one per device, same name, different id) is
+                        //    exactly that, and only one of them is the local one.
+                        val localAccountIds = remember(localPlaylists) {
+                            localPlaylists
                                 .flatMap { p ->
-                                    // The account id when the playlist knows it, plus
-                                    // its own id: a copy that arrived from the paired
-                                    // device before the account id travelled with the
-                                    // playlist is stored under the account's browse id
-                                    // itself, and listing that *and* the online one is
-                                    // the duplication E1034 is about.
                                     listOfNotNull(PlaylistSync.run { p.accountPlaylistId() }, p.id)
                                 }
                                 .toSet()
                         }
-                        onlinePlaylists.filterNot { it.id in mirroredRemoteIds }.forEach { op ->
+                        val localNames = remember(activeLocalPlaylists) {
+                            activeLocalPlaylists.map { it.name.trim().lowercase() }.toSet()
+                        }
+                        val online = onlinePlaylists
+                            .distinctBy { it.id }
+                            .filterNot { it.id in localAccountIds || it.title.trim().lowercase() in localNames }
+                        if (onlinePlaylists.isNotEmpty() && online.size != onlinePlaylists.size) {
+                            AppLog.log(
+                                "playlists",
+                                "sidebar: ${onlinePlaylists.size} account playlist(s) listed, " +
+                                    "${onlinePlaylists.size - online.size} already in the local library",
+                            )
+                        }
+                        online.forEach { op ->
                             val selected = current == Screen.Playlist(op.id)
                             val interaction = remember(op.id) { MutableInteractionSource() }
                             val hovered by interaction.collectIsHoveredAsState()
@@ -5710,11 +5755,13 @@ fun LanguageSelectionScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.height(32.dp))
-        val logo = remember { loadLogo() }
+        val welcomeDensity = LocalDensity.current.density
+        val logo = remember(welcomeDensity) { loadLogo(96, welcomeDensity) }
         if (logo != null) {
             Image(
                 bitmap = logo,
                 contentDescription = "VIVI Music DE",
+                filterQuality = FilterQuality.High,
                 modifier = Modifier
                     .size(96.dp)
                     .clip(RoundedCornerShape(24.dp)),

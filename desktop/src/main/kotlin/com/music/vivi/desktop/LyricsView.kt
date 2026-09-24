@@ -754,6 +754,12 @@ fun LyricsList(
 /** Shortest hole between two lines that gets an indicator, like the mobile app. */
 private const val GAP_INDICATOR_MIN_MS = 4_000L
 
+/** How long one sung word is assumed to take when the file has no word timings. */
+private const val MS_PER_SUNG_WORD = 500L
+
+/** A line is never assumed to be shorter than this, however few words it has. */
+private const val MIN_SUNG_MS = 1_200L
+
 /**
  * One row of the lyrics list: either a line, or the "no text" indicator that
  * stands for a hole in the lyrics.
@@ -788,7 +794,7 @@ private fun buildLyricsRows(lines: List<LyricLine>): List<LyricsRow> {
             val currentEnd = when {
                 !words.isNullOrEmpty() -> (words.last().endTime * 1000).toLong()
                 line.text.isBlank() -> line.timeMs
-                else -> null
+                else -> estimatedSungEndMs(line.text, line.timeMs, nextStart)
             }
             if (currentEnd != null && currentEnd < nextStart && nextStart - currentEnd > GAP_INDICATOR_MIN_MS) {
                 rows += LyricsRow(i, null, currentEnd, nextStart)
@@ -796,6 +802,26 @@ private fun buildLyricsRows(lines: List<LyricLine>): List<LyricsRow> {
         }
     }
     return rows
+}
+
+/**
+ * When a line stops being sung, for a lyric file that carries line timestamps
+ * only — which is the common case (a plain LRC from LrcLib or KuGou has no word
+ * timings).
+ *
+ * The old rule required word timings *or* an empty line, so for exactly those
+ * files the desktop could never find a hole: the "no text" indicator stayed
+ * invisible on every song whose lyrics come as plain LRC, while the mobile
+ * renderer showed it (the user's "the dots still don't appear"). The estimate is
+ * the model the word animations of this file already use — a sung word takes
+ * about [MS_PER_SUNG_WORD], a line at least [MIN_SUNG_MS] — and it is capped at
+ * the next line, so it can only make a hole *shorter*: it never invents one in
+ * the middle of continuous singing.
+ */
+private fun estimatedSungEndMs(text: String, lineStartMs: Long, nextStartMs: Long): Long {
+    val words = text.split(Regex("\\s+")).count { it.isNotBlank() }
+    val sung = (words * MS_PER_SUNG_WORD).coerceAtLeast(MIN_SUNG_MS)
+    return (lineStartMs + sung).coerceAtMost(nextStartMs)
 }
 
 /**

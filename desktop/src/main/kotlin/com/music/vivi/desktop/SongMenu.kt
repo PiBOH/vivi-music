@@ -3,6 +3,7 @@ package com.music.vivi.desktop
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LibraryAdd
@@ -102,6 +103,9 @@ object SongActions {
             deleted = !value,
         )
         _likedVersion.value += 1
+        // "Songs" in the Library screen is the liked list: it has to reload, or
+        // the heart toggles and the list behind it does not move.
+        LibraryRefresh.bump()
         if (value && title != null) {
             onSongLiked?.invoke(id, title)
         }
@@ -164,6 +168,8 @@ object SongActions {
                 deleted = r.deleted,
             )
         }
+        // A like/unlike made on the paired phone lands in the same list.
+        LibraryRefresh.bump()
     }
 
     /**
@@ -180,12 +186,17 @@ fun copyToClipboard(text: String) {
     }
 }
 
-/** "⋮" context menu for a song: like, library, add-to-playlist and share. */
+/** "⋮" context menu for a song: like, library, add-to-playlist, queue and share. */
 @Composable
 fun SongMenu(
     song: SongItem,
     language: String,
     onAddToPlaylist: (() -> Unit)?,
+    /** Adds the song to the play queue. It used to be a bare "＋" glyph at the
+     *  end of the row: no icon, no tooltip, no label, so it read as a mystery
+     *  button that did nothing (the row never showed whether the song landed in
+     *  the queue). The action lives here now, where it is named. */
+    onAddToQueue: (() -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -250,6 +261,18 @@ fun SongMenu(
                     onClick = {
                         expanded = false
                         onAddToPlaylist()
+                    },
+                )
+            }
+            if (onAddToQueue != null) {
+                DropdownMenuItem(
+                    text = { Text(Localization.get(language, "add_to_queue")) },
+                    leadingIcon = {
+                        Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null)
+                    },
+                    onClick = {
+                        expanded = false
+                        onAddToQueue()
                     },
                 )
             }

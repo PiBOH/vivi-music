@@ -46,6 +46,7 @@ internal fun strings_0(): Map<String, String> =
         "add_to_library" to "Add to library",
         "add_to_palette" to "Add to palette",
         "add_to_playlist" to "Add to playlist",
+        "add_to_queue" to "Add to queue",
         "advanced_login_hint" to "Required: if auto-detection fails, paste DATASYNC_ID and VISITOR_DATA from the music.youtube.com page source.",
         "ai_api_key" to "API Key",
         "ai_base_url" to "Base URL",

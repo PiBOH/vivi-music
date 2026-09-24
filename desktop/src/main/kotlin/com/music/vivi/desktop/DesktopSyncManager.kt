@@ -333,7 +333,8 @@ class DesktopSyncManager {
             AppLog.log(
                 "sync",
                 "send: track='${p.trackTitle ?: p.trackId}' queue=${p.queue.size} index=${p.queueIndex} " +
-                    "playing=${p.isPlaying} resolving=${p.isResolving} queueAt=${p.queueUpdatedAt}",
+                    "playing=${p.isPlaying} resolving=${p.isResolving} pos=${p.positionMs} " +
+                    "seek=${p.userSeek} queueAt=${p.queueUpdatedAt}",
             )
         }
         c.pushSnapshot(

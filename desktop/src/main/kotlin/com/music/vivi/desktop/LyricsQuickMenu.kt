@@ -6,9 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.Check
@@ -77,8 +75,14 @@ fun LyricsQuickMenu(
         expanded = true,
         onDismissRequest = onDismiss,
         // The list is ~25 entries once the styles are expanded: it must scroll
-        // on a short window instead of running off the screen.
-        modifier = Modifier.verticalScroll(rememberScrollState()),
+        // on a short window instead of running off the screen. That scroll is
+        // material3's own (`DropdownMenuContent` already applies it to its
+        // column), and adding a second one here crashed the expressive player
+        // with "Vertically scrollable component was measured with an infinity
+        // maximum height constraints": what the user scrolled was our
+        // verticalScroll, measured inside the menu's own one. The menu's scroll
+        // state is the one the user gets, so the extra modifier is gone rather
+        // than replaced.
     ) {
         DropdownMenuItem(
             text = { Text(Localization.get(language, "lyrics")) },

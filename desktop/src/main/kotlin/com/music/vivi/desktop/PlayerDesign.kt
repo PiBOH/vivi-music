@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -428,6 +429,39 @@ private fun BoxScope.MeshBlobs(accent: Color, dx: Float, dy: Float, dz: Float) {
                     )
                 )
         )
+    }
+}
+
+/**
+ * The artwork of a queue / up-next row, with the now-playing indicator drawn ON
+ * the cover when the row is the one playing.
+ *
+ * The bars used to be drawn only in the library-style rows, next to the cover
+ * (see `SongRow`), which left the queue with no indicator at all. They are the
+ * same composable here, driven by the live decoded level of the player through
+ * [LocalPlayback], so they move with the music instead of being a static icon.
+ */
+@Composable
+fun QueueRowArtwork(
+    thumbnail: String?,
+    isCurrent: Boolean,
+    size: Dp = 46.dp,
+    corner: Dp = 8.dp,
+) {
+    Box(Modifier.size(size)) {
+        PlayerThumbnail(thumbnail, size, corner, false)
+        if (isCurrent) {
+            val playback = LocalPlayback.current
+            NowPlayingBars(
+                audioLevel = playback.audioLevel,
+                isPlaying = playback.isPlaying,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(corner))
+                    .padding(horizontal = 5.dp, vertical = 4.dp),
+            )
+        }
     }
 }
 

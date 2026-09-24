@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -55,7 +54,10 @@ fun IntroSplash(
     background: String,
     onFinished: () -> Unit,
 ) {
-    val logo = remember { loadLogo() }
+    // Drawn at 220 dp: the bitmap is resampled for the density actually in use
+    // instead of handing Compose the 1024 px original to shrink.
+    val splashDensity = LocalDensity.current.density
+    val logo = remember(splashDensity) { loadLogo(220, splashDensity) }
     val accent = MaterialTheme.colorScheme.primary
 
     // Entrance progress drives the fade + scale of the whole content column.
@@ -161,8 +163,13 @@ private fun introBackgroundBrush(background: String, accent: Color): Brush = whe
     )
 }
 
-/** Loads the bundled official VIVI Music DE logo (`/images/logo_vmde.png`). */
-internal fun loadLogo(): ImageBitmap? = runCatching {
-    val stream = AppInfo::class.java.getResourceAsStream("/images/logo_vmde.png") ?: return null
-    stream.use { s -> javax.imageio.ImageIO.read(s)?.toComposeImageBitmap() }
-}.getOrNull()
+/**
+ * The bundled official VIVI Music DE logo, resampled for the size it is drawn at.
+ *
+ * [sizeDp] is what the caller puts in `Modifier.size(...)` and [density] the
+ * display density, so the bitmap ends up at (roughly) the drawn pixel size: a
+ * 1024 px mark shrunk to 26 px in one step is what made the sidebar and the tray
+ * look cheap (see [BrandLogo]).
+ */
+internal fun loadLogo(sizeDp: Int = 220, density: Float = 1f): ImageBitmap? =
+    BrandLogo.composeBitmap(sizeDp, density)

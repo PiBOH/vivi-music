@@ -368,14 +368,23 @@ fun SongRow(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Thumbnail(song.thumbnail, Modifier.size(48.dp))
-        if (isCurrent) {
-            Spacer(Modifier.width(8.dp))
-            NowPlayingBars(
-                audioLevel = playback.audioLevel,
-                isPlaying = playback.isPlaying,
-                color = accent,
-            )
+        // The now-playing indicator sits ON the artwork, the way the mobile row
+        // draws it: beside the cover it read as one more list icon, and on a row
+        // that is already tinted it was hard to tell the song was the one
+        // playing.
+        Box(Modifier.size(48.dp)) {
+            Thumbnail(song.thumbnail, Modifier.fillMaxSize())
+            if (isCurrent) {
+                NowPlayingBars(
+                    audioLevel = playback.audioLevel,
+                    isPlaying = playback.isPlaying,
+                    color = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 5.dp, vertical = 4.dp),
+                )
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -406,20 +415,17 @@ fun SongRow(
                 }
             }
         }
-        SongMenu(song = song, language = language, onAddToPlaylist = onAddToPlaylist)
-        if (onAddToQueue != null) {
-            Text(
-                "＋",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clickable {
-                        AppLog.click("add to queue '${song.title}'")
-                        onAddToQueue()
-                    }
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-            )
-        }
+        SongMenu(
+            song = song,
+            language = language,
+            onAddToPlaylist = onAddToPlaylist,
+            onAddToQueue = onAddToQueue?.let { add ->
+                {
+                    AppLog.click("add to queue '${song.title}'")
+                    add()
+                }
+            },
+        )
         song.duration?.let {
             Text(it.let(::formatDuration), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -431,12 +437,16 @@ fun SongRow(
  * [audioLevel] is available and the track is playing, the bars move with the
  * real decoded audio; otherwise they fall back to a gentle idle pulse. Only
  * composed for the single current row, so the ~43 Hz level updates stay cheap.
+ *
+ * Internal rather than private: the queue and history rows of the player draw
+ * the same indicator on their own artwork (see `AppleUpNextQueueScreen`).
  */
 @Composable
-private fun NowPlayingBars(
+internal fun NowPlayingBars(
     audioLevel: StateFlow<Float>?,
     isPlaying: Boolean,
     color: Color,
+    modifier: Modifier = Modifier,
 ) {
     val level by (audioLevel ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0.5f) }).collectAsState()
     val target = if (isPlaying) level.coerceIn(0.15f, 1f) else 0.08f
@@ -460,7 +470,7 @@ private fun NowPlayingBars(
     } else {
         0f
     }
-    Canvas(Modifier.size(width = 16.dp, height = 14.dp)) {
+    Canvas(modifier.size(width = 16.dp, height = 14.dp)) {
         val barWidth = size.width / 5f
         val gap = barWidth * 0.8f
         val maxH = size.height

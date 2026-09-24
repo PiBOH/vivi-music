@@ -33,6 +33,7 @@ orientation.
 
 ## Done — one line per release
 
+- [x] **DE 1.53.19** — the expressive player's lyrics-menu crash, the queue's "+" moved into the ⋮ menu, sharp tray/sidebar logos, the "no text" indicator on plain LRC, the now-playing bars on the cover, the Library live refresh, the Artists list, the duplicates left in the sidebar, the position after a skip
 - [x] **DE 1.53.18** — the liked songs travel between phone and desktop (#96); the playlist copies a pairing left behind are collapsed and no second account copy is created (#93)
 - [x] **DE 1.53.17** — seek bar drag and snap-back, the `-0:00` countdown, the playlist duplication (E1034), the expressive player's tab + autoplay, the rail toggled by the title
 - [x] **DE 1.53.16** — the lyrics "no text" indicator, aligned-line overflow, artwork quality, playlist-sync progress, the whole queue in the device sync, the player picker, the font import, the pairing scan (APK)

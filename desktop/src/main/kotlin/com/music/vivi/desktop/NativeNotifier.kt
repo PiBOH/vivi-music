@@ -5,7 +5,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.serialization.Serializable
 import java.awt.Color
-import java.awt.RenderingHints
 import java.awt.SystemTray
 import java.awt.TrayIcon
 import java.awt.image.BufferedImage
@@ -314,27 +313,32 @@ object NativeNotifier {
         }
     }
 
-    /** Loads the bundled official VIVI Music DE logo (scaled to tray size) for the notification icon. */
+    /**
+     * The bundled logo at tray size, for the notification icon.
+     *
+     * Two things made this look cheap before: the 1024 px mark was resampled to
+     * 16 px in a single bilinear step, and the image was then handed over at
+     * *logical* size while AWT scales it again for the display. The resample is
+     * now the multi-step one of [BrandLogo] and it targets the device pixels
+     * (tray size x the display scale), so what Windows receives already has the
+     * detail the tray is going to show.
+     */
     private fun trayImage(): BufferedImage {
-        val stream = NativeNotifier::class.java.getResourceAsStream("/images/logo_vmde.png")
-        if (stream != null) {
-            val source = runCatching {
-                stream.use { s -> javax.imageio.ImageIO.read(s) }
-            }.getOrNull()
-            if (source != null) {
-                val size = runCatching { SystemTray.getSystemTray().trayIconSize.width }
-                    .getOrDefault(16).coerceIn(16, 64)
-                val scaled = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
-                val g = scaled.createGraphics()
-                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
-                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
-                g.drawImage(source, 0, 0, size, size, null)
-                g.dispose()
-                return scaled
-            }
-        }
-        return fallbackTrayImage()
+        val traySize = runCatching { SystemTray.getSystemTray().trayIconSize.width }
+            .getOrDefault(16).coerceIn(16, 64)
+        val pixels = (traySize * displayScale()).toInt().coerceIn(16, 256)
+        return BrandLogo.awtImage(pixels) ?: fallbackTrayImage()
     }
+
+    /** Scale of the primary display (2.0 on a 200% Windows setting). */
+    private fun displayScale(): Float = runCatching {
+        java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+            .defaultScreenDevice
+            .defaultConfiguration
+            .defaultTransform
+            .scaleX
+            .toFloat()
+    }.getOrDefault(1f).coerceIn(1f, 4f)
 
     /** Placeholder glyph, used only if the bundled logo is missing (e.g. dev). */
     private fun fallbackTrayImage(): BufferedImage {

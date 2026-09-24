@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.OutlinedButton
 import com.music.innertube.YouTube
 import com.music.innertube.models.ArtistItem
+import com.music.innertube.models.PlaylistItem
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.YTItem
 import com.music.innertube.pages.LibraryPage
@@ -49,6 +51,24 @@ import kotlinx.serialization.encodeToString
 
 /** The account's saved-artists page (a library corpus, not a normal browse). */
 const val ARTISTS_BROWSE_ID = "FEmusic_library_corpus_artists"
+
+/**
+ * "The library changed" — a counter the Library screen watches.
+ *
+ * The screen loads a page and then sits on it: liking a song (from the player,
+ * a list row or the paired phone), removing one, or editing a playlist changed
+ * the account but nothing told the screen, so the new song only appeared after
+ * leaving and reopening it. [bump] is called by the places that change the
+ * library and the screen re-fetches the page it is showing.
+ */
+object LibraryRefresh {
+    private val _revision = MutableStateFlow(0)
+    val revision: StateFlow<Int> = _revision.asStateFlow()
+
+    fun bump() {
+        _revision.value += 1
+    }
+}
 
 /**
  * The desktop's artist list, cached on disk.
@@ -141,6 +161,10 @@ suspend fun loadLibraryPage(browseId: String): Result<LibraryPage> {
     // Every other library page is what the server returned, filtered.
     if (browseId != ARTISTS_BROWSE_ID) return result.map { it.copy(items = it.items.filteredContent()) }
 
+    // The artists tab answers from the account's songs and playlists even when
+    // the corpus request itself failed: a request that comes back empty (or
+    // errors) used to leave the tab empty or on the error box while the rest of
+    // the library was browsable.
     val artists = libraryArtists(page?.items.orEmpty())
     if (artists.isEmpty()) return result.map { it.copy(items = it.items.filteredContent()) }
     return Result.success(
@@ -153,11 +177,21 @@ suspend fun loadLibraryPage(browseId: String): Result<LibraryPage> {
  * follows, or — when it follows none — the ones heard in its songs.
  *
  * The corpus page is the *Liked* filter of mobile's Artists screen and it is
- * genuinely empty for an account that has saved songs but never followed an
- * artist. Mobile still has a list in that case because its screen reads the
- * artists table of its database, which is filled from its songs; the desktop
- * has no such table, so the equivalent is derived from the account's saved
- * songs and cached by [ArtistsStore] — which is also what is shown offline.
+ * genuinely empty for an account that follows no artist (the user's does: the
+ * log says `library FEmusic_library_corpus_artists → 0 item(s)`). Mobile still
+ * has a list in that case because its screen reads the *artists table* of its
+ * database, which is filled from the songs it has seen — the account's saved
+ * songs **and** its playlists. The desktop has no such table, so the equivalent
+ * is derived from every song list it can reach and cached by [ArtistsStore]
+ * (which is also what is shown offline).
+ *
+ * The old derivation read the liked-songs page only. For an account whose liked
+ * list is empty (or whose request comes back empty) that page yields nothing, so
+ * the screen fell back to whatever the cache happened to hold — one artist, from
+ * a single lucky page in an older session ("the Artists screen always shows only
+ * one artist"). The account's **playlists** are the reliable source: they hold
+ * the songs the user actually keeps, and every song carries its artists' channel
+ * ids, so those artists open like any other.
  */
 private suspend fun libraryArtists(corpusItems: List<YTItem>): List<ArtistItem> {
     val corpus = corpusItems.filterIsInstance<ArtistItem>()
@@ -165,17 +199,63 @@ private suspend fun libraryArtists(corpusItems: List<YTItem>): List<ArtistItem> 
         ArtistsStore.cache(corpus)
         return corpus
     }
-    val derived = artistsFromSavedSongs()
+    val derived = LinkedHashMap<String, ArtistItem>()
+    artistsFromSavedSongs().forEach { derived.putIfAbsent(it.id, it) }
+    val fromLibrary = derived.size
+    artistsFromPlaylists(derived)
+    val fromPlaylists = derived.size - fromLibrary
     if (derived.isNotEmpty()) {
-        ArtistsStore.cache(derived)
-        AppLog.log("browse", "artists corpus empty — derived ${derived.size} artist(s) from the saved songs")
-        return derived
+        ArtistsStore.cache(derived.values.toList())
+        AppLog.log(
+            "browse",
+            "artists corpus empty — derived ${derived.size} artist(s) " +
+                "($fromLibrary from the saved songs, $fromPlaylists from the account's playlists)",
+        )
+        return derived.values.toList()
     }
     val cached = ArtistsStore.all.value
     if (cached.isNotEmpty()) {
         AppLog.log("browse", "artists corpus empty and no saved songs — ${cached.size} artist(s) from the cache")
     }
     return cached
+}
+
+/**
+ * Adds the artists of the account's playlists' songs to [into].
+ *
+ * The playlists are walked a few at a time (the screen only needs enough to fill
+ * a grid, and every artist found is cached for good, so the next visit already
+ * knows them); a playlist that cannot be read is skipped instead of failing the
+ * whole tab.
+ */
+private suspend fun artistsFromPlaylists(
+    into: LinkedHashMap<String, ArtistItem>,
+    maxPlaylists: Int = 8,
+) {
+    val page = YouTube.library("FEmusic_liked_playlists").getOrNull() ?: return
+    val playlists = page.items.filterIsInstance<PlaylistItem>().take(maxPlaylists)
+    for (playlist in playlists) {
+        val songs = YouTube.playlist(playlist.id).getOrNull()?.songs ?: continue
+        songs.forEach { song ->
+            song.artists.forEach artistLoop@{ artist ->
+                val id = artist.id?.takeIf { it.isNotBlank() } ?: return@artistLoop
+                into.putIfAbsent(
+                    id,
+                    ArtistItem(
+                        id = id,
+                        title = artist.name,
+                        thumbnail = song.thumbnail,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null,
+                    ),
+                )
+            }
+        }
+    }
+    AppLog.log(
+        "browse",
+        "artists from playlists: ${playlists.size} playlist(s) read → ${into.size} artist(s) so far",
+    )
 }
 
 /**
@@ -277,15 +357,29 @@ fun LibraryScreen(
         // hiccup) used to leave an empty list with no way to reload without
         // leaving and reopening the screen.
         var reloadKey by remember { mutableStateOf(0) }
+        // Live refresh: liking/unliking a song, or a change made on the paired
+        // device, reloads the tab that is on screen (see [LibraryRefresh]).
+        val libraryRevision by LibraryRefresh.revision.collectAsState()
+        var loadedTab by remember { mutableStateOf(-1) }
 
-        LaunchedEffect(selectedTab, reloadKey) {
-            loading = true
+        LaunchedEffect(selectedTab, reloadKey, libraryRevision) {
+            // A different tab has nothing to keep: it shows the spinner. A
+            // refresh of the SAME tab keeps the list it already has on screen
+            // while the new page is fetched — clearing it made every like/unlike
+            // flash the whole tab through the loading state.
+            if (loadedTab != selectedTab) {
+                page = null
+                loading = true
+            }
             error = null
-            page = null
             // Through the shared loader: the artists tab has the derived-artists
             // fallback (see [loadLibraryPage]).
             loadLibraryPage(browseIds[selectedTab]).fold(
-                onSuccess = { page = it; loading = false },
+                onSuccess = {
+                    page = it
+                    loadedTab = selectedTab
+                    loading = false
+                },
                 onFailure = { error = it.message; loading = false },
             )
         }

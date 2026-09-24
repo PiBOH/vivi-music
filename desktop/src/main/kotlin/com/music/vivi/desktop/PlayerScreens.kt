@@ -1736,19 +1736,11 @@ fun AppleUpNextQueueScreen(
                     }
                 }
 
-                Tooltip(Localization.get(language, "tooltip_queue_options")) {
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.PlaylistAdd,
-                            contentDescription = "Queue options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
+                // A "queue options" icon used to sit here with an empty
+                // `onClick`: a button that did nothing, next to the ones that
+                // did (which is what the "mystery +" report was about). A
+                // control that has no action is worse than no control, so it is
+                // gone rather than wired to something arbitrary.
 
                 // Real autoplay toggle: it drives the window-level setting (which
                 // the player reads when a track ends), not a local flag that the
@@ -1801,13 +1793,7 @@ fun AppleUpNextQueueScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 // Rounded square thumbnail
-                                Box(
-                                    Modifier
-                                        .size(46.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                ) {
-                                    PlayerThumbnail(item.thumbnail, 46.dp, 8.dp, false)
-                                }
+                                QueueRowArtwork(item.thumbnail, isCurrent = isCurrent)
 
                                 Spacer(Modifier.width(14.dp))
 
@@ -2097,7 +2083,21 @@ fun QueueScreen(
                                     color = if (isCurrent) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(end = 8.dp),
                                 )
-                                Thumbnail(item.thumbnail, Modifier.size(44.dp))
+                                Box(Modifier.size(44.dp)) {
+                                    Thumbnail(item.thumbnail, Modifier.fillMaxSize())
+                                    if (isCurrent) {
+                                        val playback = LocalPlayback.current
+                                        NowPlayingBars(
+                                            audioLevel = playback.audioLevel,
+                                            isPlaying = playback.isPlaying,
+                                            color = Color.White,
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                                .padding(horizontal = 5.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                }
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
