@@ -169,6 +169,12 @@ object MacMediaSession {
     /** Guards against launching a second download for the same track. */
     private val downloadingUrl = AtomicReference<String?>(null)
 
+    /** The startup claim (see [claimRestoredTrack]) happens once per process. */
+    private val startupClaim = AtomicBoolean(false)
+
+    /** How long the claim is published as "playing" before the real state. */
+    private const val STARTUP_CLAIM_MS = 1_200L
+
     /** True when the native helper is loaded and the session is active. */
     val isActive: Boolean
         get() = isMac && started.get() && nativeApi != null
@@ -365,6 +371,14 @@ object MacMediaSession {
             lastLoggedTitle = m.title
             if (m.title.isNotEmpty()) log("now playing: \"${m.title}\" — ${m.artist}")
         }
+        pushMetadata(m.playing)
+        ensureArtworkDownloaded(api)
+    }
+
+    /** Hands the current metadata to the native side with an explicit state. */
+    private fun pushMetadata(playing: Boolean) {
+        val api = nativeApi ?: return
+        val m = metadata
         try {
             api.viviStartSession()
             api.viviSetNowPlaying(
@@ -373,13 +387,45 @@ object MacMediaSession {
                 m.album.ifEmpty { null },
                 m.durationMs.toDouble(),
                 m.positionMs.toDouble(),
-                if (m.playing) 1 else 0,
+                if (playing) 1 else 0,
                 m.artworkLocalPath,
             )
         } catch (t: Throwable) {
             println("[mac-media] metadata push failed: $t")
         }
-        ensureArtworkDownloaded(api)
+    }
+
+    /**
+     * Registers the app as the system's "Now Playing" source for a track that
+     * was **restored but never played** in this run (the persistent queue).
+     *
+     * macOS grants the Control Center tile and the media-key routing to an app
+     * it has seen *playing*: the reporter's own finding on issue #63 is that the
+     * tile only appears after playing and stopping something, and with the
+     * persistent queue the app comes up with a paused track that has never been
+     * played — while a paused claim on its own (what this used to send) is not
+     * enough on a freshly launched process.
+     *
+     * This walks the same two states the reporter described — `playing` for
+     * [STARTUP_CLAIM_MS], then the real paused state — **in the metadata only**:
+     * no audio is started, paused or touched, the player keeps the restored track
+     * paused at 0:00 exactly as before. It runs at most once per process.
+     */
+    fun claimRestoredTrack() {
+        if (!isMac) return
+        if (metadata.title.isEmpty()) return
+        if (!startupClaim.compareAndSet(false, true)) return
+        log("startup claim: publishing the restored track as playing, then paused (issue #63)")
+        pushMetadata(playing = true)
+        Thread({
+            runCatching {
+                Thread.sleep(STARTUP_CLAIM_MS)
+                // Only if the user has not taken over in the meantime: a real
+                // play/pause in the last second owns the state now.
+                pushMetadata(playing = metadata.playing)
+                log("startup claim done: restored track claimed for the system tile")
+            }
+        }, "vivi-startup-claim").apply { isDaemon = true }.start()
     }
 
     /**

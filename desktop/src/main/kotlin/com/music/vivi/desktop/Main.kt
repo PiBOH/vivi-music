@@ -966,6 +966,12 @@ fun WindowScope.App(
                         it.startsWith("http://") || it.startsWith("https://")
                     },
                 )
+                // A track that was restored (persistent queue) and never played
+                // this run: claiming the tile the way a real play-and-stop does
+                // is what makes it appear on a freshly launched process (issue
+                // #63). Called AFTER the push above so the claim has the track's
+                // metadata; it is a no-op once it has run.
+                if (!live.isPlaying) MacMediaSession.claimRestoredTrack()
                 // While PAUSED the claim must stay alive too: with a track
                 // restored from the persistent queue nothing has been played
                 // since launch, and if the app stops being the system's "Now
