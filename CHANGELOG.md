@@ -11,6 +11,12 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.8_DE-1.53.20-alpha] - 2026-09-24
+
+### Fixed
+- [DE] **macOS: the system "Now Playing" tile appears at launch with a track restored from the persistent queue.** macOS grants the tile and the media-key routing to an app it has seen *playing*, and the persistent queue comes up **paused**: a paused claim on a freshly launched process is not enough — which is exactly what the reporter worked out on [#63](https://github.com/PiBOH/vivi-music-de/issues/63) ("you need to play and stop the current queue song to register it"). The app now walks the same two states a real play-and-stop does at startup — one push as *playing*, then the real paused state after 1.2 s — **in the metadata only**: the restored track stays paused at 0:00, no audio is started and the player is untouched. It runs at most once per process, and the sequence is logged (`startup claim: …`) so a future report can prove whether it ran. (Closes [#63](https://github.com/PiBOH/vivi-music-de/issues/63))
+- [DE] **The "no text" indicator in the lyrics is three horizontal dots, not a ring.** The instrumental break used to draw a 36 dp grey ring filling up (a copy of the mobile `IntervalIndicator`, which is a *wavy* circle — what came out here was a plain ring that reads as a broken spinner). It is now a row of three dots that light up with the break's own progress (the first at a quarter, the second at half, the third at three quarters), the way a "this part has no lyrics" marker should look, and the row keeps its 36 dp height so nothing jumps.
+
 ## [6.0.6.8_DE-1.53.19-alpha] - 2026-09-24
 
 ### Fixed

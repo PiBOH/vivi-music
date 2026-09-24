@@ -8,6 +8,9 @@ orientation.
 
 ## Open
 
+### Audio (macOS)
+- [ ] **The audible jump the macOS reporter still hears (#3).** His last export has *no* stall line and a 99-100 % device check with a 4000 ms ring, so nothing in the pipeline we measure starves: either the PCM leaving the decoder is already discontinuous (the AAC sample-table walk — `audio integrity` only counts *overlaps* today) or the machine froze for over 4 s. **Do not guess:** the next export taken *while the jump happens* has to name it (`jvm stall`, `audio priority stall`, `audio cushion low`, `audio integrity`).
+
 ### Audio (Windows)
 - [ ] **A scheduling freeze longer than ~1 s is still audible.** Java Sound's device ring is hard-capped at 1000 ms there (measured: any request above 1 s is granted exactly 176400 bytes; macOS grants 4 s) and MMCSS now covers the ~1 s range. Beyond that it means a native WASAPI render path (event-driven, own ring) or a bigger ring in the current backend. **Do not start without a measurement:** the logs must first show the writer frozen *outside* `out.write()`.
 
@@ -33,6 +36,7 @@ orientation.
 
 ## Done — one line per release
 
+- [x] **DE 1.53.20** — macOS: the "Now Playing" tile is claimed at launch with a restored (paused) queue (#63); the lyrics "no text" marker is three horizontal dots instead of the ring
 - [x] **DE 1.53.19** — the expressive player's lyrics-menu crash, the queue's "+" moved into the ⋮ menu, sharp tray/sidebar logos, the "no text" indicator on plain LRC, the now-playing bars on the cover, the Library live refresh, the Artists list, the duplicates left in the sidebar, the position after a skip
 - [x] **DE 1.53.18** — the liked songs travel between phone and desktop (#96); the playlist copies a pairing left behind are collapsed and no second account copy is created (#93)
 - [x] **DE 1.53.17** — seek bar drag and snap-back, the `-0:00` countdown, the playlist duplication (E1034), the expressive player's tab + autoplay, the rail toggled by the title
