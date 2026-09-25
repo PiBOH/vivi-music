@@ -36,6 +36,13 @@ import javax.imageio.ImageIO
  */
 object BrandLogo {
 
+    /**
+     * The size the SVG is authored at: its `viewBox` and the units of every
+     * coordinate in the file. The canvas is scaled to the target size instead of
+     * asking Skia to re-lay-out the document at it — see [renderVector].
+     */
+    private const val SVG_INTRINSIC_PX = 1024f
+
     /** The vector master, read once. */
     private val svgBytes: ByteArray? by lazy { readVector() }
 
@@ -92,23 +99,41 @@ object BrandLogo {
     /**
      * Rasterizes the SVG at exactly [size]x[size] px.
      *
-     * Returns null (never throws) when the SVG backend is missing or the file
-     * does not parse, which is what keeps the PNG fallback reachable: a logo is
-     * not worth a crash on a machine whose Skia has no SVG module linked.
+     * Returns null (never throws) when the SVG backend is missing, the file does
+     * not parse, or the render comes out empty — which is what keeps the PNG
+     * fallback reachable: a logo is not worth a crash, and an invisible icon is
+     * worse than a resampled one.
+     *
+     * **The container size is the SVG's, not the target's.** Setting it to the
+     * target size (`setContainerSize(size, size)`) looks right and is wrong:
+     * measured with the bundled Skia (0.9.37.3), every render below 256 px comes
+     * back **fully transparent** — 0 opaque pixels at 16, 26, 32, 48, 64 and
+     * 128 px — and at 256 px only 20 964 of the expected 51 489. The mark was
+     * shipped that way in 1.53.21, which is why the sidebar drew nothing and the
+     * tray icon never appeared: an all-transparent tray image is an empty slot.
+     * The container is now the mark's own 1024 (what its `viewBox` says) and the
+     * *canvas* is scaled to the target, which renders correctly at every size
+     * (26 px: 537 opaque pixels of 676, the expected 79 %).
+     *
+     * The decoded image is also copied into `TYPE_INT_ARGB`: Skia's PNG comes
+     * back from ImageIO as `TYPE_4BYTE_ABGR`, and `toComposeImageBitmap()` only
+     * accepts ARGB — the sidebar would fail on the type even with a good render.
      */
     private fun renderVector(bytes: ByteArray, size: Int): BufferedImage? = runCatching {
         if (!SkiaVectorLogo.available()) return null
         val data = org.jetbrains.skia.Data.makeFromBytes(bytes)
         val dom = SVGDOM(data)
         try {
-            val side = size.toFloat()
-            dom.setContainerSize(side, side)
             val surface = Surface.makeRasterN32Premul(size, size)
             try {
+                dom.setContainerSize(SVG_INTRINSIC_PX, SVG_INTRINSIC_PX)
+                val scale = size / SVG_INTRINSIC_PX
+                surface.canvas.scale(scale, scale)
                 dom.render(surface.canvas)
                 val png = surface.makeImageSnapshot().encodeToData(EncodedImageFormat.PNG)
                     ?: return null
-                ImageIO.read(ByteArrayInputStream(png.bytes))
+                val decoded = ImageIO.read(ByteArrayInputStream(png.bytes)) ?: return null
+                toArgb(decoded).takeIf { it.hasVisiblePixels() }
             } finally {
                 surface.close()
             }
@@ -117,6 +142,33 @@ object BrandLogo {
             data.close()
         }
     }.getOrNull()
+
+    /** A `TYPE_INT_ARGB` copy of [image] (`toComposeImageBitmap` needs ARGB). */
+    private fun toArgb(image: BufferedImage): BufferedImage {
+        if (image.type == BufferedImage.TYPE_INT_ARGB) return image
+        val out = BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_ARGB)
+        val g = out.createGraphics()
+        try {
+            g.drawImage(image, 0, 0, null)
+        } finally {
+            g.dispose()
+        }
+        return out
+    }
+
+    /**
+     * True when anything in [image] is actually opaque. A fully transparent
+     * raster is a failure, not a logo: it is what a mis-sized SVG render
+     * produces, and it must send the caller to the PNG instead of to nothing.
+     */
+    private fun BufferedImage.hasVisiblePixels(): Boolean {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                if (((getRGB(x, y) ushr 24) and 0xFF) > 8) return true
+            }
+        }
+        return false
+    }
 
     private fun readVector(): ByteArray? = runCatching {
         BrandLogo::class.java.getResourceAsStream("/images/logo_vmde.svg")?.use { it.readBytes() }
