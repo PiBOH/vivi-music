@@ -1,0 +1,20 @@
+{
+  "version": "6.0.6.8",
+  "versionCode": 138,
+  "channel": "alpha",
+  "title": "v6.0.6.8_DE-1.53.25: every writer pass is timed, so an export says whether the stall repeats",
+  "builtAt": "2026-09-25T19:31:12Z",
+  "commit": "74b9b76fef80ba0a34704462800be4482848f928",
+  "files": [
+    {
+      "name": "vivi-gsm.apk",
+      "sizeBytes": 39704525,
+      "url": "https://raw.githubusercontent.com/PiBOH/vivi-music/apk-latest/.releases/apk/latest/vivi-gsm.apk"
+    },
+    {
+      "name": "vivi-foss.apk",
+      "sizeBytes": 38116694,
+      "url": "https://raw.githubusercontent.com/PiBOH/vivi-music/apk-latest/.releases/apk/latest/vivi-foss.apk"
+    }
+  ]
+}
