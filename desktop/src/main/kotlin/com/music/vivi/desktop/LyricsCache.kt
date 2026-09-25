@@ -52,6 +52,15 @@ object LyricsCache {
      * song or nothing at all); v5 invalidated the wrong-song KuGou match; v4
      * separated the fetch modes; v3 invalidated first-answer-wins entries; v2
      * invalidated single-provider, no-duration lookups.
+     *
+     * **v7 — cached answers written before the styled renderer.** The animated
+     * styles and the "nothing is sung here" break markers both read the
+     * word-level timings *inside the cached text*, and a cached answer is served
+     * without ever asking a provider again — so lyrics stored by an earlier
+     * resolver keep rendering with the old text even after the renderer changed,
+     * which is what "the style doesn't always load" looked like: same setting,
+     * different result depending on whether the track had been played before.
+     * v7 drops those entries and they are refetched once.
      */
     private fun file(videoId: String, preferSynced: Boolean): File {
         val safe = videoId.replace(Regex("[^A-Za-z0-9._-]"), "_")
@@ -60,7 +69,7 @@ object LyricsCache {
     }
 
     /** Cache format version — see [file] for when and why to bump it. */
-    private const val CACHE_VERSION = 6
+    private const val CACHE_VERSION = 7
 
     private fun memKey(videoId: String, preferSynced: Boolean) = "$videoId|${if (preferSynced) "s" else "p"}"
 }
