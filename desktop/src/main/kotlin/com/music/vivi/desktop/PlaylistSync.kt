@@ -289,6 +289,53 @@ object PlaylistSync {
     private suspend fun pushOne(localId: String, trigger: String): Boolean = pushOne(localId, trigger, null)
 
     /**
+     * The account's playlists, as the account screen and the pull see them.
+     *
+     * Cached for [ACCOUNT_CACHE_TTL_MS] so an upload of many playlists asks for
+     * the list once instead of once per playlist — the lookup below runs for
+     * every one of them — while still being short enough that a playlist created
+     * on the phone in between is picked up by the next run.
+     */
+    @Volatile
+    private var accountCache: Pair<Long, List<PlaylistItem>>? = null
+
+    /**
+     * The account playlist called [name] that is not already linked to another
+     * local playlist, or null.
+     *
+     * "Not already linked" matters: two local playlists must never be pointed at
+     * the same account playlist, or the next pull would have both of them
+     * claiming it. A read failure returns null (the caller then creates the
+     * playlist as before) rather than aborting the upload.
+     */
+    private suspend fun accountPlaylistNamed(name: String): PlaylistItem? {
+        if (name.isBlank()) return null
+        val cached = accountCache
+        val items = if (cached != null && System.currentTimeMillis() - cached.first < ACCOUNT_CACHE_TTL_MS) {
+            cached.second
+        } else {
+            val page = YouTube.library("FEmusic_liked_playlists").getOrElse { error ->
+                AppLog.log(
+                    "playlists",
+                    "upload: the account's playlists could not be read " +
+                        "(${error.message ?: error.javaClass.simpleName}) — creating the playlist instead",
+                )
+                return null
+            }
+            page.items.filterIsInstance<PlaylistItem>().also { list ->
+                accountCache = System.currentTimeMillis() to list
+            }
+        }
+        val linked = PlaylistStore.active.mapNotNull { it.remoteId }.toSet()
+        return items.firstOrNull { item ->
+            item.id !in linked && item.title.trim().equals(name.trim(), ignoreCase = true)
+        }
+    }
+
+    /** How long [accountCache] may answer for (see [accountPlaylistNamed]). */
+    private const val ACCOUNT_CACHE_TTL_MS = 60_000L
+
+    /**
      * Creates [localId]'s account copy and uploads the songs it holds right now.
      * Returns whether the copy was created.
      *
@@ -302,19 +349,15 @@ object PlaylistSync {
     ): Boolean {
         val playlist = PlaylistStore.get(localId) ?: return false
         if (playlist.accountPlaylistId() != null) return false
-        // The account may already hold this very playlist: the two devices each
-        // have their own row for it and the account copy was created from the other
-        // one (the phone's "Sync playlist", or *Create on YouTube Music* here).
-        // Creating a second copy is exactly the E1034 duplicate, so this row adopts
-        // the account id of the copy that exists and only the songs the account does
-        // not have are pushed.
-        val twin = PlaylistStore.active.firstOrNull { other ->
-            other.id != playlist.id && other.accountPlaylistId() != null && samePlaylist(other, playlist)
-        }
-        if (twin != null) {
-            val account = twin.accountPlaylistId()!!
+
+        /**
+         * Points [playlist] at an account copy that already exists and uploads
+         * only the songs that copy does not hold yet — the difference between
+         * updating the playlist the user already has and uploading a second one
+         * with the same name. Always returns false: nothing was *created*.
+         */
+        suspend fun adopt(account: String, alreadyThere: Set<String>, how: String): Boolean {
             PlaylistStore.link(playlist.id, account)
-            val alreadyThere = twin.songs.map { it.id }.toSet()
             val missing = playlist.songs.filterNot { it.id in alreadyThere }
             var pushed = 0
             missing.forEach { song ->
@@ -324,11 +367,49 @@ object PlaylistSync {
             AppLog.log(
                 "playlists",
                 "upload ($trigger): '${playlist.name}' already lives on the account ($account) — " +
-                    "linked instead of creating a second copy, $pushed of ${missing.size} missing song(s) pushed",
+                    "$how, $pushed of ${missing.size} missing song(s) pushed",
             )
             return false
         }
+
+        // 1. A local row that is already linked to the account may BE this
+        // playlist: the two devices each have their own row for it and the
+        // account copy was created from the other one (the phone's "Sync
+        // playlist", or *Create on YouTube Music* here). Creating a second copy
+        // is exactly the E1034 duplicate, so this row adopts the account id of
+        // the copy that exists and only the songs it does not have are pushed.
+        val twin = PlaylistStore.active.firstOrNull { other ->
+            other.id != playlist.id && other.accountPlaylistId() != null && samePlaylist(other, playlist)
+        }
+        if (twin != null) {
+            return adopt(
+                account = twin.accountPlaylistId()!!,
+                alreadyThere = twin.songs.map { it.id }.toSet(),
+                how = "linked instead of creating a second copy",
+            )
+        }
+
+        // 2. …or the account itself already holds a playlist with this name and
+        // this install simply has never seen it: created on the phone, on
+        // another computer, or in the YouTube Music web UI. Uploading here used
+        // to create a *second* playlist with the same name, which is the
+        // duplicate the user then sees twice on the account. The playlist that
+        // is already there is adopted, and its songs are the ones the account
+        // copy is missing — so "upload" updates it instead of re-uploading it.
+        accountPlaylistNamed(playlist.name)?.let { remote ->
+            // The songs on the account copy, so the ones already there are not
+            // added a second time (a playlist happily accepts duplicates).
+            val alreadyThere = YouTube.playlist(remote.id)
+                .map { page -> page.songs.map { it.id }.toSet() }
+                .getOrNull()
+                .orEmpty()
+            return adopt(remote.id, alreadyThere, "matched by name instead of uploaded again")
+        }
+
         val remote = runCatching { YouTube.createPlaylist(playlist.name) }.getOrNull()
+        // A playlist was just created: the cached account list is one playlist
+        // out of date now.
+        accountCache = null
         if (remote.isNullOrBlank()) {
             AppLog.log("playlists", "upload ($trigger): '${playlist.name}' was NOT created on the account")
             return false
