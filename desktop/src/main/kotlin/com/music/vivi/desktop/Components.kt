@@ -449,7 +449,7 @@ internal fun NowPlayingBars(
     modifier: Modifier = Modifier,
 ) {
     val level by (audioLevel ?: remember { kotlinx.coroutines.flow.MutableStateFlow(0.5f) }).collectAsState()
-    val target = if (isPlaying) level.coerceIn(0.15f, 1f) else 0.08f
+    val target = if (isPlaying) level.coerceIn(0.05f, 1f) else 0.05f
     val smooth by animateFloatAsState(
         targetValue = target,
         animationSpec = tween(durationMillis = 140, easing = LinearEasing),
@@ -474,9 +474,19 @@ internal fun NowPlayingBars(
         val barWidth = size.width / 5f
         val gap = barWidth * 0.8f
         val maxH = size.height
+        // The bars used to be drawn at `level * maxH`: a decoded RMS level of
+        // music sits around 0.1-0.3, so on a 14 dp canvas every bar came out
+        // between one and two pixels and the floor below clamped all three to
+        // the same three pixels for the whole song — a frozen icon, which is
+        // exactly the "the dots that follow the music don't move" report.
+        // The level now *modulates* a span that is always visible: quiet music
+        // moves through ~20-45% of the height, loud music through 45-100%, and
+        // the corner case of a silent level still animates instead of freezing.
+        val energy = 0.35f + 0.65f * smooth.coerceIn(0f, 1f)
         for (i in 0 until 3) {
             val wobble = 0.5f + 0.5f * sin((phase * 2 * Math.PI + i * 1.4).toFloat())
-            val h = (smooth * maxH * (0.45f + 0.55f * wobble)).coerceAtLeast(3f)
+            val h = (maxH * energy * (0.45f + 0.55f * wobble))
+                .coerceAtLeast(maxH * 0.18f)
             drawRoundRect(
                 color = color,
                 topLeft = Offset(i * (barWidth + gap), (maxH - h) / 2f),
