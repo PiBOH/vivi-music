@@ -279,7 +279,7 @@ fun PlayerScreen(
                         }
                     }
                 }
-            } else if (design == PlayerDesign.EXPRESSIVE) {
+            } else if (design.isExpressive) {
                 M3EPlayerContent(
                     np = track,
                     queue = queue,
@@ -959,7 +959,7 @@ private fun PlayerContent(
 ) {
     val contentWidth = 980.dp
     val metrics = design.metrics()
-    val singleColumn = design == PlayerDesign.NEW || design == PlayerDesign.EXPRESSIVE
+    val singleColumn = design == PlayerDesign.NEW || design.isExpressive
     val pillPlay = design == PlayerDesign.NEW
 
     Column(

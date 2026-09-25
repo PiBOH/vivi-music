@@ -51,7 +51,25 @@ import kotlinx.coroutines.flow.StateFlow
 enum class PlayerDesign(val key: String) {
     CLASSIC("classic"),
     NEW("new"),
-    EXPRESSIVE("expressive");
+
+    /** The expressive player with the opaque Queue / Lyrics / History tab. */
+    EXPRESSIVE("expressive"),
+
+    /**
+     * The same expressive player with the **translucent** tab, so the player
+     * background shows through it.
+     *
+     * The two expressive finishes are two entries of this picker and not a
+     * separate switch: the tab *is* what distinguishes them, so choosing the
+     * player and choosing its finish are the same decision, and a switch that
+     * only mattered in one of the three layouts was a control that does nothing
+     * two thirds of the time.
+     */
+    EXPRESSIVE_TRANSLUCENT("expressive_translucent");
+
+    /** True for both expressive finishes (layout, not only the tab finish). */
+    val isExpressive: Boolean
+        get() = this == EXPRESSIVE || this == EXPRESSIVE_TRANSLUCENT
 
     companion object {
         fun from(key: String?): PlayerDesign = entries.firstOrNull { it.key == key } ?: CLASSIC
@@ -130,7 +148,9 @@ data class PlayerDesignMetrics(val artSize: Dp, val overlayTitle: Boolean, val a
 fun PlayerDesign.metrics(): PlayerDesignMetrics = when (this) {
     PlayerDesign.CLASSIC -> PlayerDesignMetrics(360.dp, false, 11.dp)
     PlayerDesign.NEW -> PlayerDesignMetrics(400.dp, false, 11.dp)
-    PlayerDesign.EXPRESSIVE -> PlayerDesignMetrics(521.dp, true, 11.dp)
+    PlayerDesign.EXPRESSIVE,
+    PlayerDesign.EXPRESSIVE_TRANSLUCENT,
+    -> PlayerDesignMetrics(521.dp, true, 11.dp)
 }
 
 /**

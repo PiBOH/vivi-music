@@ -1085,7 +1085,11 @@ fun WindowScope.App(
     var lyricsProviders by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsProviderPriority) }
     var swipeThumbnail by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeThumbnail) }
     var swipeSensitivity by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeSensitivity) }
-    var expressiveTabTranslucent by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().expressiveTabTranslucent) }
+    // The tab finish of the expressive player is not a flag of its own any more:
+    // the two expressive finishes are two entries of the player picker, so the
+    // chosen [PlayerDesign] IS the answer. It is still mirrored into the older
+    // boolean on write, so a settings file stays readable by an older build.
+    val expressiveTabTranslucent = playerDesign == PlayerDesign.EXPRESSIVE_TRANSLUCENT
     var lyricsThumbnailPlayPause by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsThumbnailPlayPause) }
     var pauseSearchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
     var syncPlaylistsWithYoutube by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().syncPlaylistsWithYoutube) }
@@ -2486,7 +2490,15 @@ fun WindowScope.App(
                         design = playerDesign,
                         onDesignChange = { d ->
                             playerDesign = d
-                            DesktopSettings.update { it.copy(playerDesign = d.key) }
+                            // The legacy boolean is written in step so an older
+                            // build reading the same file still sees the finish
+                            // it knew as a switch (see DesktopSettings.migrate).
+                            DesktopSettings.update {
+                                it.copy(
+                                    playerDesign = d.key,
+                                    expressiveTabTranslucent = d == PlayerDesign.EXPRESSIVE_TRANSLUCENT,
+                                )
+                            }
                         },
                         background = playerBackground,
                         onBackgroundChange = { b ->
@@ -2522,11 +2534,6 @@ fun WindowScope.App(
                         onSwipeSensitivityChange = { s ->
                             swipeSensitivity = s
                             DesktopSettings.update { it.copy(swipeSensitivity = s) }
-                        },
-                        expressiveTabTranslucent = expressiveTabTranslucent,
-                        onExpressiveTabTranslucentChange = { t ->
-                            expressiveTabTranslucent = t
-                            DesktopSettings.update { it.copy(expressiveTabTranslucent = t) }
                         },
                     )
                     is Screen.SettingsTheme -> SettingsThemeScreen(

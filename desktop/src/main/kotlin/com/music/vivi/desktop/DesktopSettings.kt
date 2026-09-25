@@ -360,11 +360,28 @@ object DesktopSettings {
     }
 
     private fun read(): DesktopSyncState = try {
-        if (file.exists()) json.decodeFromString(DesktopSyncState.serializer(), file.readText())
+        if (file.exists()) migrate(json.decodeFromString(DesktopSyncState.serializer(), file.readText()))
         else DesktopSyncState()
     } catch (_: Exception) {
         DesktopSyncState()
     }
+
+    /**
+     * Brings a settings file written by an older build up to the current model.
+     *
+     * [expressiveTabTranslucent] used to be a switch of its own; the two
+     * expressive finishes are entries of the player picker now (see
+     * [PlayerDesign]). A file that says "expressive player + translucent tab" is
+     * therefore read back as the translucent *entry*, instead of silently
+     * reverting to the opaque one just because the picker never learned the
+     * combination. Idempotent: re-running it on a migrated file changes nothing.
+     */
+    private fun migrate(state: DesktopSyncState): DesktopSyncState =
+        if (state.expressiveTabTranslucent && state.playerDesign == PlayerDesign.EXPRESSIVE.key) {
+            state.copy(playerDesign = PlayerDesign.EXPRESSIVE_TRANSLUCENT.key)
+        } else {
+            state
+        }
 
     fun save(state: DesktopSyncState) {
         synchronized(lock) {

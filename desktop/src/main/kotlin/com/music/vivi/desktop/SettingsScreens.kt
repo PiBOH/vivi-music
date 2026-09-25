@@ -459,8 +459,6 @@ fun SettingsPlayerDesignScreen(
     onSwipeThumbnailChange: (Boolean) -> Unit = {},
     swipeSensitivity: Float = 0.73f,
     onSwipeSensitivityChange: (Float) -> Unit = {},
-    expressiveTabTranslucent: Boolean = false,
-    onExpressiveTabTranslucentChange: (Boolean) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         PlayerDesignScreen(
@@ -486,8 +484,6 @@ fun SettingsPlayerDesignScreen(
             onSwipeThumbnailChange = onSwipeThumbnailChange,
             swipeSensitivity = swipeSensitivity,
             onSwipeSensitivityChange = onSwipeSensitivityChange,
-            expressiveTabTranslucent = expressiveTabTranslucent,
-            onExpressiveTabTranslucentChange = onExpressiveTabTranslucentChange,
         )
     }
 }

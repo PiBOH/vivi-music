@@ -1046,6 +1046,30 @@ fun DensityScreen(
     }
 }
 
+/**
+ * The label of one entry of the player picker.
+ *
+ * The two expressive finishes are separate entries, and their names are built
+ * from two keys that are **already translated in all 52 languages** — the
+ * player's own name ("Expressive") and the tab finish ("Translucent tab") —
+ * rather than from a brand-new key that would have to be translated 52 times to
+ * say one word in a parenthesis. There is no English fallback hiding here: the
+ * tab key exists in every table, and [Localization.get] is asked for it in the
+ * selected language like every other label on this screen.
+ */
+internal fun playerDesignLabel(language: String, design: PlayerDesign): String {
+    val name = Localization.get(language, when (design) {
+        PlayerDesign.NEW -> "player_design_new"
+        PlayerDesign.EXPRESSIVE, PlayerDesign.EXPRESSIVE_TRANSLUCENT -> "player_design_expressive"
+        else -> "player_design_classic"
+    })
+    return if (design == PlayerDesign.EXPRESSIVE_TRANSLUCENT) {
+        "$name (${Localization.get(language, "expressive_tab_translucent")})"
+    } else {
+        name
+    }
+}
+
 @Composable
 fun PlayerDesignScreen(
     language: String,
@@ -1065,8 +1089,6 @@ fun PlayerDesignScreen(
     onSwipeThumbnailChange: (Boolean) -> Unit = {},
     swipeSensitivity: Float = 0.73f,
     onSwipeSensitivityChange: (Float) -> Unit = {},
-    expressiveTabTranslucent: Boolean = false,
-    onExpressiveTabTranslucentChange: (Boolean) -> Unit = {},
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(Localization.get(language, "player_design"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -1074,18 +1096,15 @@ fun PlayerDesignScreen(
         M3SettingsDropdownItem(
             icon = Icons.Filled.MusicNote,
             title = Localization.get(language, "player_design"),
-            value = Localization.get(language, when (design) {
-                PlayerDesign.NEW -> "player_design_new"
-                PlayerDesign.EXPRESSIVE -> "player_design_expressive"
-                else -> "player_design_classic"
-            }),
+            value = playerDesignLabel(language, design),
             // The old "V2" entry was the CLASSIC layout with a bigger artwork
-            // (one player, two names) and has been removed.
-            options = listOf(
-                PlayerDesign.CLASSIC to "player_design_classic",
-                PlayerDesign.NEW to "player_design_new",
-                PlayerDesign.EXPRESSIVE to "player_design_expressive",
-            ).map { (v, k) -> v.key to Localization.get(language, k) },
+            // (one player, two names) and has been removed. The two expressive
+            // finishes ARE two entries here rather than a separate switch: the
+            // tab is the only thing that distinguishes them, so picking the
+            // player and picking its finish are the same decision — and a switch
+            // that only applied to one of the layouts was a dead control in the
+            // other two.
+            options = PlayerDesign.entries.map { v -> v.key to playerDesignLabel(language, v) },
             onSelect = { key -> onDesignChange(PlayerDesign.from(key)) },
         )
         Spacer(Modifier.height(8.dp))
@@ -1114,29 +1133,6 @@ fun PlayerDesignScreen(
             },
             onSelect = { key -> onBackgroundChange(PlayerBackgroundStyle.from(key)) },
         )
-        // The translucent finish only exists on the expressive player, so the
-        // switch shows up with it: an option that does nothing in the two other
-        // layouts would be exactly the kind of dead control this batch is
-        // clearing out.
-        if (design == PlayerDesign.EXPRESSIVE) {
-            Spacer(Modifier.height(8.dp))
-            M3SettingsGroup(
-                items = listOf(
-                    M3SettingsItem(
-                        icon = Icons.Filled.Layers,
-                        title = { Text(Localization.get(language, "expressive_tab_translucent")) },
-                        description = { Text(Localization.get(language, "expressive_tab_translucent_desc")) },
-                        trailing = {
-                            Switch(
-                                checked = expressiveTabTranslucent,
-                                onCheckedChange = onExpressiveTabTranslucentChange,
-                            )
-                        },
-                        onClick = { onExpressiveTabTranslucentChange(!expressiveTabTranslucent) },
-                    ),
-                ),
-            )
-        }
         Spacer(Modifier.height(8.dp))
         M3SettingsGroup(
             items = listOf(
