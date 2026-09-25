@@ -164,6 +164,32 @@ class AudioPlayer {
          *  being audible. */
         const val DEVICE_STALL_TOLERANCE_MS = 500L
 
+        /**
+         * A writer pass at least this long is timed and logged even after the
+         * opening window. One pass hands over [WRITE_CHUNK_SECONDS] ≈ 120 ms of
+         * audio, so 200 ms already means either the ring was full (normal, the
+         * sound card is pacing us) or the thread was late; each line carries
+         * the `inside the device write` figure that tells the two apart.
+         */
+        const val WRITER_PASS_SLOW_MS = 200L
+
+        /**
+         * Writer passes logged in full, whatever their duration, from the start
+         * of every line — plus [WRITER_PASS_LOG_OPENING_MS] of wall time, so the
+         * window does not depend on how fast the passes happen to come.
+         *
+         * The question issue #3 left open is whether a slow pass *repeats* or
+         * whether the slow one was only the pass that opened the device (the
+         * only one the reporter's 1.53.20 export ever flagged), and that can only
+         * be answered from the opening seconds. Bounded on purpose: ~8 passes a
+         * second, so this is at most ~30 lines per track. Logging every pass for
+         * the whole track would bury the export in lines that say nothing.
+         */
+        const val WRITER_PASS_LOG_OPENING_PASSES = 30L
+
+        /** See [WRITER_PASS_LOG_OPENING_PASSES]. */
+        const val WRITER_PASS_LOG_OPENING_MS = 4_000L
+
         /** RMS level below which a decoded frame counts as silence (~-62 dBFS). */
         const val SILENCE_RMS_LEVEL = 0.0008f
 
@@ -1373,6 +1399,27 @@ class AudioPlayer {
              *  carries first-write/JIT work and must not be reported as
              *  "the thread was not scheduled" (issue #3). */
             var justPrimed = false
+            /**
+             * Per-pass writer accounting (issue #3). The cushion can only be
+             * retired — instead of grown again — when an export can say whether
+             * a slow pass is a one-off at the start or a recurring stall, so
+             * every pass is timed from the one that opens the device and the
+             * count, the worst pass and how many were slow are reported with the
+             * device check and in the per-track integrity line.
+             */
+            var passIndex = 0L
+            /** Passes that fell in the opening window (see the companion). */
+            var openingPasses = 0L
+            /** Passes printed in full (`openingPasses` plus the slow later ones). */
+            var passesLogged = 0L
+            /** Passes at or over [WRITER_PASS_SLOW_MS], cumulative for the line. */
+            var slowPasses = 0L
+            var worstBodyMs = 0L
+            var worstInWriteMs = 0L
+            var worstPassIndex = 0L
+            var worstSinceStartMs = 0L
+            /** Wall time the opening pass ended, i.e. when the device started. */
+            var primeWallMs = 0L
             /** Set while the writer sits in the pause wait, so the next device
              *  sample starts a new window instead of counting the pause. */
             var pausedWindow = false
@@ -1565,6 +1612,31 @@ class AudioPlayer {
                                     "${(handedOverBytes * 1000L / bytesPerSecond.toLong())}ms",
                             )
                         }
+                        // Per-pass writer accounting, printed with every device
+                        // check so the answer to "does the slow pass repeat?"
+                        // does not depend on catching it by hand: a clean window
+                        // reads `none of them over 200ms`, a recurring stall
+                        // reads how many and which one was the worst (issue #3).
+                        val worstPass = if (worstBodyMs > 0L) {
+                            "worst #$worstPassIndex at +${"%.1f".format(java.util.Locale.US, worstSinceStartMs / 1000.0)}s: " +
+                                "${worstBodyMs}ms (${worstInWriteMs}ms inside the device write, " +
+                                "${worstBodyMs - worstInWriteMs}ms outside)"
+                        } else {
+                            "no pass timed yet"
+                        }
+                        val repeats = if (slowPasses == 0L) {
+                            "none of them over ${WRITER_PASS_SLOW_MS}ms, so nothing after the " +
+                                "opening pass has been slow"
+                        } else {
+                            "${slowPasses} of them over ${WRITER_PASS_SLOW_MS}ms — the stall DOES " +
+                                "repeat, it is not the opening pass"
+                        }
+                        AppLog.log(
+                            "playback",
+                            "audio writer passes: ${passIndex} so far (${openingPasses} in the " +
+                                "opening window, ${passesLogged} logged in full), $repeats — " +
+                                "$worstPass",
+                        )
                         lastDeviceCheckMs = now
                         lastDeviceCheckPlayedMs = playedMs
                     }
@@ -1589,25 +1661,78 @@ class AudioPlayer {
                 val now = System.currentTimeMillis()
                 val bodyMs = now - passStartMs
                 val inWriteMs = writeBlockedMs - blockedBefore
+                val outsideMs = bodyMs - inWriteMs
+                val queueMs = queuedPcmMs()
+                passIndex++
                 // The pass that opens the device carries the first write, the
                 // CoreAudio open and the JIT of this whole path: it is slow by
                 // nature and it was the ONLY pass the reporter's 1.53.20 export
                 // flagged (325 ms, 515 ms and 556 ms, each one immediately after
                 // `audio output primed`). Reporting those as a scheduling stall
                 // is what made the logs look like a frozen thread while the
-                // picture was actually clean — skip that one pass instead.
+                // picture was actually clean — it is not counted as a stall.
+                //
+                // Its duration is still recorded and said out loud: "the slow
+                // one was only the opening pass" is a conclusion an export has
+                // to be able to reach, and silence about that pass makes it
+                // indistinguishable from a pass nobody measured.
                 if (justPrimed) {
                     justPrimed = false
+                    primeWallMs = now
+                    AppLog.log(
+                        "playback",
+                        "audio writer: the pass that opened the device took ${bodyMs}ms " +
+                            "(${inWriteMs}ms of it inside the device write) — the first write, " +
+                            "the device open and the JIT of this path live on that one pass, so " +
+                            "it is not counted as a stall; every pass from here is timed",
+                    )
                     return
                 }
-                if (bodyMs < 300L || bodyMs - inWriteMs < 150L) return
+                val sinceStartMs = if (primeWallMs == 0L) 0L else now - primeWallMs
+                if (bodyMs > worstBodyMs) {
+                    worstBodyMs = bodyMs
+                    worstInWriteMs = inWriteMs
+                    worstPassIndex = passIndex
+                    worstSinceStartMs = sinceStartMs
+                }
+                val opening = passIndex <= WRITER_PASS_LOG_OPENING_PASSES ||
+                    sinceStartMs <= WRITER_PASS_LOG_OPENING_MS
+                if (opening) openingPasses++
+                if (bodyMs >= WRITER_PASS_SLOW_MS) slowPasses++
+                if (opening || bodyMs >= WRITER_PASS_SLOW_MS) {
+                    passesLogged++
+                    AppLog.log(
+                        "playback",
+                        "audio writer pass #$passIndex (+${"%.1f".format(java.util.Locale.US, sinceStartMs / 1000.0)}s after the " +
+                            "start): ${bodyMs}ms total, ${inWriteMs}ms inside the device write, " +
+                            "${outsideMs}ms outside (queue ${queueMs.toInt()}ms, " +
+                            "cushion ${cushionMs().toInt()}ms)" +
+                            if (bodyMs >= 300L && outsideMs >= 150L) {
+                                // Long, and most of it outside the write: the
+                                // thread was not on the CPU (issue #3).
+                                " — the thread was NOT scheduled, the output itself is fine"
+                            } else if (bodyMs >= WRITER_PASS_SLOW_MS && outsideMs < 150L) {
+                                // Long, and almost all of it inside the write:
+                                // the ring was full and the sound card paced
+                                // us, which is what a healthy pass looks like
+                                // when the queue is ahead of the device.
+                                " — the time was inside the device write: the ring was full and " +
+                                    "the sound card paced us, normal"
+                            } else {
+                                ""
+                            },
+                    )
+                }
+                // The severe case, kept as its own unmistakable line so a
+                // support zip still greps one message for "the writer froze".
+                if (bodyMs < 300L || outsideMs < 150L) return
                 if (now - lastLateLogMs < 2_000L) return
                 lastLateLogMs = now
                 AppLog.log(
                     "playback",
                     "audio writer stalled: ${bodyMs}ms for one pass with only " +
                         "${inWriteMs}ms of it inside the device write (queue " +
-                        "${queuedPcmMs()}ms, cushion ${cushionMs().toInt()}ms) — the thread was " +
+                        "${queueMs.toInt()}ms, cushion ${cushionMs().toInt()}ms) — the thread was " +
                         "not scheduled, the output itself is fine",
                 )
             }
@@ -1952,6 +2077,21 @@ class AudioPlayer {
                     "audio integrity: ${boundaryIssueCount} sample-table overlaps, " +
                         "${deviceStallLogged} device stalls, ${samples.size} frames scanned " +
                         "in ${fragmentStarts.size} fragments",
+                )
+                // The same finding, stated for the whole track: whether the
+                // writer was ever late after the pass that opened the device.
+                // This is the line that decides if the cushion is still doing
+                // anything, or if the 1 s target can come back down (issue #3).
+                AppLog.log(
+                    "playback",
+                    "audio writer passes for this track: ${passIndex} total, " +
+                        "${slowPasses} over ${WRITER_PASS_SLOW_MS}ms, " +
+                        if (worstBodyMs > 0L) {
+                            "worst #$worstPassIndex at +${"%.1f".format(java.util.Locale.US, worstSinceStartMs / 1000.0)}s: " +
+                                "${worstBodyMs}ms (${worstInWriteMs}ms inside the device write)"
+                        } else {
+                            "no pass timed"
+                        },
                 )
                 // Never leave the writer behind: on a normal end it plays out
                 // the queued tail first (so the last seconds are not cut), on a

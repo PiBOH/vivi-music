@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.8_DE-1.53.25-alpha] - 2026-09-25
+
+### Added
+- [DE] **Every writer pass is timed now, so an export can say whether the stall repeats (#3).** The cushion in `AudioPlayer` is a legitimate pre-roll — the device must not start on an empty ring — but the *value* (1 s, raised from 0.3 s in 1.53.22) is a workaround for a writer pass that measured 325 ms and, in another session, 556 ms: a pass hands over ~120 ms of audio, so something is taking the writer thread off the CPU. Sizing a buffer around a hiccup hides the hiccup; it can only be retired if an export can tell "that was the opening pass" from "that keeps happening", and the previous log could not: it reported the severe case (`audio writer stalled`) and nothing else. Now every pass is timed from the one that opens the device to the end of the track:
+  - the opening pass states its own duration and says out loud that it is **not** counted as a stall (the first write, the device open and the JIT of that path live on it) — silence about it made it indistinguishable from a pass nobody measured;
+  - every pass in the first 30 or the first 4 s is logged in full — `audio writer pass #12 (+1.4s after the start): 431ms total, 118ms inside the device write, 313ms outside (queue 4210ms, cushion 998ms)` — and, after that window, every pass at or over 200 ms, each annotated: *the thread was NOT scheduled* (long, mostly outside the write) or *the time was inside the device write: the ring was full and the sound card paced us, normal*;
+  - the 10-second device check now prints the running count, the worst pass with its position after the start, and a verdict — `none of them over 200ms, so nothing after the opening pass has been slow` versus `N of them over 200ms — the stall DOES repeat, it is not the opening pass`;
+  - the per-track `audio integrity` line carries the same finding for the whole track. **Constraint:** the opening window is bounded on purpose (~8 passes/s, so ~30 lines per track); logging every pass for the whole track would bury the export in lines that say nothing, which is the opposite of what a diagnostic is for. With the answer in hand, the next step is the writer thread's priority and allocation behaviour — not a bigger cushion.
+
 ## [6.0.6.8_DE-1.53.24-alpha] - 2026-09-25
 
 ### Changed
