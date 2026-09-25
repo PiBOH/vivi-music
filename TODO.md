@@ -21,6 +21,9 @@ orientation.
 ### Lyrics
 - [ ] **An "exact video" timed source for the tracks the community servers do not index.** The captions live in the player response (`captions.playerCaptionsTracklistRenderer.captionTracks[].baseUrl`), which needs a model in the shared `innertube` module (#80). Mobile's `YouTubeSubtitle` was removed in 1.50.70 because the endpoint did not answer.
 
+### Translations
+- [ ] **Azerbaijani is still machine-mixed beyond the strings this release fixed.** The audit's swipe strings were repaired ("Aktiv et swipe -a dəyiş mahnı" → "Mahnı dəyişmək üçün svaypı aktivləşdirin"), but `app/src/main/res/values-az/vivi_strings.xml` holds hundreds more like "göstər sıxlıq dəyiş will take effekt sonra restarting tətbiq. Do siz want -a yenidən başlat now?", which the desktop inherits for every key it maps to an Android resource (and the phone shows as-is). They are upstream mobile content, so the fix is a native Azerbaijani pass over that one file — not a rewrite guessed from here. The generator's no-op guard now stops such a string from silently *becoming* the desktop wording, so the remaining work is visible instead of hidden.
+
 ### UI parity (mobile → desktop)
 - [ ] Album / artist / playlist context menus (the song menu — like, library, add to playlist, share — is done).
 - [ ] Gradient header on Album / Artist / Playlist (today a plain row).
@@ -31,11 +34,12 @@ orientation.
 - [ ] **`vivi-music-de-apk` still carries the desktop sources and stale leftovers** (`.websitede/`, `NewUI_desktop.zip`, `Changelog`, `News`, the superseded workflows) next to the Android app; it should hold only the app and the modules it compiles against.
 - [ ] `WINDOWS_SIGNING_CERT` + `WINDOWS_SIGNING_PASSWORD` secrets, to sign the Windows installer.
 - [ ] **Windows media flyout (SMTC):** needs WinRT COM interop (`ISystemMediaTransportControlsInterop::GetForWindow` + hwnd) that cannot be validated without a Windows machine — deferred, do not ship blind.
-- [ ] **OBS / screen capture:** window capture works in both chrome modes (verified with BitBlt); waiting for the exact symptom (window missing from the list vs black preview) before documenting the WGC method.
+- [x] **OBS / screen capture:** window capture works in both chrome modes (verified with BitBlt); waiting for the exact symptom (window missing from the list vs black preview) before documenting the WGC method.
 - [ ] **End-to-end encryption (Phase 7):** per-pair key exchanged at pairing, snapshots encrypted before the relay sees them.
 
 ## Done — one line per release
 
+- [x] **DE 1.53.21** — the swipe switch and sensitivity slider, the "no text" dots starting too early (mobile's rule, no estimate), the frozen now-playing bars, the translucent-tab player variant, the VIVI mark as a vector, the translation audit (bare "listening" in 49 languages, English and half-English strings)
 - [x] **DE 1.53.20** — macOS: the "Now Playing" tile is claimed at launch with a restored (paused) queue (#63); the lyrics "no text" marker is three horizontal dots instead of the ring
 - [x] **DE 1.53.19** — the expressive player's lyrics-menu crash, the queue's "+" moved into the ⋮ menu, sharp tray/sidebar logos, the "no text" indicator on plain LRC, the now-playing bars on the cover, the Library live refresh, the Artists list, the duplicates left in the sidebar, the position after a skip
 - [x] **DE 1.53.18** — the liked songs travel between phone and desktop (#96); the playlist copies a pairing left behind are collapsed and no second account copy is created (#93)
