@@ -127,7 +127,7 @@
     <string name="download_in_progress_desc">Yüklə dır in progress</string>
     <string name="share_playlist_desc">Paylaş bu pleylist ilə others</string>
     <string name="delete_playlist_desc">Sil bu pleylist həmişəlik</string>
-    <string name="sync_playlist_desc">Pleylisti sinxronlaşdır ilə YouTube Musiqi</string>
+    <string name="sync_playlist_desc">Pleylisti YouTube Music ilə sinxronlaşdır</string>
     <string name="show_player_thumbnail_shadow">Pleyer Thumbnail Shadow</string>
     <string name="show_player_thumbnail_shadow_desc">Göstər shadow around pleyer thumbnail şəkil</string>
     <string name="player_thumbnail_shadow_depth">Kölgənin dərinliyi</string>
@@ -189,8 +189,8 @@
     <string name="swipe_song_to_remove">Swipe mahnı -a sil it -dan pleylist</string>
     <string name="lyrics_click_change">Dəyiş mahnı sözləri on klik</string>
     <string name="lyrics_auto_scroll">Avtomatik sürüşdür mahnı sözləri</string>
-    <string name="lyrics_glow_effect">Aktiv et glowing mahnı sözləri effekt</string>
-    <string name="lyrics_glow_effect_desc">Əlavə et glowing animation və bounce effekt -a active mahnı sözləri</string>
+    <string name="lyrics_glow_effect">Mahnı sözlərində işıq effektini aktivləşdir</string>
+    <string name="lyrics_glow_effect_desc">Oxunan sözün ətrafında işıq haləsi əlavə edin</string>
     <string name="enable_better_lyrics">Aktiv et Better Mahnı sözləri</string>
     <string name="enable_better_lyrics_desc">Istifadə et Better Mahnı sözləri provayder üçün word-by-word sinxronlaşdırıldı mahnı sözləri</string>
     <string name="enable_simpmusic">Aktiv et SimpMusiqi Mahnı sözləri</string>
@@ -218,7 +218,7 @@
     <string name="token_hidden">Toxun -a göstər token</string>
     <string name="token_shown">Toxun yenidən -a kopyala və ya redaktə et</string>
     <string name="token_adv_login_description">Bu dır bir ADVANCED giriş method. As bir alternative -a web portal, siz may directly enter və ya yeniləmə sizin giriş token here. Üçün example, bu can speed up logging in on multiple cihazlar. Zəhmət olmasa qeyd həmin any invalid token formats tətbiq fails -a parse will deyil olmaq accepted</string>
-    <string name="ytm_sync">Avtomatikally sinxronlaşdır ilə sizin YouTube Musiqi hesab</string>
+    <string name="ytm_sync">YouTube Music hesabınızla avtomatik sinxronlaşdır</string>
     <string name="yt_sync">Avtomatik sinxronlaşdır ilə hesab</string>
     <string name="more_content">Daha çox məzmun</string>
     <string name="edit_playlist_cover">Redaktə et pleylist üz qabığı</string>
@@ -274,7 +274,7 @@
     <string name="logout_clear_data">Təmizlə Data</string>
     <string name="disable">Deaktiv et</string>
     <string name="pause_remote_listen_history">Pauza share listen tarixçə ilə YouTube Musiqi</string>
-    <string name="not_logged_in_youtube">Hesaba giriş edilməyib -a YouTube</string>
+    <string name="not_logged_in_youtube">YouTube hesabına daxil olunmayıb</string>
     <string name="default_links">Aç supported links</string>
     <string name="open_app_settings_error">Couldn\'t aç tətbiq parametrlər</string>
     <string name="release_notes">Buraxmaq notes</string>
@@ -341,7 +341,7 @@
     <string name="line_by_line_dialog_title">Dır siz sure?</string>
     <string name="line_by_line_dialog_desc">Bu dır bir hit və ya miss experimental funksiya. \n\nİfaçı: standart, dil dır determined -dan whole mahnı, but ilə bu option on, it will olmaq determined line by line instead. Bu will allow multi-dil mahnılar -a work BUT dil might deyil always olmaq correct (üçün example if there dır bir Ukrainian lyric həmin doesn\'t contain any Ukrainian-specific letters, it might olmaq romanized as Russian instead). \n\nIf siz do deyil have issues, it dır tövsiyə olunur -a keep bu option off.</string>
     <string name="line_by_line_dialog_enable">Aktiv et</string>
-    <string name="romanize_current_track">Romanize cari trek</string>
+    <string name="romanize_current_track">Cari treki latınlaşdır</string>
     <string name="lyrics_offset">Mahnı sözləri Bağlıset</string>
     <string name="settings_section_ui">İnterfeys</string>
     <string name="settings_section_privacy">Məxfilik &amp; Təhlükəsizlik</string>
@@ -360,13 +360,13 @@
     <string name="google_cast">Google Cast</string>
     <string name="google_cast_description">Aktiv et casting audio -a Chromecast və other Cast-enabled cihazlar</string>
     <string name="lyrics_romanize_macedonian">Romanize Macedonian mahnı sözləri</string>
-    <string name="lyrics_romanize_as_main">Göstər romanized mahnı sözləri as main</string>
+    <string name="lyrics_romanize_as_main">Latınlaşdırılmış variantı əsas sətir kimi göstər</string>
     <string name="integrations">İnteqrasiyalar</string>
     <string name="username">Istifadəçi adı</string>
     <string name="password">Parol</string>
     <string name="lastfm_integration">Last.fm inteqrasiyası</string>
     <string name="enable_scrobbling">Aktiv et scrobbling</string>
-    <string name="lastfm_now_playing">Send İndi oxudulur</string>
+    <string name="lastfm_now_playing">İndi oxunanı göndər</string>
     <string name="last_fm_send_likes">Send Bəyəns/Unlikes</string>
     <string name="last_fm_send_likes_description">Love/Unlove mahnılar in Last.fm when they dır Bəyənilənlər/Unliked in vivimusic</string>
     <string name="logging_in">Daxil olunur…</string>
@@ -374,8 +374,8 @@
     <string name="scrobble_min_track_duration">Scrobble mahnılar longer than</string>
     <string name="scrobble_delay_percent">Scrobble gecikmə faizi</string>
     <string name="scrobble_delay_minutes">Scrobble delay dəqiqə</string>
-    <string name="hide_video_songs">Gizlət video mahnılar</string>
-    <string name="hide_youtube_shorts">Gizlət YouTube Shorts</string>
+    <string name="hide_video_songs">Video mahnıları gizlət</string>
+    <string name="hide_youtube_shorts">YouTube Shorts-u gizlət</string>
     <string name="details_desc">View mahnı\'s məlumat</string>
     <string name="edit_desc">Dəyiş başlıq və ya ifaçı</string>
     <string name="start_radio_desc">Create bir station əsaslanan on bu item</string>
@@ -397,7 +397,7 @@
     <string name="cache_size_warning_title">Bir az gözləyin!</string>
     <string name="cache_size_warning_message">Siz\'ve chosen bir keş ölçü limit smaller than what tətbiq dır currently using (%1$s). If siz continue, tətbiq may sil some keşlənmiş %2$s -a match yeni limit. Proceed anyway?</string>
     <string name="cache_size_warning_confirm">Davam et</string>
-    <string name="lyrics_animation_style">Mahnı sözləri animation</string>
+    <string name="lyrics_animation_style">Mahnı sözlərinin animasiyası</string>
     <string name="none">Heç biri</string>
     <string name="fade">Solma</string>
     <string name="glow">Parıltı</string>
@@ -411,7 +411,7 @@
     <string name="lyrics_v2_fluid">Mahnı sözləri V2 (Fluid)</string>
     <string name="lyrics_animation_metro">MetroMahnı sözləri</string>
     <string name="lyrics_text_size">Mahnı sözləri mətn ölçü</string>
-    <string name="lyrics_line_spacing">Mahnı sözləri line spacing</string>
+    <string name="lyrics_line_spacing">Mahnı sözlərinin sətir aralığı</string>
     <string name="album_art_for">Albom art üçün %s</string>
     <string name="wrapped_total_albums_title">Siz\'ve listened -a</string>
     <string name="wrapped_total_albums_subtitle">unique albomlar</string>
@@ -778,7 +778,7 @@
     <string name="speed_dial">Sürətli yığım</string>
     <string name="pin_to_speed_dial">Pin -a Speed dial</string>
     <string name="unpin_from_speed_dial">Unpin -dan Speed dial</string>
-    <string name="randomize_home_order">Randomize Əsas səhifə Ekran Order</string>
+    <string name="randomize_home_order">Əsas ekranın sırasını təsadüfi et</string>
     <string name="randomize_home_order_desc">Randomly sıralamanı dəyiş home ekran sections ilə weighted priorities</string>
     <string name="daily_discover_sounds_like">Sounds like %1$s</string>
     <string name="your_daily_discover">Sizin daily discover</string>

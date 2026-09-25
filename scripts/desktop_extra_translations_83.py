@@ -241,4 +241,92 @@ EXTRA_TRANSLATIONS = {
         "eu": "Bidalketak", "fr": "Validations", "pt": "Confirmações",
     },
     "animation_speed_normal": {"fil": "Karaniwan", "fr": "Normale"},
+    # The one the first pass missed. `discord_presence_desc` was English in 36
+    # languages too, but with a *different wording* than the English table (the
+    # filler wrote "Shows the current track on your Discord profile." while the
+    # table says "… (Windows)."), so comparing against the English value found
+    # nothing. An English-prose detector did: every Latin word of the value is
+    # an English word.
+    "discord_presence_desc": {
+        "as": "আপোনাৰ Discord প্ৰফাইলত বৰ্তমান গীতটো দেখুৱায়।",
+        "az": "Cari mahnını Discord profilinizdə göstərir.",
+        "be": "Паказвае бягучы трэк у вашым профілі Discord.",
+        "bg": "Показва текущата песен в профила ви в Discord.",
+        "bn": "আপনার Discord প্রোফাইলে বর্তমান গানটি দেখায়।",
+        "bs": "Prikazuje trenutnu pjesmu na tvom Discord profilu.",
+        "ca": "Mostra la cançó actual al teu perfil de Discord.",
+        "cs": "Zobrazuje aktuální skladbu na tvém profilu Discord.",
+        "el": "Εμφανίζει το τρέχον κομμάτι στο προφίλ σας στο Discord.",
+        "et": "Kuvab praegust lugu sinu Discordi profiilis.",
+        "eu": "Uneko abestia zure Discord profilean erakusten du.",
+        "fi": "Näyttää nykyisen kappaleen Discord-profiilissasi.",
+        "fil": "Ipinapakita ang kasalukuyang kanta sa iyong Discord profile.",
+        "hi": "आपके Discord प्रोफ़ाइल पर मौजूदा गाना दिखाता है।",
+        "hr": "Prikazuje trenutnu pjesmu na tvom Discord profilu.",
+        "hu": "A jelenlegi számot jeleníti meg a Discord-profilodon.",
+        "id": "Menampilkan lagu saat ini di profil Discord Anda.",
+        "ja": "現在再生中の曲を Discord プロフィールに表示します。",
+        "km": "បង្ហាញបទចម្រៀងបច្ចុប្បន្ននៅលើប្រវត្តិរូប Discord របស់អ្នក។",
+        "ko": "현재 곡을 Discord 프로필에 표시합니다.",
+        "lt": "Rodo dabartinę dainą jūsų Discord profilyje.",
+        "ml": "നിലവിലെ ഗാനം നിങ്ങളുടെ Discord പ്രൊഫൈലിൽ കാണിക്കുന്നു.",
+        "ms": "Menunjukkan lagu semasa pada profil Discord anda.",
+        "nb": "Viser den aktuelle sangen på Discord-profilen din.",
+        "pa": "ਤੁਹਾਡੇ Discord ਪਰੋਫਾਈਲ 'ਤੇ ਮੌਜੂਦਾ ਗੀਤ ਦਿਖਾਉਂਦਾ ਹੈ।",
+        "ro": "Afișează melodia curentă pe profilul tău Discord.",
+        "sk": "Zobrazuje aktuálnu skladbu na tvojom profile Discord.",
+        "sl": "Prikaže trenutno skladbo v vašem profilu Discord.",
+        "sr": "Приказује тренутну песму на твом Discord профилу.",
+        "sv": "Visar den aktuella låten på din Discord-profil.",
+        "ta": "தற்போதைய பாடலை உங்கள் Discord சுயவிவரத்தில் காட்டுகிறது.",
+        "te": "ప్రస్తుత పాటను మీ Discord ప్రొఫైల్‌లో చూపిస్తుంది.",
+        "th": "แสดงเพลงปัจจุบันบนโปรไฟล์ Discord ของคุณ",
+        "vi": "Hiển thị bài hát hiện tại trên hồ sơ Discord của bạn.",
+    },
+    "lyrics_apple_blur": {"tr": "Apple Music şarkı sözü bulanıklığı"},
+    "pure_black_mini": {"fil": "Purong itim na mini player"},
+    # Azerbaijani, word by word: the same machine gluing that put English words
+    # inside Azeri sentences ("Aktiv et glowing mahnı sözləri effekt"). Where the
+    # string exists in the mobile resources (lyrics_glow_effect, …) it is fixed
+    # there and both apps pick it up; these have no Android resource, so the
+    # desktop owns them.
+    "lyrics_apple_blur": {
+        "az": "Apple Music bulanıqlaşdırması",
+        "tr": "Apple Music şarkı sözü bulanıklığı",
+    },
+    "lyrics_apple_blur_desc": {
+        "az": "Cari sətrin ətrafındakı sətirləri Apple Music pleyerindəki kimi "
+              "bulanıqlaşdırın",
+    },
+    "lyrics_style_apple_v2": {"az": "Apple Music V2 (hərf-hərf)"},
+    "lyrics_style_lyrics_v2": {"az": "Mahnı sözləri V2 (axıcı)"},
+    "lyrics_style_vivimusic": {"az": "VIVI Music (axıcı)"},
+    "player_design_desc": {"az": "Tam pleyerin düzüm üslubu."},
+    "translate_lyrics": {"az": "Mahnı sözlərini AI ilə tərcümə et"},
+    "snapshot_received": {"az": "Anlıq görüntü alındı"},
+    "pure_black_mini_desc": {
+        "az": "Qaranlıq rejimdə mini pleyer üçün həqiqi AMOLED qara fonundan "
+              "istifadə edin",
+    },
+    "welcome_title": {"az": "VIVI Music DE-yə xoş gəlmisiniz"},
+    # "Romanize Bulgarian mahnı sözləri": one English verb in front of an Azeri
+    # noun phrase, eleven times over.
+    "romanize_belarusian": {"az": "Belarus mahnı sözlərini latınlaşdır"},
+    "romanize_bulgarian": {"az": "Bolqar mahnı sözlərini latınlaşdır"},
+    "romanize_chinese": {"az": "Çin mahnı sözlərini latınlaşdır"},
+    "romanize_hindi": {"az": "Hind mahnı sözlərini latınlaşdır"},
+    "romanize_japanese": {"az": "Yapon mahnı sözlərini latınlaşdır"},
+    "romanize_korean": {"az": "Koreya mahnı sözlərini latınlaşdır"},
+    "romanize_macedonian": {"az": "Makedon mahnı sözlərini latınlaşdır"},
+    "romanize_punjabi": {"az": "Pəncab mahnı sözlərini latınlaşdır"},
+    "romanize_russian": {"az": "Rus mahnı sözlərini latınlaşdır"},
+    "romanize_serbian": {"az": "Serb mahnı sözlərini latınlaşdır"},
+    "romanize_ukrainian": {"az": "Ukrayna mahnı sözlərini latınlaşdır"},
+    # The same four strings again: their Azeri value reaches the desktop from an
+    # extra batch rather than from the mobile resource the file above fixes, so
+    # they are spelled out here as well.
+    "hide_explicit": {"az": "Yetkin məzmunu gizlət"},
+    "hide_video_songs": {"az": "Video mahnıları gizlət"},
+    "hide_youtube_shorts": {"az": "YouTube Shorts-u gizlət"},
+    "yt_sync": {"az": "YouTube Music hesabınızla avtomatik sinxronlaşdır"},
 }

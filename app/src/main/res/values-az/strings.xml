@@ -219,7 +219,7 @@
     <string name="customize_navigation_tabs">Customize navigation tabs</string>
     <string name="player">Pleyer</string>
     <string name="player_text_alignment">Pleyer mətn alignment</string>
-    <string name="lyrics_text_position">Mahnı sözləri mətn position</string>
+    <string name="lyrics_text_position">Mətnin mövqeyi</string>
     <string name="sided">Sided</string>
     <string name="left">Sol</string>
     <string name="center">Mərkəz</string>
@@ -296,7 +296,7 @@
     <string name="disable_screenshot_desc">When bu option dır on, screenshots və tətbiq\'s view in Recents dır disabled.</string>
     <string name="enable_lrclib">Aktiv et LrcLib mahnı sözləri provayder</string>
     <string name="enable_kugou">Aktiv et KuGou mahnı sözləri provayder</string>
-    <string name="hide_explicit">Gizlət explicit məzmun</string>
+    <string name="hide_explicit">Yetkin məzmunu gizlət</string>
     <string name="backup_restore">Yedəkləmə və bərpa</string>
     <string name="action_backup">Yedəklə</string>
     <string name="action_restore">Bərpa et</string>
