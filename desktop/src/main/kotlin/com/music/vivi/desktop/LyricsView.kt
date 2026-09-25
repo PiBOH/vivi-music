@@ -581,6 +581,11 @@ fun LyricsList(
                     endMs = row.gapEndMs,
                     position = positionState.value,
                     accent = accent,
+                    // The mobile renderer shows the break only while auto-scroll
+                    // is following the song: with the list released from the
+                    // playhead the indicator would follow the song's clock
+                    // while the text no longer does.
+                    autoScroll = options.autoScroll,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
                 )
                 return@itemsIndexed
@@ -757,12 +762,6 @@ fun LyricsList(
 /** Shortest hole between two lines that gets an indicator, like the mobile app. */
 private const val GAP_INDICATOR_MIN_MS = 4_000L
 
-/** How long one sung word is assumed to take when the file has no word timings. */
-private const val MS_PER_SUNG_WORD = 500L
-
-/** A line is never assumed to be shorter than this, however few words it has. */
-private const val MIN_SUNG_MS = 1_200L
-
 /**
  * One row of the lyrics list: either a line, or the "no text" indicator that
  * stands for a hole in the lyrics.
@@ -779,13 +778,23 @@ private data class LyricsRow(
 )
 
 /**
- * Builds the rows the list draws (mobile's `mergedLyricsList`).
+ * Builds the rows the list draws — the desktop twin of mobile's
+ * `mergedLyricsList`, rule for rule.
  *
- * A hole is measured from the END of the line's own words — or from the line's
+ * A hole is measured from the END of the line's own words, or from the line's
  * own timestamp when the line has no text at all (an LRC file marks an
- * instrumental break with a bare `[mm:ss.xx]`) — to the start of the next line.
+ * instrumental break with a bare `[mm:ss.xx]`), to the start of the next line.
  * Only holes longer than [GAP_INDICATOR_MIN_MS] get the indicator: a short gap
  * between two sung lines is just the singing.
+ *
+ * There is deliberately no third case. The previous version guessed the end of
+ * a line from its word count for files that carry line timestamps only (a plain
+ * LRC), and that guess is what made the dots start too early: a line is sung
+ * slower than five words a second, so the estimated end landed seconds before
+ * the singing actually stopped, and the dots lit up in the middle of a line the
+ * user could still hear. Mobile never guesses — when a file carries no word
+ * timings and no blank marker it simply has no hole to show — and the report is
+ * exactly that: they should behave like mobile's, which are never early.
  */
 private fun buildLyricsRows(lines: List<LyricLine>): List<LyricsRow> {
     val rows = ArrayList<LyricsRow>(lines.size + 4)
@@ -797,7 +806,7 @@ private fun buildLyricsRows(lines: List<LyricLine>): List<LyricsRow> {
             val currentEnd = when {
                 !words.isNullOrEmpty() -> (words.last().endTime * 1000).toLong()
                 line.text.isBlank() -> line.timeMs
-                else -> estimatedSungEndMs(line.text, line.timeMs, nextStart)
+                else -> null
             }
             if (currentEnd != null && currentEnd < nextStart && nextStart - currentEnd > GAP_INDICATOR_MIN_MS) {
                 rows += LyricsRow(i, null, currentEnd, nextStart)
@@ -805,26 +814,6 @@ private fun buildLyricsRows(lines: List<LyricLine>): List<LyricsRow> {
         }
     }
     return rows
-}
-
-/**
- * When a line stops being sung, for a lyric file that carries line timestamps
- * only — which is the common case (a plain LRC from LrcLib or KuGou has no word
- * timings).
- *
- * The old rule required word timings *or* an empty line, so for exactly those
- * files the desktop could never find a hole: the "no text" indicator stayed
- * invisible on every song whose lyrics come as plain LRC, while the mobile
- * renderer showed it (the user's "the dots still don't appear"). The estimate is
- * the model the word animations of this file already use — a sung word takes
- * about [MS_PER_SUNG_WORD], a line at least [MIN_SUNG_MS] — and it is capped at
- * the next line, so it can only make a hole *shorter*: it never invents one in
- * the middle of continuous singing.
- */
-private fun estimatedSungEndMs(text: String, lineStartMs: Long, nextStartMs: Long): Long {
-    val words = text.split(Regex("\\s+")).count { it.isNotBlank() }
-    val sung = (words * MS_PER_SUNG_WORD).coerceAtLeast(MIN_SUNG_MS)
-    return (lineStartMs + sung).coerceAtMost(nextStartMs)
 }
 
 /**
@@ -839,6 +828,13 @@ private fun estimatedSungEndMs(text: String, lineStartMs: Long, nextStartMs: Lon
  * colour) says "the singing has not started again yet" without looking like a
  * loading state.
  *
+ * The *window* is the mobile one, which is what makes the dots trustworthy:
+ * they exist only while the playhead is inside the hole (the last 650 ms belong
+ * to the incoming line, so the dots are gone before it starts), and only while
+ * auto-scroll is following the song. Outside that window the row collapses to
+ * zero height and is clipped away, exactly like the mobile indicator — so the
+ * lyrics list never shows a placeholder where nothing is happening.
+ *
  * The dots are information, not decoration, so they are deliberately NOT gated
  * behind the "Animations" switch.
  */
@@ -848,6 +844,7 @@ private fun LyricsGapIndicator(
     endMs: Long,
     position: Long,
     accent: Color,
+    autoScroll: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val span = (endMs - startMs).coerceAtLeast(1L)
@@ -857,14 +854,21 @@ private fun LyricsGapIndicator(
         label = "lyricsGapProgress",
     )
     // The last 650 ms belong to the incoming line (mobile's window).
-    val visible = position >= startMs && position <= endMs - 650L
-    val alpha by animateFloatAsState(
+    val visible = autoScroll && position >= startMs && position <= endMs - 650L
+    // One value drives both the fade and the height: the row grows open and
+    // closes as the break comes and goes, instead of leaving a blank slot.
+    val window by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = tween(lyricTween(200)),
-        label = "lyricsGapAlpha",
+        label = "lyricsGapWindow",
     )
     Row(
-        modifier = modifier.height(36.dp).graphicsLayer { this.alpha = alpha },
+        modifier = modifier
+            .height(36.dp * window)
+            .graphicsLayer {
+                alpha = window
+                clip = true
+            },
         horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
