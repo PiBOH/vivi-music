@@ -455,6 +455,12 @@ fun SettingsPlayerDesignScreen(
     onMiniPlayerBackgroundStyleChange: (MiniPlayerBackgroundStyle) -> Unit = {},
     pureBlackMiniPlayer: Boolean = false,
     onPureBlackMiniPlayerChange: (Boolean) -> Unit = {},
+    swipeThumbnail: Boolean = true,
+    onSwipeThumbnailChange: (Boolean) -> Unit = {},
+    swipeSensitivity: Float = 0.73f,
+    onSwipeSensitivityChange: (Float) -> Unit = {},
+    expressiveTabTranslucent: Boolean = false,
+    onExpressiveTabTranslucentChange: (Boolean) -> Unit = {},
 ) {
     SettingsSubScreen(language, onBack) {
         PlayerDesignScreen(
@@ -471,6 +477,17 @@ fun SettingsPlayerDesignScreen(
             onMiniPlayerBackgroundStyleChange = onMiniPlayerBackgroundStyleChange,
             pureBlackMiniPlayer = pureBlackMiniPlayer,
             onPureBlackMiniPlayerChange = onPureBlackMiniPlayerChange,
+            // "Enable swipe to change song" and its sensitivity slider are
+            // settings of the player, so they belong to this screen — but the
+            // screen used to be built without them, so both controls sat on
+            // their defaults and did nothing at all: the switch snapped back on
+            // and the slider could not be moved.
+            swipeThumbnail = swipeThumbnail,
+            onSwipeThumbnailChange = onSwipeThumbnailChange,
+            swipeSensitivity = swipeSensitivity,
+            onSwipeSensitivityChange = onSwipeSensitivityChange,
+            expressiveTabTranslucent = expressiveTabTranslucent,
+            onExpressiveTabTranslucentChange = onExpressiveTabTranslucentChange,
         )
     }
 }

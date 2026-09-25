@@ -235,6 +235,12 @@ data class DesktopSyncState(
      * reopening the player does not always land on the queue.
      */
     val expressivePlayerTab: String = "queue",
+    /**
+     * The expressive player's Queue / Lyrics / History panel comes in two
+     * finishes: `false` is the original opaque card, `true` lets the player
+     * background (gradient, canvas, live mesh) show through it.
+     */
+    val expressiveTabTranslucent: Boolean = false,
     val firstLaunchDate: Long = 0L,
     val developerOptions: Boolean = false,
     val devToolsMode: String = "OVERLAY",

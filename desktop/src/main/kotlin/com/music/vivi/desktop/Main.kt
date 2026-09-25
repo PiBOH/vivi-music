@@ -1085,6 +1085,7 @@ fun WindowScope.App(
     var lyricsProviders by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsProviderPriority) }
     var swipeThumbnail by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeThumbnail) }
     var swipeSensitivity by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().swipeSensitivity) }
+    var expressiveTabTranslucent by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().expressiveTabTranslucent) }
     var lyricsThumbnailPlayPause by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().lyricsThumbnailPlayPause) }
     var pauseSearchHistory by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().pauseSearchHistory) }
     var syncPlaylistsWithYoutube by remember(settingsFileRevision()) { mutableStateOf(DesktopSettings.load().syncPlaylistsWithYoutube) }
@@ -2512,6 +2513,21 @@ fun WindowScope.App(
                             pureBlackMiniPlayer = p
                             DesktopSettings.update { it.copy(pureBlackMiniPlayer = p) }
                         },
+                        swipeThumbnail = swipeThumbnail,
+                        onSwipeThumbnailChange = { s ->
+                            swipeThumbnail = s
+                            DesktopSettings.update { it.copy(swipeThumbnail = s) }
+                        },
+                        swipeSensitivity = swipeSensitivity,
+                        onSwipeSensitivityChange = { s ->
+                            swipeSensitivity = s
+                            DesktopSettings.update { it.copy(swipeSensitivity = s) }
+                        },
+                        expressiveTabTranslucent = expressiveTabTranslucent,
+                        onExpressiveTabTranslucentChange = { t ->
+                            expressiveTabTranslucent = t
+                            DesktopSettings.update { it.copy(expressiveTabTranslucent = t) }
+                        },
                     )
                     is Screen.SettingsTheme -> SettingsThemeScreen(
                         language = language,
@@ -3159,6 +3175,7 @@ fun WindowScope.App(
                         sliderStyle = ViviSliderStyle.from(sliderStyle),
                         design = playerDesign,
                         background = playerBackground,
+                        expressiveTabTranslucent = expressiveTabTranslucent,
                         rotatingThumbnail = rotatingThumbnail,
                         accent = accent,
                         audioLevel = player.audioLevel,

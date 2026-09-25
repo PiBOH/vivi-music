@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.FontDownload
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.MotionPhotosOn
@@ -1064,6 +1065,8 @@ fun PlayerDesignScreen(
     onSwipeThumbnailChange: (Boolean) -> Unit = {},
     swipeSensitivity: Float = 0.73f,
     onSwipeSensitivityChange: (Float) -> Unit = {},
+    expressiveTabTranslucent: Boolean = false,
+    onExpressiveTabTranslucentChange: (Boolean) -> Unit = {},
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(Localization.get(language, "player_design"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
@@ -1111,6 +1114,29 @@ fun PlayerDesignScreen(
             },
             onSelect = { key -> onBackgroundChange(PlayerBackgroundStyle.from(key)) },
         )
+        // The translucent finish only exists on the expressive player, so the
+        // switch shows up with it: an option that does nothing in the two other
+        // layouts would be exactly the kind of dead control this batch is
+        // clearing out.
+        if (design == PlayerDesign.EXPRESSIVE) {
+            Spacer(Modifier.height(8.dp))
+            M3SettingsGroup(
+                items = listOf(
+                    M3SettingsItem(
+                        icon = Icons.Filled.Layers,
+                        title = { Text(Localization.get(language, "expressive_tab_translucent")) },
+                        description = { Text(Localization.get(language, "expressive_tab_translucent_desc")) },
+                        trailing = {
+                            Switch(
+                                checked = expressiveTabTranslucent,
+                                onCheckedChange = onExpressiveTabTranslucentChange,
+                            )
+                        },
+                        onClick = { onExpressiveTabTranslucentChange(!expressiveTabTranslucent) },
+                    ),
+                ),
+            )
+        }
         Spacer(Modifier.height(8.dp))
         M3SettingsGroup(
             items = listOf(

@@ -200,6 +200,8 @@ fun PlayerScreen(
     sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
     design: PlayerDesign = PlayerDesign.CLASSIC,
     background: PlayerBackgroundStyle = PlayerBackgroundStyle.CANVAS,
+    /** Expressive player: draw the Queue / Lyrics / History panel translucent. */
+    expressiveTabTranslucent: Boolean = false,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
     /** Live audio level for the VISUALIZER background (never collected here —
@@ -308,6 +310,7 @@ fun PlayerScreen(
                     onClearQueue = onClearQueue,
                     onReorderQueue = onReorderQueue,
                     sliderStyle = sliderStyle,
+                    tabTranslucent = expressiveTabTranslucent,
                     rotatingThumbnail = rotatingThumbnail,
                     accent = accent,
                     onBack = onBack,
@@ -384,6 +387,7 @@ private fun M3EPlayerContent(
     onClearQueue: () -> Unit = {},
     onReorderQueue: (List<NowPlaying>) -> Unit = {},
     sliderStyle: ViviSliderStyle = ViviSliderStyle.SLIM,
+    tabTranslucent: Boolean = false,
     rotatingThumbnail: Boolean = false,
     accent: Color = MaterialTheme.colorScheme.primary,
     onBack: (() -> Unit)? = null,
@@ -739,11 +743,24 @@ private fun M3EPlayerContent(
                         .weight(1f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(20.dp))
-                        // Opaque panel: the accent-tinted player background must
-                        // not bleed through the Queue / Lyrics / History list.
-                        .background(MaterialTheme.colorScheme.surface)
+                        // Two finishes for the same panel (Settings → Player
+                        // design → "Translucent tab"): the opaque card the
+                        // player shipped with, or a translucent one that lets
+                        // the accent-tinted background through. The border gets
+                        // stronger in the translucent finish because the panel
+                        // is then the only thing separating the list from the
+                        // artwork behind it.
+                        .background(
+                            if (tabTranslucent) MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
+                            else MaterialTheme.colorScheme.surface
+                        )
                         .border(
-                            BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                            BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.onSurface.copy(
+                                    alpha = if (tabTranslucent) 0.22f else 0.08f
+                                ),
+                            ),
                             RoundedCornerShape(20.dp),
                         )
                         .padding(16.dp)
