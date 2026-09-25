@@ -43,6 +43,11 @@ tasks.processResources {
     from(rootProject.file("version.txt"))
     from(rootProject.file("CHANGELOG.md"))
     from(rootProject.file("contributorsde.json"))
+    // The vector brand mark: the master lives with the other brand assets in
+    // `icons/` (next to logo_vmde.png), and the app reads it from the classpath
+    // as `images/logo_vmde.svg`. Copied rather than committed a second time so
+    // there is exactly one master to edit.
+    from(project.file("icons/logo_vmde.svg")) { into("images") }
 }
 
 kotlin {

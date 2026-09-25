@@ -2,65 +2,129 @@ package com.music.vivi.desktop
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Surface
+import org.jetbrains.skia.svg.SVGDOM
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
+import javax.imageio.ImageIO
 
 /**
- * The bundled brand logo, resampled properly.
+ * The bundled brand logo.
  *
- * The logo ships as a 1024x1024 PNG (gradients, transparency and the white
- * rings of the mark — see `desktop/icons/logo_vmde.png`). Everything that draws
- * it is small: the sidebar shows it at 26-30 dp and the tray icon at 16-64 px.
- * Resampling 1024 px down to 26 px in **one** pass is what made both look cheap:
- * a single bilinear/box step drops most of the artwork's detail, which is
- * exactly the "the tray and sidebar icons are very low quality" report.
+ * The mark ships twice: as an SVG and as a 1024x1024 PNG (both master files in
+ * `desktop/icons/`, shipped under `resources/images/`), and this object is the
+ * single place the UI asks for it.
  *
- * No vector file is shipped, on purpose. The mark is drawn almost entirely with
- * gradients, soft edges and alpha-blended white rings: those live in the pixels,
- * and a contour trace of the PNG (what an autotrace of it produces) collapses
- * them into a couple of flat colours, which is a downgrade rather than a fix.
- * The detail is in the 1024 px source and a correct downscale is what keeps it.
+ * The vector is preferred, and it is what the tray icon and the sidebar
+ * actually draw. Compose has no SVG loader of its own, but the Skia that Compose
+ * Desktop is built on does ([SVGDOM]), so the mark is rasterized at exactly the
+ * size the caller is about to draw it — 26 dp of sidebar on a 200% display is a
+ * 52 px raster of the real artwork, not a 1024 px bitmap squeezed down to 52.
  *
- * [highQualityScaled] therefore halves the image repeatedly (each pass averages
- * whole 2x2 blocks, so no detail is skipped and no ringing is introduced) until
- * the next halving would undershoot the target, and only then finishes with one
- * high-quality interpolated step.
+ * The PNG stays as the fallback, and it is not a placeholder: if the vector
+ * cannot be read or the SVG backend is unavailable (a stripped native build),
+ * everything still works, just resampled. That is what [highQualityScaled] is
+ * for — it halves the source repeatedly (each pass averages whole 2x2 blocks, so
+ * no detail is skipped and no ringing is introduced) until the next halving
+ * would undershoot the target, and only then finishes with one high-quality
+ * interpolated step. A single 1024 -> 26 bilinear step is what made the small
+ * sizes look cheap in the first place, and the report that came out of it is
+ * "the tray and sidebar icons are very low quality".
  */
 object BrandLogo {
 
-    /** Raw `logo_vmde.png`, read once. */
+    /** The vector master, read once. */
+    private val svgBytes: ByteArray? by lazy { readVector() }
+
+    /** Raw `logo_vmde.png`, read once. Used only when the vector cannot be. */
     private val source: BufferedImage? by lazy { readSource() }
+
+    /**
+     * Rasters of the vector, keyed by target size. The sidebar asks for the same
+     * size on every recomposition, and the tray re-reads its icon on every track
+     * change; neither should re-rasterize the SVG.
+     */
+    private val vectorCache = HashMap<Int, BufferedImage>()
+
+    /** Compose-ready bitmaps, keyed by target size. */
+    private val composeCache = HashMap<Int, ImageBitmap>()
+
+    /** True when the mark could be read at all (false only in a broken build). */
+    val available: Boolean get() = svgBytes != null || source != null
 
     /**
      * The logo resampled so that a caller drawing it at [sizeDp] can also bump
      * it for a HiDPI display ([scale] = 2 on a 200% monitor).
      */
-    private val composeCache = HashMap<Int, ImageBitmap>()
-
-    /** True when the bundled logo could be read (false only in a broken build). */
-    val available: Boolean get() = source != null
-
     @Synchronized
     fun composeBitmap(sizePx: Int, scale: Float = 1f): ImageBitmap? {
         val target = (sizePx * scale).toInt().coerceIn(16, 1024)
         composeCache[target]?.let { return it }
-        val bitmap = source?.let { highQualityScaled(it, target).toComposeImageBitmap() } ?: return null
-        // The sidebar asks for the same size on every recomposition; the cache
-        // keeps this from re-rasterizing the 1024 px source each time.
+        val bitmap = raster(target)
+            ?.toComposeImageBitmap()
+            ?: source?.let { highQualityScaled(it, target).toComposeImageBitmap() }
+            ?: return null
         composeCache[target] = bitmap
         return bitmap
     }
 
     /** AWT image at [size] px, for the tray icon. */
     fun awtImage(size: Int): BufferedImage? {
-        val source = source ?: return null
-        return highQualityScaled(source, size)
+        val target = size.coerceIn(1, 1024)
+        raster(target)?.let { return it }
+        val png = source ?: return null
+        return highQualityScaled(png, target)
     }
+
+    /** The mark at [size]x[size] px: the vector when it renders, else null. */
+    @Synchronized
+    private fun raster(size: Int): BufferedImage? {
+        vectorCache[size]?.let { return it }
+        val bytes = svgBytes ?: return null
+        val image = renderVector(bytes, size) ?: return null
+        vectorCache[size] = image
+        return image
+    }
+
+    /**
+     * Rasterizes the SVG at exactly [size]x[size] px.
+     *
+     * Returns null (never throws) when the SVG backend is missing or the file
+     * does not parse, which is what keeps the PNG fallback reachable: a logo is
+     * not worth a crash on a machine whose Skia has no SVG module linked.
+     */
+    private fun renderVector(bytes: ByteArray, size: Int): BufferedImage? = runCatching {
+        if (!SkiaVectorLogo.available()) return null
+        val data = org.jetbrains.skia.Data.makeFromBytes(bytes)
+        val dom = SVGDOM(data)
+        try {
+            val side = size.toFloat()
+            dom.setContainerSize(side, side)
+            val surface = Surface.makeRasterN32Premul(size, size)
+            try {
+                dom.render(surface.canvas)
+                val png = surface.makeImageSnapshot().encodeToData(EncodedImageFormat.PNG)
+                    ?: return null
+                ImageIO.read(ByteArrayInputStream(png.bytes))
+            } finally {
+                surface.close()
+            }
+        } finally {
+            dom.close()
+            data.close()
+        }
+    }.getOrNull()
+
+    private fun readVector(): ByteArray? = runCatching {
+        BrandLogo::class.java.getResourceAsStream("/images/logo_vmde.svg")?.use { it.readBytes() }
+    }.getOrNull()
 
     private fun readSource(): BufferedImage? = runCatching {
         BrandLogo::class.java.getResourceAsStream("/images/logo_vmde.png")?.use { stream ->
-            javax.imageio.ImageIO.read(stream)
+            ImageIO.read(stream)
         }
     }.getOrNull()
 
@@ -134,4 +198,20 @@ object BrandLogo {
         }
         return out
     }
+}
+
+/**
+ * True when the running Skia was built with the SVG module.
+ *
+ * Checked by name rather than by catching a `NoClassDefFoundError` on the class
+ * itself: this file references [SVGDOM] directly, so a build without the module
+ * would fail the class load of [BrandLogo] entirely — with the check, the
+ * fallback path is still reachable. The result is memoized by the JVM's own
+ * class loading, so this is a one-off lookup.
+ */
+private object SkiaVectorLogo {
+    fun available(): Boolean = runCatching {
+        Class.forName("org.jetbrains.skia.svg.SVGDOM", false, BrandLogo::class.java.classLoader)
+        true
+    }.getOrDefault(false)
 }

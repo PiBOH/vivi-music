@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  VIVI Music DE — the brand mark, as a vector.
+
+  Hand-rebuilt from desktop/icons/logo_vmde.png (1024x1024) so that every
+  feature of the raster survives at any size: the diagonal gradient, the
+  transparent outside, and the three white rings.
+
+  The mark, measured off the source:
+    * a circle (r 512.5 of the 1024 box, centred at 511.5,511.5) filled with a
+      45-degree linear gradient, #536DFE at the top-left corner to #6B3DE8 at
+      the bottom-right. The stops below are the source's own ramp, sampled
+      along the gradient axis: it is not a straight two-colour blend, it is
+      flat near both ends and steep through the middle, which a two-stop
+      gradient cannot reproduce.
+    * three concentric white rings, all 61.2 units thick (the source's edges
+      are soft, so the bands below are the 50%-luminance crossings, not the
+      fully-white plateaus, which are ~2 units narrower on each side):
+        r  61.5 - 122.7   the inner ring, a full circle
+        r 214.9 - 276.1   the middle ring, open over the arc 271deg -> 323deg
+        r 368.4 - 429.6   the outer ring, a full circle
+    * a white bar, 61.1 units wide (x 573.2 - 634.3), running from the outer
+      ring down to the inner one and separated from it by the inner ring's own
+      outer edge: its lower end is the arc r 122.7, not a straight cut, so the
+      bar and the ring read as one shape with a pinched corner at the 3 o'clock
+      side. It passes through the opening in the middle ring, which is why that
+      ring is drawn with a gap.
+
+  Every value here is in the source image's own pixel units, so the drawing
+  lines up with the PNG pixel for pixel.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+    <defs>
+        <linearGradient id="vivi-disc" gradientUnits="userSpaceOnUse"
+                        x1="0" y1="0" x2="1024" y2="1024">
+            <stop offset="0" stop-color="#536DFE"/>
+            <stop offset="0.14076" stop-color="#536DFE"/>
+            <stop offset="0.17204" stop-color="#536DFD"/>
+            <stop offset="0.20332" stop-color="#536DFD"/>
+            <stop offset="0.23460" stop-color="#536CFC"/>
+            <stop offset="0.26588" stop-color="#536BFC"/>
+            <stop offset="0.29717" stop-color="#546BFC"/>
+            <stop offset="0.32845" stop-color="#546AFC"/>
+            <stop offset="0.35973" stop-color="#5568FB"/>
+            <stop offset="0.39101" stop-color="#5666F9"/>
+            <stop offset="0.42229" stop-color="#5863F7"/>
+            <stop offset="0.45357" stop-color="#5B5EF5"/>
+            <stop offset="0.48485" stop-color="#5D58F3"/>
+            <stop offset="0.51613" stop-color="#6052F1"/>
+            <stop offset="0.54741" stop-color="#624BEF"/>
+            <stop offset="0.57869" stop-color="#6646EC"/>
+            <stop offset="0.60997" stop-color="#6743EB"/>
+            <stop offset="0.64125" stop-color="#6841EA"/>
+            <stop offset="0.67253" stop-color="#693FE9"/>
+            <stop offset="0.70381" stop-color="#693DE8"/>
+            <stop offset="0.73509" stop-color="#693EE9"/>
+            <stop offset="0.76637" stop-color="#6A3DE8"/>
+            <stop offset="0.79765" stop-color="#6A3CE8"/>
+            <stop offset="0.82893" stop-color="#6A3CE8"/>
+            <stop offset="0.86022" stop-color="#6B3DE8"/>
+            <stop offset="1" stop-color="#6B3DE8"/>
+        </linearGradient>
+    </defs>
+
+    <!-- The disc: the circle IS the clip, so everything outside stays
+         transparent without a clip path the renderer might not support. -->
+    <circle cx="511.5" cy="511.5" r="512.5" fill="url(#vivi-disc)"/>
+
+    <g fill="none" stroke="#FFFFFF" stroke-width="61.2">
+        <!-- Inner ring. -->
+        <circle cx="511.5" cy="511.5" r="92.1"/>
+        <!-- Middle ring. The drawn arc runs from 323deg clockwise all the way
+             round to 271deg (306deg of the circle): the gap is the opening the
+             bar passes through, at the 3 o'clock side. -->
+        <path d="M707.59 363.84 A245.5 245.5 0 1 1 515.79 266"/>
+        <!-- Outer ring. -->
+        <circle cx="511.5" cy="511.5" r="399"/>
+    </g>
+
+    <!-- The bar: down the right side from under the outer ring, ending on the
+         inner ring's outer edge (the arc r 122.7), which is why the bottom
+         edge is an arc and the corner at x 634.3 lands on the horizontal
+         through the centre. -->
+    <path d="M573.2 148 H634.3 V511.5 A122.7 122.7 0 0 1 573.2 617.6 Z" fill="#FFFFFF"/>
+</svg>
