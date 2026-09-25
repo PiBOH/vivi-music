@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Audit the generated desktop string table (`Localization.kt` + `LocalizationTablesN.kt`).
+Audit the generated desktop string table (`Localization.kt` + `Localization_<lang>.kt`).
 
 Run from the repo root:  python3 scripts/audit_desktop_localization.py
 
@@ -103,20 +103,24 @@ def read(path):
 
 
 def parse_tables():
-    """{lang: {key: value}} from the generated table files."""
+    """{lang: {key: value}} from the generated per-language files.
+
+    One `Localization_<lang>.kt` per language (the layout the APK uses with its
+    `values-<lang>/strings.xml`), each exporting one `internal fun strings_<lang>()`.
+    """
     funcs = {}
     for name in sorted(os.listdir(DESKTOP)):
-        if not (name.startswith("LocalizationTables") and name.endswith(".kt")):
+        if not (name.startswith("Localization_") and name.endswith(".kt")):
             continue
         text = read(os.path.join(DESKTOP, name))
         for fn, body in re.findall(
-            r"internal fun (strings_\d+)\(\): Map<String, String> =\s*mapOf\((.*?)\n    \)",
+            r"internal fun (strings_\w+)\(\): Map<String, String> =\s*mapOf\((.*?)\n    \)",
             text,
             re.S,
         ):
             funcs[fn] = dict(re.findall(r'"([^"]+)" to "([^"]*)"', body))
     localization = read(os.path.join(DESKTOP, "Localization.kt"))
-    lang_of = dict(re.findall(r'"([^"]+)" to (strings_\d+)\(\)', localization))
+    lang_of = dict(re.findall(r'"([^"]+)" to (strings_\w+)\(\)', localization))
     missing = [fn for fn in lang_of.values() if fn not in funcs]
     if missing:
         raise SystemExit(

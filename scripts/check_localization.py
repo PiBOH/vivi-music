@@ -23,38 +23,40 @@ SRC = os.path.join(REPO, "desktop", "src", "main", "kotlin")
 
 text = open(LOC, encoding="utf-8").read()
 
-# ---- parse the language tables: strings_N() -> {key: value} ----
+# ---- parse the language tables: strings_<lang>() -> {key: value} ----
 #
-# The maps no longer live inside Localization.kt: a class file is capped at
-# 64KB and the literals overflowed it ("ClassTooLargeException: Class too
+# The maps do not live inside Localization.kt: a class file is capped at 64KB
+# and the literals overflowed it ("ClassTooLargeException: Class too
 # large: LocalizationKt"), so the generator emits them as top-level
-# `internal fun strings_N()` in LocalizationTables1..N.kt and Localization.kt
-# keeps only the language -> function map. This script used to look for
-# `private fun strings_N()` in Localization.kt, so it had been failing with
-# "could not parse" since the split — it reads both files again now.
+# `internal fun strings_<lang>()` — one `Localization_<lang>.kt` per language,
+# the layout the APK uses with its `values-<lang>/strings.xml` — and
+# Localization.kt keeps only the language -> function map. This script used to
+# look for `private fun strings_N()` in Localization.kt, and then for numbered
+# `strings_N()` in LocalizationTables1..N.kt; it reads the per-language files
+# now.
 DIR = os.path.dirname(LOC)
 lang_tables = {}
 for name in sorted(os.listdir(DIR)):
-    if not (name.startswith("LocalizationTables") and name.endswith(".kt")):
+    if not (name.startswith("Localization_") and name.endswith(".kt")):
         continue
     body = open(os.path.join(DIR, name), encoding="utf-8").read()
     for m in re.finditer(
-        r"internal fun strings_(\d+)\(\): Map<String, String> =\s*mapOf\((.*?)\n\s*\)",
+        r"internal fun strings_(\w+)\(\): Map<String, String> =\s*mapOf\((.*?)\n\s*\)",
         body,
         re.S,
     ):
-        idx = int(m.group(1))
+        symbol = m.group(1)
         pairs = re.findall(r'"([^"]+)"\s+to\s+"((?:[^"\\]|\\.)*)"', m.group(2))
-        lang_tables[idx] = {k: v for k, v in pairs}
+        lang_tables[symbol] = {k: v for k, v in pairs}
 
 if not lang_tables:
     print("ERROR: could not parse Localization.kt language tables")
     sys.exit(1)
 
-# ---- map table index -> language code from the strings map ----
+# ---- map table symbol -> language code from the strings map ----
 lang_of = {}
-for m in re.finditer(r'"([A-Za-z-]+)"\s+to\s+strings_(\d+)\(\)', text):
-    lang_of[int(m.group(2))] = m.group(1)
+for m in re.finditer(r'"([A-Za-z_-]+)"\s+to\s+strings_(\w+)\(\)', text):
+    lang_of[m.group(2)] = m.group(1)
 
 en_idx = next((k for k, v in lang_of.items() if v == "en"), None)
 if en_idx is None:
@@ -64,8 +66,8 @@ english = lang_tables[en_idx]
 
 # language code -> set of keys
 by_lang = {}
-for idx, table in lang_tables.items():
-    code = lang_of.get(idx, f"strings_{idx}")
+for symbol, table in lang_tables.items():
+    code = lang_of.get(symbol, f"strings_{symbol}")
     by_lang[code] = set(table.keys())
 
 langs = sorted(k for k in by_lang if k != "en")
