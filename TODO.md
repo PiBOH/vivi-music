@@ -42,6 +42,7 @@ orientation.
 
 ## Done — one line per release
 
+- [x] **DE 1.53.24** — the translations as one file per language (the APK's `values-<lang>/strings.xml` shape, proven identical to the old tables language by language), the history row without a track length, the artists tab saying its list can take ten seconds
 - [x] **DE 1.53.23** — the sidebar logo and the tray icon (an all-transparent vector render, so the tray never appeared), the two expressive finishes as entries of the player picker, a YouTube Music playlist that already exists is updated instead of uploaded again, the lyrics cache bumped to v7 for the styled renderer
 - [x] **DE 1.53.22** — the device is primed with a real cushion instead of 0.3 s (#3), the macOS tile artwork follows the track instead of sticking to the first song (#63), and two diagnostics that misled this investigation are fixed
 - [x] **DE 1.53.21** — the swipe switch and sensitivity slider, the "no text" dots starting too early (mobile's rule, no estimate), the frozen now-playing bars, the translucent-tab player variant, the VIVI mark as a vector, the translation audit (bare "listening" in 49 languages, English and half-English strings)

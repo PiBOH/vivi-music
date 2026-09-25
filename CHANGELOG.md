@@ -11,6 +11,15 @@ the program's own SemVer. `[APK]` marks mobile-only changes.
 
 ## [Unreleased]
 
+## [6.0.6.8_DE-1.53.24-alpha] - 2026-09-25
+
+### Changed
+- [DE] **The translations are one file per language now, the way the APK keeps them.** The 53 maps lived in nine numbered `LocalizationTablesN.kt` files of six languages each — sliced that way for a JVM limit (a class file is capped at 64KB, which `ClassTooLargeException: Class too large: LocalizationKt` hit once the lyrics keys were completed), a boundary the compiler has and not one a reader has. Answering "what does the desktop say in Italian?" meant importing nine files and knowing which slice held Italian. The generator now emits `Localization_it.kt`, `Localization_ja.kt`, … one language each (the counterpart of the APK's `app/src/main/res/values-<lang>/strings.xml`), referenced from `Localization.kt`, and each file's docstring says what it holds **and what it deliberately does not** (keys whose Android resource is translated, which come from that resource via the generator's `MAPPING`). Verified rather than assumed: the tables were copied aside first, and comparing every entry line language by language reports *53 comparisons, 0 problems* — same strings, no key lost, added or reworded. **Constraint:** `check_localization.py`/`audit_desktop_localization.py` find the tables by file name, so a layout change must update them too (both are clean on the result: 0 missing/leaking, 0 values in a script the language does not use, 0 English left).
+
+### Fixed
+- [DE] **The history drew a track length on some rows and nothing on the others.** Both kinds of row share `SongRow`, and the local rows are built from this machine's own records (which know the length) while the rows the account returns do not — so the same list showed `3:42` on one line and nothing on the next, which reads as a bug. The length is off for the whole history, switched on the *row* rather than by emptying the durations, because a history answers "what did I play", not "how long is it". Every other list keeps its lengths.
+- [DE] **The artists tab can take seconds to appear and looked stuck while it did.** It is the one tab whose list has to be derived from the songs when the account does not return an artist list (see `loadLibraryPage`). `LoadingBox` takes an optional hint line now and the artists tab says *"Loading can take up to 10 seconds"*. The hint is a new desktop-only key, so its English is in the generator's inline map and all 52 other languages are in the new `desktop_extra_translations_84.py` — a language left out would print the English sentence, which is exactly what the translation audits exist to catch.
+
 ## [6.0.6.8_DE-1.53.23-alpha] - 2026-09-25
 
 ### Fixed
