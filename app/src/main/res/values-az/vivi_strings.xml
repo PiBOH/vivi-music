@@ -184,7 +184,7 @@
     <string name="density_restart_message">göstər sıxlıq dəyiş will take effekt sonra restarting tətbiq. Do siz want -a yenidən başlat now?</string>
     <string name="enable_wavy_slider">Aktiv et wavy slider</string>
     <string name="wavy">Dalğalı</string>
-    <string name="enable_swipe_thumbnail">Aktiv et swipe -a dəyiş mahnı</string>
+    <string name="enable_swipe_thumbnail">Mahnı dəyişmək üçün svaypı aktivləşdirin</string>
     <string name="swipe_song_to_add">Swipe mahnı -a left -a əlavə et it -a növbə və ya -a right -a oxut it növbəti</string>
     <string name="swipe_song_to_remove">Swipe mahnı -a sil it -dan pleylist</string>
     <string name="lyrics_click_change">Dəyiş mahnı sözləri on klik</string>
@@ -262,8 +262,8 @@
     <string name="playlist_add_local_to_synced_note">Qeyd: Adding yerli mahnılar -a sinxronlaşdırıldı/uzaqdan pleylistlər dır unsupported. Any other combination dır valid</string>
     <string name="auto_download_on_like">Avtomatik yüklə on like</string>
     <string name="auto_download_on_like_desc">Avtomatikally yüklə mahnılar when siz like them</string>
-    <string name="swipe_sensitivity">Mini pleyer swipe sensitivity</string>
-    <string name="swipe_sensitivity_desc">Adjust how sensitive swipe gestures dır üçün changing mahnılar</string>
+    <string name="swipe_sensitivity">Mini pleyerin svayp həssaslığı</string>
+    <string name="swipe_sensitivity_desc">Mahnı dəyişmək üçün svayp jestinin həssaslığını tənzimləyin</string>
     <string name="sensitivity_percentage">%1$d%%</string>
     <string name="clear_song_cache_dialog">Dır siz sure siz want -a təmizlə bütün keşlənmiş mahnılar?</string>
     <string name="clear_image_cache_dialog">Dır siz sure siz want -a təmizlə bütün keşlənmiş şəkil?</string>

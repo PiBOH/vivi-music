@@ -24,12 +24,28 @@ SRC = os.path.join(REPO, "desktop", "src", "main", "kotlin")
 text = open(LOC, encoding="utf-8").read()
 
 # ---- parse the language tables: strings_N() -> {key: value} ----
+#
+# The maps no longer live inside Localization.kt: a class file is capped at
+# 64KB and the literals overflowed it ("ClassTooLargeException: Class too
+# large: LocalizationKt"), so the generator emits them as top-level
+# `internal fun strings_N()` in LocalizationTables1..N.kt and Localization.kt
+# keeps only the language -> function map. This script used to look for
+# `private fun strings_N()` in Localization.kt, so it had been failing with
+# "could not parse" since the split — it reads both files again now.
+DIR = os.path.dirname(LOC)
 lang_tables = {}
-for m in re.finditer(r"private fun strings_(\d+)\(\): Map<String, String> =\s*mapOf\((.*?)\n\s*\)", text, re.S):
-    idx = int(m.group(1))
-    body = m.group(2)
-    pairs = re.findall(r'"([^"]+)"\s+to\s+"((?:[^"\\]|\\.)*)"', body)
-    lang_tables[idx] = {k: v for k, v in pairs}
+for name in sorted(os.listdir(DIR)):
+    if not (name.startswith("LocalizationTables") and name.endswith(".kt")):
+        continue
+    body = open(os.path.join(DIR, name), encoding="utf-8").read()
+    for m in re.finditer(
+        r"internal fun strings_(\d+)\(\): Map<String, String> =\s*mapOf\((.*?)\n\s*\)",
+        body,
+        re.S,
+    ):
+        idx = int(m.group(1))
+        pairs = re.findall(r'"([^"]+)"\s+to\s+"((?:[^"\\]|\\.)*)"', m.group(2))
+        lang_tables[idx] = {k: v for k, v in pairs}
 
 if not lang_tables:
     print("ERROR: could not parse Localization.kt language tables")
@@ -70,7 +86,10 @@ for root, _dirs, files in os.walk(SRC):
             if mm.group(1) in english or mm.group(1) in used:
                 used.add(mm.group(1))
 
-missing_in_en = sorted(k for k in used if k not in english)
+# A Kotlin string *template* ("accent_${entry.key}") is not a key: the regex
+# above reads it as one, and reporting it as missing from the English table is
+# noise. Only report literal keys.
+missing_in_en = sorted(k for k in used if "$" not in k and k not in english)
 print(f"== used keys: {len(used)}, English table: {len(english)} ==")
 print()
 if missing_in_en:

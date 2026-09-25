@@ -210,6 +210,11 @@ MAPPING = {
     "player_background_glow": "Glow",
     "player_background_apple": "Apple Music",
     "player_background_mesh": "Live mesh",
+    # The expressive player's two tab finishes (1.53.21). Desktop-only: the
+    # mobile app has no translucent variant, so the 52 translations live in
+    # desktop_extra_translations_81.py / _82.py.
+    "expressive_tab_translucent": "Translucent tab",
+    "expressive_tab_translucent_desc": "Let the player background show through the Queue, Lyrics and History panel",
     "rotating_thumbnail": "Rotating artwork",
     "rotating_thumbnail_desc": "Slowly rotate the album artwork while playing.",
     "apple_mini_player": "Apple mini player",
@@ -672,6 +677,24 @@ MAPPING = {
     "lyrics_provider_priority": "lyrics_provider_priority",
     "show_artist_description": "show_artist_description",
     "show_artist_subscriber_count": "show_artist_subscriber_count",
+
+    # ------------------------------------------------------------------
+    # 1.53.21 — the translation audit's leftovers. Each of these desktop
+    # labels is a word the Android app already ships, so mapping the resource
+    # beats the inline English literal it used to point at: the literal left
+    # EVERY language showing English (the audit reported "Off", "Gradient",
+    # "Add to queue" … as untranslated in all 52 of them).
+    # ------------------------------------------------------------------
+    "add_to_queue": "add_to_queue",
+    "player_background_gradient": "gradient",
+    "mini_player_bg_gradient": "gradient",
+    "player_background_glow": "glow",
+    "mini_player_bg_blur": "player_background_blur",
+    "lastfm_enable": "enable_scrobbling",
+    "discord_presence_enable": "enable_discord_rpc",
+    "integrations_inactive": "dark_theme_off",
+    "lt_transfer_host": "transfer_host",
+    "mini_player_pure_black": "pure_black",
 }
 
 # Full desktop English table (source language).
@@ -1753,12 +1776,15 @@ from desktop_extra_translations_77 import EXTRA_TRANSLATIONS as _EXTRA_77
 from desktop_extra_translations_78 import EXTRA_TRANSLATIONS as _EXTRA_78
 from desktop_extra_translations_79 import EXTRA_TRANSLATIONS as _EXTRA_79
 from desktop_extra_translations_80 import EXTRA_TRANSLATIONS as _EXTRA_80
+from desktop_extra_translations_81 import EXTRA_TRANSLATIONS as _EXTRA_81
+from desktop_extra_translations_82 import EXTRA_TRANSLATIONS as _EXTRA_82
+from desktop_extra_translations_83 import EXTRA_TRANSLATIONS as _EXTRA_83
 
 # Merge per key (deep): the same key can appear in several extra files with
 # different language subsets (e.g. batch 30 defines "comments" for all
 # languages, batch 31 adds only tr). A plain dict.update() would REPLACE the
 # whole language map with the last file's subset, dropping translations.
-for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69, _EXTRA_70, _EXTRA_71, _EXTRA_72, _EXTRA_73, _EXTRA_74, _EXTRA_75, _EXTRA_76, _EXTRA_77, _EXTRA_78, _EXTRA_79, _EXTRA_80):
+for _extra in (_EXTRA_1, _EXTRA_2, _EXTRA_3, _EXTRA_4, _EXTRA_5, _EXTRA_6, _EXTRA_7, _EXTRA_8, _EXTRA_9, _EXTRA_10, _EXTRA_11, _EXTRA_12, _EXTRA_13, _EXTRA_14, _EXTRA_15, _EXTRA_16, _EXTRA_17, _EXTRA_18, _EXTRA_19, _EXTRA_20, _EXTRA_21, _EXTRA_22, _EXTRA_23, _EXTRA_24, _EXTRA_25, _EXTRA_26, _EXTRA_27, _EXTRA_28, _EXTRA_29, _EXTRA_30, _EXTRA_31, _EXTRA_32, _EXTRA_33, _EXTRA_34, _EXTRA_35, _EXTRA_36, _EXTRA_37, _EXTRA_38, _EXTRA_39, _EXTRA_40, _EXTRA_41, _EXTRA_42, _EXTRA_43, _EXTRA_44, _EXTRA_45, _EXTRA_46, _EXTRA_47, _EXTRA_48, _EXTRA_49, _EXTRA_50, _EXTRA_51, _EXTRA_52, _EXTRA_53, _EXTRA_54, _EXTRA_55, _EXTRA_56, _EXTRA_57, _EXTRA_58, _EXTRA_59, _EXTRA_60, _EXTRA_61, _EXTRA_62, _EXTRA_63, _EXTRA_64, _EXTRA_65, _EXTRA_66, _EXTRA_67, _EXTRA_68, _EXTRA_69, _EXTRA_70, _EXTRA_71, _EXTRA_72, _EXTRA_73, _EXTRA_74, _EXTRA_75, _EXTRA_76, _EXTRA_77, _EXTRA_78, _EXTRA_79, _EXTRA_80, _EXTRA_81, _EXTRA_82, _EXTRA_83):
     for _key, _langmap in _extra.items():
         TRANSLATIONS.setdefault(_key, {}).update(_langmap)
 
@@ -1894,14 +1920,62 @@ def main():
         if mapped:
             languages[lang] = mapped
 
+    # Complete the English table BEFORE the extras are merged: the merge guard
+    # below compares a translation against the English wording, and for a
+    # desktop-only key that wording only exists as the inline literal on the
+    # right-hand side of MAPPING (`"mini_player_pure_black": "Pure black"`), so
+    # without this the guard would see `None`, treat the no-op filler as a real
+    # translation and let it clobber the mapping again.
+    #
+    # Some desktop-only keys are mapped to an inline English literal (no Android
+    # resource with that name exists, e.g. "screen_transitions" -> "Screen
+    # transitions"); those literals must also land in the English table,
+    # otherwise the key shows up raw in the UI.
+    for key, android_name in MAPPING.items():
+        if key in ENGLISH:
+            continue
+        val = default.get(android_name)
+        if val:
+            ENGLISH[key] = val
+        else:
+            ENGLISH[key] = android_name
+
     # Fill in desktop-only translations and gap-fills on top of the Android
     # mappings (applied last so it can also add keys for languages that have no
     # matching Android string, e.g. as/az/eu/km/...).
+    #
+    # A no-op does not get to overwrite a real translation. Several of the
+    # extra batches are filler: they wrote the English literal under all 52
+    # language tags (`"integrations_inactive": {"it": "Off", ...}`) so the key
+    # existed everywhere without being translated. Because the extras are
+    # applied LAST, that filler clobbered the translation the key had just
+    # picked up from its Android resource — `integrations_inactive` is mapped
+    # to Android's `dark_theme_off`, which is "Disattivato" in Italian, and the
+    # filler forced "Off" back in. Keep the no-op only where there is nothing
+    # to overwrite (the audit still reports those as untranslated).
+    #
+    # The same filler sometimes wrote the *key name of the Android resource*
+    # instead of a translation (`"wrapped_listening_time": {"it": "listening"}`,
+    # where MAPPING points the key at Android's `listening` — "In ascolto…").
+    # That is worse than the English wording: the Wrapped screen printed the
+    # bare word "listening" in 49 languages. A value that is the key, the
+    # resource name or the English wording carries no translation, so it never
+    # gets written; the key stays absent and falls back to English, which at
+    # least reads like a sentence.
     for key, langmap in TRANSLATIONS.items():
+        english = ENGLISH.get(key)
+        # The key's own name and the Android resource name are never wording.
+        garbage = {key, MAPPING.get(key)} - {None, english}
         for lang, text in langmap.items():
             if lang == "en":
                 continue
-            languages.setdefault(lang, {})[key] = text
+            entries = languages.setdefault(lang, {})
+            existing = entries.get(key)
+            if text in garbage:
+                text = english
+            if text == english and existing is not None and existing != text:
+                continue
+            entries[key] = text
 
     # Ensure no two options in the same selection list share a label in any
     # language (e.g. slider styles both translated as "Ondulato" in Italian).
@@ -1917,24 +1991,6 @@ def main():
         alias_map = languages.setdefault(alias, {})
         for key, text in languages[twin].items():
             alias_map.setdefault(key, text)
-
-    # Ensure the default also contributes any translated fallback values, so
-    # the "en" table uses the Android English wording for the mapped keys.
-    # Some desktop-only keys are mapped to an inline English literal (no
-    # Android resource with that name exists, e.g. "screen_transitions" ->
-    # "Screen transitions"); those literals must also land in the English
-    # table, otherwise the key shows up raw in the UI.
-    for key, android_name in MAPPING.items():
-        if key in ENGLISH:
-            continue
-        val = default.get(android_name)
-        if val:
-            ENGLISH[key] = val
-        else:
-            # No Android resource with this name exists: the mapping value is
-            # the inline English literal itself (e.g. "screen_transitions" ->
-            # "Screen transitions"). Without this, the key shows up raw in UI.
-            ENGLISH[key] = android_name
 
     # A key that has translations but no English value is a bug, not a gap: the
     # lookup tries English before its last-resort fallback ("the first

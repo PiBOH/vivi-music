@@ -53,6 +53,11 @@ BRAND_KEYS = {
     "canvas_source_apple_music", "vivi_equalizer", "lastfm", "discord",
     "de", "mobile", "website", "telegram_channel", "wrapped_title",
     "lyrics_style_none",
+    # Discord's own feature name, kept as-is upstream.
+    "discord_presence",
+    # The window/app title; "desktop" is the same loanword everywhere it is
+    # not already translated, and the product name never changes.
+    "header",
 }
 # Device/technical readouts, font names and unit labels: English by design.
 TECHNICAL_KEYS = {
