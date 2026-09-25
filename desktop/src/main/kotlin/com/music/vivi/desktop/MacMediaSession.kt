@@ -486,7 +486,19 @@ object MacMediaSession {
         }
     }
 
-    /** Downloads the artwork and returns a local path, or null on failure. */
+    /**
+     * Downloads the artwork and returns a local path, or null on failure.
+     *
+     * The file name is **derived from the artwork URL**, and that is the whole
+     * point of this function (issue #63): while it was the fixed name
+     * `macos-artwork.jpg`, every track wrote over the same file and the native
+     * side — which decodes the image once and caches it *per path* (`
+     * g_artworkLoadedPath` in `ViviMediaSession.m`) — kept handing the system
+     * the picture it had already loaded. The reporter saw exactly that: "the
+     * current playing song image is not getting changed, so it stays always as a
+     * very first song played". A name per URL makes the path change with the
+     * track, so the cache in the native layer misses and the tile is redrawn.
+     */
     private fun downloadArtwork(url: String, cacheDir: File): String? {
         return try {
             val connection = java.net.URI(url).toURL().openConnection()
@@ -498,12 +510,13 @@ object MacMediaSession {
                     url.substringBefore('?').contains(".webp", ignoreCase = true) -> "webp"
                     else -> "jpg"
                 }
-                val out = File(cacheDir, "macos-artwork.$ext")
+                val out = File(cacheDir, artworkFileName(url, ext))
                 FileOutputStream(out).use { output -> input.copyTo(output) }
                 if (out.length() == 0L) {
                     out.delete()
                     null
                 } else {
+                    purgeOldArtwork(cacheDir, keep = out)
                     out.absolutePath
                 }
             }
@@ -511,6 +524,37 @@ object MacMediaSession {
             println("[mac-media] artwork download failed: $t")
             log("artwork download failed: ${t.message}")
             null
+        }
+    }
+
+    /**
+     * A stable, per-artwork file name: same URL, same name (so the position
+     * ticks that re-push the metadata do not re-download or re-decode anything),
+     * different URL, different name (so the native per-path cache misses and the
+     * tile updates). The URL is hashed because it is far too long for a file
+     * name — the extension is kept because the native side decodes by content
+     * anyway and the log is easier to read with it.
+     */
+    private fun artworkFileName(url: String, ext: String): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-1")
+            .digest(url.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+            .take(16)
+        return "macos-artwork-$digest.$ext"
+    }
+
+    /**
+     * Keeps the artwork cache bounded: one file per track is needed only while
+     * the system may still be showing it, so everything except the file just
+     * written is dropped (the previous track is no longer on the tile).
+     */
+    private fun purgeOldArtwork(cacheDir: File, keep: File) {
+        runCatching {
+            cacheDir.listFiles { f ->
+                f.isFile && f.name.startsWith("macos-artwork")
+            }?.forEach { f ->
+                if (f.absolutePath != keep.absolutePath) f.delete()
+            }
         }
     }
 }

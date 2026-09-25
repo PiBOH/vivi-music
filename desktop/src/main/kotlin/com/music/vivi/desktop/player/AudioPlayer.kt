@@ -199,8 +199,40 @@ class AudioPlayer {
          * buffered while the line is stopped, so the writer fills the ring
          * first and starts the line once this much audio is queued in it (or
          * as soon as the producer has nothing more to hand over).
+         *
+         * It used to be **0.3 s**, and the reporter's 1.53.20 export on macOS
+         * shows why that is not enough on its own: `audio output primed: device
+         * started with 278ms already queued`, immediately followed by `audio
+         * writer stalled: 325ms for one pass … (cushion 278ms)` and, in another
+         * session, `556ms` — i.e. a single pass of the writer can take longer
+         * than the cushion the device was started with, so the ring empties and
+         * the user hears exactly the "few ms pause, on almost every song" of
+         * this issue. A cushion has to be bigger than the hiccups it absorbs,
+         * so it is a full second now, never more than half of what the backend
+         * actually granted (Windows caps the ring at 1 s, macOS grants 4 s).
          */
-        const val LINE_PRIME_SECONDS = 0.3
+        const val LINE_PRIME_SECONDS = 1.0
+
+        /**
+         * Never prime more than this fraction of the granted device ring: the
+         * cushion exists to absorb a late writer, and a ring that is full to the
+         * brim when the device starts leaves no room for the write that follows
+         * it (issue #3).
+         */
+        const val LINE_PRIME_MAX_RING_FRACTION = 0.5
+
+        /**
+         * The ring may simply refuse to take more while the line is stopped (a
+         * backend buffers only so much before `write` blocks), so "wait for the
+         * cushion" needs an exit. It is NOT "the PCM queue is momentarily
+         * empty": on a cached track the decoder hands over its first fragments
+         * over-then-under time, and the reporter's log shows the device started
+         * at 278 ms because that check fired on the wrong side of a burst. The
+         * exit is now "the ring has stopped growing for this long while the
+         * producer had something to give", which cannot be decided by a single
+         * unlucky sample (issue #3).
+         */
+        const val LINE_PRIME_GROWTH_WINDOW_MS = 400L
 
         /**
          * Seconds of audio that must already be on disk before the output line
@@ -1331,6 +1363,16 @@ class AudioPlayer {
             var lastDeviceCheckMs = 0L
             var lastDeviceCheckPlayedMs = 0L
             var deviceStallLogged = 0
+            /** Priming state (issue #3): how far the ring has been filled and
+             *  when it last grew, so "the backend refuses more while stopped"
+             *  can be told from "the producer happens to be empty right now". */
+            var primeCushionMs = 0.0
+            var primeGrowWallMs = 0L
+            var primeSeenData = false
+            /** Set on the pass that starts the device: that pass legitimately
+             *  carries first-write/JIT work and must not be reported as
+             *  "the thread was not scheduled" (issue #3). */
+            var justPrimed = false
             /** Set while the writer sits in the pause wait, so the next device
              *  sample starts a new window instead of counting the pause. */
             var pausedWindow = false
@@ -1403,15 +1445,48 @@ class AudioPlayer {
                 // must not delay the start for ever).
                 if (!lineStarted) {
                     val primed = cushionMs()
-                    if (primed >= LINE_PRIME_SECONDS * 1000.0 ||
-                        pcmQueue.isEmpty() || producerDone.get()
-                    ) {
+                    val now = System.currentTimeMillis()
+                    // The target is the configured cushion, but never more than
+                    // half of what the backend actually granted: on Windows the
+                    // ring is 1 s (so 0.5 s of cushion), on macOS 4 s.
+                    val targetMs = minOf(
+                        LINE_PRIME_SECONDS * 1000.0,
+                        lineBufferMs * LINE_PRIME_MAX_RING_FRACTION,
+                    )
+                    if (primed > primeCushionMs + 20.0) {
+                        primeCushionMs = primed
+                        primeGrowWallMs = now
+                    } else if (primeGrowWallMs == 0L) {
+                        primeGrowWallMs = now
+                    }
+                    if (!pcmQueue.isEmpty()) primeSeenData = true
+                    val enough = primed >= targetMs
+                    // The only other way out: the producer has nothing left at
+                    // all, or the ring has stopped growing for a while even
+                    // though the producer kept handing audio over — which means
+                    // the backend will not accept more while the line is
+                    // stopped. Both are safe: the writer keeps filling the ring
+                    // while the device plays.
+                    val plateau = primeSeenData &&
+                        now - primeGrowWallMs >= LINE_PRIME_GROWTH_WINDOW_MS
+                    if (enough || plateau || producerDone.get()) {
                         lineStarted = true
+                        justPrimed = true
                         runCatching { out.start() }
+                        val why = when {
+                            enough ->
+                                "reached the ${targetMs.toInt()}ms target"
+                            producerDone.get() ->
+                                "the producer had nothing else to hand over"
+                            else ->
+                                "the ring stopped taking more after ${primed.toInt()}ms " +
+                                    "(${LINE_PRIME_GROWTH_WINDOW_MS}ms without growth)"
+                        }
                         AppLog.log(
                             "playback",
                             "audio output primed: device started with ${primed.toInt()}ms " +
-                                "already queued in its buffer (ring ~${lineBufferMs}ms)",
+                                "already queued in its buffer (ring ~${lineBufferMs}ms, " +
+                                "target ${targetMs.toInt()}ms) — $why",
                         )
                     }
                 }
@@ -1449,7 +1524,24 @@ class AudioPlayer {
                 if (lineStarted) {
                     val playedMs = playedAudioMs()
                     val now = System.currentTimeMillis()
-                    if (lastDeviceCheckMs == 0L) {
+                    // A frame counter that moved BACKWARDS is a different line,
+                    // not a stalled sound card: the reporter's exports carried
+                    // `the sound card played only 3136ms of audio in 18350ms of
+                    // wall time (17%)` with a 3.1 s cushion sitting in the ring,
+                    // which cannot happen while the device is playing — it is
+                    // the new line's counter starting near zero. Counting that as
+                    // a stall sent this issue down the wrong path twice.
+                    val counterReset = lastDeviceCheckPlayedMs > 0L &&
+                        playedMs < lastDeviceCheckPlayedMs
+                    if (lastDeviceCheckMs == 0L || counterReset) {
+                        if (counterReset) {
+                            AppLog.log(
+                                "playback",
+                                "audio device check: the frame counter restarted " +
+                                    "(new output line) — window restarted instead of " +
+                                    "reporting a stall",
+                            )
+                        }
                         lastDeviceCheckMs = now
                         lastDeviceCheckPlayedMs = playedMs
                     } else if (now - lastDeviceCheckMs >= DEVICE_CHECK_INTERVAL_MS) {
@@ -1497,6 +1589,17 @@ class AudioPlayer {
                 val now = System.currentTimeMillis()
                 val bodyMs = now - passStartMs
                 val inWriteMs = writeBlockedMs - blockedBefore
+                // The pass that opens the device carries the first write, the
+                // CoreAudio open and the JIT of this whole path: it is slow by
+                // nature and it was the ONLY pass the reporter's 1.53.20 export
+                // flagged (325 ms, 515 ms and 556 ms, each one immediately after
+                // `audio output primed`). Reporting those as a scheduling stall
+                // is what made the logs look like a frozen thread while the
+                // picture was actually clean — skip that one pass instead.
+                if (justPrimed) {
+                    justPrimed = false
+                    return
+                }
                 if (bodyMs < 300L || bodyMs - inWriteMs < 150L) return
                 if (now - lastLateLogMs < 2_000L) return
                 lastLateLogMs = now

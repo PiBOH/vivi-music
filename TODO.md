@@ -14,6 +14,9 @@ orientation.
 ### Audio (Windows)
 - [ ] **A scheduling freeze longer than ~1 s is still audible.** Java Sound's device ring is hard-capped at 1000 ms there (measured: any request above 1 s is granted exactly 176400 bytes; macOS grants 4 s) and MMCSS now covers the ~1 s range. Beyond that it means a native WASAPI render path (event-driven, own ring) or a bigger ring in the current backend. **Do not start without a measurement:** the logs must first show the writer frozen *outside* `out.write()`.
 
+### Audio (macOS, #3)
+- [ ] **The reporter still hears it on 1.53.20, and 1.53.22 changes exactly one thing about the start of a track** — the device is primed with a real second instead of 0.3 s (his export: `device started with 278ms already queued` followed by a 325-556 ms writer pass, i.e. the ring could not absorb the pass that followed the start). His next export is what decides: `audio output primed: … — reached the 1000ms target` with no `cushion low`/`device ran dry` line means the start is covered; a `plateau` in the priming line means his backend refuses a deeper cushion while stopped (then the ring size itself is the bound and the next step is an event-driven output, not another cushion change); a genuine `audio writer stalled` line *during* steady playback with the cushion high would be the first real evidence of a frozen thread on macOS, which 24 sessions have not shown yet.
+
 ### Performance (Windows)
 - [ ] **Playing still costs ~0.5 core** on the reporting machine (`AWT-EventQueue-0` ≈ 3.1 s CPU in 6 s, Skiko OpenGL redrawer vs `dwmFlush`). The per-tick recomposition went in 1.50.71; what is left is the renderer itself (candidates: software/ANGLE backend, lower animation rate) (#3).
 - [ ] **The setup is ~129 MB and cannot go below ~100 MB** while the sign-in WebView ships: `javafx-web` ~31 MB, `icudtl.dat` 10 MB, `skiko` 12 MB, the 78 MB jlink runtime. Levers left: subset the four bundled fonts, shrink the jlink image.
@@ -39,6 +42,7 @@ orientation.
 
 ## Done — one line per release
 
+- [x] **DE 1.53.22** — the device is primed with a real cushion instead of 0.3 s (#3), the macOS tile artwork follows the track instead of sticking to the first song (#63), and two diagnostics that misled this investigation are fixed
 - [x] **DE 1.53.21** — the swipe switch and sensitivity slider, the "no text" dots starting too early (mobile's rule, no estimate), the frozen now-playing bars, the translucent-tab player variant, the VIVI mark as a vector, the translation audit (bare "listening" in 49 languages, English and half-English strings)
 - [x] **DE 1.53.20** — macOS: the "Now Playing" tile is claimed at launch with a restored (paused) queue (#63); the lyrics "no text" marker is three horizontal dots instead of the ring
 - [x] **DE 1.53.19** — the expressive player's lyrics-menu crash, the queue's "+" moved into the ⋮ menu, sharp tray/sidebar logos, the "no text" indicator on plain LRC, the now-playing bars on the cover, the Library live refresh, the Artists list, the duplicates left in the sidebar, the position after a skip
