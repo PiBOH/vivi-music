@@ -100,6 +100,7 @@ internal fun strings_ja(): Map<String, String> =
         "apple_mini_player" to "Apple風ミニプレイヤー",
         "apple_mini_player_desc" to "Apple Music風の角丸ミニプレイヤー。",
         "artists" to "アーティスト",
+        "artists_loading_hint" to "読み込みに最大10秒かかることがあります",
         "audio_quality" to "音質",
         "audio_quality_auto" to "自動",
         "audio_quality_high" to "高",

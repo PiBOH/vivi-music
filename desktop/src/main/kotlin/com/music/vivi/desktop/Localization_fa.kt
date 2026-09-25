@@ -100,6 +100,7 @@ internal fun strings_fa(): Map<String, String> =
         "apple_mini_player" to "مینی پلیر اپل",
         "apple_mini_player_desc" to "مینی پلیر گرد به سبک Apple Music.",
         "artists" to "هنرمندها",
+        "artists_loading_hint" to "بارگذاری ممکن است تا 10 ثانیه طول بکشد",
         "audio_quality" to "کیفیت صدا",
         "audio_quality_auto" to "خودکار",
         "audio_quality_high" to "بالا",

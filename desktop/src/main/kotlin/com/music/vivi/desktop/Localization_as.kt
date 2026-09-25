@@ -100,6 +100,7 @@ internal fun strings_as(): Map<String, String> =
         "apple_mini_player" to "এপল-ষ্টাইল মিনি প্লেয়াৰ",
         "apple_mini_player_desc" to "Apple Music-শৈলীৰ ঘূৰণীয়া মিনি প্লেয়াৰ।",
         "artists" to "শিল্পী",
+        "artists_loading_hint" to "লোড হ’বলৈ 10 ছেকেণ্ডলৈকে লাগিব পাৰে",
         "audio_quality" to "অডিঅ' মান",
         "audio_quality_auto" to "স্বয়ং",
         "audio_quality_high" to "উচ্চ",

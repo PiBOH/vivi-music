@@ -100,6 +100,7 @@ internal fun strings_ta(): Map<String, String> =
         "apple_mini_player" to "ஆப்பிள்-பாணி மினி பிளேயர்",
         "apple_mini_player_desc" to "ஆப்பிள் மியூசிக்-பாணி வட்ட மினி பிளேயர்.",
         "artists" to "கலைஞர்கள்",
+        "artists_loading_hint" to "ஏற்றுவதற்கு 10 வினாடிகள் வரை ஆகலாம்",
         "audio_quality" to "ஆடியோ தகுதி",
         "audio_quality_auto" to "தானி",
         "audio_quality_high" to "உயர்ந்த",

@@ -452,6 +452,10 @@ fun HistoryScreen(
                         { onPlaySong(song) },
                         onAddToQueue = { onAddToQueue(song) },
                         onAddToPlaylist = { onAddToPlaylist(song) },
+                        // No length on a history row: the local rows know it and
+                        // the account's rows do not, so drawing it showed a
+                        // duration on some rows and nothing on the others.
+                        showDuration = false,
                     )
                 }
             }
@@ -480,7 +484,14 @@ fun HistoryScreen(
                         )
                     }
                     items(section.songs, key = { "song-${it.id}" }) { song ->
-                        SongRow(song, language, { onPlaySong(song) }, onAddToQueue = { onAddToQueue(song) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                        SongRow(
+                            song,
+                            language,
+                            { onPlaySong(song) },
+                            onAddToQueue = { onAddToQueue(song) },
+                            onAddToPlaylist = { onAddToPlaylist(song) },
+                            showDuration = false,
+                        )
                     }
                 }
             }

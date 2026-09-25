@@ -100,6 +100,7 @@ internal fun strings_nb(): Map<String, String> =
         "apple_mini_player" to "Mini-avspiller i Apple-stil",
         "apple_mini_player_desc" to "Avrundet mini-avspiller i Apple Music-stil.",
         "artists" to "Artister",
+        "artists_loading_hint" to "Lastingen kan ta opptil 10 sekunder",
         "audio_quality" to "Lydkvalitet",
         "audio_quality_auto" to "Automatisk",
         "audio_quality_high" to "Høy",

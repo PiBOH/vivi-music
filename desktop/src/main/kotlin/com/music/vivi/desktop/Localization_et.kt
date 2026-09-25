@@ -100,6 +100,7 @@ internal fun strings_et(): Map<String, String> =
         "apple_mini_player" to "Apple-stiilis mini-mängija",
         "apple_mini_player_desc" to "Ümmargune Apple Music stiilis mini-mängija.",
         "artists" to "Esitajaid",
+        "artists_loading_hint" to "Laadimine võib kesta kuni 10 sekundit",
         "audio_quality" to "Helikvaliteet",
         "audio_quality_auto" to "Automaatne",
         "audio_quality_high" to "Kõrge",

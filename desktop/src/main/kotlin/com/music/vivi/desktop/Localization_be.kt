@@ -100,6 +100,7 @@ internal fun strings_be(): Map<String, String> =
         "apple_mini_player" to "Міні-плэер у стылі Apple",
         "apple_mini_player_desc" to "Круглы міні-плэер у стылі Apple Music.",
         "artists" to "Выканаўцы",
+        "artists_loading_hint" to "Загрузка можа заняць да 10 секунд",
         "audio_quality" to "Якасць аўдыя",
         "audio_quality_auto" to "Аўта",
         "audio_quality_high" to "Высокая",

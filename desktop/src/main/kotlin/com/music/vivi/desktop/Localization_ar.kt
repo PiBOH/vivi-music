@@ -100,6 +100,7 @@ internal fun strings_ar(): Map<String, String> =
         "apple_mini_player" to "مشغل مصغر بنمط آبل",
         "apple_mini_player_desc" to "مشغل مصغر دائري بنمط Apple Music.",
         "artists" to "فنانون",
+        "artists_loading_hint" to "قد يستغرق التحميل حتى 10 ثوانٍ",
         "audio_quality" to "جودة الصوت",
         "audio_quality_auto" to "تلقائي",
         "audio_quality_high" to "عالي",

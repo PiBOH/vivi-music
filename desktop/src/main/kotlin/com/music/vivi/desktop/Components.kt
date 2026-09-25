@@ -352,6 +352,17 @@ fun SongRow(
     onClick: () -> Unit,
     onAddToQueue: (() -> Unit)? = null,
     onAddToPlaylist: (() -> Unit)? = null,
+    /**
+     * Whether to draw the track length on the right.
+     *
+     * Off in the history, and deliberately at the *row* level rather than by
+     * emptying the durations: the history mixes rows built from this machine's
+     * own records (which know the length) with rows the account returned (which
+     * do not), so hiding the ones it happens to know is what made the same list
+     * show a duration on some rows and nothing on others. A history answers
+     * "what did I play", not "how long is it".
+     */
+    showDuration: Boolean = true,
 ) {
     val playback = LocalPlayback.current
     val isCurrent = song.id == playback.videoId
@@ -426,8 +437,10 @@ fun SongRow(
                 }
             },
         )
-        song.duration?.let {
-            Text(it.let(::formatDuration), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (showDuration) {
+            song.duration?.let {
+                Text(it.let(::formatDuration), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -498,8 +511,23 @@ internal fun NowPlayingBars(
 }
 
 @Composable
-fun LoadingBox(language: String) {
-    Box(Modifier.fillMaxSize().padding(16.dp)) { Text(Localization.get(language, "loading")) }
+fun LoadingBox(language: String, hint: String? = null) {
+    Box(Modifier.fillMaxSize().padding(16.dp)) {
+        Column {
+            Text(Localization.get(language, "loading"))
+            // Some lists take noticeably longer than others, and a spinner on
+            // its own reads as "stuck" after a few seconds: the caller can say
+            // how long it may take.
+            hint?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable

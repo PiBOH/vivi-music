@@ -100,6 +100,7 @@ internal fun strings_tr(): Map<String, String> =
         "apple_mini_player" to "Apple tarzı mini oynatıcı",
         "apple_mini_player_desc" to "Apple Music tarzı yuvarlak mini oynatıcı.",
         "artists" to "Sanatçılar",
+        "artists_loading_hint" to "Yükleme 10 saniye kadar sürebilir",
         "audio_quality" to "Ses kalitesi",
         "audio_quality_auto" to "Otomatik",
         "audio_quality_high" to "Yüksek",

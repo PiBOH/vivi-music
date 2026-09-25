@@ -100,6 +100,7 @@ internal fun strings_th(): Map<String, String> =
         "apple_mini_player" to "มินิเพลเยอร์สไตล์ Apple",
         "apple_mini_player_desc" to "มินิเพลเยอร์ทรงโค้งสไตล์ Apple Music",
         "artists" to "ศิลปิน",
+        "artists_loading_hint" to "การโหลดอาจใช้เวลาถึง 10 วินาที",
         "audio_quality" to "คุณภาพเสียง",
         "audio_quality_auto" to "อัตโนมัติ",
         "audio_quality_high" to "สูง",

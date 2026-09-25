@@ -100,6 +100,7 @@ internal fun strings_lt(): Map<String, String> =
         "apple_mini_player" to "Apple stiliaus mini grotuvas",
         "apple_mini_player_desc" to "Apvalus Apple Music stiliaus mini grotuvas.",
         "artists" to "Atlikėjai",
+        "artists_loading_hint" to "Įkėlimas gali užtrukti iki 10 sekundžių",
         "audio_quality" to "Garso kokybė",
         "audio_quality_auto" to "Automatiškai",
         "audio_quality_high" to "Aukšta",

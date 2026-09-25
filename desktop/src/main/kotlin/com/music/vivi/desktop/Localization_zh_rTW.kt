@@ -100,6 +100,7 @@ internal fun strings_zh_rTW(): Map<String, String> =
         "apple_mini_player" to "Apple 風格迷你播放器",
         "apple_mini_player_desc" to "Apple Music 風格的圓角迷你播放器。",
         "artists" to "藝人",
+        "artists_loading_hint" to "載入最多可能需要 10 秒",
         "audio_quality" to "音質",
         "audio_quality_auto" to "自動",
         "audio_quality_high" to "高",

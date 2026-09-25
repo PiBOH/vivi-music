@@ -100,6 +100,7 @@ internal fun strings_ml(): Map<String, String> =
         "apple_mini_player" to "ആപ്പിൾ-സ്റ്റൈൽ മിനി പ്ലേയർ",
         "apple_mini_player_desc" to "ആപ്പിൾ മ്യൂസിക്-സ്റ്റൈൽ വൃത്താകൃതിയിലുള്ള മിനി പ്ലേയർ.",
         "artists" to "കലാകാരന്മാർ",
+        "artists_loading_hint" to "ലോഡ് ചെയ്യാൻ 10 സെക്കൻഡ് വരെ എടുത്തേക്കാം",
         "audio_quality" to "ഓഡിയോ നിലവാരം",
         "audio_quality_auto" to "Auto",
         "audio_quality_high" to "കൂടി",

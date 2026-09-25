@@ -100,6 +100,7 @@ internal fun strings_sv(): Map<String, String> =
         "apple_mini_player" to "Mini-spelare i Apple-stil",
         "apple_mini_player_desc" to "Rundad mini-spelare i Apple Music-stil.",
         "artists" to "Artister",
+        "artists_loading_hint" to "Laddningen kan ta upp till 10 sekunder",
         "audio_quality" to "Ljudkvalitet",
         "audio_quality_auto" to "Automatiskt",
         "audio_quality_high" to "Hög",

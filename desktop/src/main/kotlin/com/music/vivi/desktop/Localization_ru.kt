@@ -100,6 +100,7 @@ internal fun strings_ru(): Map<String, String> =
         "apple_mini_player" to "Мини-плеер в стиле Apple",
         "apple_mini_player_desc" to "Скруглённый мини-плеер в стиле Apple Music.",
         "artists" to "Исполнители",
+        "artists_loading_hint" to "Загрузка может занять до 10 секунд",
         "audio_quality" to "Качество аудио",
         "audio_quality_auto" to "Авто",
         "audio_quality_high" to "Высокое",

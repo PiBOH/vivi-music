@@ -100,6 +100,7 @@ internal fun strings_te(): Map<String, String> =
         "apple_mini_player" to "ఆపిల్-స్టైల్ మినీ ప్లేయర్",
         "apple_mini_player_desc" to "ఆపిల్ మ్యూజిక్-స్టైల్ గుండ్రని మినీ ప్లేయర్.",
         "artists" to "కళాకారులు",
+        "artists_loading_hint" to "లోడ్ అవ్వడానికి 10 సెకన్ల వరకు పట్టవచ్చు",
         "audio_quality" to "ఆడియో నాణ్యత",
         "audio_quality_auto" to "స్వీయ",
         "audio_quality_high" to "ఎక్కువ",

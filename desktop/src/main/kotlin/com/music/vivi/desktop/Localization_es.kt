@@ -100,6 +100,7 @@ internal fun strings_es(): Map<String, String> =
         "apple_mini_player" to "Mini reproductor estilo Apple",
         "apple_mini_player_desc" to "Mini reproductor redondeado estilo Apple Music.",
         "artists" to "Artistas",
+        "artists_loading_hint" to "La carga puede tardar hasta 10 segundos",
         "audio_quality" to "Calidad de sonido",
         "audio_quality_auto" to "Automática",
         "audio_quality_high" to "Alta",

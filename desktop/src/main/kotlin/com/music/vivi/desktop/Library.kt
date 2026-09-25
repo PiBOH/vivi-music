@@ -434,7 +434,14 @@ fun LibraryScreen(
 
         when {
             error != null -> ErrorBox(language, error)
-            loading || page == null -> LoadingBox(language)
+            // The artists tab is the one that has to be *derived* when the
+            // account has no artist list (see [loadLibraryPage]): it walks the
+            // songs and builds the list from them, which takes seconds rather
+            // than a moment, and a bare spinner for that long reads as a hang.
+            loading || page == null -> LoadingBox(
+                language,
+                hint = if (selectedTab == 2) Localization.get(language, "artists_loading_hint") else null,
+            )
             else -> {
                 val rawItems = page!!.items
                 val items = run {

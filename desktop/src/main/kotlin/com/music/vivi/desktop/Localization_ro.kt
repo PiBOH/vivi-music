@@ -100,6 +100,7 @@ internal fun strings_ro(): Map<String, String> =
         "apple_mini_player" to "Mini player în stil Apple",
         "apple_mini_player_desc" to "Mini player rotunjit în stil Apple Music.",
         "artists" to "Artiști",
+        "artists_loading_hint" to "Încărcarea poate dura până la 10 secunde",
         "audio_quality" to "Calitate audio",
         "audio_quality_auto" to "Automată",
         "audio_quality_high" to "Înaltă",

@@ -100,6 +100,7 @@ internal fun strings_sk(): Map<String, String> =
         "apple_mini_player" to "Mini prehrávač v štýle Apple",
         "apple_mini_player_desc" to "Zaoblený mini prehrávač v štýle Apple Music.",
         "artists" to "Umelci",
+        "artists_loading_hint" to "Načítanie môže trvať až 10 sekúnd",
         "audio_quality" to "Kvalita zvuku",
         "audio_quality_auto" to "Automaticky",
         "audio_quality_high" to "Vysoká",

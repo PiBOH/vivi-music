@@ -100,6 +100,7 @@ internal fun strings_ms(): Map<String, String> =
         "apple_mini_player" to "Pemain mini gaya Apple",
         "apple_mini_player_desc" to "Pemain mini bulat gaya Apple Music.",
         "artists" to "Artis",
+        "artists_loading_hint" to "Pemuatan boleh mengambil masa sehingga 10 saat",
         "audio_quality" to "Kualiti audio",
         "audio_quality_auto" to "Automatik",
         "audio_quality_high" to "Tinggi",

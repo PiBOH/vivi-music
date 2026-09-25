@@ -100,6 +100,7 @@ internal fun strings_pa(): Map<String, String> =
         "apple_mini_player" to "ਐਪਲ-ਸਟਾਈਲ ਮਿੰਨੀ ਪਲੇਅਰ",
         "apple_mini_player_desc" to "ਐਪਲ ਮਿਊਜ਼ਿਕ-ਸ਼ੈਲੀ ਦਾ ਗੋਲ ਮਿੰਨੀ ਪਲੇਅਰ।",
         "artists" to "ਕਲਾਕਾਰ",
+        "artists_loading_hint" to "ਲੋਡ ਹੋਣ ਵਿੱਚ 10 ਸਕਿੰਟ ਤੱਕ ਲੱਗ ਸਕਦੇ ਹਨ",
         "audio_quality" to "ਆਡੀਓ ਕੁਆਲਿਟੀ",
         "audio_quality_auto" to "ਆਟੋ",
         "audio_quality_high" to "ਉੱਚ",

@@ -100,6 +100,7 @@ internal fun strings_el(): Map<String, String> =
         "apple_mini_player" to "Μίνι αναπαραγωγή τύπου Apple",
         "apple_mini_player_desc" to "Στρογγυλεμένο μίνι αναπαραγωγής τύπου Apple Music.",
         "artists" to "Καλλιτέχνες",
+        "artists_loading_hint" to "Η φόρτωση μπορεί να διαρκέσει έως 10 δευτερόλεπτα",
         "audio_quality" to "Ποιότητα ήχου",
         "audio_quality_auto" to "Αυτόματο",
         "audio_quality_high" to "Υψηλή",

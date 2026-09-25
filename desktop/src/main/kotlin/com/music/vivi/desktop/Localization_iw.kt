@@ -100,6 +100,7 @@ internal fun strings_iw(): Map<String, String> =
         "apple_mini_player" to "נגן מיני של אפל",
         "apple_mini_player_desc" to "נגן מיני מעוגל בסגנון Apple Music.",
         "artists" to "אמנים",
+        "artists_loading_hint" to "הטעינה עשויה להימשך עד 10 שניות",
         "audio_quality" to "איכות שמע",
         "audio_quality_auto" to "אוטומטי",
         "audio_quality_high" to "גבוה",

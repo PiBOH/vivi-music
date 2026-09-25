@@ -100,6 +100,7 @@ internal fun strings_eu(): Map<String, String> =
         "apple_mini_player" to "Apple estiloko mini erreproduzigailua",
         "apple_mini_player_desc" to "Apple Music estiloko mini erreproduzigailu biribila.",
         "artists" to "Artistak",
+        "artists_loading_hint" to "Kargak 10 segundo arte iraun dezake",
         "audio_quality" to "Audio kalitatea",
         "audio_quality_auto" to "Automatikoa",
         "audio_quality_high" to "Altua",

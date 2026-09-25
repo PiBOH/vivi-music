@@ -100,6 +100,7 @@ internal fun strings_sr(): Map<String, String> =
         "apple_mini_player" to "Мини плејер у Apple стилу",
         "apple_mini_player_desc" to "Заобљени мини плејер у Apple Music стилу.",
         "artists" to "Umetnici",
+        "artists_loading_hint" to "Учитавање може потрајати до 10 секунди",
         "audio_quality" to "Kvalitet zvuka",
         "audio_quality_auto" to "Automatski",
         "audio_quality_high" to "Visoko",

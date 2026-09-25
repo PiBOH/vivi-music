@@ -100,6 +100,7 @@ internal fun strings_az(): Map<String, String> =
         "apple_mini_player" to "Apple üslubunda mini pleyer",
         "apple_mini_player_desc" to "Apple Music üslubunda yuvarlaq mini pleyer.",
         "artists" to "Sənətçilər",
+        "artists_loading_hint" to "Yükləmə 10 saniyəyə qədər çəkə bilər",
         "audio_quality" to "Səs keyfiyyəti",
         "audio_quality_auto" to "Avtomatik",
         "audio_quality_high" to "Yüksək",

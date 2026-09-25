@@ -100,6 +100,7 @@ internal fun strings_fi(): Map<String, String> =
         "apple_mini_player" to "Apple-tyylinen minisoitin",
         "apple_mini_player_desc" to "Pyöristetty Apple Music -tyylinen minisoitin.",
         "artists" to "Artistit",
+        "artists_loading_hint" to "Lataus voi kestää jopa 10 sekuntia",
         "audio_quality" to "Äänenlaatu",
         "audio_quality_auto" to "Automaattinen",
         "audio_quality_high" to "Korkea",

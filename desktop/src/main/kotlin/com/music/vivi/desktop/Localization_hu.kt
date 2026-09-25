@@ -100,6 +100,7 @@ internal fun strings_hu(): Map<String, String> =
         "apple_mini_player" to "Apple stílusú mini lejátszó",
         "apple_mini_player_desc" to "Kerekített, Apple Music stílusú mini lejátszó.",
         "artists" to "Előadók",
+        "artists_loading_hint" to "A betöltés akár 10 másodpercig is tarthat",
         "audio_quality" to "Hangminőség",
         "audio_quality_auto" to "Automata",
         "audio_quality_high" to "Magas",

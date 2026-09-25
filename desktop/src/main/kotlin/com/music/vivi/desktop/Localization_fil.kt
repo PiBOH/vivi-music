@@ -100,6 +100,7 @@ internal fun strings_fil(): Map<String, String> =
         "apple_mini_player" to "Mini player na istilo ng Apple",
         "apple_mini_player_desc" to "Bilog na mini player na istilo ng Apple Music.",
         "artists" to "Mga artist",
+        "artists_loading_hint" to "Maaaring tumagal ng hanggang 10 segundo ang pag-load",
         "audio_quality" to "Kalidad ng audio",
         "audio_quality_auto" to "Awtomatiko",
         "audio_quality_high" to "Mataas",

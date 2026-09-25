@@ -100,6 +100,7 @@ internal fun strings_bg(): Map<String, String> =
         "apple_mini_player" to "Мини плейър в стил Apple",
         "apple_mini_player_desc" to "Закръглен мини плейър в стил Apple Music.",
         "artists" to "Изпълнители",
+        "artists_loading_hint" to "Зареждането може да отнеме до 10 секунди",
         "audio_quality" to "Качество на звука",
         "audio_quality_auto" to "Автоматично",
         "audio_quality_high" to "Високо",

@@ -100,6 +100,7 @@ internal fun strings_ko(): Map<String, String> =
         "apple_mini_player" to "애플 스타일 미니 플레이어",
         "apple_mini_player_desc" to "Apple Music 스타일의 둥근 미니 플레이어입니다.",
         "artists" to "아티스트",
+        "artists_loading_hint" to "불러오는 데 최대 10초가 걸릴 수 있습니다",
         "audio_quality" to "오디오 품질",
         "audio_quality_auto" to "자동",
         "audio_quality_high" to "높음",

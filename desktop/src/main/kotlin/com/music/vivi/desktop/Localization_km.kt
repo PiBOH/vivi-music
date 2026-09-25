@@ -100,6 +100,7 @@ internal fun strings_km(): Map<String, String> =
         "apple_mini_player" to "អ្នកចាក់ខ្នាតតូចបែប Apple",
         "apple_mini_player_desc" to "អ្នកចាក់ខ្នាតតូចរាងមូលបែប Apple Music។",
         "artists" to "សិល្បករ",
+        "artists_loading_hint" to "ការផ្ទុកអាចចំណាយពេលរហូតដល់ 10 វិនាទី",
         "audio_quality" to "គុណភាពអូឌីយ៉ូ",
         "audio_quality_auto" to "ដោយស្វ័យប្រវត្តិ",
         "audio_quality_high" to "ខ្ពស់",

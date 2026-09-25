@@ -100,6 +100,7 @@ internal fun strings_hi(): Map<String, String> =
         "apple_mini_player" to "ऐप्पल-स्टाइल मिनी प्लेयर",
         "apple_mini_player_desc" to "एप्पल म्यूज़िक-शैली का गोल मिनी प्लेयर।",
         "artists" to "कलाकार",
+        "artists_loading_hint" to "लोड होने में 10 सेकंड तक लग सकते हैं",
         "audio_quality" to "ऑडियो गुणवत्ता",
         "audio_quality_auto" to "स्वचालित",
         "audio_quality_high" to "उच्च",

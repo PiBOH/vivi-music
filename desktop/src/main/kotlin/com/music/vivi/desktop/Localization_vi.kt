@@ -100,6 +100,7 @@ internal fun strings_vi(): Map<String, String> =
         "apple_mini_player" to "Trình phát mini kiểu Apple",
         "apple_mini_player_desc" to "Trình phát mini bo tròn kiểu Apple Music.",
         "artists" to "Nghệ sĩ",
+        "artists_loading_hint" to "Quá trình tải có thể mất tới 10 giây",
         "audio_quality" to "Chất lượng âm thanh",
         "audio_quality_auto" to "Tự động",
         "audio_quality_high" to "Cao",
